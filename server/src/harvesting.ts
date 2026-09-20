@@ -14,11 +14,11 @@ import * as safeZone from "./safeZone";
 
 export {};
 
-const funct = require("./functions");
 const vars = require("./vars");
 const handleProtocol = require("./handleProtocol") as HandleProtocolApi;
 const socket = require("./socket") as SocketApi;
 const workingLock = require("./workingLock");
+const workProfessions = require("./workProfessions");
 
 type HarvestingUser = RuntimeCharacter & {
     id: EntityId;
@@ -176,33 +176,27 @@ function resolveRewardItemId(skill: HarvestingSkill, resourceObject: DataObject 
     return IRON_ORE_ITEM_ID;
 }
 
-function getSimulatedSkill(user: HarvestingUser) {
-    return Math.min(100, Math.max(0, Number(user.level ?? 0) * 3));
+function getHarvestSkillValue(user: HarvestingUser, skill: HarvestingSkill) {
+    const skills = require("./skills");
+    return skills.getSkill(user, skill === "woodcutting" ? skills.SKILLS.talar : skills.SKILLS.mineria);
 }
 
 function isSafeHarvestingZone(user: HarvestingUser) {
     return safeZone.isSafeZonePosition(user.map, user.pos);
 }
 
-function getExtractResourceForLevel(level: number) {
-    const lower = Math.max(1, Math.floor((level + 0.000001) / 3.6));
-    const upper = Math.max(lower, Math.floor((level + 0.000001) / 2));
-
-    return funct.randomIntFromInterval(lower, upper);
-}
-
 function rollHarvestSuccess(user: HarvestingUser, skill: HarvestingSkill) {
-    const simulatedSkill = getSimulatedSkill(user);
-    const luck = Math.max(1, Math.floor(-0.00125 * simulatedSkill * simulatedSkill - 0.3 * simulatedSkill + 49));
-    const safeZoneBonus = skill === "woodcutting" ? 4 : 2;
-    const rollMax = isSafeHarvestingZone(user) ? luck + safeZoneBonus : luck;
-    const result = funct.randomIntFromInterval(1, Math.max(1, rollMax));
-
-    return result <= 5;
+    const harvestSkill = getHarvestSkillValue(user, skill);
+    const kind = skill === "woodcutting" ? "talar" : "mineria";
+    return require("./skills").rollOldGatherSuccess(harvestSkill, kind);
 }
 
-function getHarvestAmount(user: HarvestingUser) {
-    return getExtractResourceForLevel(Number(user.level ?? 0));
+function getHarvestAmount(user: HarvestingUser, skill: HarvestingSkill) {
+    if (skill === "woodcutting") {
+        return workProfessions.getWoodcuttingAmount(user);
+    }
+
+    return workProfessions.getMiningAmount(user);
 }
 
 function addRewardToInventory(user: HarvestingUser, itemId: number, amount: number) {
@@ -484,7 +478,7 @@ const harvesting: HarvestingApi = {
 
             const resourceObject = getTargetDataObject(user, state.target);
             const rewardItemId = resolveRewardItemId(state.skill, resourceObject);
-            const rewardAmount = getHarvestAmount(user);
+            const rewardAmount = getHarvestAmount(user, state.skill);
 
             if (!addRewardToInventory(user, rewardItemId, rewardAmount)) {
                 withUserClient(idUser, (userClient) => {
@@ -500,6 +494,10 @@ const harvesting: HarvestingApi = {
             }
 
             playHarvestingSound(idUser, state.skill);
+            require("./skills").applyTraining(
+                user,
+                state.skill === "woodcutting" ? require("./skills").SKILLS.talar : require("./skills").SKILLS.mineria,
+            );
 
             withUserClient(idUser, (userClient) => {
                 const rewardName = vars.datObj[rewardItemId]?.name ?? "el recurso";

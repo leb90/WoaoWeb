@@ -9,6 +9,8 @@ const vars = require("./vars");
 const handleProtocol = require("./handleProtocol") as HandleProtocolApi;
 const socket = require("./socket") as SocketApi;
 const workingLock = require("./workingLock");
+const { isWaterGraphic } = require("./waterTiles");
+const workProfessions = require("./workProfessions");
 
 type FishingUser = RuntimeCharacter & {
     id: EntityId;
@@ -18,6 +20,7 @@ type FishingUser = RuntimeCharacter & {
     dead?: number | boolean;
     navegando?: number | boolean;
     level?: number;
+    idClase?: number;
     inv: Record<string, { idItem: number; cant: number; equipped?: number | boolean }>;
     idItemWeapon?: number | string;
     fishing?: FishingState;
@@ -79,14 +82,6 @@ function isWithinMapBounds(x: number, y: number) {
     return x >= 1 && x <= 100 && y >= 1 && y <= 100;
 }
 
-function isWaterGraphic(graphicLayer1: number) {
-    return (
-        (graphicLayer1 >= 1505 && graphicLayer1 <= 1520) ||
-        (graphicLayer1 >= 5665 && graphicLayer1 <= 5680) ||
-        (graphicLayer1 >= 13547 && graphicLayer1 <= 13562)
-    );
-}
-
 function isWaterTile(idMap: number, pos: Position) {
     if (!isWithinMapBounds(pos.x, pos.y)) {
         return false;
@@ -142,36 +137,12 @@ function getRewardsForPower(power: number): FishingReward[] {
     return rewardsByPower ?? vars.fishing.fishByPower?.[1] ?? [];
 }
 
-function getSimulatedFishingSkill(user: FishingUser) {
-    return Math.min(100, Math.max(0, Number(user.level ?? 0) * 3));
+function getFishingSkill(user: FishingUser) {
+    return require("./skills").getSkill(user, require("./skills").SKILLS.pesca);
 }
 
-function getFishingChanceForSkill(skill: number) {
-    if (skill < 20) {
-        return 20;
-    }
-
-    if (skill < 40) {
-        return 35;
-    }
-
-    if (skill < 70) {
-        return 55;
-    }
-
-    if (skill < 100) {
-        return 68;
-    }
-
-    return 80;
-}
-
-function isFishingNet(itemId: number) {
-    return /red de pesca/i.test(String(vars.datObj?.[itemId]?.name ?? ""));
-}
-
-function getFishingRewardAmount(itemId: number) {
-    return isFishingNet(itemId) ? Math.floor(Math.random() * 5) + 2 : Math.floor(Math.random() * 3) + 1;
+function getFishingRewardAmount(user: FishingUser) {
+    return workProfessions.getFishingCatchAmount(user);
 }
 
 function pickWeightedReward(power: number) {
@@ -396,9 +367,7 @@ const fishing: FishingApi = {
 
             state.nextTickAt = now + vars.timing.fishingTickMs;
 
-            const fishingChance = getFishingChanceForSkill(getSimulatedFishingSkill(user));
-
-            if (Math.floor(Math.random() * 100) + 1 > fishingChance) {
+            if (!require("./skills").rollOldGatherSuccess(getFishingSkill(user), "pesca")) {
                 continue;
             }
 
@@ -408,7 +377,7 @@ const fishing: FishingApi = {
                 continue;
             }
 
-            const rewardAmount = getFishingRewardAmount(equippedRod.itemId);
+            const rewardAmount = getFishingRewardAmount(user);
 
             if (!addRewardToInventory(user, reward.itemId, rewardAmount)) {
                 withUserClient(idUser, (userClient) => {
@@ -417,6 +386,8 @@ const fishing: FishingApi = {
                 this.cancelFishing(idUser, "La pesca se detuvo porque no tienes espacio en el inventario.");
                 continue;
             }
+
+            require("./skills").applyTraining(user, require("./skills").SKILLS.pesca);
 
             withUserClient(idUser, (userClient) => {
                 handleProtocol.console(

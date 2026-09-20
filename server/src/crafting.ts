@@ -8,6 +8,7 @@ export {};
 
 const vars = require("./vars");
 const handleProtocol = require("./handleProtocol") as HandleProtocolApi;
+const workProfessions = require("./workProfessions");
 
 function getGameApi() {
     return require("./game") as GameApi;
@@ -17,6 +18,7 @@ type CraftingUser = RuntimeCharacter & {
     id: EntityId;
     dead?: number | boolean;
     level?: number;
+    idClase?: number;
     inv: Record<string, { idItem: number; cant: number }>;
     map: number;
     pos: Position;
@@ -49,8 +51,18 @@ function getUser(idUser: EntityId) {
     return getCharacterById<CraftingUser>(idUser);
 }
 
-function getSimulatedSkill(user: CraftingUser) {
-    return Math.min(100, Math.max(0, Number(user.level ?? 0) * 3));
+function getProfessionSkillId(profession: CraftingProfession) {
+    const skills = require("./skills");
+
+    if (profession === "blacksmith") {
+        return skills.SKILLS.herreria;
+    }
+
+    return skills.SKILLS.carpinteria;
+}
+
+function getCraftingSkill(user: CraftingUser, profession: CraftingProfession) {
+    return require("./skills").getSkill(user, getProfessionSkillId(profession));
 }
 
 function getProfessionForTool(idItem: number): CraftingProfession | null {
@@ -79,6 +91,18 @@ function getProfessionLabel(profession: CraftingProfession) {
     }
 
     return "Herrería";
+}
+
+function getProfessionClassRestriction(user: CraftingUser, profession: CraftingProfession) {
+    if (profession === "blacksmith" && !workProfessions.isHerrero(user)) {
+        return "Sólo los Herreros pueden usar estos objetos.";
+    }
+
+    if (profession === "carpentry" && !workProfessions.isCarpintero(user)) {
+        return "Sólo los Carpinteros pueden usar estos objetos.";
+    }
+
+    return null;
 }
 
 function getProfessionRecipes(profession: CraftingProfession, skill: number) {
@@ -286,6 +310,13 @@ const crafting: CraftingApi = {
             return true;
         }
 
+        const classRestriction = getProfessionClassRestriction(user, profession);
+
+        if (classRestriction) {
+            handleProtocol.console(classRestriction, "white", 0, 0, ws);
+            return true;
+        }
+
         if (profession === "blacksmith") {
             user.craftingTarget = {
                 pendingTarget: true,
@@ -297,7 +328,7 @@ const crafting: CraftingApi = {
             return true;
         }
 
-        const recipes = getProfessionRecipes(profession, getSimulatedSkill(user))
+        const recipes = getProfessionRecipes(profession, getCraftingSkill(user, profession))
             .map((recipe) => serializeRecipe(user, recipe))
             .filter((recipe) => recipe !== null);
 
@@ -342,7 +373,7 @@ const crafting: CraftingApi = {
 
         user.craftingTarget = undefined;
 
-        const recipes = getProfessionRecipes("blacksmith", getSimulatedSkill(user))
+        const recipes = getProfessionRecipes("blacksmith", getCraftingSkill(user, "blacksmith"))
             .map((recipe) => serializeRecipe(user, recipe))
             .filter((recipe) => recipe !== null);
 
@@ -370,6 +401,13 @@ const crafting: CraftingApi = {
             return;
         }
 
+        const classRestriction = getProfessionClassRestriction(user, profession);
+
+        if (classRestriction) {
+            handleProtocol.console(classRestriction, "white", 0, 0, ws);
+            return;
+        }
+
         const safeAmount = Math.max(1, Math.min(9999, Math.floor(Number(amount) || 0)));
         const recipe = getRecipe(itemId, profession);
 
@@ -377,7 +415,7 @@ const crafting: CraftingApi = {
             return;
         }
 
-        if (getSimulatedSkill(user) < recipe.skill) {
+        if (getCraftingSkill(user, profession) < recipe.skill) {
             handleProtocol.console("No tienes skill suficiente para fabricar ese objeto.", "white", 0, 0, ws);
             return;
         }
@@ -435,6 +473,7 @@ const crafting: CraftingApi = {
 
         game.putItemToInv(user.id, recipe.itemId, safeAmount);
         await game.persistCharacterItemsById(user.id);
+        require("./skills").applyTraining(user, getProfessionSkillId(profession));
 
         const craftedObj = vars.datObj[recipe.itemId] as DataObject | undefined;
         handleProtocol.console(`Has fabricado ${safeAmount} ${craftedObj?.name ?? "objeto"}.`, "#86efac", 0, 0, ws);

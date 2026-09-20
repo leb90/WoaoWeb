@@ -892,7 +892,8 @@ export class Engine {
         return (
             (layer1 >= 1505 && layer1 <= 1520) ||
             (layer1 >= 5665 && layer1 <= 5680) ||
-            (layer1 >= 13547 && layer1 <= 13562)
+            (layer1 >= 13547 && layer1 <= 13562) ||
+            (layer1 >= 36563 && layer1 <= 36578)
         );
     }
 

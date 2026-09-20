@@ -66,6 +66,9 @@ const crafting = require("./crafting");
 const smelting = require("./smelting");
 const mapInstanceManager = require("./mapInstanceManager");
 const balance = require("./balance");
+const { isWaterGraphic } = require("./waterTiles");
+const workProfessions = require("./workProfessions");
+const skills = require("./skills");
 
 const getPotionRecoveryAmount = (maxStat: number, percentage: number | undefined, fixedAmount: number): number => {
     const recoveryPercentage = Number(percentage ?? 0);
@@ -325,6 +328,9 @@ type GameCharacter = RuntimeCharacter & {
     factionRankCaos: number;
     factionRewardsArmada: number;
     factionRewardsCaos: number;
+    skills?: number[];
+    skillPts?: number;
+    segCritico?: boolean;
     meditar: boolean;
     meditarFx?: number;
     navegando: NumericFlag;
@@ -423,7 +429,6 @@ type GameNpc = RuntimeNpc & {
     paralizado?: NumericFlag;
     inmovilizado?: NumericFlag;
     envenenado?: number;
-    envenenado?: number;
     aguaValida?: boolean;
     tierraInvalida?: boolean;
     objs?: Record<number, { item: number; cant?: number }>;
@@ -431,61 +436,44 @@ type GameNpc = RuntimeNpc & {
     hitExpAwarded?: number;
 };
 
-const STABBING_CHANCE_BY_CLASS: Record<number, number> = {
-    3: 0.08,
-    9: 0.08,
-    8: 0.15,
-    4: 0.24,
-    2: 0.15,
-    6: 0.15,
-    1: 0.08,
-    7: 0.08,
-    10: 0.08,
-    5: 0.08,
-    11: 0.08,
-};
+// Tabla de "suerte" de Apuñalar tal cual el servidor viejo (Trabajo.bas: DoApuñalar).
+// A menor "suerte", mayor probabilidad de éxito (1 en `suerte`, salvo Asesino que usa un umbral fijo).
+const STABBING_SUERTE_BY_SKILL: Array<[maxSkill: number, suerte: number]> = [
+    [20, 35],
+    [40, 30],
+    [60, 28],
+    [80, 24],
+    [100, 22],
+    [120, 20],
+    [140, 18],
+    [160, 15],
+    [180, 12],
+    [200, 9],
+];
 
-const STABBING_DAMAGE_MOD_BY_CLASS: Record<number, number> = {
-    3: 1.4,
-    9: 1.3,
-    8: 1.4,
-    4: 1.35,
-    2: 1.25,
-    6: 1.25,
-    1: 0.1,
-    7: 0.1,
-    10: 1.1,
-    5: 1.2,
-    11: 1.2,
-};
+function getStabbingSuerte(skillApu: number, isAsesino: boolean): number {
+    if (isAsesino) {
+        return 10;
+    }
 
-const STABBING_NPC_MIN_MOD_BY_CLASS: Record<number, number> = {
-    3: 1.4,
-    9: 1.3,
-    8: 1.4,
-    4: 1.6,
-    2: 1.25,
-    6: 1.25,
-    1: 1.2,
-    7: 1.2,
-    10: 1.1,
-    5: 1.2,
-    11: 1.2,
-};
+    if (skillApu >= 200) {
+        return 7;
+    }
 
-const STABBING_NPC_MAX_MOD_BY_CLASS: Record<number, number> = {
-    3: 1.4,
-    9: 1.3,
-    8: 1.4,
-    4: 1.9,
-    2: 1.25,
-    6: 1.25,
-    1: 1.2,
-    7: 1.2,
-    10: 1.1,
-    5: 1.2,
-    11: 1.2,
-};
+    for (const [maxSkill, suerte] of STABBING_SUERTE_BY_SKILL) {
+        if (skillApu <= maxSkill) {
+            return suerte;
+        }
+    }
+
+    return 9;
+}
+
+function rollStabbingSuccess(skillApu: number, isAsesino: boolean): boolean {
+    const suerte = getStabbingSuerte(skillApu, isAsesino);
+    const roll = funct.randomIntFromInterval(1, suerte);
+    return isAsesino ? roll <= 4 : roll === 2;
+}
 
 const COMBAT_HIT_FX_ID = 14;
 const COMBAT_SHIELD_BLOCK_FX_ID = 88;
@@ -496,8 +484,72 @@ function clampChance(value: number, min = 5, max = 95): number {
     return Math.max(min, Math.min(max, value));
 }
 
-function getSimulatedSkill(user: GameCharacter): number {
-    return Math.min(100, user.level * 3);
+function getCharacterSkill(user: GameCharacter | null | undefined, skillId: number): number {
+    return skills.getSkill(user, skillId);
+}
+
+function trainCharacterSkill(user: GameCharacter | null | undefined, skillId: number) {
+    skills.applyTraining(user, skillId);
+}
+
+function getAttackTrainSkillId(user: GameCharacter): number {
+    const weapon = getEquippedWeaponData(user);
+
+    if (weapon?.proyectil) {
+        return skills.SKILLS.proyectiles;
+    }
+
+    return skills.SKILLS.armas;
+}
+
+// Sistema general de golpes críticos contra NPCs (SistemaCombate.bas: UserDañoNpc).
+// No es racial: depende del skill Suerte y de si el NPC es "duro" (exp >= 37000).
+// Nota: el viejo también excluía a un NPC puntual (numero=664) del insta-kill; el dato
+// de "número de plantilla" no existe en los NPCs runtime nuevos, así que esa exclusión
+// puntual no se portó (solo queda el resguardo general de "raid").
+const NPC_CRIT_TOUGH_EXP_THRESHOLD = 37000;
+
+function rollNpcCriticalHit(
+    user: GameCharacter,
+    npc: GameNpc,
+    isRanged: boolean,
+): { multiplier: number; instaKill: boolean } {
+    if (user.segCritico) {
+        return { multiplier: 1, instaKill: false };
+    }
+
+    const suerte = skills.getSkill(user, skills.SKILLS.suerte);
+    const isToughNpc = Number(npc.exp ?? 0) >= NPC_CRIT_TOUGH_EXP_THRESHOLD;
+
+    let cf = 3500;
+    if (isRanged) {
+        cf += 2000;
+    }
+
+    let critico: number;
+    if (isToughNpc) {
+        critico = funct.randomIntFromInterval(1, cf + 7000) - suerte * 10;
+    } else {
+        critico = funct.randomIntFromInterval(1, cf) - suerte * 5;
+    }
+
+    let criti = 1;
+    if (critico < 60) {
+        criti = 2;
+    } else if (critico < 109) {
+        criti = 3;
+    } else if (critico < 118) {
+        criti = 4;
+    } else if (!isToughNpc && critico < 120) {
+        criti = 5;
+    }
+
+    if (criti === 5) {
+        const canInstaKill = !(Number((npc as any).raid ?? 0) > 0);
+        return { multiplier: 1, instaKill: canInstaKill };
+    }
+
+    return { multiplier: criti, instaKill: false };
 }
 
 function getInventoryItem(user: GameCharacter, slot: number | string | undefined) {
@@ -676,18 +728,41 @@ function rebuildEquippedInventoryState(user: GameCharacter): void {
     }
 }
 
+// InvUsuario.bas: CheckRazaUsaRopa (usada para restaurar el auto-equipo al conectarse)
+// SÍ bloquea en los dos sentidos, pero solo para Enano/Gnomo/Goblin: es una cuestión de
+// sprite/cuerpo (esas razas no pueden ponerse ropa "normal" ni al revés). Las otras
+// restricciones raciales (razaElfa/razaVampiro/razaHumana/razaOrca) son "de lore", no de
+// sprite, y en el viejo solo bloquean en un sentido (UseInvItem/EquiparObjeto).
 function isArmorRaceRestricted(user: GameCharacter, obj: DataObject): boolean {
     if (obj.objType !== vars.objType.armaduras || itemKinds.isHelmetObject(obj)) {
         return false;
     }
 
-    const isDwarfRace = user.idRaza === vars.razas.gnomo || user.idRaza === vars.razas.enano;
+    const isDwarfRace =
+        user.idRaza === vars.razas.gnomo || user.idRaza === vars.razas.enano || user.idRaza === vars.razas.goblin;
+    const isElfRace = user.idRaza === vars.razas.elfo || user.idRaza === vars.razas.elfoDrow;
 
     if (obj.razaEnana && !isDwarfRace) {
         return true;
     }
 
     if (!obj.razaEnana && isDwarfRace) {
+        return true;
+    }
+
+    if (obj.razaElfa && !isElfRace) {
+        return true;
+    }
+
+    if (obj.razaVampiro && user.idRaza !== vars.razas.vampiro) {
+        return true;
+    }
+
+    if (obj.razaHumana && user.idRaza !== vars.razas.humano) {
+        return true;
+    }
+
+    if (obj.razaOrca && user.idRaza !== vars.razas.orco) {
         return true;
     }
 
@@ -846,7 +921,7 @@ function applyMagicResistanceToNpc(
     magicPenetration: number,
 ): number {
     let nextDamage = damage;
-    const casterMagicSkill = getSimulatedSkill(caster);
+    const casterMagicSkill = getCharacterSkill(caster, skills.SKILLS.magia);
     const npcMagicResistance = Number(npc.magicResistance ?? 0);
     const npcMagicDef = Number(npc.magicDef ?? npc.defM ?? 0);
 
@@ -867,8 +942,8 @@ function applyMagicResistanceToUser(
     magicPenetration: number,
 ): number {
     let nextDamage = damage;
-    const casterMagicSkill = getSimulatedSkill(caster);
-    const targetMagicResistance = getSimulatedSkill(target);
+    const casterMagicSkill = getCharacterSkill(caster, skills.SKILLS.magia);
+    const targetMagicResistance = getCharacterSkill(target, skills.SKILLS.defMagia);
     const targetItemMagicResistance = getTargetMagicResistanceBonus(target);
     const targetClassMagicResistance = getClassMagicResistanceBonus(target.idClase);
     const diffSkill = targetMagicResistance - casterMagicSkill;
@@ -4473,13 +4548,7 @@ function Game(this: GameApi) {
         delete getFloorItemsRegistry()[getFloorItemRegistryKey(idMap, pos)];
     };
 
-    const isPlayerWaterGraphic = (graphicLayer1: number) => {
-        return (
-            (graphicLayer1 >= 1505 && graphicLayer1 <= 1520) ||
-            (graphicLayer1 >= 5665 && graphicLayer1 <= 5680) ||
-            (graphicLayer1 >= 13547 && graphicLayer1 <= 13562)
-        );
-    };
+    const isPlayerWaterGraphic = (graphicLayer1: number) => isWaterGraphic(graphicLayer1);
 
     const hasLegalOccupancy = (
         x: number,
@@ -7528,9 +7597,22 @@ function Game(this: GameApi) {
                 user.minHit = newMinHit;
                 user.maxHit = newMaxHit;
 
+                const skillPointsGained = skills.grantLevelUpSkillPoints(user);
+
                 handleProtocol.console("¡Has subido a nivel " + user.level + "!", "red", 1, 0, client);
 
                 handleProtocol.console("¡Has ganado " + aumentoHP + " puntos de vida!", "red", 1, 0, client);
+
+                if (skillPointsGained > 0) {
+                    handleProtocol.console(
+                        "Has ganado " + skillPointsGained + " skillpoints.",
+                        "white",
+                        1,
+                        0,
+                        client,
+                    );
+                    skills.sendSkillsState(user);
+                }
 
                 if (aumentoMana) {
                     handleProtocol.console("¡Has ganado " + aumentoMana + " puntos de maná!", "red", 1, 0, client);
@@ -7712,6 +7794,8 @@ function Game(this: GameApi) {
             if (!user || !npc) {
                 return 0;
             }
+
+            trainCharacterSkill(user, skills.SKILLS.magia);
 
             const datSpell = vars.datSpell[idSpell];
             const isHostileSpell = isOffensiveSpellData(datSpell);
@@ -7928,6 +8012,8 @@ function Game(this: GameApi) {
                 });
                 return 0;
             }
+
+            trainCharacterSkill(user, skills.SKILLS.magia);
 
             const arenaCombat = isArenaCombat(user, userAttacked);
             const challengeCombatRelation = getChallengeManager().getCombatRelation(user, userAttacked);
@@ -8600,7 +8686,28 @@ function Game(this: GameApi) {
                         dmg = 1;
                     }
 
-                    npc.hp -= dmg;
+                    const isRanged = Boolean(vars.datObj[weaponItemId]?.proyectil);
+                    const critResult = rollNpcCriticalHit(user, npc, isRanged);
+
+                    if (critResult.instaKill) {
+                        dmg = Math.max(1, npc.hp);
+                        npc.hp = 0;
+
+                        withUserClient(idUser, (userClient) => {
+                            handleProtocol.console(
+                                `¡Golpe mortal! Has eliminado a ${npc.nameCharacter} de un solo golpe.`,
+                                "red",
+                                1,
+                                0,
+                                userClient,
+                            );
+                        });
+                    } else {
+                        dmg = Math.max(1, Math.floor(dmg * critResult.multiplier));
+                        npc.hp -= dmg;
+                    }
+
+                    require("./racialPassives").applyVampireLifestealOnNpcHit(user);
                 }
 
                 let stabResult: StabResult = {
@@ -8650,9 +8757,15 @@ function Game(this: GameApi) {
 
                 game.calcularExp(idUser, idNpc, dmg);
                 broadcastNpcVitalsDelta(npc);
+                trainCharacterSkill(user, getAttackTrainSkillId(user));
+
+                if (stabResult.stabbed) {
+                    trainCharacterSkill(user, skills.SKILLS.apunalar);
+                }
 
                 return stabResult.stabbed ? `¡${stabResult.totalDamage}!` : dmg;
             } else {
+                trainCharacterSkill(user, skills.SKILLS.tacticas);
                 emitNpcFxToArea(npc, COMBAT_MISS_FX_ID);
                 game.loopAreaPos(user.map, user.pos, function (target: GameCharacter) {
                     withUserClient(target.id, (targetClient) => {
@@ -8767,6 +8880,7 @@ function Game(this: GameApi) {
 
             let dmg = 0;
             let attackMissed = false;
+            let rechazo = false;
             let stabResult: StabResult = {
                 stabbed: false,
                 extraDamage: 0,
@@ -9042,8 +9156,6 @@ function Game(this: GameApi) {
                     }
                 });
             } else {
-                let rechazo = false;
-
                 if (userAttacked.idItemShield) {
                     const skillDefensa = game.getSkillDefensa(idUserAttacked);
                     const skillTacticasCombate = game.getSkillTacticasCombate(idUserAttacked);
@@ -9134,6 +9246,22 @@ function Game(this: GameApi) {
                 }
             }
 
+            if (!attackMissed) {
+                trainCharacterSkill(user, getAttackTrainSkillId(user));
+
+                if (stabResult.stabbed) {
+                    trainCharacterSkill(user, skills.SKILLS.apunalar);
+                }
+            } else if (rechazo) {
+                trainCharacterSkill(userAttacked, skills.SKILLS.defensa);
+            } else {
+                const weapon = getEquippedWeaponData(user);
+                trainCharacterSkill(
+                    userAttacked,
+                    weapon?.proyectil ? skills.SKILLS.evitarProyec : skills.SKILLS.tacticas,
+                );
+            }
+
             if (userAttacked.meditar) {
                 userAttacked.meditar = false;
                 userAttacked.meditarFx = 0;
@@ -9173,23 +9301,22 @@ function Game(this: GameApi) {
             }
 
             const skillApu = game.getSkillApu(idUser);
-            const baseChance = skillApu * (STABBING_CHANCE_BY_CLASS[user.idClase] ?? STABBING_CHANCE_BY_CLASS[3]);
-            const probExito = clampChance(baseChance);
+            const isAsesino = user.idClase === vars.clases.asesino;
 
-            const chance = funct.randomIntFromInterval(1, 100);
+            if (rollStabbingSuccess(skillApu, isAsesino)) {
+                const fromBehind = user.heading === npc.heading;
+                const totalDamage = fromBehind ? dmg * 2 : dmg;
+                const extraDamage = totalDamage - dmg;
 
-            if (chance <= probExito) {
-                const minMod = STABBING_NPC_MIN_MOD_BY_CLASS[user.idClase] ?? 1;
-                const maxMod = STABBING_NPC_MAX_MOD_BY_CLASS[user.idClase] ?? minMod;
-                const extraDamage = Math.floor(dmg * (Math.random() * (maxMod - minMod) + minMod));
-                npc.hp -= extraDamage;
-
-                game.calcularExp(idUser, idNpc, extraDamage);
+                if (extraDamage > 0) {
+                    npc.hp -= extraDamage;
+                    game.calcularExp(idUser, idNpc, extraDamage);
+                }
 
                 return {
                     stabbed: true,
                     extraDamage,
-                    totalDamage: dmg + extraDamage,
+                    totalDamage,
                 };
             }
 
@@ -9229,17 +9356,21 @@ function Game(this: GameApi) {
             }
 
             const skillApu = game.getSkillApu(idUser);
-            const baseChance = skillApu * (STABBING_CHANCE_BY_CLASS[user.idClase] ?? STABBING_CHANCE_BY_CLASS[3]);
-            const probExito = clampChance(baseChance);
+            const isAsesino = user.idClase === vars.clases.asesino;
 
-            if (funct.randomIntFromInterval(1, 100) <= probExito) {
-                const tmpDmg = Math.floor(dmg * (STABBING_DAMAGE_MOD_BY_CLASS[user.idClase] ?? 1));
-                userAttacked.hp -= tmpDmg;
+            if (rollStabbingSuccess(skillApu, isAsesino)) {
+                const fromBehind = user.heading === userAttacked.heading;
+                const totalDamage = fromBehind ? dmg * 2 : dmg;
+                const extraDamage = totalDamage - dmg;
+
+                if (extraDamage > 0) {
+                    userAttacked.hp -= extraDamage;
+                }
 
                 return {
                     stabbed: true,
-                    extraDamage: tmpDmg,
-                    totalDamage: dmg + tmpDmg,
+                    extraDamage,
+                    totalDamage,
                 };
             }
 
@@ -9269,7 +9400,7 @@ function Game(this: GameApi) {
             if (!user) {
                 return 0;
             }
-            return getSimulatedSkill(user);
+            return getCharacterSkill(user, skills.SKILLS.tacticas);
         } catch (err) {
             funct.dumpError(err);
             return 0;
@@ -9287,7 +9418,7 @@ function Game(this: GameApi) {
             if (!user) {
                 return 0;
             }
-            return getSimulatedSkill(user);
+            return getCharacterSkill(user, skills.SKILLS.defensa);
         } catch (err) {
             funct.dumpError(err);
             return 0;
@@ -9305,7 +9436,7 @@ function Game(this: GameApi) {
             if (!user) {
                 return 0;
             }
-            return getSimulatedSkill(user);
+            return getCharacterSkill(user, skills.SKILLS.armas);
         } catch (err) {
             funct.dumpError(err);
             return 0;
@@ -9318,7 +9449,7 @@ function Game(this: GameApi) {
             if (!user) {
                 return 0;
             }
-            return getSimulatedSkill(user);
+            return getCharacterSkill(user, skills.SKILLS.proyectiles);
         } catch (err) {
             funct.dumpError(err);
             return 0;
@@ -9331,7 +9462,7 @@ function Game(this: GameApi) {
             if (!user) {
                 return 0;
             }
-            return getSimulatedSkill(user);
+            return getCharacterSkill(user, skills.SKILLS.armas);
         } catch (err) {
             funct.dumpError(err);
             return 0;
@@ -9344,7 +9475,7 @@ function Game(this: GameApi) {
             if (!user) {
                 return 0;
             }
-            return getSimulatedSkill(user);
+            return getCharacterSkill(user, skills.SKILLS.ocultarse);
         } catch (err) {
             funct.dumpError(err);
             return 0;
@@ -9362,7 +9493,7 @@ function Game(this: GameApi) {
             if (!user) {
                 return 0;
             }
-            return getSimulatedSkill(user);
+            return getCharacterSkill(user, skills.SKILLS.apunalar);
         } catch (err) {
             funct.dumpError(err);
             return 0;
@@ -9425,10 +9556,11 @@ function Game(this: GameApi) {
                 return 0;
             }
 
-            let skillTacticasCombate = game.getSkillTacticasCombate(idUser);
+            const skillTacticasCombate = game.getSkillTacticasCombate(idUser);
+            const n = skillTacticasCombate / 66;
 
             const tmpCalc =
-                (skillTacticasCombate + (skillTacticasCombate / 33) * user.attrAgilidad) *
+                (user.attrAgilidad + Math.round(skillTacticasCombate / 2) + n * user.attrAgilidad) *
                 vars.modEvasion[user.idClase];
 
             return (tmpCalc + 2.5 * Math.max(user.level - 12, 0)) * getRacialEvasionMultiplier(user);
@@ -9494,9 +9626,16 @@ function Game(this: GameApi) {
                 }
             }
 
-            let poderAtaqueArmaTmp = (skill + 3 * user.attrAgilidad) * modifier;
+            const n = skill / 66;
+            const poderAtaqueArmaTmp = (user.attrAgilidad + Math.round(skill / 2) + n * user.attrAgilidad) * modifier;
 
-            return poderAtaqueArmaTmp + 2.5 * Math.max(user.level - 12, 0);
+            let poderAtaqueArma = poderAtaqueArmaTmp + 2.5 * Math.max(user.level - 12, 0);
+
+            if (Number(user.remort ?? 0) > 0) {
+                poderAtaqueArma += Math.floor(poderAtaqueArma / 3);
+            }
+
+            return poderAtaqueArma;
         } catch (err) {
             funct.dumpError(err);
             return 0;
@@ -10254,6 +10393,7 @@ function Game(this: GameApi) {
             }
 
             user.mana += cantMana;
+            trainCharacterSkill(user, skills.SKILLS.meditar);
 
             withUserClient(idUser, (userClient) => {
                 handleProtocol.updateMana(user.mana, userClient);
@@ -10486,13 +10626,55 @@ function Game(this: GameApi) {
                 return;
             }
 
+            const barco = idBarco ? vars.datObj[idBarco] : undefined;
+            const requiredSkill = workProfessions.getRequiredNavegacionSkill(
+                Number(barco?.minSkill ?? 0),
+                Number(user.idClase ?? 0),
+            );
+            const currentSkill = getCharacterSkill(user, skills.SKILLS.navegacion);
+
+            if (currentSkill < requiredSkill) {
+                withUserClient(idUser, (userClient) => {
+                    handleProtocol.console(
+                        "No tenes suficientes conocimientos para usar este barco.",
+                        "white",
+                        0,
+                        0,
+                        userClient,
+                    );
+                    handleProtocol.console(
+                        `Para usar este barco necesitas ${requiredSkill} puntos en navegacion.`,
+                        "white",
+                        0,
+                        0,
+                        userClient,
+                    );
+                });
+                return;
+            }
+
+            const hayAguaCerca = () => {
+                for (let x = user.pos.x - 1; x <= user.pos.x + 1; x++) {
+                    for (let y = user.pos.y - 1; y <= user.pos.y + 1; y++) {
+                        if (game.hayAgua(user.map, { x, y })) {
+                            return true;
+                        }
+                    }
+                }
+
+                return false;
+            };
+
+            const canDisembark = () =>
+                !(
+                    game.hayAgua(user.map, { x: user.pos.x + 1, y: user.pos.y }) &&
+                    game.hayAgua(user.map, { x: user.pos.x, y: user.pos.y + 1 }) &&
+                    game.hayAgua(user.map, { x: user.pos.x, y: user.pos.y - 1 }) &&
+                    game.hayAgua(user.map, { x: user.pos.x - 1, y: user.pos.y })
+                );
+
             if (user.navegando) {
-                if (
-                    game.legalPos(user.pos.x - 1, user.pos.y, user.map, false) ||
-                    game.legalPos(user.pos.x, user.pos.y - 1, user.map, false) ||
-                    game.legalPos(user.pos.x + 1, user.pos.y, user.map, false) ||
-                    game.legalPos(user.pos.x, user.pos.y + 1, user.map, false)
-                ) {
+                if (canDisembark()) {
                     if (user.dead) {
                         user.idBody = 8;
                         user.idHead = 500;
@@ -10527,7 +10709,7 @@ function Game(this: GameApi) {
                 } else {
                     withUserClient(idUser, (userClient) => {
                         handleProtocol.console(
-                            "¡Debes aproximarte a la costa para poder bajar del barco!",
+                            "No Puedes bajar del barco.",
                             "white",
                             0,
                             0,
@@ -10537,12 +10719,7 @@ function Game(this: GameApi) {
                     return;
                 }
             } else {
-                if (
-                    game.legalPos(user.pos.x - 1, user.pos.y, user.map, true) ||
-                    game.legalPos(user.pos.x, user.pos.y - 1, user.map, true) ||
-                    game.legalPos(user.pos.x + 1, user.pos.y, user.map, true) ||
-                    game.legalPos(user.pos.x, user.pos.y + 1, user.map, true)
-                ) {
+                if (hayAguaCerca()) {
                     if (user.idHead != 500) {
                         user.idLastHead = Number(user.idHead);
                     }
@@ -10556,7 +10733,6 @@ function Game(this: GameApi) {
                     if (user.dead) {
                         user.idBody = 87;
                     } else {
-                        const barco = idBarco ? vars.datObj[idBarco] : undefined;
                         user.idBody = Number(barco?.anim) || 84;
                     }
 
@@ -10566,6 +10742,7 @@ function Game(this: GameApi) {
                     user.idShield = 0;
 
                     user.navegando = 1;
+                    trainCharacterSkill(user, skills.SKILLS.navegacion);
 
                     withUserClient(idUser, (userClient) => {
                         handleProtocol.selfMapMetaDelta(
@@ -10588,7 +10765,7 @@ function Game(this: GameApi) {
                 } else {
                     withUserClient(idUser, (userClient) => {
                         handleProtocol.console(
-                            "¡Debes aproximarte al agua para usar el barco!",
+                            "No puedes usar el barco en tierra.",
                             "white",
                             0,
                             0,

@@ -1,14 +1,16 @@
 "use client";
 
 import React from "react";
-import type { PlayerHudState } from "../lib/aowProtocol";
+import type { PlayerHudState, SkillsState } from "../lib/aowProtocol";
 import type { RuntimeTimingConfig } from "../lib/runtime-config";
 
 const HUNTER_CLASS_ID = 9;
+const OCULTARSE_SKILL_INDEX = 7;
 
 type BuffStatusSidebarProps = {
     hud: PlayerHudState | null;
     runtimeTiming: RuntimeTimingConfig;
+    skillsState?: SkillsState | null;
 };
 
 type StatusEntry = {
@@ -73,6 +75,7 @@ function getHiddenSkillDurationMs(skill: number, classId?: number): number {
 export default function BuffStatusSidebar({
     hud,
     runtimeTiming,
+    skillsState,
 }: BuffStatusSidebarProps) {
     const hasHud = Boolean(hud);
     const [now, setNow] = React.useState(() => Date.now());
@@ -150,7 +153,7 @@ export default function BuffStatusSidebar({
             inmovilizado: Boolean(hud.inmovilizado),
         };
         const hiddenSkillDurationMs = getHiddenSkillDurationMs(
-            Math.min(100, Number(hud.level ?? 0) * 3),
+            Math.min(100, Number(skillsState?.values?.[OCULTARSE_SKILL_INDEX] ?? 0)),
             hud.idClase,
         );
         const reportedInvisibilityRemainingMs = Math.max(
@@ -229,13 +232,13 @@ export default function BuffStatusSidebar({
         hud?.inmovilizado,
         hud?.hiddenSkill,
         hud?.idClase,
-        hud?.level,
         hud?.invisibleSpell,
         hud?.invisibleSpellRemainingMs,
         hud?.invisibleSpellUpdatedAt,
         hud?.paralizado,
         runtimeTiming.statusDurations.crowdControlUserMs,
         runtimeTiming.statusDurations.invisibilitySpellMs,
+        skillsState?.values,
     ]);
 
     const entries = React.useMemo<StatusEntry[]>(() => {
@@ -264,7 +267,7 @@ export default function BuffStatusSidebar({
               )
             : 0;
         const hiddenSkillDurationMs = getHiddenSkillDurationMs(
-            Math.min(100, Number(hud.level ?? 0) * 3),
+            Math.min(100, Number(skillsState?.values?.[OCULTARSE_SKILL_INDEX] ?? 0)),
             hud.idClase,
         );
         const paralyzedSeconds = hud.paralizado
@@ -353,6 +356,7 @@ export default function BuffStatusSidebar({
         hud,
         now,
         runtimeTiming,
+        skillsState,
         timedStatusExpiryAt,
     ]);
 

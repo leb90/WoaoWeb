@@ -206,6 +206,10 @@ export type DataObject = {
     agarrable?: boolean;
     clasesNoPermitidas?: number[];
     razaEnana?: boolean;
+    razaElfa?: boolean;
+    razaVampiro?: boolean;
+    razaHumana?: boolean;
+    razaOrca?: boolean;
     abriga?: boolean;
     manaRequired?: number;
     [key: string]: unknown;

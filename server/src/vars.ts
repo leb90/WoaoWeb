@@ -653,7 +653,8 @@ function Vars(this: any) {
         invalidTrigger: 11,
         rods: {
             138: { power: 1 },
-            563: { power: 1 },
+            543: { power: 1 },
+            601: { power: 1 },
         },
         fishByPower: {
             1: [

@@ -15,6 +15,7 @@ import {
     createSellItemPacket,
     createUseItemClickPacket,
     createUseItemUPacket,
+    createAssignSkillPacket,
     createWithdrawBankGoldPacket,
     type InventoryItem,
 } from "../../../lib/aowProtocol";
@@ -45,6 +46,7 @@ type OutgoingRequestProps = {
     equipRequest?: { slot: number; token: number } | null;
     useItemClickRequest?: { slot: number; token: number } | null;
     useItemURequest?: { slot: number; token: number } | null;
+    assignSkillRequest?: { skillId: number; token: number } | null;
     dropRequest?: { slot: number; amount: number; token: number } | null;
     buyRequest?: { slot: number; amount: number; token: number } | null;
     sellRequest?: { slot: number; amount: number; token: number } | null;
@@ -215,6 +217,7 @@ export function useOutgoingRequests({
     equipRequest,
     useItemClickRequest,
     useItemURequest,
+    assignSkillRequest,
     dropRequest,
     buyRequest,
     sellRequest,
@@ -560,6 +563,30 @@ export function useOutgoingRequests({
         playerHudRef,
         setTargetingMode,
         useItemURequest,
+    ]);
+
+    useEffect(() => {
+        const request = assignSkillRequest;
+        if (!request) {
+            return;
+        }
+
+        if (hasProcessedRequestToken("assignSkill", request.token)) {
+            return;
+        }
+
+        const socket = getSocket(websocketRef);
+        if (!socket) {
+            return;
+        }
+
+        socket.send(createAssignSkillPacket(request.skillId));
+        markRequestTokenProcessed("assignSkill", request.token);
+    }, [
+        assignSkillRequest,
+        hasProcessedRequestToken,
+        markRequestTokenProcessed,
+        websocketRef,
     ]);
 
     useEffect(() => {

@@ -45,8 +45,8 @@ function clonePosition(pos: Position): Position {
     return { x: pos.x, y: pos.y };
 }
 
-function getSimulatedMiningSkill(user: SmeltingUser) {
-    return Math.min(100, Math.max(0, Number(user.level ?? 0) * 3));
+function getMiningSkill(user: SmeltingUser) {
+    return require("./skills").getSkill(user, require("./skills").SKILLS.mineria);
 }
 
 function getConfig(itemId: number) {
@@ -148,7 +148,7 @@ const smelting: SmeltingApi = {
             return true;
         }
 
-        if (getSimulatedMiningSkill(user) < config.requiredSkill) {
+        if (getMiningSkill(user) < config.requiredSkill) {
             handleProtocol.console(
                 `No tienes conocimientos de minería suficientes para trabajar este mineral. Necesitas ${config.requiredSkill} puntos en minería.`,
                 "white",
@@ -236,6 +236,7 @@ const smelting: SmeltingApi = {
 
             game.quitarUserInvItem(user.id, slotKey, requiredMinerals);
             addIngotsToInventory(user, config.ingotItemId, ingotAmount);
+            require("./skills").applyTraining(user, require("./skills").SKILLS.mineria);
             void game.persistCharacterItemsById(user.id).catch((error: unknown) => {
                 console.error(error);
             });

@@ -154,6 +154,8 @@ const characterPatchSchema = z
         items: z.array(itemSchema).optional(),
         bankItems: z.array(bankItemSchema).optional(),
         spells: z.array(spellSchema).optional(),
+        skills: z.array(z.coerce.number().int()).optional(),
+        skillPts: z.coerce.number().int().optional(),
     })
     .passthrough();
 
@@ -219,6 +221,8 @@ const fieldMap = [
     ["factionRankCaos", "faction_rank_caos"],
     ["factionRewardsArmada", "faction_rewards_armada"],
     ["factionRewardsCaos", "faction_rewards_caos"],
+    ["skills", "skills"],
+    ["skillPts", "skill_pts"],
     ["jailMinutes", "jail_minutes"],
     ["jailReason", "jail_reason"],
     ["connected", "connected"],
@@ -294,6 +298,8 @@ function toCharacterResponse(
         factionRankCaos: character.faction_rank_caos,
         factionRewardsArmada: character.faction_rewards_armada,
         factionRewardsCaos: character.faction_rewards_caos,
+        skills: Array.isArray(character.skills) ? character.skills : null,
+        skillPts: character.skill_pts ?? null,
         jailMinutes: character.jail_minutes,
         jailReason: character.jail_reason,
         connected: character.connected,
@@ -1096,7 +1102,11 @@ export async function patchCharacter(
                 continue;
             }
 
-            values.push(parsed[apiField]);
+            const nextValue =
+                apiField === "skills" && Array.isArray(parsed[apiField])
+                    ? JSON.stringify(parsed[apiField])
+                    : parsed[apiField];
+            values.push(nextValue);
             assignments.push(`${dbField} = $${values.length}`);
         }
 

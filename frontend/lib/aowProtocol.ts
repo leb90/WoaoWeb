@@ -78,6 +78,7 @@ export const CLIENT_PACKET_ID = {
     spellVisual: 80,
     entityVitalsDelta: 81,
     characterSwing: 82,
+    skillsState: 83,
 } as const;
 
 export const CHARACTER_SWING_WEAPON = 1;
@@ -174,6 +175,14 @@ export type CharacterStatsSnapshotChunk = {
     chunk: string;
 };
 
+export const NUM_SKILLS = 31;
+export const MAX_SKILL_POINTS = 200;
+
+export type SkillsState = {
+    skillPts: number;
+    values: number[];
+};
+
 export const SERVER_PACKET_ID = {
     changeHeading: 175,
     click: 183,
@@ -205,6 +214,7 @@ export const SERVER_PACKET_ID = {
     closeTrade: 190,
     marketAction: 239,
     retosAction: 248,
+    assignSkill: 249,
 } as const;
 
 export interface CharacterSnapshot {
@@ -805,6 +815,7 @@ export type ParsedServerPacket =
           type: "characterStatsSnapshotChunk";
           payload: CharacterStatsSnapshotChunk;
       }
+    | { type: "skillsState"; payload: SkillsState }
     | { type: "partyState"; payload: PartyHudStateDelta }
     | { type: "clanState"; payload: ClanHudStateDelta }
     | { type: "startCastBar"; payload: { id: number; durationMs: number } }
@@ -1869,6 +1880,20 @@ function parseServerPacketById(
                 },
             };
 
+        case CLIENT_PACKET_ID.skillsState: {
+            const skillPts = reader.getShort();
+            const values: number[] = [];
+
+            for (let index = 0; index < NUM_SKILLS; index++) {
+                values.push(reader.canReadBytes(1) ? reader.getByte() : 0);
+            }
+
+            return {
+                type: "skillsState",
+                payload: { skillPts, values },
+            };
+        }
+
         case CLIENT_PACKET_ID.characterStatsSnapshot: {
             const rawSnapshot = reader.getString();
             return {
@@ -2244,6 +2269,12 @@ export function createRetosActionPacket(
 ): ArrayBuffer {
     const writer = new PacketWriter(SERVER_PACKET_ID.retosAction);
     writer.writeString(JSON.stringify({ action, ...payload }));
+    return writer.toArrayBuffer();
+}
+
+export function createAssignSkillPacket(skillId: number): ArrayBuffer {
+    const writer = new PacketWriter(SERVER_PACKET_ID.assignSkill);
+    writer.writeByte(skillId);
     return writer.toArrayBuffer();
 }
 

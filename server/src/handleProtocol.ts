@@ -132,6 +132,12 @@ type SelfVitalsDeltaPayload = {
     maxHp: number;
     mana: number;
     maxMana: number;
+    sta?: number;
+    maxSta?: number;
+    hambre?: number;
+    maxHambre?: number;
+    sed?: number;
+    maxSed?: number;
 };
 
 type SelfMapMetaDeltaPayload = {
@@ -315,6 +321,7 @@ export type HandleProtocolApi = {
         },
     ) => void;
     animFX: (idUser: EntityId, fxGrh: number, client: RuntimeClient) => void;
+    characterSwing: (idUser: EntityId, flags: number, client: RuntimeClient) => void;
     createProjectile: (startPos: Position, endPos: Position, grhIndex: number, client: RuntimeClient) => void;
     spellProjectile: (startPos: Position, endPos: Position, spellId: number, client: RuntimeClient) => void;
     spellVisual: (
@@ -532,7 +539,7 @@ function dataObj(idItem: number) {
 
             case vars.objType.pergaminos: {
                 const spell = getSpell(obj.spellIndex ?? 0);
-                const requiredLevel = Math.ceil(Number(spell.minSkill ?? 0) / 3);
+                const requiredLevel = Number(spell.minNivel ?? 0);
 
                 if (spell.minHp && spell.maxHp) {
                     if (spell.subeHp === 1) {
@@ -867,6 +874,13 @@ const handleServer: HandleProtocolApi = {
         socket.send(client);
     },
 
+    characterSwing(idUser, flags, client) {
+        pkg.setPackageID(pkg.clientPacketID.characterSwing);
+        pkg.writeDouble(idUser);
+        pkg.writeByte(flags);
+        socket.send(client);
+    },
+
     createProjectile(startPos, endPos, grhIndex, client) {
         pkg.setPackageID(pkg.clientPacketID.createProjectile);
         pkg.writeByte(startPos.x);
@@ -1108,6 +1122,18 @@ const handleServer: HandleProtocolApi = {
         }
 
         pkg.writeInt(invisibilitySpellRemainingMs);
+        const maxSta = Number(
+            character.maxSta ??
+                Math.max(20, 20 + Number(character.attrConstitucion ?? 18)),
+        );
+        const maxHambre = Number(character.maxHambre ?? 100);
+        const maxSed = Number(character.maxSed ?? 100);
+        pkg.writeShort(Number(character.sta ?? maxSta));
+        pkg.writeShort(maxSta);
+        pkg.writeShort(Number(character.hambre ?? maxHambre));
+        pkg.writeShort(maxHambre);
+        pkg.writeShort(Number(character.sed ?? maxSed));
+        pkg.writeShort(maxSed);
     },
 
     sendNpc(npc) {
@@ -1205,6 +1231,12 @@ const handleServer: HandleProtocolApi = {
         pkg.writeShort(payload.maxHp);
         pkg.writeShort(payload.mana);
         pkg.writeShort(payload.maxMana);
+        pkg.writeShort(payload.sta ?? 0);
+        pkg.writeShort(payload.maxSta ?? 0);
+        pkg.writeShort(payload.hambre ?? 0);
+        pkg.writeShort(payload.maxHambre ?? 100);
+        pkg.writeShort(payload.sed ?? 0);
+        pkg.writeShort(payload.maxSed ?? 100);
         socket.send(client);
     },
 

@@ -19,20 +19,20 @@ export const DEFAULT_RUNTIME_TIMING: RuntimeTimingConfig = {
         crowdControlNpcMs: 50000,
         fuerzaAgilidadBuffMs: 90000,
         invisibilitySpellMs: 20000,
-        npcAttackMs: 2000,
+        npcAttackMs: 2300,
     },
     actionCooldowns: {
         dialogMs: 500,
         clickMs: 150,
         doorToggleMs: 250,
-        meleeMs: 950,
-        rangeMs: 950,
-        spellMs: 850,
-        meleeToSpellMs: 550,
-        spellToMeleeMs: 550,
-        useItemMs: 250,
-        meleeToUseItemMs: 550,
-        dropItemMs: 500,
+        meleeMs: 650,
+        rangeMs: 450,
+        spellMs: 560,
+        meleeToSpellMs: 0,
+        spellToMeleeMs: 0,
+        useItemMs: 50,
+        meleeToUseItemMs: 0,
+        dropItemMs: 150,
         equipToggleMs: 125,
     },
     visualEffects: {
@@ -169,6 +169,15 @@ function isAlphaTimingPath(path: string): boolean {
     );
 }
 
+function allowsZeroTimingPath(path: string): boolean {
+    return (
+        path === "actionCooldowns.meleeToSpellMs" ||
+        path === "actionCooldowns.spellToMeleeMs" ||
+        path === "actionCooldowns.meleeToUseItemMs" ||
+        isAlphaTimingPath(path)
+    );
+}
+
 function sanitizeTimingValue(value: unknown, path: string): number {
     const numericValue = Number(value);
 
@@ -184,7 +193,7 @@ function sanitizeTimingValue(value: unknown, path: string): number {
         return Math.round(numericValue * 1000) / 1000;
     }
 
-    if (numericValue <= 0) {
+    if (numericValue < 0 || (numericValue === 0 && !allowsZeroTimingPath(path))) {
         throw new Error(
             `El valor para ${path} debe ser un numero positivo en milisegundos`,
         );

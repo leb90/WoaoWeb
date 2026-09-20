@@ -1,13 +1,1 @@
-{
-    "id": 281,
-    "name": "Mausoleo",
-    "musicNum": 59,
-    "magiaSinEfecto": 0,
-    "noEncriptarMp": 0,
-    "terreno": "BOSQUE",
-    "zona": "DUNGEON",
-    "restringir": "No",
-    "minLevel": 15,
-    "backup": 1,
-    "pk": 0
-}
+{"id":281,"name":"sala clan","musicNum":20,"magiaSinEfecto":0,"noEncriptarMp":0,"terreno":"CLAN","zona":"CLAN","restringir":"No","minLevel":0,"maxLevel":0,"backup":0,"pk":1}

@@ -95,6 +95,15 @@ function isAlphaTimingPath(path: string): boolean {
     return path === "visualEffects.invisibilityMinAlpha" || path === "visualEffects.invisibilityMaxAlpha";
 }
 
+function allowsZeroTimingPath(path: string): boolean {
+    return (
+        path === "actionCooldowns.meleeToSpellMs" ||
+        path === "actionCooldowns.spellToMeleeMs" ||
+        path === "actionCooldowns.meleeToUseItemMs" ||
+        isAlphaTimingPath(path)
+    );
+}
+
 function sanitizeTimingValue(value: unknown, fallback: number, path: string): number {
     const numericValue = Number(value);
 
@@ -110,7 +119,7 @@ function sanitizeTimingValue(value: unknown, fallback: number, path: string): nu
         return Math.round(numericValue * 1000) / 1000;
     }
 
-    if (numericValue <= 0) {
+    if (numericValue < 0 || (numericValue === 0 && !allowsZeroTimingPath(path))) {
         return fallback;
     }
 

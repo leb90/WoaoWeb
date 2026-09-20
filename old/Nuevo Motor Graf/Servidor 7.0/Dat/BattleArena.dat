@@ -1,0 +1,29 @@
+e_BRONCE = 0
+e_PLATA = 1
+e_ORO = 2
+e_PLATINO = 3
+e_DIAMANTE = 4
+
+[INIT]
+Active=1
+MaxBattles0=1
+MaxBattles1=1
+MaxBattles2=1
+MaxBattles3=1
+MaxBattles4=1
+
+' MAP-X1-Y1-X2-Y2
+[ARENA0]
+BattleArena0=211-28-40-55-59
+
+[ARENA1]
+BattleArena0=212-28-40-55-59
+
+[ARENA2]
+BattleArena0=213-28-40-55-59
+
+[ARENA3]
+BattleArena0=214-28-40-55-59
+
+[ARENA4]
+BattleArena0=215-28-40-55-59

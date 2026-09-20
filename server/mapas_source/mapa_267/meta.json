@@ -1,13 +1,1 @@
-{
-    "id": 267,
-    "name": "Interior de la Montaña.",
-    "musicNum": 110,
-    "magiaSinEfecto": 1,
-    "noEncriptarMp": 0,
-    "terreno": "NIEVE",
-    "zona": "DUNGEON",
-    "restringir": "No",
-    "minLevel": 22,
-    "backup": 1,
-    "pk": 0
-}
+{"id":267,"name":"Aldea Humana","musicNum":34,"magiaSinEfecto":0,"noEncriptarMp":0,"terreno":"ALDEA","zona":"CAMPO","restringir":"No","minLevel":0,"maxLevel":0,"backup":0,"pk":0}

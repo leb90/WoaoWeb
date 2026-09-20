@@ -1,0 +1,6 @@
+Línea 138: la clase RichTextLib.RichTextBox del control RecTxt2 no era una clase de control cargada.
+Línea 227: la clase MSWinsockLib.Winsock del control ws_cliente no era una clase de control cargada.
+Línea 234: la clase InetCtlsObjects.Inet del control Inet1 no era una clase de control cargada.
+Línea 274: la clase RichTextLib.RichTextBox del control RecTxt3 no era una clase de control cargada.
+Línea 303: la clase RichTextLib.RichTextBox del control RecTxt no era una clase de control cargada.
+Línea 381: la clase RichTextLib.RichTextBox del control RecTxt4 no era una clase de control cargada.

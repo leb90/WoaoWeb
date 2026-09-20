@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0" xmlns:asmv3="urn:schemas-microsoft-com:asm.v3">
+    <assemblyIdentity name="Argentum-Online" processorArchitecture="X86" type="win32" version="1.2.0.4" />
+    <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+        <security>
+            <requestedPrivileges>
+                <requestedExecutionLevel level="requireAdministrator" uiAccess="false"/>
+            </requestedPrivileges>
+        </security>
+    </trustInfo> 
+    <file name="Aurora.Multimedia.dll">
+        <typelib tlbid="{BCAA90BC-24DB-4470-901A-CD7932B14011}" version="1.0" flags="hasdiskimage" helpdir="" />
+        <comClass clsid="{4D539813-A654-44D0-B7EE-B347AE1BD08A}"/>
+        <comClass clsid="{DCC3659F-FFEF-4B7B-A7B8-77F5BA079986}"/>
+        <comClass clsid="{DCC3659F-FFEF-4B7B-A7B8-77F5BA079988}"/>
+    </file>
+    <file name="Aurora.Network.dll">
+        <typelib tlbid="{88D89F7C-BB59-4F13-9850-93CBD874039D}" version="1.5" flags="hasdiskimage" helpdir="" />
+        <comClass clsid="{07CC11E3-D300-4CD4-9EB0-C4EB4D63865D}"/>
+        <comClass clsid="{ACF5D638-7DDD-443D-B9B4-E5DC3C01BB4C}"/>
+        <comClass clsid="{9BE50AF2-385F-4C56-9826-65C320451642}"/>
+        <comClass clsid="{AC398261-6275-4797-950A-5B914DDB2130}"/>
+        <comClass clsid="{25DEA4F0-4C5B-4674-B357-2C6FFE8ABF46}"/>
+    </file>
+</assembly>

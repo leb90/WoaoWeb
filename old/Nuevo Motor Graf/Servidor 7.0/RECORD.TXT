@@ -1,0 +1,9 @@
+[INIT]
+NivCiu=10
+NNivCiu=Artfs
+NivCrimi=49
+NNivCrimi=SnooZe
+Maxtorneo=1
+NMaxtorneo=Nilks
+Moro=33140
+NMoro=Nilks

@@ -1,25 +1,41 @@
 import type { MapData, ObjectsDB } from "../../../types/game";
 import type { CharacterSnapshot, SpellEntry } from "../../../lib/aowProtocol";
+import {
+    VIEWPORT_TILE_HEIGHT,
+    VIEWPORT_TILE_WIDTH,
+} from "../../../lib/viewport";
 import { getTileAt } from "../../../utils/gameLoader";
 import type { Engine } from "../engine/Engine";
 
-const INITIAL_MAP_WINDOW_SIZE = 21;
-
 export const NAKED_BODY_IDS = [
-    21, 210, 32, 53, 222, 39, 259, 40, 60, 260,
+    21, 32, 39, 40, 53, 60, 178, 212, 215, 217, 486, 488, 526, 527, 528, 529, 530, 531,
 ] as const;
 
 const HEAD_ID_TO_NAKED_BODY_RANGES = [
-    { startHeadId: 1, endHeadId: 41, bodyId: 21 },
-    { startHeadId: 50, endHeadId: 80, bodyId: 39 },
-    { startHeadId: 101, endHeadId: 132, bodyId: 210 },
-    { startHeadId: 150, endHeadId: 179, bodyId: 259 },
-    { startHeadId: 200, endHeadId: 229, bodyId: 32 },
-    { startHeadId: 250, endHeadId: 279, bodyId: 40 },
-    { startHeadId: 300, endHeadId: 329, bodyId: 53 },
-    { startHeadId: 350, endHeadId: 379, bodyId: 60 },
-    { startHeadId: 400, endHeadId: 429, bodyId: 222 },
-    { startHeadId: 450, endHeadId: 479, bodyId: 260 },
+    { startHeadId: 3, endHeadId: 53, bodyId: 21 },
+    { startHeadId: 70, endHeadId: 82, bodyId: 39 },
+    { startHeadId: 101, endHeadId: 119, bodyId: 21 },
+    { startHeadId: 170, endHeadId: 180, bodyId: 39 },
+    { startHeadId: 201, endHeadId: 216, bodyId: 32 },
+    { startHeadId: 270, endHeadId: 277, bodyId: 40 },
+    { startHeadId: 301, endHeadId: 315, bodyId: 53 },
+    { startHeadId: 370, endHeadId: 373, bodyId: 60 },
+    { startHeadId: 401, endHeadId: 411, bodyId: 53 },
+    { startHeadId: 470, endHeadId: 476, bodyId: 60 },
+    { startHeadId: 501, endHeadId: 503, bodyId: 40 },
+    { startHeadId: 505, endHeadId: 512, bodyId: 32 },
+    { startHeadId: 601, endHeadId: 606, bodyId: 215 },
+    { startHeadId: 607, endHeadId: 609, bodyId: 217 },
+    { startHeadId: 701, endHeadId: 704, bodyId: 212 },
+    { startHeadId: 705, endHeadId: 712, bodyId: 178 },
+    { startHeadId: 801, endHeadId: 804, bodyId: 488 },
+    { startHeadId: 851, endHeadId: 853, bodyId: 486 },
+    { startHeadId: 860, endHeadId: 863, bodyId: 527 },
+    { startHeadId: 880, endHeadId: 883, bodyId: 526 },
+    { startHeadId: 890, endHeadId: 893, bodyId: 530 },
+    { startHeadId: 900, endHeadId: 903, bodyId: 531 },
+    { startHeadId: 910, endHeadId: 913, bodyId: 528 },
+    { startHeadId: 920, endHeadId: 923, bodyId: 529 },
 ] as const;
 
 export type TileBounds = {
@@ -263,19 +279,19 @@ export function getInitialVisibleBounds(
         return null;
     }
 
-    const halfWidth = Math.floor(INITIAL_MAP_WINDOW_SIZE / 2);
-    const halfHeight = Math.floor(INITIAL_MAP_WINDOW_SIZE / 2);
+    const halfWidth = Math.floor(VIEWPORT_TILE_WIDTH / 2);
+    const halfHeight = Math.floor(VIEWPORT_TILE_HEIGHT / 2);
 
     return {
         minX: Math.max(1, snapshot.pos.x - halfWidth),
         maxX: Math.min(
             mapDimensions.width,
-            snapshot.pos.x + (INITIAL_MAP_WINDOW_SIZE - halfWidth - 1),
+            snapshot.pos.x + (VIEWPORT_TILE_WIDTH - halfWidth - 1),
         ),
         minY: Math.max(1, snapshot.pos.y - halfHeight),
         maxY: Math.min(
             mapDimensions.height,
-            snapshot.pos.y + (INITIAL_MAP_WINDOW_SIZE - halfHeight - 1),
+            snapshot.pos.y + (VIEWPORT_TILE_HEIGHT - halfHeight - 1),
         ),
     };
 }

@@ -1,13 +1,1 @@
-{
-    "id": 145,
-    "name": "Dungeon Veriil.",
-    "musicNum": 18,
-    "magiaSinEfecto": 0,
-    "noEncriptarMp": 0,
-    "terreno": "NIEVE",
-    "zona": "DUNGEON",
-    "restringir": "No",
-    "minLevel": 28,
-    "backup": 1,
-    "pk": 0
-}
+{"id":145,"name":"Dungeon","musicNum":15,"magiaSinEfecto":0,"noEncriptarMp":0,"terreno":"DUNGEON","zona":"DUNGEON","restringir":"No","minLevel":0,"maxLevel":0,"backup":0,"pk":0}

@@ -230,7 +230,18 @@ function Respawn(this: any) {
                         ws,
                     );
                     user.npcMatados++;
-                    npcs.tirarItems(idPersonaje, ws);
+                    require("./quests").onNpcKilled(String(ws.id), Number(pjSelected.templateNpcIndex ?? 0));
+                    require("./mounts").onNpcKilled(String(ws.id));
+                    require("./factionWars").onNpcDied(Number(pjSelected.templateNpcIndex ?? 0));
+                    require("./clanCastles").onCastleNpcKilled(user, pjSelected);
+                    if (
+                        !require("./hungerChests").onChestNpcKilled(
+                            String(ws.id),
+                            Number(pjSelected.templateNpcIndex ?? 0),
+                        )
+                    ) {
+                        npcs.tirarItems(idPersonaje, ws);
+                    }
                     npcs.muereNpc(idPersonaje);
                     return;
                 }
@@ -275,6 +286,8 @@ function Respawn(this: any) {
 
                 handleProtocol.console("¡Has matado a " + recibeName + "!", "red", 1, 0, ws);
 
+                require("./clanMeta").onPlayerKill(String(ws.id), String(idPersonaje));
+                require("./cityConquest").tryConquer(Number(user.map), user.faction);
                 challengeManager.onCharacterDeath(pjSelected);
 
                 if (pjSelected.disconnectOnDeath && !getClientById(idPersonaje)) {
@@ -292,6 +305,7 @@ function Respawn(this: any) {
         if (!pjSelected.isNpc) {
             if (user.meditar) {
                 user.meditar = false;
+                user.meditarFx = 0;
 
                 handleProtocol.console("Terminas de meditar.", "gray", 0, 0, ws);
 

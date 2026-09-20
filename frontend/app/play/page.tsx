@@ -3,7 +3,7 @@
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Maximize2, Minimize2 } from "lucide-react";
+import { Map, Maximize2, Minimize2 } from "lucide-react";
 import React, {
     Suspense,
     useCallback,
@@ -16,7 +16,6 @@ import React, {
 import { MapRenderer } from "../../components/game";
 import AdminIntervalsModal from "../../components/AdminIntervalsModal";
 import BuffStatusSidebar from "../../components/BuffStatusSidebar";
-import InventoryFloatingPanel from "../../components/InventoryFloatingPanel";
 import MacroBar from "../../components/MacroBar";
 import BailModal from "../../components/BailModal";
 import CharacterStatsModal from "../../components/CharacterStatsModal";
@@ -35,6 +34,7 @@ import {
     formatHotkeyBinding,
     type HotkeySettings,
 } from "../../lib/hotkeys";
+import { formatNumber } from "../../lib/number-format";
 import type {
     BailOffer,
     CraftingState,
@@ -71,25 +71,35 @@ const DEFAULT_WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:7666";
 const OverviewModal = dynamic(() => import("../../components/OverviewModal"), {
     ssr: false,
 });
+const InventoryFloatingPanel = dynamic(
+    () => import("../../components/InventoryFloatingPanel"),
+    { ssr: false },
+);
 const CANVAS_BASE_WIDTH = VIEWPORT_PIXEL_WIDTH;
 const CANVAS_BASE_HEIGHT = VIEWPORT_PIXEL_HEIGHT;
-const HUD_GAP = 10;
+const HUD_GAP = 0;
 const RIGHT_PANEL_WIDTH = 320;
-const DESKTOP_CONSOLE_HEIGHT = 126;
-const MACRO_BAR_ESTIMATED_HEIGHT = 80;
+const DESKTOP_CONSOLE_HEIGHT = 110;
+const CHAT_TABS_ESTIMATED_HEIGHT = 32;
+const CHAT_INPUT_ROW_HEIGHT = 36;
+const EXP_BAR_ESTIMATED_HEIGHT = 34;
+const MAX_CHARACTER_LEVEL = 50;
 const RIGHT_COLUMN_ACTIONS_ESTIMATED_HEIGHT = 112;
-const SHELL_VERTICAL_PADDING = 48;
+const SHELL_VERTICAL_PADDING = 16;
+const SHELL_TOP_PADDING = 64;
 const SHELL_TOP_PADDING_FULLSCREEN = 0;
 const SHELL_BOTTOM_PADDING_FULLSCREEN = 0;
-const SHELL_HORIZONTAL_PADDING = 24;
-const SHELL_HORIZONTAL_PADDING_FULLSCREEN = 16;
-const COLUMN_SECTION_GAP = 12;
-const MAX_FULLSCREEN_HUD_SCALE = 1.5;
+const SHELL_HORIZONTAL_PADDING = 12;
+const SHELL_HORIZONTAL_PADDING_FULLSCREEN = 12;
+const COLUMN_SECTION_GAP = 6;
+const EXP_SECTION_GAP = 0;
+const MAX_HUD_SCALE = 2.5;
 const FULLSCREEN_HINT_DURATION_MS = 2600;
 const FULLSCREEN_PROMPT_MAX_WIDTH = 1200;
 const FULLSCREEN_PROMPT_MAX_HEIGHT = 900;
 const PLAY_HOTKEYS_HINT_STORAGE_KEY = "ao-play-hotkeys-hint-dismissed";
 const PLAY_SOUND_VOLUME_STORAGE_KEY = "ao-play-sound-volume";
+const PLAY_MINIMAP_VISIBLE_STORAGE_KEY = "ao-play-minimap-visible";
 const LOGOUT_STARTED_MESSAGE =
     "[Servidor] Debes permanecer quieto durante 10 segundos para salir. Si te mueves, la salida se cancelará.";
 const LOGOUT_CANCELLED_PATTERN = /^\[Servidor\] La salida se canceló porque /;
@@ -208,6 +218,13 @@ type ScaledHudFrameProps = {
     children: React.ReactNode;
 };
 
+function hudSizesMatch(left: MeasuredHudSize, right: MeasuredHudSize) {
+    return (
+        Math.abs(left.width - right.width) <= 1 &&
+        Math.abs(left.height - right.height) <= 1
+    );
+}
+
 type EquipRequest = {
     slot: number;
     token: number;
@@ -300,7 +317,8 @@ type SpellTargetRequest = {
 };
 
 type ChatRequest = {
-    message: string;
+    message?: string;
+    messages?: Array<{ text: string; id: number }>;
     token: number;
 };
 
@@ -523,7 +541,7 @@ function renderConsoleEntryText(text: string) {
                     href={url}
                     target="_blank"
                     rel="noreferrer"
-                    className="font-semibold text-sky-300 underline underline-offset-2 hover:text-sky-200"
+                    className="break-all font-semibold text-sky-300 underline underline-offset-2 hover:text-sky-200"
                 >
                     {url}
                 </a>
@@ -580,10 +598,13 @@ function ScaledHudFrame({
 }: ScaledHudFrameProps) {
     const innerRef = useRef<HTMLDivElement | null>(null);
     const lastReportedSizeRef = useRef<MeasuredHudSize | null>(null);
+    const onMeasureRef = useRef(onMeasure);
     const [measuredSize, setMeasuredSize] = useState({
         width: baseWidth ?? 0,
         height: 0,
     });
+
+    onMeasureRef.current = onMeasure;
 
     useEffect(() => {
         const element = innerRef.current;
@@ -591,39 +612,22 @@ function ScaledHudFrame({
             return;
         }
 
-        const normalizedScale = scale || 1;
-
         const updateSize = () => {
-            const rect = element.getBoundingClientRect();
-            const nextWidth =
-                baseWidth ?? Math.round(rect.width / normalizedScale);
-            const nextHeight = Math.round(rect.height / normalizedScale);
             const nextSize = {
-                width: nextWidth,
-                height: nextHeight,
+                width: baseWidth ?? Math.round(element.offsetWidth),
+                height: Math.round(element.offsetHeight),
             };
 
             const lastReportedSize = lastReportedSizeRef.current;
-            const didSizeChange =
-                !lastReportedSize ||
-                lastReportedSize.width !== nextSize.width ||
-                lastReportedSize.height !== nextSize.height;
-
-            if (didSizeChange) {
-                lastReportedSizeRef.current = nextSize;
-                onMeasure?.(nextSize);
+            if (lastReportedSize && hudSizesMatch(lastReportedSize, nextSize)) {
+                return;
             }
 
-            setMeasuredSize((current) => {
-                if (
-                    current.width === nextWidth &&
-                    current.height === nextHeight
-                ) {
-                    return current;
-                }
-
-                return nextSize;
-            });
+            lastReportedSizeRef.current = nextSize;
+            onMeasureRef.current?.(nextSize);
+            setMeasuredSize((current) =>
+                hudSizesMatch(current, nextSize) ? current : nextSize,
+            );
         };
 
         updateSize();
@@ -634,14 +638,14 @@ function ScaledHudFrame({
 
         observer.observe(element);
         return () => observer.disconnect();
-    }, [baseWidth, onMeasure, scale]);
+    }, [baseWidth]);
 
     const frameWidth = (measuredSize.width || baseWidth || 0) * scale;
     const frameHeight = measuredSize.height * scale;
 
     return (
         <div
-            className="relative"
+            className="relative overflow-hidden"
             style={{
                 width: frameWidth || undefined,
                 height: frameHeight || undefined,
@@ -652,7 +656,8 @@ function ScaledHudFrame({
                 ref={innerRef}
                 style={{
                     width: baseWidth ? `${baseWidth}px` : undefined,
-                    zoom: scale,
+                    transform: `scale(${scale})`,
+                    transformOrigin: "top left",
                 }}
             >
                 {children}
@@ -862,20 +867,21 @@ function HomeContent() {
     const [isHotkeyIntroOpen, setIsHotkeyIntroOpen] = useState(false);
     const [deathHomePromptOpen, setDeathHomePromptOpen] = useState(false);
     const [arenaLeavePending, setArenaLeavePending] = useState(false);
+    const [isMinimapVisible, setIsMinimapVisible] = useState(true);
+    const [minimapHost, setMinimapHost] = useState<HTMLElement | null>(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [fullscreenError, setFullscreenError] = useState<string | null>(null);
     const [showFullscreenHint, setShowFullscreenHint] = useState(false);
     const [showFullscreenPrompt, setShowFullscreenPrompt] = useState(false);
     const [topHudSectionSize, setTopHudSectionSize] = useState<MeasuredHudSize>(
         {
-            width: CANVAS_BASE_WIDTH + 156 + HUD_GAP,
-            height: DESKTOP_CONSOLE_HEIGHT,
+            width: CANVAS_BASE_WIDTH,
+            height:
+                CHAT_TABS_ESTIMATED_HEIGHT +
+                DESKTOP_CONSOLE_HEIGHT +
+                CHAT_INPUT_ROW_HEIGHT,
         },
     );
-    const [macroBarSize, setMacroBarSize] = useState<MeasuredHudSize>({
-        width: CANVAS_BASE_WIDTH,
-        height: MACRO_BAR_ESTIMATED_HEIGHT,
-    });
     const [rightColumnSize, setRightColumnSize] = useState<MeasuredHudSize>({
         width: RIGHT_PANEL_WIDTH,
         height: CANVAS_BASE_HEIGHT + RIGHT_COLUMN_ACTIONS_ESTIMATED_HEIGHT,
@@ -905,6 +911,22 @@ function HomeContent() {
     const setGameShellNode = useCallback((node: HTMLDivElement | null) => {
         gameShellRef.current = node;
         setGameShellElement(node);
+    }, []);
+
+    const setMinimapHostNode = useCallback((node: HTMLDivElement | null) => {
+        setMinimapHost(node);
+    }, []);
+
+    const persistMinimapVisible = useCallback((visible: boolean) => {
+        setIsMinimapVisible(visible);
+        try {
+            window.localStorage.setItem(
+                PLAY_MINIMAP_VISIBLE_STORAGE_KEY,
+                visible ? "1" : "0",
+            );
+        } catch {
+            // Ignore storage failures in restricted/browser test contexts.
+        }
     }, []);
 
     const switchCharacterHref = arenaMode
@@ -1007,10 +1029,16 @@ function HomeContent() {
                 return true;
             }
 
-            setChatRequest((current) => ({
-                message: normalizedMessage,
-                token: (current?.token ?? 0) + 1,
-            }));
+            setChatRequest((current) => {
+                const nextId = (current?.token ?? 0) + 1;
+                const previous =
+                    current?.messages ??
+                    (current?.message ? [{ text: current.message, id: current.token }] : []);
+                return {
+                    messages: [...previous, { text: normalizedMessage, id: nextId }],
+                    token: nextId,
+                };
+            });
             return true;
         },
         [],
@@ -1467,20 +1495,11 @@ function HomeContent() {
         status.connecting,
     ]);
 
-    const minimumPinnedConsoleHeight =
-        CANVAS_BASE_HEIGHT +
-        DESKTOP_CONSOLE_HEIGHT +
-        MACRO_BAR_ESTIMATED_HEIGHT +
-        HUD_GAP +
-        COLUMN_SECTION_GAP;
-
-    const isDesktopConsoleLayout = isFullscreen
-        ? viewport.width > 768
-        : viewport.width > 768 && viewport.height >= minimumPinnedConsoleHeight;
+    const isDesktopConsoleLayout = viewport.width > 768;
 
     const shellTopPadding = isFullscreen
         ? SHELL_TOP_PADDING_FULLSCREEN
-        : SHELL_VERTICAL_PADDING;
+        : SHELL_TOP_PADDING;
     const shellBottomPadding = isFullscreen
         ? SHELL_BOTTOM_PADDING_FULLSCREEN
         : SHELL_VERTICAL_PADDING;
@@ -1489,63 +1508,35 @@ function HomeContent() {
         : SHELL_HORIZONTAL_PADDING;
 
     const handleTopHudSectionMeasure = useCallback((size: MeasuredHudSize) => {
-        setTopHudSectionSize((current) => {
-            if (
-                current.width === size.width &&
-                current.height === size.height
-            ) {
-                return current;
-            }
-
-            return size;
-        });
-    }, []);
-
-    const handleMacroBarMeasure = useCallback((size: MeasuredHudSize) => {
-        setMacroBarSize((current) => {
-            if (
-                current.width === size.width &&
-                current.height === size.height
-            ) {
-                return current;
-            }
-
-            return size;
-        });
+        setTopHudSectionSize((current) =>
+            hudSizesMatch(current, size) ? current : size,
+        );
     }, []);
 
     const handleRightColumnMeasure = useCallback((size: MeasuredHudSize) => {
-        setRightColumnSize((current) => {
-            if (
-                current.width === size.width &&
-                current.height === size.height
-            ) {
-                return current;
-            }
-
-            return size;
-        });
+        setRightColumnSize((current) =>
+            hudSizesMatch(current, size) ? current : size,
+        );
     }, []);
 
     const hudScale = useMemo(() => {
-        if (!isFullscreen || !viewport.width || !viewport.height) {
+        if (!viewport.width || !viewport.height) {
             return 1;
         }
 
-        const leftColumnBaseHeight =
-            CANVAS_BASE_HEIGHT + COLUMN_SECTION_GAP + macroBarSize.height;
-        const mainRowBaseHeight = Math.max(
-            leftColumnBaseHeight,
+        const showExperienceBar = (hud?.level ?? 0) < MAX_CHARACTER_LEVEL;
+        const centerColumnBaseHeight =
+            (isDesktopConsoleLayout ? topHudSectionSize.height : 0) +
+            CANVAS_BASE_HEIGHT +
+            (showExperienceBar
+                ? EXP_SECTION_GAP + EXP_BAR_ESTIMATED_HEIGHT
+                : 0);
+        const totalBaseHeight = Math.max(
+            centerColumnBaseHeight,
             rightColumnSize.height,
         );
-        const totalBaseHeight =
-            (isDesktopConsoleLayout ? topHudSectionSize.height + HUD_GAP : 0) +
-            mainRowBaseHeight;
-        const mainRowBaseWidth =
+        const totalBaseWidth =
             CANVAS_BASE_WIDTH + HUD_GAP + rightColumnSize.width;
-        const totalBaseWidth = isDesktopConsoleLayout
-            ? Math.max(mainRowBaseWidth, topHudSectionSize.width)
-            : mainRowBaseWidth;
         const availableWidth = viewport.width - shellHorizontalPadding * 2;
         const availableHeight =
             viewport.height - shellTopPadding - shellBottomPadding;
@@ -1557,47 +1548,34 @@ function HomeContent() {
             return 1;
         }
 
-        return Math.min(MAX_FULLSCREEN_HUD_SCALE, nextScale);
+        const maxScale = MAX_HUD_SCALE;
+        return Math.min(maxScale, nextScale);
     }, [
         isDesktopConsoleLayout,
-        isFullscreen,
-        macroBarSize.height,
+        hud?.level,
         rightColumnSize.height,
         rightColumnSize.width,
         shellHorizontalPadding,
         shellBottomPadding,
         shellTopPadding,
         topHudSectionSize.height,
-        topHudSectionSize.width,
         viewport.height,
         viewport.width,
     ]);
 
     const hudLayout = useMemo<HudLayout>(() => {
-        if (!viewport.width || !viewport.height) {
+        if (!viewport.width || !viewport.height || hudScale === 1) {
             return {
                 canvasWidth: CANVAS_BASE_WIDTH,
                 canvasHeight: CANVAS_BASE_HEIGHT,
             };
         }
-
-        if (!isFullscreen) {
-            return {
-                canvasWidth: CANVAS_BASE_WIDTH,
-                canvasHeight: CANVAS_BASE_HEIGHT,
-            };
-        }
-
-        const scaledCanvasSize = Math.max(
-            1,
-            Math.floor(CANVAS_BASE_WIDTH * hudScale),
-        );
 
         return {
-            canvasWidth: scaledCanvasSize,
-            canvasHeight: scaledCanvasSize,
+            canvasWidth: Math.max(1, Math.floor(CANVAS_BASE_WIDTH * hudScale)),
+            canvasHeight: Math.max(1, Math.floor(CANVAS_BASE_HEIGHT * hudScale)),
         };
-    }, [hudScale, isFullscreen, viewport.height, viewport.width]);
+    }, [hudScale, viewport.height, viewport.width]);
 
     const toggleFullscreen = useCallback(async () => {
         const shellElement = gameShellRef.current;
@@ -2039,6 +2017,20 @@ function HomeContent() {
 
         hasInitializedSoundVolumeRef.current = true;
         setSoundVolume(nextVolume);
+    }, []);
+
+    useEffect(() => {
+        try {
+            const storedMinimapVisible = window.localStorage.getItem(
+                PLAY_MINIMAP_VISIBLE_STORAGE_KEY,
+            );
+
+            if (storedMinimapVisible === "0") {
+                setIsMinimapVisible(false);
+            }
+        } catch {
+            setIsMinimapVisible(true);
+        }
     }, []);
 
     useEffect(() => {
@@ -2627,6 +2619,146 @@ function HomeContent() {
         </div>
     );
 
+    const chatTabsHorizontal = (
+        <div className="flex gap-px border-b border-[#6f5734] bg-[#1a120c]">
+            {CHAT_TABS.map((tab) => {
+                const isActive = tab.id === activeChatTab;
+                const unreadCount =
+                    tab.id === "party" ||
+                    tab.id === "clan" ||
+                    tab.id === "whisper"
+                        ? unreadChatCounts[tab.id]
+                        : 0;
+
+                return (
+                    <button
+                        key={tab.id}
+                        type="button"
+                        onClick={(event) => {
+                            setActiveChatTab(tab.id);
+                            event.currentTarget.blur();
+                        }}
+                        className={`relative min-w-0 flex-1 px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-[0.14em] transition focus:outline-none focus-visible:outline-none ${
+                            isActive
+                                ? "bg-[#2a1c12] text-amber-100"
+                                : "text-stone-400 hover:bg-[#24180f] hover:text-stone-200"
+                        }`}
+                    >
+                        {tab.label}
+                        {unreadCount > 0 ? (
+                            <span className="absolute -right-0.5 -top-0.5 flex min-w-3.5 items-center justify-center rounded-full bg-red-500 px-1 text-[8px] font-semibold leading-3 text-white">
+                                {unreadCount > 9 ? "9+" : unreadCount}
+                            </span>
+                        ) : null}
+                    </button>
+                );
+            })}
+            <button
+                type="button"
+                onClick={(event) => {
+                    persistMinimapVisible(!isMinimapVisible);
+                    event.currentTarget.blur();
+                }}
+                className={`inline-flex w-9 shrink-0 items-center justify-center border-l border-[#6f5734] transition focus:outline-none focus-visible:outline-none ${
+                    isMinimapVisible
+                        ? "bg-[#2a1c12] text-amber-200"
+                        : "text-stone-500 hover:bg-[#24180f] hover:text-amber-100"
+                }`}
+                aria-pressed={isMinimapVisible}
+                aria-label={
+                    isMinimapVisible ? "Ocultar minimapa" : "Mostrar minimapa"
+                }
+                title={
+                    isMinimapVisible ? "Ocultar minimapa" : "Mostrar minimapa"
+                }
+            >
+                <Map className="h-3.5 w-3.5" strokeWidth={1.8} />
+            </button>
+        </div>
+    );
+
+    const consoleMessages = (
+        <>
+            {visibleConsoleEntries.length ? (
+                visibleConsoleEntries.map((entry) => (
+                    <div
+                        key={entry.id}
+                        className="min-w-0 break-all [overflow-wrap:anywhere]"
+                        style={{
+                            color: entry.color || "rgba(231, 229, 228, 0.92)",
+                        }}
+                    >
+                        {renderConsoleEntryText(entry.text)}
+                    </div>
+                ))
+            ) : (
+                <div className="text-stone-300/55">
+                    No hay mensajes en {activeChatTabLabel.toLowerCase()}{" "}
+                    todavía.
+                </div>
+            )}
+        </>
+    );
+
+    const sessionFooter = (
+        <div className="pointer-events-auto flex w-full flex-col gap-2 bg-[#120c09]/94 px-3 py-2.5 text-xs text-stone-100">
+            <div className="flex items-center justify-center gap-3 uppercase tracking-[0.18em]">
+                {authSession ? (
+                    <>
+                        <Link
+                            href="/arenas"
+                            prefetch={false}
+                            onClick={(event) => {
+                                if (!arenaMode) {
+                                    return;
+                                }
+
+                                event.preventDefault();
+                                void leaveArenaRoom();
+                            }}
+                            className="text-amber-300 transition hover:text-amber-200"
+                        >
+                            {arenaMode && arenaLeavePending
+                                ? "Saliendo..."
+                                : "Arenas"}
+                        </Link>
+                        <Link
+                            href={switchCharacterHref}
+                            prefetch={false}
+                            onClick={handleSwitchCharacterClick}
+                            className="text-cyan-300 transition hover:text-cyan-200"
+                        >
+                            {switchCharacterLabel}
+                        </Link>
+                    </>
+                ) : (
+                    <>
+                        <Link
+                            href="/login"
+                            prefetch={false}
+                            className="text-cyan-300 transition hover:text-cyan-200"
+                        >
+                            Login
+                        </Link>
+                        <Link
+                            href="/register"
+                            prefetch={false}
+                            className="text-stone-400 transition hover:text-stone-200"
+                        >
+                            Registro
+                        </Link>
+                    </>
+                )}
+            </div>
+            {authSession && !arenaMode ? (
+                <div className="text-center text-[10px] leading-4 tracking-[0.04em] text-stone-300/85">
+                    En zona insegura cerrá el personaje con{" "}
+                    <span className="text-amber-300">/salir</span>.
+                </div>
+            ) : null}
+        </div>
+    );
+
     return (
         <div
             ref={setGameShellNode}
@@ -2639,9 +2771,7 @@ function HomeContent() {
             }}
         >
             <div
-                className={`pointer-events-none fixed inset-0 z-20 flex justify-center overflow-hidden ${
-                    isFullscreen ? "items-start" : "items-center"
-                }`}
+                className="pointer-events-none fixed inset-0 z-20 flex items-start justify-center overflow-hidden"
                 style={{
                     padding: `${shellTopPadding}px ${shellHorizontalPadding}px ${shellBottomPadding}px`,
                 }}
@@ -2650,61 +2780,6 @@ function HomeContent() {
                     className="pointer-events-auto flex flex-col"
                     style={{ gap: `${HUD_GAP}px` }}
                 >
-                    {isDesktopConsoleLayout ? (
-                        <ScaledHudFrame
-                            scale={hudScale}
-                            baseWidth={CANVAS_BASE_WIDTH + 156 + HUD_GAP}
-                            onMeasure={handleTopHudSectionMeasure}
-                        >
-                            <div
-                                className="pointer-events-auto flex items-start"
-                                style={{ gap: `${HUD_GAP}px` }}
-                            >
-                                <div
-                                    className="flex flex-1 flex-col overflow-hidden rounded-2xl border border-cyan-200/20 bg-stone-950/72 shadow-2xl backdrop-blur-[2px]"
-                                    style={{
-                                        width: `${CANVAS_BASE_WIDTH}px`,
-                                    }}
-                                >
-                                    <div
-                                        ref={consoleScrollRef}
-                                        className="h-[126px] overflow-y-auto px-4 py-3 text-xs leading-5 text-stone-200/90"
-                                    >
-                                        {visibleConsoleEntries.length ? (
-                                            visibleConsoleEntries.map(
-                                                (entry) => (
-                                                    <div
-                                                        key={entry.id}
-                                                        className="break-words"
-                                                        style={{
-                                                            color:
-                                                                entry.color ||
-                                                                "rgba(231, 229, 228, 0.92)",
-                                                        }}
-                                                    >
-                                                        {renderConsoleEntryText(
-                                                            entry.text,
-                                                        )}
-                                                    </div>
-                                                ),
-                                            )
-                                        ) : (
-                                            <div className="text-stone-300/55">
-                                                No hay mensajes en{" "}
-                                                {activeChatTabLabel.toLowerCase()}{" "}
-                                                todavía.
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="pointer-events-auto h-[126px] w-[156px] shrink-0">
-                                    {chatTabsMenu}
-                                </div>
-                            </div>
-                        </ScaledHudFrame>
-                    ) : null}
-
                     <div
                         className="flex items-start"
                         style={{ gap: `${HUD_GAP}px` }}
@@ -2713,11 +2788,101 @@ function HomeContent() {
                             className="flex flex-col"
                             style={{
                                 width: `${hudLayout.canvasWidth ?? CANVAS_BASE_WIDTH}px`,
-                                gap: "12px",
+                                gap: `${EXP_SECTION_GAP}px`,
                             }}
                         >
+                            <div className="overflow-hidden bg-[#0c0907]">
+                            {isDesktopConsoleLayout ? (
+                                <ScaledHudFrame
+                                    scale={hudScale}
+                                    baseWidth={CANVAS_BASE_WIDTH}
+                                    onMeasure={handleTopHudSectionMeasure}
+                                >
+                                    <div className="pointer-events-auto isolate flex w-full min-w-0 flex-col overflow-hidden bg-[#0c0907]">
+                                        <div className="flex w-full min-w-0 items-stretch overflow-hidden border-b border-[#6f5734]">
+                                            <div className="flex min-w-0 w-0 flex-1 flex-col overflow-hidden">
+                                            {chatTabsHorizontal}
+                                            <div
+                                                ref={consoleScrollRef}
+                                                className="min-w-0 overflow-y-auto overflow-x-hidden break-all px-3 py-1.5 text-[11px] leading-4 text-stone-200/90 [overflow-wrap:anywhere]"
+                                                style={{
+                                                    height: `${DESKTOP_CONSOLE_HEIGHT}px`,
+                                                }}
+                                            >
+                                                {consoleMessages}
+                                            </div>
+                                            </div>
+                                            {isMinimapVisible ? (
+                                                <div
+                                                    ref={setMinimapHostNode}
+                                                    className="relative z-[1] flex w-[100px] shrink-0 items-center justify-center self-stretch border-l border-[#6f5734] bg-[#0b0705] p-1"
+                                                />
+                                            ) : null}
+                                        </div>
+                                        <div
+                                            className="h-9 shrink-0 border-t border-[#6f5734] bg-black"
+                                            style={{ height: `${CHAT_INPUT_ROW_HEIGHT}px` }}
+                                        >
+                                            {isChatOpen ? (
+                                                <form
+                                                    ref={chatFormRef}
+                                                    className="pointer-events-auto flex h-full w-full items-center px-4"
+                                                    onSubmit={(event) => {
+                                                        event.preventDefault();
+                                                        submitChatMessage();
+                                                    }}
+                                                >
+                                                    <input
+                                                        ref={chatInputRef}
+                                                        type="text"
+                                                        autoComplete="off"
+                                                        value={chatMessage}
+                                                        maxLength={120}
+                                                        onChange={(event) =>
+                                                            setChatMessage(
+                                                                event.target.value,
+                                                            )
+                                                        }
+                                                        onKeyDown={(event) => {
+                                                            if (
+                                                                event.key ===
+                                                                "Escape"
+                                                            ) {
+                                                                event.preventDefault();
+                                                                setIsChatOpen(
+                                                                    false,
+                                                                );
+                                                                setChatMessage(
+                                                                    "",
+                                                                );
+                                                            }
+                                                        }}
+                                                        placeholder={
+                                                            activeChatTab ===
+                                                            "global"
+                                                                ? "/global para mandar un mensaje global"
+                                                                : activeChatTab ===
+                                                                    "party"
+                                                                  ? "Mensaje para la party"
+                                                                  : activeChatTab ===
+                                                                      "clan"
+                                                                    ? "Mensaje para el clan"
+                                                                    : activeChatTab ===
+                                                                        "whisper"
+                                                                      ? whisperPlaceholder
+                                                                      : "Escribi tu mensaje y presiona Enter"
+                                                        }
+                                                        className="min-w-0 flex-1 bg-transparent text-sm text-stone-100 outline-none placeholder:text-stone-500"
+                                                    />
+                                                </form>
+                                            ) : null}
+                                        </div>
+                                    </div>
+                                </ScaledHudFrame>
+                            ) : null}
+                            </div>
                             <div
-                                className="relative"
+                                className="relative overflow-hidden rounded-none bg-black"
                                 style={{
                                     width: `${hudLayout.canvasWidth ?? CANVAS_BASE_WIDTH}px`,
                                     height: `${hudLayout.canvasHeight ?? CANVAS_BASE_HEIGHT}px`,
@@ -2892,7 +3057,7 @@ function HomeContent() {
                                 </div>
 
                                 <div className="pointer-events-none absolute bottom-3 right-16 z-30 flex w-[594px] max-w-[calc(100vw-9rem)] flex-col items-center gap-3">
-                                    {isChatOpen ? (
+                                    {!isDesktopConsoleLayout && isChatOpen ? (
                                         <form
                                             ref={chatFormRef}
                                             className="pointer-events-auto flex w-full items-center gap-3 rounded-2xl border border-amber-300/35 bg-stone-950/88 px-4 py-3 shadow-2xl backdrop-blur-md"
@@ -3094,63 +3259,90 @@ function HomeContent() {
                                     </div>
                                 ) : null}
                             </div>
-
-                            {isCharacterSettingsLoading ? (
+                            {(hud?.level ?? 0) < MAX_CHARACTER_LEVEL ? (
                                 <ScaledHudFrame
                                     scale={hudScale}
                                     baseWidth={CANVAS_BASE_WIDTH}
-                                    onMeasure={handleMacroBarMeasure}
                                 >
-                                    <div className="flex min-h-20 items-center justify-center rounded-[24px] border border-white/8 bg-stone-950/55 px-4 py-5 text-sm text-stone-400 shadow-xl backdrop-blur-md">
-                                        Cargando macros...
+                                    <div className="border-t border-[#6f5734] bg-[#0c0907] px-3 py-1.5">
+                                        <div className="mb-1 flex items-center justify-between text-[9px] uppercase tracking-[0.14em] text-stone-400/90">
+                                            <span>Experiencia</span>
+                                            <span className="tabular-nums tracking-normal text-amber-100">
+                                                {hud
+                                                    ? `${Math.round(
+                                                          Math.max(
+                                                              0,
+                                                              Math.min(
+                                                                  100,
+                                                                  ((hud.exp ||
+                                                                      0) /
+                                                                      Math.max(
+                                                                          1,
+                                                                          hud.expNextLevel ||
+                                                                              1,
+                                                                      )) *
+                                                                      100,
+                                                              ),
+                                                          ),
+                                                      )}% (${formatNumber(hud.exp || 0)} / ${formatNumber(hud.expNextLevel || 0)})`
+                                                    : "-"}
+                                            </span>
+                                        </div>
+                                        <div className="relative h-[7px] overflow-hidden rounded-[2px] border border-[#8b6b3e]/80 bg-black/55">
+                                            <div
+                                                className="h-full bg-linear-to-r from-[#547a24] via-[#7cb63b] to-[#b6e05a]"
+                                                style={{
+                                                    width: `${
+                                                        hud?.expNextLevel
+                                                            ? Math.max(
+                                                                  0,
+                                                                  Math.min(
+                                                                      100,
+                                                                      ((hud.exp ||
+                                                                          0) /
+                                                                          hud.expNextLevel) *
+                                                                          100,
+                                                                  ),
+                                                              )
+                                                            : 0
+                                                    }%`,
+                                                }}
+                                            />
+                                            <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-white/20 to-transparent" />
+                                        </div>
                                     </div>
                                 </ScaledHudFrame>
-                            ) : (
-                                <ScaledHudFrame
-                                    scale={hudScale}
-                                    baseWidth={CANVAS_BASE_WIDTH}
-                                    onMeasure={handleMacroBarMeasure}
-                                >
-                                    <MacroBar
-                                        hud={hud}
-                                        connected={status.connected}
-                                        hotkeySettings={hotkeySettings}
-                                        macros={macros}
-                                        useItemRepeatMs={useItemRepeatMs}
-                                        onMacrosChange={setMacros}
-                                        onUseItem={(slot) =>
-                                            setUseItemURequest((current) => ({
-                                                slot,
-                                                token:
-                                                    (current?.token ?? 0) + 1,
-                                            }))
-                                        }
-                                        onRangeAttackRequest={() =>
-                                            setRangeAttackRequest(
-                                                (current) => ({
-                                                    token:
-                                                        (current?.token ?? 0) +
-                                                        1,
-                                                }),
-                                            )
-                                        }
-                                        onCastSpell={(spell) =>
-                                            setSpellTargetRequest(
-                                                (current) => ({
-                                                    slot: spell.slot,
-                                                    manaRequired:
-                                                        spell.manaRequired,
-                                                    name: spell.name,
-                                                    token:
-                                                        (current?.token ?? 0) +
-                                                        1,
-                                                }),
-                                            )
-                                        }
-                                        onSendCommand={sendChatMessage}
-                                    />
-                                </ScaledHudFrame>
-                            )}
+                            ) : null}
+
+                            <MacroBar
+                                hidden
+                                hud={hud}
+                                connected={status.connected}
+                                hotkeySettings={hotkeySettings}
+                                macros={macros}
+                                useItemRepeatMs={useItemRepeatMs}
+                                onMacrosChange={setMacros}
+                                onUseItem={(slot) =>
+                                    setUseItemURequest((current) => ({
+                                        slot,
+                                        token: (current?.token ?? 0) + 1,
+                                    }))
+                                }
+                                onRangeAttackRequest={() =>
+                                    setRangeAttackRequest((current) => ({
+                                        token: (current?.token ?? 0) + 1,
+                                    }))
+                                }
+                                onCastSpell={(spell) =>
+                                    setSpellTargetRequest((current) => ({
+                                        slot: spell.slot,
+                                        manaRequired: spell.manaRequired,
+                                        name: spell.name,
+                                        token: (current?.token ?? 0) + 1,
+                                    }))
+                                }
+                                onSendCommand={sendChatMessage}
+                            />
                         </div>
 
                         <ScaledHudFrame
@@ -3159,11 +3351,11 @@ function HomeContent() {
                             onMeasure={handleRightColumnMeasure}
                         >
                             <div
-                                className="flex w-[320px] flex-col"
-                                style={{ gap: "12px" }}
+                                className="relative flex w-[320px] flex-col"
+                                style={{ gap: `${COLUMN_SECTION_GAP}px` }}
                             >
                                 {isDesktopConsoleLayout ? (
-                                    <div className="pointer-events-none absolute right-0 top-0 z-30 -translate-y-[calc(100%+12px)]">
+                                    <div className="pointer-events-none absolute right-0 top-0 z-30 -translate-y-[calc(100%+8px)]">
                                         {fullscreenToggleControl}
                                     </div>
                                 ) : null}
@@ -3174,8 +3366,13 @@ function HomeContent() {
                                     characterStatsSnapshot={
                                         characterStatsSnapshot
                                     }
-                                    panelHeight={`${CANVAS_BASE_HEIGHT}px`}
+                                    panelHeight={`${CANVAS_BASE_HEIGHT + CHAT_TABS_ESTIMATED_HEIGHT + DESKTOP_CONSOLE_HEIGHT + CHAT_INPUT_ROW_HEIGHT + ((hud?.level ?? 0) < MAX_CHARACTER_LEVEL ? EXP_SECTION_GAP + EXP_BAR_ESTIMATED_HEIGHT : 0)}px`}
                                     portalTarget={gameShellElement}
+                                    minimapHost={minimapHost}
+                                    minimapVisible={isMinimapVisible}
+                                    onMinimapVisibleChange={
+                                        persistMinimapVisible
+                                    }
                                     selectedSpellSlot={selectedSpellSlot}
                                     hotkeySettings={hotkeySettings}
                                     useItemRepeatMs={useItemRepeatMs}
@@ -3281,105 +3478,23 @@ function HomeContent() {
                                             token: (current?.token ?? 0) + 1,
                                         }))
                                     }
-                                    onMoveSpell={(slot, direction) => {
-                                        setHud((currentHud) => {
-                                            if (!currentHud) {
-                                                return currentHud;
-                                            }
+                                    onReorderSpell={(sourceSlot, targetSlot) => {
+                                        if (
+                                            sourceSlot === targetSlot ||
+                                            sourceSlot < 1 ||
+                                            targetSlot < 1 ||
+                                            sourceSlot > 50 ||
+                                            targetSlot > 50
+                                        ) {
+                                            return;
+                                        }
 
-                                            const sortedSpells =
-                                                currentHud.spells
-                                                    .slice()
-                                                    .sort(
-                                                        (left, right) =>
-                                                            left.slot -
-                                                            right.slot,
-                                                    );
-                                            const spellIndex =
-                                                sortedSpells.findIndex(
-                                                    (spell) =>
-                                                        spell.slot === slot,
-                                                );
-
-                                            if (spellIndex === -1) {
-                                                return currentHud;
-                                            }
-
-                                            const targetIndex =
-                                                direction === "up"
-                                                    ? spellIndex - 1
-                                                    : spellIndex + 1;
-                                            const targetSpell =
-                                                sortedSpells[targetIndex] ??
-                                                null;
-
-                                            if (!targetSpell) {
-                                                return currentHud;
-                                            }
-
-                                            const movingSpell =
-                                                currentHud.spells.find(
-                                                    (spell) =>
-                                                        spell.slot === slot,
-                                                ) ?? null;
-
-                                            if (!movingSpell) {
-                                                return currentHud;
-                                            }
-
-                                            const nextSpells =
-                                                currentHud.spells.map(
-                                                    (spell) => {
-                                                        if (
-                                                            spell.slot === slot
-                                                        ) {
-                                                            return {
-                                                                ...spell,
-                                                                slot: targetSpell.slot,
-                                                            };
-                                                        }
-
-                                                        if (
-                                                            spell.slot ===
-                                                            targetSpell.slot
-                                                        ) {
-                                                            return {
-                                                                ...spell,
-                                                                slot,
-                                                            };
-                                                        }
-
-                                                        return spell;
-                                                    },
-                                                );
-
-                                            const movedSpell =
-                                                nextSpells.find(
-                                                    (spell) =>
-                                                        spell.idSpell ===
-                                                        movingSpell.idSpell,
-                                                ) ?? null;
-
-                                            setSelectedSpellSlot(
-                                                movedSpell?.slot ??
-                                                    targetSpell.slot,
-                                            );
-                                            setReorderSpellRequest(
-                                                (current) => ({
-                                                    sourceSlot: slot,
-                                                    targetSlot:
-                                                        targetSpell.slot,
-                                                    token:
-                                                        (current?.token ?? 0) +
-                                                        1,
-                                                }),
-                                            );
-
-                                            return {
-                                                ...currentHud,
-                                                spells: nextSpells,
-                                            };
-                                        });
+                                        setSelectedSpellSlot(targetSlot);
+                                        setReorderSpellRequest((current) => ({
+                                            sourceSlot,
+                                            targetSlot,
+                                            token: (current?.token ?? 0) + 1,
+                                        }));
                                     }}
                                     onDropRequest={(slot, amount) =>
                                         setDropRequest((current) => ({
@@ -3394,70 +3509,7 @@ function HomeContent() {
                                     }
                                 />
 
-                                <div className="pointer-events-auto flex w-full flex-col gap-2 rounded-2xl border border-stone-700/80 bg-stone-950/84 px-4 py-3 text-xs text-stone-100 shadow-2xl backdrop-blur-md">
-                                    <div className="flex items-center justify-center gap-3 uppercase tracking-[0.22em]">
-                                        {authSession ? (
-                                            <>
-                                                <Link
-                                                    href="/arenas"
-                                                    prefetch={false}
-                                                    onClick={(event) => {
-                                                        if (!arenaMode) {
-                                                            return;
-                                                        }
-
-                                                        event.preventDefault();
-                                                        void leaveArenaRoom();
-                                                    }}
-                                                    className="text-amber-300 transition hover:text-amber-200"
-                                                >
-                                                    {arenaMode &&
-                                                    arenaLeavePending
-                                                        ? "Saliendo..."
-                                                        : "Arenas"}
-                                                </Link>
-                                                <Link
-                                                    href={switchCharacterHref}
-                                                    prefetch={false}
-                                                    onClick={
-                                                        handleSwitchCharacterClick
-                                                    }
-                                                    className="text-cyan-300 transition hover:text-cyan-200"
-                                                >
-                                                    {switchCharacterLabel}
-                                                </Link>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Link
-                                                    href="/login"
-                                                    prefetch={false}
-                                                    className="text-cyan-300 transition hover:text-cyan-200"
-                                                >
-                                                    Login
-                                                </Link>
-                                                <Link
-                                                    href="/register"
-                                                    prefetch={false}
-                                                    className="text-stone-400 transition hover:text-stone-200"
-                                                >
-                                                    Registro
-                                                </Link>
-                                            </>
-                                        )}
-                                    </div>
-
-                                    {authSession && !arenaMode ? (
-                                        <div className="text-center text-[11px] leading-5 tracking-[0.04em] text-stone-300/85">
-                                            En zona insegura cerrá el personaje
-                                            con{" "}
-                                            <span className="text-amber-300">
-                                                /salir
-                                            </span>{" "}
-                                            o quedará conectado por 10 segundos.
-                                        </div>
-                                    ) : null}
-                                </div>
+                                {sessionFooter}
                             </div>
                         </ScaledHudFrame>
                     </div>

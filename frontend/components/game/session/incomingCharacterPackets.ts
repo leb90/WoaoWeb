@@ -273,6 +273,24 @@ export async function handleIncomingCharacterPacket({
                     mana: packet.payload.mana,
                     tMana: packet.payload.mana,
                     maxMana: packet.payload.maxMana,
+                    ...(packet.payload.sta != null
+                        ? {
+                              sta: packet.payload.sta,
+                              maxSta: packet.payload.maxSta,
+                          }
+                        : {}),
+                    ...(packet.payload.hambre != null
+                        ? {
+                              hambre: packet.payload.hambre,
+                              maxHambre: packet.payload.maxHambre,
+                          }
+                        : {}),
+                    ...(packet.payload.sed != null
+                        ? {
+                              sed: packet.payload.sed,
+                              maxSed: packet.payload.maxSed,
+                          }
+                        : {}),
                 };
             }
 
@@ -300,6 +318,24 @@ export async function handleIncomingCharacterPacket({
                 maxHp: packet.payload.maxHp,
                 mana: packet.payload.mana,
                 maxMana: packet.payload.maxMana,
+                ...(packet.payload.sta != null
+                    ? {
+                          sta: packet.payload.sta,
+                          maxSta: packet.payload.maxSta,
+                      }
+                    : {}),
+                ...(packet.payload.hambre != null
+                    ? {
+                          hambre: packet.payload.hambre,
+                          maxHambre: packet.payload.maxHambre,
+                      }
+                    : {}),
+                ...(packet.payload.sed != null
+                    ? {
+                          sed: packet.payload.sed,
+                          maxSed: packet.payload.maxSed,
+                      }
+                    : {}),
             });
             return true;
 

@@ -72,17 +72,21 @@ function getBodySpritePosition(width: number, height: number): SpritePosition {
     };
 }
 
+const DEFAULT_HEAD_FRAME_HEIGHT = 50;
+const HELMET_HEAD_OFFSET_Y = -34;
+
 function getHeadSpritePosition(
     bodyPosition: SpritePosition,
     bodyWidth: number,
     bodyHeight: number,
     headWidth: number,
+    headHeight = DEFAULT_HEAD_FRAME_HEIGHT,
     headOffsetX = 0,
     headOffsetY = 0,
 ): SpritePosition {
     return {
         x: bodyPosition.x + bodyWidth / 2 - headWidth / 2 + headOffsetX,
-        y: bodyPosition.y + bodyHeight - 50 + headOffsetY,
+        y: bodyPosition.y + bodyHeight - headHeight + headOffsetY,
     };
 }
 
@@ -102,23 +106,21 @@ function getHelmetSpritePosition(
     bodyWidth: number,
     bodyHeight: number,
     helmetWidth: number,
+    helmetHeight: number,
     headOffsetX = 0,
     headOffsetY = 0,
     helmetOffsetX = 0,
     helmetOffsetY = 0,
 ): SpritePosition {
-    const basePosition = getHeadSpritePosition(
-        bodyPosition,
-        bodyWidth,
-        bodyHeight,
-        helmetWidth,
-        headOffsetX,
-        headOffsetY,
-    );
-
     return {
-        x: basePosition.x + helmetOffsetX,
-        y: basePosition.y + helmetOffsetY,
+        x: bodyPosition.x + bodyWidth / 2 - helmetWidth / 2 + headOffsetX + helmetOffsetX,
+        y:
+            bodyPosition.y +
+            bodyHeight -
+            helmetHeight +
+            headOffsetY +
+            HELMET_HEAD_OFFSET_Y +
+            helmetOffsetY,
     };
 }
 
@@ -473,6 +475,7 @@ export default function CharacterSpritePreview({
                 bodyTexture.width,
                 bodyTexture.height,
                 headTexture.width,
+                headTexture.height,
                 bodyData.headOffsetX,
                 bodyData.headOffsetY,
             );
@@ -490,12 +493,13 @@ export default function CharacterSpritePreview({
                       shieldTexture.height,
                   )
                 : null;
-            const helmetPosition = helmetTexture
+                const helmetPosition = helmetTexture
                 ? getHelmetSpritePosition(
                       bodyPosition,
                       bodyTexture.width,
                       bodyTexture.height,
                       helmetTexture.width,
+                      helmetTexture.height,
                       bodyData.headOffsetX,
                       bodyData.headOffsetY,
                       helmetData?.offsetX,
@@ -580,7 +584,7 @@ export default function CharacterSpritePreview({
             headSprite.x = Math.round((headPosition.x + offsetX) * scale);
             headSprite.y = Math.round((headPosition.y + offsetY) * scale);
             headSprite.scale.set(scale);
-            headSprite.zIndex = 0.1;
+            headSprite.zIndex = 0.25;
             characterContainer.addChild(headSprite);
 
             if (mode === "full" && helmetTexture && helmetPosition) {

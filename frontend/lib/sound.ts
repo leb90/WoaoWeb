@@ -14,7 +14,7 @@ interface PlaySoundOptions {
     fadeOutMs?: number;
 }
 
-const SOUND_FILE_EXTENSIONS = ["ogg", "mp3", "wav"] as const;
+const SOUND_FILE_EXTENSIONS = ["wav", "ogg", "mp3"] as const;
 const DEFAULT_BASE_VOLUME = 0.7;
 const MAX_AUDIBLE_DISTANCE_TILES = 15;
 const MIN_DISTANCE_VOLUME = 0.18;
@@ -69,8 +69,12 @@ export class GameSoundManager {
             return;
         }
 
-        const playbackId = sound.play();
-        if (typeof playbackId === "number") {
+        const startPlayback = () => {
+            const playbackId = sound.play();
+            if (typeof playbackId !== "number") {
+                return;
+            }
+
             if (fadeInMs > 0) {
                 sound.volume(0, playbackId);
                 sound.fade(0, computedVolume, fadeInMs, playbackId);
@@ -97,7 +101,14 @@ export class GameSoundManager {
                     }, fadeOutStartMs);
                 }
             }
+        };
+
+        if (sound.state() === "loaded") {
+            startPlayback();
+            return;
         }
+
+        sound.once("load", startPlayback);
     }
 
     setMasterVolume(volume: number): void {
@@ -129,21 +140,26 @@ export class GameSoundManager {
             return null;
         }
 
+        const urls = this.getSoundUrls(soundId);
         const sound = new Howl({
-            src: this.getSoundUrls(soundId),
+            src: urls,
             format: [...SOUND_FILE_EXTENSIONS],
             preload: true,
             html5: !this.preferWebAudio,
             pool: this.preferWebAudio ? SOUND_POOL_SIZE : HTML5_SOUND_POOL_SIZE,
             onloaderror: () => {
+                if (sound.state() === "loaded" || sound.state() === "loading") {
+                    return;
+                }
+
                 this.unavailableSoundIds.add(soundId);
                 this.soundCache.delete(soundId);
                 sound.unload();
             },
             onplayerror: () => {
-                this.unavailableSoundIds.add(soundId);
-                this.soundCache.delete(soundId);
-                sound.unload();
+                sound.once("unlock", () => {
+                    sound.play();
+                });
             },
         });
 
@@ -204,20 +220,6 @@ export class GameSoundManager {
     }
 
     private resolvePreferredExtension(): (typeof SOUND_FILE_EXTENSIONS)[number] {
-        if (typeof document === "undefined") {
-            return SOUND_FILE_EXTENSIONS[0];
-        }
-
-        const probe = document.createElement("audio");
-
-        if (probe.canPlayType("audio/ogg") !== "") {
-            return "ogg";
-        }
-
-        if (probe.canPlayType("audio/mpeg") !== "") {
-            return "mp3";
-        }
-
         return "wav";
     }
 

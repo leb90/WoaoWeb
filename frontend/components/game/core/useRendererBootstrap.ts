@@ -280,16 +280,18 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                         return;
                     }
 
-                    if (!options.canStartLocalCombatAction("melee")) {
-                        return;
-                    }
+                    socket.send(createAttackMeleePacket());
 
                     const meleeTarget = getMeleeCombatTarget();
                     if (meleeTarget?.isNpc) {
                         engine.addHealthBarEntity(meleeTarget.id);
                     }
 
-                    socket.send(createAttackMeleePacket());
+                    if (!options.canStartLocalCombatAction("melee")) {
+                        return;
+                    }
+
+                    engine.playLocalCombatSwing();
                     options.recordClientGameAction("melee_attack");
                     options.registerLocalCombatAction("melee");
                 };
@@ -388,7 +390,7 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                 app.canvas.style.width = "100%";
                 app.canvas.style.height = "100%";
                 app.canvas.style.display = "block";
-                app.canvas.style.borderRadius = "22px";
+                app.canvas.style.borderRadius = "0";
                 engine.app = app;
                 options.updateCanvasCursor();
 
@@ -604,6 +606,7 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                                 resolvedCombatTarget.y,
                             ),
                         );
+                        engine.playLocalCombatSwing();
                         options.recordClientGameAction("range_attack", {
                             x: resolvedCombatTarget.x,
                             y: resolvedCombatTarget.y,

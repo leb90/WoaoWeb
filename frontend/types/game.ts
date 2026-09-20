@@ -165,6 +165,7 @@ export interface SpellData {
     fxGrh: number;
     manaRequired?: number;
     minSkill?: number;
+    minNivel?: number;
     minHp?: number;
     maxHp?: number;
     subeHp?: number;

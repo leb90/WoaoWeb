@@ -48,6 +48,14 @@ const getMaxManaForLevel = (classId: number, inteligencia: number, level: number
     return Math.max(0, Math.round(total));
 };
 
+const MAX_HAMBRE = 100;
+const MAX_SED = 100;
+
+const getMaxStaForLevel = (constitucion: number, level: number): number => {
+    const safeLevel = clampLevel(level);
+    return Math.max(20, Math.round(20 + Number(constitucion || 0) + (safeLevel - 1) * 5));
+};
+
 const getHitModifierForLevel = (classId: number, level: number): number => {
     const safeLevel = clampLevel(level);
     const classProgress = getClassProgress()[classId] ?? DEFAULT_CLASS_PROGRESS[1];
@@ -95,6 +103,9 @@ module.exports = {
     clampGold,
     getMaxHpForLevel,
     getMaxManaForLevel,
+    getMaxStaForLevel,
+    MAX_HAMBRE,
+    MAX_SED,
     getMinHitForLevel,
     getMaxHitForLevel,
     getLegacyExpNextLevelForLevel,

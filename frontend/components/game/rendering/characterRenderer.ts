@@ -115,6 +115,20 @@ export function ensureCharacterBodyReady(
     });
 }
 
+function assignNakedBodyIfMissing(
+    entity: Character,
+    resolveNakedBodyIdFromHeadId: (headId: number) => number | null,
+): void {
+    if (entity.idBody > 0) {
+        return;
+    }
+
+    const nakedBodyId = resolveNakedBodyIdFromHeadId(entity.idHead);
+    if (nakedBodyId) {
+        entity.idBody = nakedBodyId;
+    }
+}
+
 export function resolveBodyRenderState(
     engine: Engine,
     entity: Character,
@@ -706,6 +720,23 @@ function removeStoredCharacterChild(
     delete (container as any)[key];
 }
 
+function characterTexturesMatch(
+    currentTextures: AnimatedSprite["textures"],
+    nextTextures: Texture[],
+): boolean {
+    if (currentTextures.length !== nextTextures.length) {
+        return false;
+    }
+
+    return nextTextures.every((texture, index) => {
+        const currentTexture = currentTextures[index];
+        return (
+            currentTexture === texture ||
+            (currentTexture instanceof Texture && currentTexture === texture)
+        );
+    });
+}
+
 function ensureAnimatedCharacterChild(
     container: CharacterDisplayContainer,
     key: CharacterDisplayStorageKey,
@@ -715,21 +746,47 @@ function ensureAnimatedCharacterChild(
     let sprite = getStoredCharacterChild<AnimatedSprite>(container, key, tag);
 
     if (!sprite) {
-        sprite = new AnimatedSprite(textures);
-        sprite.stop();
+        sprite = new AnimatedSprite({
+            textures,
+            autoUpdate: true,
+            autoPlay: false,
+        });
+        sprite.loop = true;
+        sprite.gotoAndStop(0);
         (sprite as any)[tag] = true;
         container.addChild(sprite);
         (container as any)[key] = sprite;
-    } else if (sprite.parent !== container) {
+        sprite.alpha = 1;
+        sprite.visible = true;
+        return sprite;
+    }
+
+    if (sprite.parent !== container) {
         container.addChild(sprite);
     }
 
-    sprite.textures = textures;
-    sprite.currentFrame = 0;
-    sprite.texture = textures[0];
+    if (!characterTexturesMatch(sprite.textures, textures)) {
+        const wasPlaying = sprite.playing;
+        sprite.textures = textures;
+        if (wasPlaying && textures.length > 1) {
+            sprite.gotoAndPlay(0);
+        } else {
+            sprite.gotoAndStop(0);
+        }
+    }
+
     sprite.alpha = 1;
     sprite.visible = true;
     return sprite;
+}
+
+function attachWalkFrameMs(
+    sprite: AnimatedSprite,
+    graphicData?: GraphicData,
+): void {
+    const speed = Number(graphicData?.speed);
+    (sprite as { walkFrameMs?: number }).walkFrameMs =
+        Number.isFinite(speed) && speed >= 20 ? speed : 1000 / 18;
 }
 
 function ensureSpriteCharacterChild(
@@ -803,6 +860,8 @@ export async function renderRemoteCharacter(
     const previousContainer = engine.remoteEntities.get(entity.id) as
         | CharacterDisplayContainer
         | undefined;
+
+    assignNakedBodyIfMissing(entity, deps.resolveNakedBodyIdFromHeadId);
 
     const bodyRenderState = resolveBodyRenderState(
         engine,
@@ -1019,6 +1078,7 @@ export async function renderRemoteCharacter(
         "isRemoteBody",
         bodyTextures,
     );
+    attachWalkFrameMs(bodySprite, bodyGraphicData);
     const bodyPosition = getBodySpritePosition(bodyTextures[0]);
     bodySprite.x = bodyPosition.x;
     bodySprite.y = bodyPosition.y;
@@ -1049,6 +1109,7 @@ export async function renderRemoteCharacter(
         const weaponPosition = getEquipmentSpritePosition(
             "weapon",
             weaponTextures[0],
+            bodyData.headOffsetY,
         );
         weaponSprite.x = Math.round(weaponPosition.x);
         weaponSprite.y = Math.round(weaponPosition.y);
@@ -1073,6 +1134,7 @@ export async function renderRemoteCharacter(
         const shieldPosition = getEquipmentSpritePosition(
             "shield",
             shieldTextures[0],
+            bodyData.headOffsetY,
         );
         shieldSprite.x = Math.round(shieldPosition.x);
         shieldSprite.y = Math.round(shieldPosition.y);
@@ -1101,7 +1163,7 @@ export async function renderRemoteCharacter(
         );
         headSprite.x = Math.round(headPosition.x);
         headSprite.y = Math.round(headPosition.y);
-        headSprite.zIndex = 0.1;
+        headSprite.zIndex = 0.25;
         headSprite.visible = !hideBody;
     } else {
         removeStoredCharacterChild(
@@ -1124,6 +1186,7 @@ export async function renderRemoteCharacter(
             bodyData,
             helmetTexture,
             helmetData,
+            headTexture ?? helmetTexture,
         );
         helmetSprite.x = Math.round(helmetPosition.x);
         helmetSprite.y = Math.round(helmetPosition.y);
@@ -1329,6 +1392,8 @@ export async function renderLocalPlayer(
         (engine as any).playerRenderRequestId !== renderRequestId ||
         !deps.canUseEngineContainer(engine, engine.playerContainer);
 
+    assignNakedBodyIfMissing(engine.user, deps.resolveNakedBodyIdFromHeadId);
+
     const bodyRenderState = resolveBodyRenderState(
         engine,
         engine.user,
@@ -1530,6 +1595,7 @@ export async function renderLocalPlayer(
         "isPlayerBody",
         bodyTextures,
     );
+    attachWalkFrameMs(bodySprite, bodyGraphicData);
     const bodyPosition = getBodySpritePosition(bodyTextures[0]);
     bodySprite.x = bodyPosition.x;
     bodySprite.y = bodyPosition.y;
@@ -1557,6 +1623,7 @@ export async function renderLocalPlayer(
         const weaponPosition = getEquipmentSpritePosition(
             "weapon",
             weaponTextures[0],
+            bodyData.headOffsetY,
         );
         weaponSprite.x = Math.round(weaponPosition.x);
         weaponSprite.y = Math.round(weaponPosition.y);
@@ -1580,6 +1647,7 @@ export async function renderLocalPlayer(
         const shieldPosition = getEquipmentSpritePosition(
             "shield",
             shieldTextures[0],
+            bodyData.headOffsetY,
         );
         shieldSprite.x = Math.round(shieldPosition.x);
         shieldSprite.y = Math.round(shieldPosition.y);
@@ -1607,7 +1675,7 @@ export async function renderLocalPlayer(
         );
         headSprite.x = Math.round(headPosition.x);
         headSprite.y = Math.round(headPosition.y);
-        headSprite.zIndex = 0.1;
+        headSprite.zIndex = 0.25;
     } else {
         removeStoredCharacterChild(
             container,
@@ -1629,6 +1697,7 @@ export async function renderLocalPlayer(
             bodyData,
             helmetTexture,
             helmetData,
+            headTexture ?? helmetTexture,
         );
         helmetSprite.x = Math.round(helmetPosition.x);
         helmetSprite.y = Math.round(helmetPosition.y);

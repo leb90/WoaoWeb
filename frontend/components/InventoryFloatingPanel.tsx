@@ -21,6 +21,8 @@ import {
     Shield,
     Trash2,
     MoreHorizontal,
+    Map as MapIcon,
+    Plus,
 } from "lucide-react";
 import type {
     CharacterStatsSnapshot,
@@ -50,6 +52,8 @@ import {
     detectHardwareAccelerationDiagnostics,
     type BrowserHardwareAccelerationHelp,
 } from "../lib/hardware-acceleration";
+import WoaoHubModal, { type WoaoHubTab } from "./WoaoHubModal";
+import SkillsModal from "./SkillsModal";
 
 type InventoryFloatingPanelProps = {
     hud: PlayerHudState | null;
@@ -58,6 +62,9 @@ type InventoryFloatingPanelProps = {
     characterStatsSnapshot?: CharacterStatsSnapshot | null;
     panelHeight?: number | string;
     portalTarget?: HTMLElement | null;
+    minimapHost?: HTMLElement | null;
+    minimapVisible?: boolean;
+    onMinimapVisibleChange?: (visible: boolean) => void;
     selectedSpellSlot: number | null;
     hotkeySettings: HotkeySettings;
     useItemRepeatMs: number;
@@ -67,6 +74,7 @@ type InventoryFloatingPanelProps = {
     onSelectSpell: (slot: number | null) => void;
     onCastSpell: (spell: SpellEntry) => void;
     onMoveSpell?: (slot: number, direction: "up" | "down") => void;
+    onReorderSpell?: (sourceSlot: number, targetSlot: number) => void;
     onMoveInventoryItem?: (sourceSlot: number, targetSlot: number) => void;
     onEquipRequest?: (slot: number) => void;
     onUseItemClickRequest?: (slot: number) => void;
@@ -83,8 +91,6 @@ type HardwareAccelerationWarning = {
 };
 
 type ClanAlignment = "citizen" | "criminal";
-
-const MAX_LEVEL = 50;
 
 type ClanSummary = {
     id: string;
@@ -301,9 +307,13 @@ const HOTKEY_SECTIONS: HotkeySection[] = [
 ];
 
 const MIN_SLOTS = 21;
+const MAX_USER_SPELLS = 50;
+const EMPTY_SPELL_LABEL = "Ninguno";
 const HOVER_DELAY_MS = 450;
 const DOUBLE_ACTIVATE_WINDOW_MS = 240;
-const MINIMAP_PREVIEW_SIZE = 92;
+const MINIMAP_PREVIEW_SIZE = 100;
+const HUD_ACTION_BUTTON_CLASS =
+    "inline-flex min-h-[24px] min-w-0 items-center justify-center gap-0.5 rounded-sm border border-[#6a5132] bg-[linear-gradient(180deg,#3a2a1c_0%,#1a120c_100%)] px-1.5 text-[9px] font-semibold uppercase tracking-[0.04em] text-[#f0e0c4] shadow-[inset_0_1px_0_rgba(255,220,180,0.12)] transition hover:border-[#c49a62] hover:text-amber-50";
 const DYNAMIC_INSTANCE_MAP_START = 30_000;
 const DYNAMIC_INSTANCE_MAP_STRIDE = 50;
 
@@ -493,7 +503,7 @@ function ItemGraphic({
     name: string;
 }) {
     if (!graphicData?.numFile) {
-        return <div className="h-8 w-8 rounded-md bg-black/20" />;
+        return <div className="h-8 w-8 bg-black/20" />;
     }
 
     const scale = Math.min(
@@ -502,7 +512,7 @@ function ItemGraphic({
     );
 
     return (
-        <div className="relative h-8 w-8 overflow-hidden rounded-sm">
+        <div className="relative h-8 w-8 overflow-hidden">
             <div
                 aria-label={name}
                 className="absolute left-1/2 top-1/2 bg-no-repeat"
@@ -519,148 +529,104 @@ function ItemGraphic({
     );
 }
 
-function VitalBarsCanvas({
+function VitalBar({
+    label,
+    value,
+    max,
+    fromColor,
+    toColor,
+}: {
+    label: string;
+    value: number;
+    max: number;
+    fromColor: string;
+    toColor: string;
+}) {
+    const ratio = max > 0 ? Math.max(0, Math.min(1, value / max)) : 0;
+
+    return (
+        <div className="flex h-[11px] items-center gap-1">
+            <span className="w-[44px] shrink-0 text-[9px] font-semibold uppercase tracking-[0.04em] text-[#d7c4a4]">
+                {label}
+            </span>
+            <div className="relative h-[7px] min-w-0 flex-1 overflow-hidden rounded-[2px] border border-[#8b6b3e]/90 bg-black/65">
+                <div
+                    className="absolute inset-y-0 left-0"
+                    style={{
+                        width: `${ratio * 100}%`,
+                        background: `linear-gradient(90deg, ${fromColor}, ${toColor})`,
+                    }}
+                />
+                <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-white/22 to-transparent" />
+            </div>
+            <span className="w-[48px] shrink-0 text-right text-[9px] font-semibold tabular-nums leading-none text-[#f4ead6]">
+                {value}/{max}
+            </span>
+        </div>
+    );
+}
+
+function VitalBars({
     hp,
     maxHp,
     mana,
     maxMana,
+    sta,
+    maxSta,
+    hambre,
+    maxHambre,
+    sed,
+    maxSed,
 }: {
     hp: number;
     maxHp: number;
     mana: number;
     maxMana: number;
+    sta: number;
+    maxSta: number;
+    hambre: number;
+    maxHambre: number;
+    sed: number;
+    maxSed: number;
 }) {
-    const canvasRef = React.useRef<HTMLCanvasElement>(null);
-
-    React.useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) {
-            return;
-        }
-
-        const dpr = window.devicePixelRatio || 1;
-        const cssWidth = 156;
-        const cssHeight = 70;
-        canvas.width = Math.floor(cssWidth * dpr);
-        canvas.height = Math.floor(cssHeight * dpr);
-
-        const context = canvas.getContext("2d");
-        if (!context) {
-            return;
-        }
-
-        context.setTransform(dpr, 0, 0, dpr, 0, 0);
-        context.clearRect(0, 0, cssWidth, cssHeight);
-
-        const drawBar = ({
-            y,
-            label,
-            value,
-            max,
-            startColor,
-            endColor,
-        }: {
-            y: number;
-            label: string;
-            value: number;
-            max: number;
-            startColor: string;
-            endColor: string;
-        }) => {
-            const ratio = max > 0 ? Math.max(0, Math.min(1, value / max)) : 0;
-
-            context.font = "600 10px Inter, system-ui, sans-serif";
-            context.textBaseline = "top";
-            context.letterSpacing = "0.14em";
-            context.fillStyle = "rgba(214, 211, 209, 0.8)";
-            context.fillText(label.toUpperCase(), 0, y);
-
-            context.letterSpacing = "0";
-            context.font = "600 10px Inter, system-ui, sans-serif";
-            context.fillStyle = "#f5f5f4";
-            const valueLabel = `${value}/${max}`;
-            const valueMetrics = context.measureText(valueLabel);
-            context.fillText(valueLabel, cssWidth - valueMetrics.width, y);
-
-            const barY = y + 14;
-            const barHeight = 12;
-            const barRadius = 6;
-            const barWidth = cssWidth;
-
-            context.fillStyle = "rgba(0, 0, 0, 0.35)";
-            context.strokeStyle = "rgba(0, 0, 0, 0.35)";
-            context.lineWidth = 1;
-            context.beginPath();
-            context.roundRect(
-                0.5,
-                barY + 0.5,
-                barWidth - 1,
-                barHeight - 1,
-                barRadius,
-            );
-            context.fill();
-            context.stroke();
-
-            const innerX = 2;
-            const innerY = barY + 2;
-            const innerWidth = barWidth - 4;
-            const innerHeight = barHeight - 4;
-            context.fillStyle = "rgba(12, 10, 9, 0.85)";
-            context.beginPath();
-            context.roundRect(innerX, innerY, innerWidth, innerHeight, 4);
-            context.fill();
-
-            if (ratio <= 0) {
-                return;
-            }
-
-            const fillWidth = Math.max(4, innerWidth * ratio);
-            const gradient = context.createLinearGradient(
-                0,
-                innerY,
-                fillWidth,
-                innerY,
-            );
-            gradient.addColorStop(0, startColor);
-            gradient.addColorStop(1, endColor);
-            context.fillStyle = gradient;
-            context.beginPath();
-            context.roundRect(
-                innerX,
-                innerY,
-                Math.min(innerWidth, fillWidth),
-                innerHeight,
-                4,
-            );
-            context.fill();
-        };
-
-        drawBar({
-            y: 0,
-            label: "Vida",
-            value: hp,
-            max: maxHp,
-            startColor: "#951212",
-            endColor: "#f06b34",
-        });
-        drawBar({
-            y: 35,
-            label: "Mana",
-            value: mana,
-            max: maxMana,
-            startColor: "#0e436f",
-            endColor: "#2fb8ed",
-        });
-    }, [hp, mana, maxHp, maxMana]);
-
     return (
-        <canvas
-            ref={canvasRef}
-            width={156}
-            height={70}
-            className="block h-[70px] w-[156px] max-w-full"
-            aria-hidden="true"
-        />
+        <div className="space-y-0.5">
+            <VitalBar
+                label="Energia"
+                value={sta}
+                max={maxSta}
+                fromColor="#7a5b12"
+                toColor="#e6c35a"
+            />
+            <VitalBar
+                label="Vida"
+                value={hp}
+                max={maxHp}
+                fromColor="#951212"
+                toColor="#f06b34"
+            />
+            <VitalBar
+                label="Mana"
+                value={mana}
+                max={maxMana}
+                fromColor="#0e436f"
+                toColor="#2fb8ed"
+            />
+            <VitalBar
+                label="Hambre"
+                value={hambre}
+                max={maxHambre}
+                fromColor="#6b3a12"
+                toColor="#d4893a"
+            />
+            <VitalBar
+                label="Sed"
+                value={sed}
+                max={maxSed}
+                fromColor="#1a5f73"
+                toColor="#5ad0e6"
+            />
+        </div>
     );
 }
 
@@ -676,19 +642,30 @@ function StatLine({
     icon,
     value,
     rightValue,
+    label,
     accent = "text-stone-100",
 }: {
     icon: React.ReactNode;
     value: string | number;
     rightValue?: string | number | null;
+    label: string;
     accent?: string;
 }) {
+    const tooltip =
+        rightValue !== null && rightValue !== undefined
+            ? `${label}: ${value} ${rightValue}`
+            : `${label}: ${value}`;
+
     return (
-        <div className="flex items-center gap-1.5 text-sm font-semibold leading-none text-stone-100">
+        <div
+            className="flex min-w-0 flex-1 items-center justify-center gap-1 text-[11px] font-semibold leading-none text-stone-100"
+            title={tooltip}
+            aria-label={tooltip}
+        >
             {icon}
             <span className={accent}>{value}</span>
             {rightValue !== null && rightValue !== undefined ? (
-                <span className="ml-1 inline-flex items-center self-center text-[11px] font-semibold leading-none text-amber-200/85">
+                <span className="text-[11px] font-semibold leading-none text-amber-200/85">
                     {rightValue}
                 </span>
             ) : null}
@@ -706,6 +683,9 @@ export default function InventoryFloatingPanel({
     characterStatsSnapshot,
     panelHeight,
     portalTarget,
+    minimapHost,
+    minimapVisible = true,
+    onMinimapVisibleChange,
     selectedSpellSlot,
     hotkeySettings,
     useItemRepeatMs,
@@ -715,6 +695,7 @@ export default function InventoryFloatingPanel({
     onSelectSpell,
     onCastSpell,
     onMoveSpell,
+    onReorderSpell,
     onMoveInventoryItem,
     onEquipRequest,
     onUseItemClickRequest,
@@ -730,7 +711,7 @@ export default function InventoryFloatingPanel({
         fuerza: 0,
         agilidad: 0,
     });
-    const [buffNow, setBuffNow] = React.useState(() => Date.now());
+    const [buffNow, setBuffNow] = React.useState(0);
     const [graphicsDB, setGraphicsDB] = React.useState<Record<
         string,
         GraphicData
@@ -755,6 +736,7 @@ export default function InventoryFloatingPanel({
     const [isSpellInfoOpen, setIsSpellInfoOpen] = React.useState(false);
     const [isPartyModalOpen, setIsPartyModalOpen] = React.useState(false);
     const [isClanModalOpen, setIsClanModalOpen] = React.useState(false);
+    const [woaoHubTab, setWoaoHubTab] = React.useState<WoaoHubTab | null>(null);
     const [clanOverview, setClanOverview] = React.useState<ClanOverview | null>(
         null,
     );
@@ -834,9 +816,9 @@ export default function InventoryFloatingPanel({
     ]);
 
     React.useEffect(() => {
-        const interval = window.setInterval(() => {
-            setBuffNow(Date.now());
-        }, 1000);
+        const tick = () => setBuffNow(Date.now());
+        tick();
+        const interval = window.setInterval(tick, 1000);
 
         return () => window.clearInterval(interval);
     }, []);
@@ -943,6 +925,7 @@ export default function InventoryFloatingPanel({
     >(null);
     const [isWorldMapOpen, setIsWorldMapOpen] = React.useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
+    const [isSkillsOpen, setIsSkillsOpen] = React.useState(false);
     const [hardwareAccelerationWarning, setHardwareAccelerationWarning] =
         React.useState<HardwareAccelerationWarning | null>(null);
     const [isHotkeySettingsOpen, setIsHotkeySettingsOpen] =
@@ -953,9 +936,13 @@ export default function InventoryFloatingPanel({
         slotIndex: number;
     } | null>(null);
     const [isSpellListDragging, setIsSpellListDragging] = React.useState(false);
+    const [pendingSpellMoveSlot, setPendingSpellMoveSlot] = React.useState<
+        number | null
+    >(null);
     const hoverTimerRef = React.useRef<number | null>(null);
     const spellListRef = React.useRef<HTMLDivElement | null>(null);
     const spellListScrollTopRef = React.useRef(0);
+    const skipNextSpellDoubleClickRef = React.useRef(false);
     const heldUseItemTimerRef = React.useRef<number | null>(null);
     const heldUseItemKeyRef = React.useRef<string | null>(null);
     const lastClickedSlotRef = React.useRef<{
@@ -968,10 +955,20 @@ export default function InventoryFloatingPanel({
         [items, selectedSlot],
     );
 
-    const selectedSpell = React.useMemo(
-        () => spells.find((spell) => spell.slot === selectedSpellSlot) ?? null,
-        [selectedSpellSlot, spells],
-    );
+    const selectedSpell = React.useMemo(() => {
+        const exact =
+            spells.find((spell) => spell.slot === selectedSpellSlot) ?? null;
+
+        if (exact) {
+            return exact;
+        }
+
+        if (selectedSpellSlot === 1) {
+            return spells.find((spell) => spell.slot < 1) ?? null;
+        }
+
+        return null;
+    }, [selectedSpellSlot, spells]);
     const selectedSpellData = React.useMemo(() => {
         if (!selectedSpell || !spellsDB) {
             return null;
@@ -1099,23 +1096,33 @@ export default function InventoryFloatingPanel({
         useItemRepeatMs,
     ]);
 
-    const sortedSpells = React.useMemo(
-        () => spells.slice().sort((a, b) => a.slot - b.slot),
-        [spells],
-    );
+    const spellSlots = React.useMemo(() => {
+        const spellsBySlot = new Map<number, SpellEntry>();
 
-    const selectedSpellIndex = React.useMemo(
-        () =>
-            selectedSpellSlot === null
-                ? -1
-                : sortedSpells.findIndex(
-                      (spell) => spell.slot === selectedSpellSlot,
-                  ),
-        [selectedSpellSlot, sortedSpells],
-    );
-    const canMoveSelectedSpellUp = selectedSpellIndex > 0;
+        for (const spell of spells) {
+            const slot =
+                spell.slot < 1 ? 1 : Math.min(MAX_USER_SPELLS, spell.slot);
+
+            if (!spellsBySlot.has(slot)) {
+                spellsBySlot.set(slot, { ...spell, slot });
+            }
+        }
+
+        return Array.from({ length: MAX_USER_SPELLS }, (_, index) => {
+            const slot = index + 1;
+            return {
+                slot,
+                spell: spellsBySlot.get(slot) ?? null,
+            };
+        });
+    }, [spells]);
+    const canUseSpellBook =
+        spells.length > 0 || Number(hud?.maxMana ?? 0) > 0;
+    const canMoveSelectedSpellUp =
+        Boolean(selectedSpell) && (selectedSpell?.slot ?? 1) > 1;
     const canMoveSelectedSpellDown =
-        selectedSpellIndex >= 0 && selectedSpellIndex < sortedSpells.length - 1;
+        Boolean(selectedSpell) &&
+        (selectedSpell?.slot ?? MAX_USER_SPELLS) < MAX_USER_SPELLS;
     const selectedSpellDamageLabel = React.useMemo(() => {
         if (
             !selectedSpellData ||
@@ -1129,15 +1136,8 @@ export default function InventoryFloatingPanel({
         return `${selectedSpellData.minHp} - ${selectedSpellData.maxHp}`;
     }, [selectedSpellData]);
     const selectedSpellRequiredLevel = React.useMemo(() => {
-        if (
-            !selectedSpellData ||
-            typeof selectedSpellData.minSkill !== "number" ||
-            selectedSpellData.minSkill <= 0
-        ) {
-            return null;
-        }
-
-        return Math.ceil(selectedSpellData.minSkill / 3);
+        const requiredLevel = Number(selectedSpellData?.minNivel ?? 0);
+        return requiredLevel > 0 ? requiredLevel : null;
     }, [selectedSpellData]);
 
     const dropItem = React.useMemo(
@@ -1145,13 +1145,6 @@ export default function InventoryFloatingPanel({
         [dropSlot, items],
     );
 
-    const expPercent = hud?.expNextLevel
-        ? Math.max(0, Math.min(100, ((hud.exp || 0) / hud.expNextLevel) * 100))
-        : 0;
-    const expLabel = hud
-        ? `${Math.round(expPercent)}% (${formatNumber(hud.exp || 0)} / ${formatNumber(hud.expNextLevel || 0)})`
-        : "-";
-    const isMaxLevelCharacter = (hud?.level ?? 0) >= MAX_LEVEL;
     const currentClan = clanOverview?.currentClan ?? null;
     const detailClan =
         selectedClanDetails ??
@@ -1952,7 +1945,13 @@ export default function InventoryFloatingPanel({
         });
 
         return () => window.cancelAnimationFrame(frame);
-    }, [activeTab, sortedSpells.length]);
+    }, [activeTab, spellSlots.length]);
+
+    React.useEffect(() => {
+        if (activeTab !== "spells") {
+            setPendingSpellMoveSlot(null);
+        }
+    }, [activeTab]);
 
     React.useEffect(() => {
         if (!isHotkeySettingsOpen || !listeningBinding) {
@@ -2026,6 +2025,12 @@ export default function InventoryFloatingPanel({
                 return;
             }
 
+            if (key === "escape" && pendingSpellMoveSlot !== null) {
+                setPendingSpellMoveSlot(null);
+                event.preventDefault();
+                return;
+            }
+
             if (key === "escape" && dropSlot !== null) {
                 closeDropDialog();
                 event.preventDefault();
@@ -2080,6 +2085,7 @@ export default function InventoryFloatingPanel({
     }, [
         closeDropDialog,
         dropSlot,
+        pendingSpellMoveSlot,
         onCastSpell,
         onEquipRequest,
         hotkeySettings.dropItem,
@@ -2292,7 +2298,7 @@ export default function InventoryFloatingPanel({
         <>
             <div
                 ref={panelRef}
-                className="pointer-events-auto flex w-[min(92vw,320px)] flex-col overflow-hidden rounded-2xl border border-cyan-300/25 bg-slate-950/78 text-slate-100 shadow-[0_24px_80px_rgba(15,23,42,0.55)] backdrop-blur-xl"
+                className="pointer-events-auto flex w-[min(92vw,320px)] flex-col overflow-hidden bg-[#120c09]/94 text-slate-100"
                 style={{
                     height: panelHeight,
                     minHeight: panelHeight,
@@ -2300,26 +2306,44 @@ export default function InventoryFloatingPanel({
                 }}
             >
                 <div
-                    className="flex min-h-0 flex-1 flex-col p-3"
+                    className="flex min-h-0 flex-1 flex-col p-2"
                     style={{
                         touchAction: "pan-y",
                         scrollbarWidth: "none",
                         msOverflowStyle: "none",
                     }}
                 >
-                    <div className="flex h-full flex-col gap-2 text-stone-100">
-                        <section className="rounded-[22px] border border-[#6f5734] bg-[radial-gradient(circle_at_top,rgba(120,86,44,0.35),rgba(21,14,10,0.96)_60%)] p-3 shadow-[inset_0_1px_0_rgba(255,223,175,0.1)]">
+                    <div className="flex h-full flex-col gap-1 text-stone-100">
+                        <section className="bg-[radial-gradient(circle_at_top,rgba(120,86,44,0.35),rgba(21,14,10,0.96)_60%)] p-2">
                             <div className="flex items-start gap-2.5">
-                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-amber-200/20 bg-black/25 text-base font-bold text-amber-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-                                    {hud?.level ?? "-"}
+                                <div className="relative shrink-0">
+                                    <div className="flex h-9 w-9 items-center justify-center rounded-full border border-amber-200/20 bg-black/25 text-sm font-bold text-amber-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+                                        {hud?.level ?? "-"}
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsSkillsOpen(true)}
+                                        className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border border-amber-300/50 bg-[#7d2e12] text-amber-50 shadow-[0_0_8px_rgba(251,191,36,0.35)] transition hover:border-amber-200 hover:bg-[#9a3b18]"
+                                        aria-label="Habilidades"
+                                        title="Habilidades"
+                                    >
+                                        <Plus
+                                            aria-hidden="true"
+                                            className="h-3 w-3"
+                                            strokeWidth={2.6}
+                                        />
+                                    </button>
                                 </div>
                                 <div className="min-w-0 flex-1">
                                     <p className="text-[9px] uppercase tracking-[0.3em] text-amber-200/70">
                                         Personaje
                                     </p>
-                                    <h3 className="truncate text-[24px] font-semibold leading-none text-[#efe2c5]">
+                                    <h3 className="truncate text-[20px] font-semibold leading-none text-[#efe2c5]">
                                         {hud?.nameCharacter || "Aventurero"}
                                     </h3>
+                                    <p className="mt-1.5 text-[11px] font-semibold tabular-nums text-amber-200">
+                                        {formatNumber(hud?.gold ?? 0)} oro
+                                    </p>
                                 </div>
                                 <button
                                     type="button"
@@ -2353,35 +2377,16 @@ export default function InventoryFloatingPanel({
                                     ) : null}
                                 </button>
                             </div>
-
-                            {!isMaxLevelCharacter ? (
-                                <div className="mt-3">
-                                    <div className="mb-1 flex flex-nowrap items-center justify-between gap-2 text-[10px] uppercase tracking-[0.14em] text-stone-300/82">
-                                        <span className="shrink-0">
-                                            Experiencia
-                                        </span>
-                                        <span className="shrink-0 whitespace-nowrap text-[10px] tracking-[0.08em] text-right text-amber-100 tabular-nums">
-                                            {expLabel}
-                                        </span>
-                                    </div>
-                                    <div className="h-3 overflow-hidden rounded-full border border-[#8b6b3e] bg-black/45 p-[2px]">
-                                        <div
-                                            className="h-full rounded-full bg-linear-to-r from-[#6a9b2f] via-[#7cb63b] to-[#9fd14d]"
-                                            style={{ width: `${expPercent}%` }}
-                                        />
-                                    </div>
-                                </div>
-                            ) : null}
                         </section>
 
-                        <section className="flex min-h-0 flex-1 flex-col rounded-[22px] border border-[#5e4529] bg-[#19110d]/95 p-2.5 shadow-[inset_0_1px_0_rgba(255,214,170,0.08)]">
+                        <section className="flex min-h-0 flex-1 flex-col bg-[#19110d]/95 p-2">
                             <div className="grid grid-cols-2 gap-2">
                                 <button
                                     type="button"
                                     onClick={() => setActiveTab("inventory")}
-                                    className={`rounded-[14px] border px-3 py-2 text-sm font-semibold transition focus:outline-none focus-visible:outline-none ${
+                                    className={`border px-3 py-2 text-sm font-semibold transition focus:outline-none focus-visible:outline-none ${
                                         activeTab === "inventory"
-                                            ? "border-amber-300/70 bg-[linear-gradient(180deg,#7d2e12,#4f1608)] text-amber-50 shadow-[0_0_0_1px_rgba(251,191,36,0.12),inset_0_1px_0_rgba(255,220,180,0.18)]"
+                                            ? "border-amber-300/70 bg-[linear-gradient(180deg,#7d2e12,#4f1608)] text-amber-50 shadow-[inset_0_1px_0_rgba(255,220,180,0.18)]"
                                             : "border-[#4a3424] bg-[#241813] text-stone-300 hover:border-amber-400/40 hover:text-stone-100"
                                     }`}
                                 >
@@ -2390,9 +2395,9 @@ export default function InventoryFloatingPanel({
                                 <button
                                     type="button"
                                     onClick={() => setActiveTab("spells")}
-                                    className={`rounded-[14px] border px-3 py-2 text-sm font-semibold transition focus:outline-none focus-visible:outline-none ${
+                                    className={`border px-3 py-2 text-sm font-semibold transition focus:outline-none focus-visible:outline-none ${
                                         activeTab === "spells"
-                                            ? "border-amber-300/70 bg-[linear-gradient(180deg,#7d2e12,#4f1608)] text-amber-50 shadow-[0_0_0_1px_rgba(251,191,36,0.12),inset_0_1px_0_rgba(255,220,180,0.18)]"
+                                            ? "border-amber-300/70 bg-[linear-gradient(180deg,#7d2e12,#4f1608)] text-amber-50 shadow-[inset_0_1px_0_rgba(255,220,180,0.18)]"
                                             : "border-[#4a3424] bg-[#241813] text-stone-300 hover:border-amber-400/40 hover:text-stone-100"
                                     }`}
                                 >
@@ -2402,8 +2407,8 @@ export default function InventoryFloatingPanel({
 
                             {activeTab === "inventory" ? (
                                 <div className="mt-2 flex min-h-0 flex-1 flex-col gap-2">
-                                    <div className="rounded-[18px] border border-amber-300/15 bg-[#120c09] p-2.5 shadow-[inset_0_1px_0_rgba(255,214,170,0.08)]">
-                                        <div className="grid grid-cols-7 gap-1">
+                                    <div className="bg-[#120c09] p-1">
+                                        <div className="grid grid-cols-6 gap-px">
                                             {slotItems.map((item, index) => {
                                                 const slotNumber =
                                                     index + inventoryStartSlot;
@@ -2420,17 +2425,17 @@ export default function InventoryFloatingPanel({
                                                         data-inventory-slot={
                                                             slotNumber
                                                         }
-                                                        className={`relative flex aspect-square items-center justify-center rounded-[6px] border text-left transition focus:outline-none focus-visible:outline-none ${
+                                                        className={`relative flex aspect-square items-center justify-center border text-left transition focus:outline-none focus-visible:outline-none ${
                                                             item
                                                                 ? !item.validForUser
                                                                     ? selectedSlot ===
                                                                       item.slot
-                                                                        ? "border-rose-300/85 bg-[#3b2026] shadow-[0_0_0_1px_rgba(253,164,175,0.22),inset_0_1px_0_rgba(255,218,180,0.06)]"
-                                                                        : "border-rose-400/25 bg-[#24151a] shadow-[inset_0_1px_0_rgba(255,218,180,0.05)] hover:border-rose-300/60 hover:bg-[#2c181f]"
+                                                                        ? "border-rose-300/85 bg-[#3b2026]"
+                                                                        : "border-rose-400/25 bg-[#24151a] hover:border-rose-300/60 hover:bg-[#2c181f]"
                                                                     : selectedSlot ===
                                                                         item.slot
-                                                                      ? "border-cyan-300/85 bg-[#3a2817] shadow-[0_0_0_1px_rgba(103,232,249,0.25),inset_0_1px_0_rgba(255,218,180,0.08)]"
-                                                                      : "border-amber-500/25 bg-[#2b2016] shadow-[inset_0_1px_0_rgba(255,218,180,0.08)] hover:border-amber-300/60 hover:bg-[#35271b]"
+                                                                      ? "border-cyan-300/85 bg-[#3a2817]"
+                                                                      : "border-amber-500/25 bg-[#2b2016] hover:border-amber-300/60 hover:bg-[#35271b]"
                                                                 : "border-[#433126] bg-[#140f0a]"
                                                         }`}
                                                         onMouseDown={(
@@ -2515,7 +2520,7 @@ export default function InventoryFloatingPanel({
                                                                     </span>
                                                                 )}
                                                                 {!item.validForUser && (
-                                                                    <span className="pointer-events-none absolute inset-0 rounded-[6px] bg-[linear-gradient(135deg,rgba(244,63,94,0.18),rgba(0,0,0,0))]" />
+                                                                    <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(244,63,94,0.18),rgba(0,0,0,0))]" />
                                                                 )}
                                                             </>
                                                         ) : null}
@@ -2526,7 +2531,7 @@ export default function InventoryFloatingPanel({
                                     </div>
 
                                     {hoveredItem ? (
-                                        <div className="rounded-2xl border border-amber-200/15 bg-black/45 px-3 py-2 text-[11px] leading-4 text-stone-200">
+                                        <div className="bg-black/45 px-3 py-2 text-[11px] leading-4 text-stone-200">
                                             <p className="font-semibold text-amber-100">
                                                 {hoveredItem.name}
                                             </p>
@@ -2540,16 +2545,21 @@ export default function InventoryFloatingPanel({
                                 </div>
                             ) : (
                                 <div className="mt-2 flex min-h-0 flex-1 flex-col gap-2">
-                                    {spells.length ? (
+                                    {canUseSpellBook ? (
                                         <div className="flex min-h-0 flex-1 flex-col gap-2">
+                                            {pendingSpellMoveSlot !== null ? (
+                                                <p className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-amber-200/85">
+                                                    Selecciona un hueco
+                                                </p>
+                                            ) : null}
                                             <div className="flex min-h-0 flex-1 items-start gap-1.5">
                                                 <div
                                                     ref={spellListRef}
                                                     role="listbox"
                                                     aria-label="Lista de hechizos"
                                                     aria-activedescendant={
-                                                        selectedSpell
-                                                            ? `spell-option-${selectedSpell.slot}`
+                                                        selectedSpellSlot
+                                                            ? `spell-option-${selectedSpellSlot}`
                                                             : undefined
                                                     }
                                                     tabIndex={-1}
@@ -2569,18 +2579,23 @@ export default function InventoryFloatingPanel({
                                                             );
                                                         }
                                                     }}
-                                                    className="h-full min-h-0 flex-1 overflow-y-auto rounded-[10px] border border-[#7a5a3a] bg-black p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+                                                    className={`h-full min-h-0 flex-1 overflow-y-auto bg-black p-1 ${
+                                                        pendingSpellMoveSlot !==
+                                                        null
+                                                            ? "cursor-crosshair"
+                                                            : ""
+                                                    }`}
                                                 >
-                                                    {sortedSpells.map(
-                                                        (spell) => (
+                                                    {spellSlots.map(
+                                                        ({ slot, spell }) => (
                                                             <button
-                                                                key={`${spell.slot}-${spell.idSpell}`}
-                                                                id={`spell-option-${spell.slot}`}
+                                                                key={`spell-slot-${slot}`}
+                                                                id={`spell-option-${slot}`}
                                                                 type="button"
                                                                 role="option"
                                                                 aria-selected={
                                                                     selectedSpellSlot ===
-                                                                    spell.slot
+                                                                    slot
                                                                 }
                                                                 onMouseDown={(
                                                                     event,
@@ -2593,20 +2608,78 @@ export default function InventoryFloatingPanel({
                                                                     }
 
                                                                     event.preventDefault();
-                                                                    setIsSpellListDragging(
-                                                                        true,
-                                                                    );
+
+                                                                    if (
+                                                                        pendingSpellMoveSlot !==
+                                                                        null
+                                                                    ) {
+                                                                        skipNextSpellDoubleClickRef.current =
+                                                                            true;
+                                                                        if (
+                                                                            pendingSpellMoveSlot !==
+                                                                            slot
+                                                                        ) {
+                                                                            onReorderSpell?.(
+                                                                                pendingSpellMoveSlot,
+                                                                                slot,
+                                                                            );
+                                                                        }
+                                                                        setPendingSpellMoveSlot(
+                                                                            null,
+                                                                        );
+                                                                        onSelectSpell(
+                                                                            spell
+                                                                                ? slot
+                                                                                : null,
+                                                                        );
+                                                                        return;
+                                                                    }
+
+                                                                    if (spell) {
+                                                                        setIsSpellListDragging(
+                                                                            true,
+                                                                        );
+                                                                        onSelectSpell(
+                                                                            slot,
+                                                                        );
+                                                                    } else {
+                                                                        onSelectSpell(
+                                                                            null,
+                                                                        );
+                                                                    }
+                                                                }}
+                                                                onDoubleClick={(
+                                                                    event,
+                                                                ) => {
+                                                                    event.preventDefault();
+                                                                    if (
+                                                                        skipNextSpellDoubleClickRef.current
+                                                                    ) {
+                                                                        skipNextSpellDoubleClickRef.current =
+                                                                            false;
+                                                                        return;
+                                                                    }
+                                                                    if (!spell) {
+                                                                        return;
+                                                                    }
+
                                                                     onSelectSpell(
-                                                                        spell.slot,
+                                                                        slot,
+                                                                    );
+                                                                    setPendingSpellMoveSlot(
+                                                                        slot,
                                                                     );
                                                                 }}
                                                                 onMouseEnter={(
                                                                     event,
                                                                 ) => {
                                                                     if (
+                                                                        pendingSpellMoveSlot !==
+                                                                            null ||
                                                                         (event.buttons &
                                                                             1) ===
-                                                                        0
+                                                                            0 ||
+                                                                        !spell
                                                                     ) {
                                                                         return;
                                                                     }
@@ -2615,7 +2688,7 @@ export default function InventoryFloatingPanel({
                                                                         true,
                                                                     );
                                                                     onSelectSpell(
-                                                                        spell.slot,
+                                                                        slot,
                                                                     );
                                                                 }}
                                                                 onDragStart={(
@@ -2623,18 +2696,27 @@ export default function InventoryFloatingPanel({
                                                                 ) => {
                                                                     event.preventDefault();
                                                                 }}
-                                                                className={`flex w-full items-center px-2 text-left text-[13px] leading-6 text-stone-100 select-none ${
+                                                                className={`flex w-full items-center px-2 text-left text-[13px] leading-6 select-none ${
                                                                     selectedSpellSlot ===
-                                                                    spell.slot
+                                                                    slot
                                                                         ? "bg-[#2f86ff] text-white"
-                                                                        : "bg-transparent hover:bg-white/8"
+                                                                        : spell
+                                                                          ? "bg-transparent text-stone-100 hover:bg-white/8"
+                                                                          : "bg-transparent text-stone-500 hover:bg-white/5"
+                                                                } ${
+                                                                    pendingSpellMoveSlot ===
+                                                                    slot
+                                                                        ? "outline outline-1 outline-amber-300/80"
+                                                                        : ""
                                                                 }`}
                                                                 style={{
                                                                     minHeight: `${SPELL_LIST_ROW_HEIGHT}px`,
                                                                 }}
                                                             >
                                                                 <span className="block truncate">
-                                                                    {spell.name}
+                                                                    {spell
+                                                                        ? spell.name
+                                                                        : EMPTY_SPELL_LABEL}
                                                                 </span>
                                                             </button>
                                                         ),
@@ -2651,14 +2733,35 @@ export default function InventoryFloatingPanel({
                                                             !canMoveSelectedSpellUp
                                                         }
                                                         onClick={() => {
-                                                            if (selectedSpell) {
-                                                                onMoveSpell?.(
-                                                                    selectedSpell.slot,
-                                                                    "up",
-                                                                );
+                                                            if (!selectedSpell) {
+                                                                return;
                                                             }
+
+                                                            const sourceSlot =
+                                                                selectedSpell.slot <
+                                                                1
+                                                                    ? 1
+                                                                    : selectedSpell.slot;
+                                                            const targetSlot =
+                                                                sourceSlot - 1;
+                                                            if (targetSlot < 1) {
+                                                                return;
+                                                            }
+
+                                                            if (onReorderSpell) {
+                                                                onReorderSpell(
+                                                                    sourceSlot,
+                                                                    targetSlot,
+                                                                );
+                                                                return;
+                                                            }
+
+                                                            onMoveSpell?.(
+                                                                selectedSpell.slot,
+                                                                "up",
+                                                            );
                                                         }}
-                                                        className="flex h-7 items-center justify-center rounded-[6px] border border-[#8b6a47] bg-[linear-gradient(180deg,#46331f_0%,#26180e_100%)] text-stone-100 shadow-[inset_0_1px_0_rgba(255,240,210,0.18)] transition hover:border-[#c39a6a] hover:text-amber-100 disabled:cursor-not-allowed disabled:opacity-35"
+                                                        className="flex h-7 items-center justify-center border border-[#8b6a47] bg-[linear-gradient(180deg,#46331f_0%,#26180e_100%)] text-stone-100 shadow-[inset_0_1px_0_rgba(255,240,210,0.18)] transition hover:border-[#c39a6a] hover:text-amber-100 disabled:cursor-not-allowed disabled:opacity-35"
                                                     >
                                                         <ChevronUp className="h-4 w-4" />
                                                     </button>
@@ -2672,14 +2775,38 @@ export default function InventoryFloatingPanel({
                                                             !canMoveSelectedSpellDown
                                                         }
                                                         onClick={() => {
-                                                            if (selectedSpell) {
-                                                                onMoveSpell?.(
-                                                                    selectedSpell.slot,
-                                                                    "down",
-                                                                );
+                                                            if (!selectedSpell) {
+                                                                return;
                                                             }
+
+                                                            const sourceSlot =
+                                                                selectedSpell.slot <
+                                                                1
+                                                                    ? 1
+                                                                    : selectedSpell.slot;
+                                                            const targetSlot =
+                                                                sourceSlot + 1;
+                                                            if (
+                                                                targetSlot >
+                                                                MAX_USER_SPELLS
+                                                            ) {
+                                                                return;
+                                                            }
+
+                                                            if (onReorderSpell) {
+                                                                onReorderSpell(
+                                                                    sourceSlot,
+                                                                    targetSlot,
+                                                                );
+                                                                return;
+                                                            }
+
+                                                            onMoveSpell?.(
+                                                                selectedSpell.slot,
+                                                                "down",
+                                                            );
                                                         }}
-                                                        className="flex h-7 items-center justify-center rounded-[6px] border border-[#8b6a47] bg-[linear-gradient(180deg,#46331f_0%,#26180e_100%)] text-stone-100 shadow-[inset_0_1px_0_rgba(255,240,210,0.18)] transition hover:border-[#c39a6a] hover:text-amber-100 disabled:cursor-not-allowed disabled:opacity-35"
+                                                        className="flex h-7 items-center justify-center border border-[#8b6a47] bg-[linear-gradient(180deg,#46331f_0%,#26180e_100%)] text-stone-100 shadow-[inset_0_1px_0_rgba(255,240,210,0.18)] transition hover:border-[#c39a6a] hover:text-amber-100 disabled:cursor-not-allowed disabled:opacity-35"
                                                     >
                                                         <ChevronDown className="h-4 w-4" />
                                                     </button>
@@ -2698,7 +2825,7 @@ export default function InventoryFloatingPanel({
                                                                 );
                                                             }
                                                         }}
-                                                        className="mt-3 flex h-7 items-center justify-center rounded-[6px] border border-[#8b6a47] bg-[linear-gradient(180deg,#46331f_0%,#26180e_100%)] text-[12px] font-bold leading-none text-stone-100 shadow-[inset_0_1px_0_rgba(255,240,210,0.18)] transition hover:border-[#c39a6a] hover:text-amber-100 disabled:cursor-not-allowed disabled:opacity-35"
+                                                        className="mt-3 flex h-7 items-center justify-center border border-[#8b6a47] bg-[linear-gradient(180deg,#46331f_0%,#26180e_100%)] text-[12px] font-bold leading-none text-stone-100 shadow-[inset_0_1px_0_rgba(255,240,210,0.18)] transition hover:border-[#c39a6a] hover:text-amber-100 disabled:cursor-not-allowed disabled:opacity-35"
                                                     >
                                                         i
                                                     </button>
@@ -2706,7 +2833,7 @@ export default function InventoryFloatingPanel({
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="rounded-[20px] border border-dashed border-white/10 bg-white/3 px-4 py-6 text-center text-sm text-stone-400">
+                                        <div className="border border-dashed border-white/10 bg-white/3 px-4 py-6 text-center text-sm text-stone-400">
                                             Este personaje no tiene hechizos
                                             disponibles.
                                         </div>
@@ -2720,7 +2847,7 @@ export default function InventoryFloatingPanel({
                                             }
                                         }}
                                         disabled={!selectedSpell}
-                                        className="shrink-0 w-full rounded-xl bg-amber-300 px-4 py-2 text-sm font-semibold text-stone-950 transition hover:bg-amber-200 focus:outline-none focus-visible:outline-none disabled:cursor-not-allowed disabled:bg-stone-700 disabled:text-stone-400"
+                                        className="w-full shrink-0 border border-amber-300/70 bg-[linear-gradient(180deg,#7d2e12,#4f1608)] px-4 py-2 text-sm font-semibold text-amber-50 shadow-[inset_0_1px_0_rgba(255,220,180,0.18)] transition hover:brightness-110 focus:outline-none focus-visible:outline-none disabled:cursor-not-allowed disabled:border-[#4a3424] disabled:bg-[#241813] disabled:text-stone-500 disabled:shadow-none"
                                     >
                                         Lanzar
                                     </button>
@@ -2728,163 +2855,109 @@ export default function InventoryFloatingPanel({
                             )}
                         </section>
 
-                        <section className="relative rounded-[22px] border border-[#5e4529] bg-[#19110d]/95 p-3 shadow-[inset_0_1px_0_rgba(255,214,170,0.08)]">
-                            <p className="text-center text-[10px] font-semibold tracking-[0.04em] text-[#cbb18e]">
-                                {mapName || "Sin mapa cargado"}
-                            </p>
-
-                            <div className="mt-2 flex items-start gap-3">
-                                <div className="min-w-0 flex-1 space-y-2">
-                                    <VitalBarsCanvas
+                        <section className="relative shrink-0 bg-[#19110d]/95 p-1.5">
+                            <div className="flex items-start gap-1.5">
+                                <div className="min-w-0 flex-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsWorldMapOpen(true)}
+                                        className="mb-1 w-full text-left text-[9px] font-semibold tracking-[0.04em] text-[#cbb18e] transition hover:text-amber-100"
+                                        aria-label="Abrir mapa del mundo"
+                                        title={
+                                            hud
+                                                ? `Mapa ${hud.map} (${hud.pos.x}, ${hud.pos.y})`
+                                                : "Abrir mapa del mundo"
+                                        }
+                                    >
+                                        {mapName || "Sin mapa cargado"}
+                                    </button>
+                                    <VitalBars
                                         hp={hud?.hp || 0}
                                         maxHp={hud?.maxHp || 0}
                                         mana={hud?.mana || 0}
                                         maxMana={hud?.maxMana || 0}
+                                        sta={hud?.sta ?? 0}
+                                        maxSta={hud?.maxSta ?? 0}
+                                        hambre={hud?.hambre ?? 100}
+                                        maxHambre={hud?.maxHambre ?? 100}
+                                        sed={hud?.sed ?? 100}
+                                        maxSed={hud?.maxSed ?? 100}
                                     />
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                setIsPartyModalOpen(true)
-                                            }
-                                            className="inline-flex min-w-0 items-center justify-center gap-2 rounded-[10px] border border-[#4f3f2b] bg-[linear-gradient(180deg,#2d2218_0%,#17100a_100%)] px-3 py-1.5 text-center text-[11px] font-semibold text-amber-100 transition hover:border-[#8c6a43]"
-                                        >
-                                            <Users className="h-4 w-4 text-cyan-300" />
-                                            Party
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                setIsClanModalOpen(true)
-                                            }
-                                            className="inline-flex min-w-0 items-center justify-center gap-2 rounded-[10px] border border-[#4f3f2b] bg-[linear-gradient(180deg,#2d2218_0%,#17100a_100%)] px-3 py-1.5 text-center text-[11px] font-semibold text-amber-100 transition hover:border-[#8c6a43]"
-                                        >
-                                            <Shield className="h-4 w-4 text-amber-300" />
-                                            Clanes
-                                        </button>
-                                    </div>
                                 </div>
-
-                                <div className="w-[92px] shrink-0">
+                                <div className="grid w-[118px] shrink-0 grid-cols-2 gap-1">
                                     <button
-                                        ref={worldMapTriggerRef}
                                         type="button"
-                                        onClick={() => setIsWorldMapOpen(true)}
-                                        className="relative block h-[92px] w-[92px] overflow-hidden rounded-[10px] border border-[#705134] bg-[#0b0705] text-left shadow-[inset_0_1px_0_rgba(255,220,180,0.1)] transition hover:border-[#9b744f] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/70"
-                                        aria-label="Abrir mapa del mundo"
+                                        onClick={() =>
+                                            setIsPartyModalOpen(true)
+                                        }
+                                        className={HUD_ACTION_BUTTON_CLASS}
                                     >
-                                        {mapPreviewSrc && !mapPreviewErrored ? (
-                                            <img
-                                                src={mapPreviewSrc}
-                                                alt={
-                                                    mapName ||
-                                                    `Mapa ${hud?.map ?? ""}`
-                                                }
-                                                width={MINIMAP_PREVIEW_SIZE}
-                                                height={MINIMAP_PREVIEW_SIZE}
-                                                className="h-[92px] w-[92px] object-contain"
-                                                onLoad={(event) => {
-                                                    const target =
-                                                        event.currentTarget;
-                                                    const naturalWidth =
-                                                        target.naturalWidth ||
-                                                        MINIMAP_PREVIEW_SIZE;
-                                                    const naturalHeight =
-                                                        target.naturalHeight ||
-                                                        MINIMAP_PREVIEW_SIZE;
-
-                                                    setMapPreviewAspectRatio(
-                                                        naturalWidth /
-                                                            Math.max(
-                                                                1,
-                                                                naturalHeight,
-                                                            ),
-                                                    );
-                                                }}
-                                                onError={() =>
-                                                    setMapPreviewErrored(true)
-                                                }
-                                            />
-                                        ) : isChallengeInstanceMap ? (
-                                            <div className="h-[92px] w-[92px] bg-black" />
-                                        ) : (
-                                            <div className="flex h-[92px] w-[92px] items-center justify-center bg-[linear-gradient(180deg,#3d2a1d,#1a120d)] text-[10px] font-semibold text-stone-300">
-                                                Mapa {hud?.map ?? "-"}
-                                            </div>
-                                        )}
-                                        {minimapMarkerPosition ? (
-                                            <span
-                                                data-testid="minimap-self-marker"
-                                                className="pointer-events-none absolute block h-[5px] w-[5px] rounded-full border border-white/90 bg-[#ff3b22] shadow-[0_0_0_1px_rgba(90,14,2,0.9),0_0_5px_rgba(255,88,42,0.9)]"
-                                                style={{
-                                                    left: minimapMarkerPosition.left,
-                                                    top: minimapMarkerPosition.top,
-                                                    transform:
-                                                        "translate(-50%, -50%)",
-                                                }}
-                                            />
-                                        ) : null}
-                                        {clanMinimapMarkerPositions.map(
-                                            (marker) => (
-                                                <span
-                                                    key={`clan-${marker.id}`}
-                                                    data-testid={`minimap-clan-marker-${marker.id}`}
-                                                    title={marker.title}
-                                                    className="pointer-events-none absolute block h-[5px] w-[5px] rounded-full border border-white/90 bg-[#22c55e] shadow-[0_0_0_1px_rgba(20,83,45,0.95),0_0_5px_rgba(34,197,94,0.95)]"
-                                                    style={{
-                                                        left: marker.left,
-                                                        top: marker.top,
-                                                        transform:
-                                                            "translate(-50%, -50%)",
-                                                    }}
-                                                />
-                                            ),
-                                        )}
-                                        {partyMinimapMarkerPositions.map(
-                                            (marker) => (
-                                                <span
-                                                    key={marker.id}
-                                                    data-testid={`minimap-party-marker-${marker.id}`}
-                                                    title={marker.title}
-                                                    className="pointer-events-none absolute block h-[5px] w-[5px] rounded-full border border-white/90 bg-[#38bdf8] shadow-[0_0_0_1px_rgba(8,47,73,0.95),0_0_5px_rgba(56,189,248,0.95)]"
-                                                    style={{
-                                                        left: marker.left,
-                                                        top: marker.top,
-                                                        transform:
-                                                            "translate(-50%, -50%)",
-                                                    }}
-                                                />
-                                            ),
-                                        )}
+                                        <Users className="h-3 w-3 text-cyan-300" />
+                                        Party
                                     </button>
-                                    <div className="mt-1 text-center text-[10px] text-amber-100/85">
-                                        {hud
-                                            ? `Mapa ${hud.map} (${hud.pos.x}, ${hud.pos.y})`
-                                            : "Mapa - (-, -)"}
-                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setIsClanModalOpen(true)
+                                        }
+                                        className={HUD_ACTION_BUTTON_CLASS}
+                                    >
+                                        <Shield className="h-3 w-3 text-amber-300" />
+                                        Clanes
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setWoaoHubTab("misiones");
+                                            onSendCommand?.("/quests");
+                                        }}
+                                        className={HUD_ACTION_BUTTON_CLASS}
+                                    >
+                                        Misiones
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setWoaoHubTab("montura");
+                                            onSendCommand?.("/montura");
+                                        }}
+                                        className={HUD_ACTION_BUTTON_CLASS}
+                                    >
+                                        Montura
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setWoaoHubTab("premios")}
+                                        className={HUD_ACTION_BUTTON_CLASS}
+                                    >
+                                        Premios
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setWoaoHubTab("ranked")}
+                                        className={HUD_ACTION_BUTTON_CLASS}
+                                    >
+                                        Ranked
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setWoaoHubTab("viajes")}
+                                        className={HUD_ACTION_BUTTON_CLASS}
+                                    >
+                                        Viajes
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setWoaoHubTab("guerra")}
+                                        className={HUD_ACTION_BUTTON_CLASS}
+                                    >
+                                        WOAO
+                                    </button>
                                 </div>
                             </div>
-
-                            <div className="mt-3 grid grid-cols-3 gap-x-3 gap-y-2 text-stone-100">
+                            <div className="mt-1.5 flex items-center gap-1 text-stone-100">
                                 <StatLine
-                                    icon={
-                                        <HudGlyph>
-                                            <svg
-                                                viewBox="0 0 16 16"
-                                                className="h-4 w-4 fill-current"
-                                            >
-                                                <circle cx="8" cy="8" r="5.5" />
-                                                <path
-                                                    d="M8 3.5 9.2 6H12l-2.3 1.7.9 2.8L8 8.9l-2.6 1.6.9-2.8L4 6h2.8Z"
-                                                    className="fill-[#5a3a14]"
-                                                />
-                                            </svg>
-                                        </HudGlyph>
-                                    }
-                                    value={formatNumber(hud?.gold ?? 0)}
-                                    accent="text-amber-200"
-                                />
-                                <StatLine
+                                    label="Defensa"
                                     icon={
                                         <HudGlyph>
                                             <svg
@@ -2898,6 +2971,7 @@ export default function InventoryFloatingPanel({
                                     value={equippedArmorLabel}
                                 />
                                 <StatLine
+                                    label="Daño"
                                     icon={
                                         <HudGlyph>
                                             <svg
@@ -2913,11 +2987,13 @@ export default function InventoryFloatingPanel({
                                     value={equippedDamageLabel}
                                 />
                                 <StatLine
+                                    label="Fuerza"
                                     icon={
                                         <span className="inline-flex h-4 w-4 items-center justify-center">
                                             <Image
                                                 src="/graphics/23003.png"
-                                                alt="Agilidad"
+                                                alt="Fuerza"
+                                                title="Fuerza"
                                                 width={14}
                                                 height={14}
                                                 className="h-3.5 w-3.5 object-contain opacity-90"
@@ -2935,11 +3011,13 @@ export default function InventoryFloatingPanel({
                                     }
                                 />
                                 <StatLine
+                                    label="Agilidad"
                                     icon={
                                         <span className="inline-flex h-4 w-4 items-center justify-center">
                                             <Image
                                                 src="/graphics/23000.png"
                                                 alt="Agilidad"
+                                                title="Agilidad"
                                                 width={14}
                                                 height={14}
                                                 className="h-3.5 w-3.5 object-contain opacity-90"
@@ -2957,14 +3035,103 @@ export default function InventoryFloatingPanel({
                                     }
                                 />
                             </div>
-
-                            <div className="pointer-events-none absolute bottom-3 right-3 text-[10px] uppercase tracking-[0.16em] text-stone-500">
-                                v0.0.75
-                            </div>
+                                <div className="mt-1 pointer-events-none text-right text-[9px] uppercase tracking-[0.16em] text-stone-500">
+                                    v0.0.75
+                                </div>
                         </section>
                     </div>
                 </div>
             </div>
+
+            {minimapVisible && minimapHost
+                ? createPortal(
+                      <div className="relative h-full w-full overflow-hidden bg-[#070504]">
+                          <button
+                              ref={worldMapTriggerRef}
+                              type="button"
+                              onClick={() => setIsWorldMapOpen(true)}
+                              className="relative block h-full w-full overflow-hidden text-left transition hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/70"
+                              aria-label="Abrir mapa del mundo"
+                              title={
+                                  hud
+                                      ? `Mapa ${hud.map} (${hud.pos.x}, ${hud.pos.y})`
+                                      : "Abrir mapa del mundo"
+                              }
+                          >
+                              {mapPreviewSrc && !mapPreviewErrored ? (
+                                  <img
+                                      src={mapPreviewSrc}
+                                      alt={mapName || `Mapa ${hud?.map ?? ""}`}
+                                      width={MINIMAP_PREVIEW_SIZE}
+                                      height={MINIMAP_PREVIEW_SIZE}
+                                      className="h-full w-full object-contain"
+                                      onLoad={(event) => {
+                                          const target = event.currentTarget;
+                                          const naturalWidth =
+                                              target.naturalWidth ||
+                                              MINIMAP_PREVIEW_SIZE;
+                                          const naturalHeight =
+                                              target.naturalHeight ||
+                                              MINIMAP_PREVIEW_SIZE;
+
+                                          setMapPreviewAspectRatio(
+                                              naturalWidth /
+                                                  Math.max(1, naturalHeight),
+                                          );
+                                      }}
+                                      onError={() =>
+                                          setMapPreviewErrored(true)
+                                      }
+                                  />
+                              ) : isChallengeInstanceMap ? (
+                                  <span className="block h-full w-full bg-black" />
+                              ) : (
+                                  <span className="flex h-full w-full items-center justify-center bg-[linear-gradient(180deg,#3d2a1d,#1a120d)] text-[10px] font-semibold text-stone-300">
+                                      Mapa {hud?.map ?? "-"}
+                                  </span>
+                              )}
+                              {minimapMarkerPosition ? (
+                                  <span
+                                      data-testid="minimap-self-marker"
+                                      className="pointer-events-none absolute block h-[5px] w-[5px] rounded-full border border-white/90 bg-[#ff3b22] shadow-[0_0_0_1px_rgba(90,14,2,0.9),0_0_5px_rgba(255,88,42,0.9)]"
+                                      style={{
+                                          left: minimapMarkerPosition.left,
+                                          top: minimapMarkerPosition.top,
+                                          transform: "translate(-50%, -50%)",
+                                      }}
+                                  />
+                              ) : null}
+                              {clanMinimapMarkerPositions.map((marker) => (
+                                  <span
+                                      key={`clan-${marker.id}`}
+                                      data-testid={`minimap-clan-marker-${marker.id}`}
+                                      title={marker.title}
+                                      className="pointer-events-none absolute block h-[5px] w-[5px] rounded-full border border-white/90 bg-[#22c55e] shadow-[0_0_0_1px_rgba(20,83,45,0.95),0_0_5px_rgba(34,197,94,0.95)]"
+                                      style={{
+                                          left: marker.left,
+                                          top: marker.top,
+                                          transform: "translate(-50%, -50%)",
+                                      }}
+                                  />
+                              ))}
+                              {partyMinimapMarkerPositions.map((marker) => (
+                                  <span
+                                      key={marker.id}
+                                      data-testid={`minimap-party-marker-${marker.id}`}
+                                      title={marker.title}
+                                      className="pointer-events-none absolute block h-[5px] w-[5px] rounded-full border border-white/90 bg-[#38bdf8] shadow-[0_0_0_1px_rgba(8,47,73,0.95),0_0_5px_rgba(56,189,248,0.95)]"
+                                      style={{
+                                          left: marker.left,
+                                          top: marker.top,
+                                          transform: "translate(-50%, -50%)",
+                                      }}
+                                  />
+                              ))}
+                          </button>
+                      </div>,
+                      minimapHost,
+                  )
+                : null}
 
             {dropItem ? (
                 <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/35 px-4 backdrop-blur-[2px]">
@@ -3165,6 +3332,12 @@ export default function InventoryFloatingPanel({
                   )
                 : null}
 
+            <SkillsModal
+                isOpen={isSkillsOpen}
+                level={hud?.level ?? 1}
+                onClose={() => setIsSkillsOpen(false)}
+            />
+
             {isSettingsOpen ? (
                 <div className="fixed inset-0 z-[84] flex items-center justify-center bg-black/45 px-4 backdrop-blur-[3px]">
                     <div className="w-full max-w-md overflow-hidden rounded-[28px] border border-amber-200/20 bg-[#120c08]/95 text-stone-100 shadow-[0_28px_90px_rgba(0,0,0,0.55)]">
@@ -3286,6 +3459,56 @@ export default function InventoryFloatingPanel({
                                 </div>
                             </section>
 
+                            {onMinimapVisibleChange ? (
+                                <section className="rounded-[22px] border border-[#4f3926] bg-[#19110d]/92 p-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-amber-300/15 bg-black/25 text-amber-100">
+                                            <MapIcon
+                                                className="h-4.5 w-4.5"
+                                                strokeWidth={1.8}
+                                            />
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-[11px] uppercase tracking-[0.26em] text-amber-200/78">
+                                                Minimapa
+                                            </p>
+                                            <p className="mt-1 text-sm text-stone-300">
+                                                Mostrarlo junto al chat, como
+                                                en el cliente original.
+                                            </p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            role="switch"
+                                            aria-checked={minimapVisible}
+                                            onClick={() =>
+                                                onMinimapVisibleChange(
+                                                    !minimapVisible,
+                                                )
+                                            }
+                                            className={`relative h-7 w-12 shrink-0 rounded-full border transition ${
+                                                minimapVisible
+                                                    ? "border-amber-300/45 bg-amber-400/80"
+                                                    : "border-stone-600 bg-stone-800"
+                                            }`}
+                                        >
+                                            <span
+                                                className={`absolute top-0.5 h-5 w-5 rounded-full bg-stone-100 transition ${
+                                                    minimapVisible
+                                                        ? "right-0.5"
+                                                        : "left-0.5"
+                                                }`}
+                                            />
+                                            <span className="sr-only">
+                                                {minimapVisible
+                                                    ? "Ocultar minimapa"
+                                                    : "Mostrar minimapa"}
+                                            </span>
+                                        </button>
+                                    </div>
+                                </section>
+                            ) : null}
+
                             <button
                                 type="button"
                                 onClick={() => {
@@ -3320,6 +3543,16 @@ export default function InventoryFloatingPanel({
                 </div>
             ) : null}
 
+            {woaoHubTab ? (
+                <WoaoHubModal
+                    tab={woaoHubTab}
+                    mapId={hud?.map}
+                    onTabChange={setWoaoHubTab}
+                    onClose={() => setWoaoHubTab(null)}
+                    onSendCommand={onSendCommand}
+                />
+            ) : null}
+
             {isPartyModalOpen ? (
                 <div
                     className="fixed inset-0 z-[83] flex items-center justify-center bg-black/45 px-4 backdrop-blur-[3px]"
@@ -3336,7 +3569,7 @@ export default function InventoryFloatingPanel({
                                 </p>
                                 <h3 className="mt-1 text-lg font-semibold text-[#f2e5ca]">
                                     {partyMembers.length
-                                        ? `Miembros ${partyMembers.length}/4`
+                                        ? `Miembros ${partyMembers.length}/10`
                                         : "Crear o unirte a una party"}
                                 </h3>
                             </div>
@@ -3440,7 +3673,11 @@ export default function InventoryFloatingPanel({
                                         <code>/party nombredeusuario</code> para
                                         invitar a otro jugador. El usuario
                                         invitado tiene que escribir{" "}
-                                        <code>/aceptar</code> para unirse.
+                                        <code>/aceptar</code> o{" "}
+                                        <code>/aceptarparty</code> para unirse.
+                                        Hasta 10 miembros. Usa{" "}
+                                        <code>/partyinfo</code> para ver el
+                                        grupo.
                                     </p>
                                 </div>
                             )}
@@ -3961,6 +4198,49 @@ export default function InventoryFloatingPanel({
                                     </div>
 
                                     <div className="space-y-4">
+                                        <section className="rounded-[18px] border border-white/8 bg-white/4 p-4">
+                                            <p className="text-[11px] uppercase tracking-[0.22em] text-amber-300/78">
+                                                Castillos
+                                            </p>
+                                            <p className="mt-2 text-sm text-stone-400">
+                                                Mata al Rey del Castillo para
+                                                conquistar Norte, Sur, Este u
+                                                Oeste. Con los 4, ataca al
+                                                Defensor de la Fortaleza.
+                                            </p>
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    onSendCommand?.("/castillos")
+                                                }
+                                                className="mt-3 w-full rounded-2xl border border-[#8b6a47] bg-[linear-gradient(180deg,#46331f_0%,#26180e_100%)] px-4 py-2.5 text-[12px] font-semibold text-amber-100 transition hover:border-[#c39a6a]"
+                                            >
+                                                Ver dueños
+                                            </button>
+                                            <div className="mt-3 grid grid-cols-2 gap-2">
+                                                {(
+                                                    [
+                                                        ["norte", "Norte"],
+                                                        ["sur", "Sur"],
+                                                        ["este", "Este"],
+                                                        ["oeste", "Oeste"],
+                                                    ] as const
+                                                ).map(([id, label]) => (
+                                                    <button
+                                                        key={id}
+                                                        type="button"
+                                                        onClick={() =>
+                                                            onSendCommand?.(
+                                                                `/castillo ${id}`,
+                                                            )
+                                                        }
+                                                        className="rounded-[12px] border border-white/8 bg-white/4 px-3 py-2 text-[11px] font-semibold text-stone-200 transition hover:border-amber-300/40 hover:text-amber-100"
+                                                    >
+                                                        Ir {label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </section>
                                         {canReviewClanRequests ? (
                                             <section className="rounded-[18px] border border-white/8 bg-white/4 p-4">
                                                 <p className="text-[11px] uppercase tracking-[0.22em] text-amber-300/78">

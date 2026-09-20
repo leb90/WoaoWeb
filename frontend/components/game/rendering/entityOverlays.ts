@@ -5,6 +5,7 @@ import type { Engine } from "../engine/Engine";
 import { createSpellProjectileVisual } from "./effectsRenderer";
 import {
     getDialogLabelPosition,
+    getFxSpritePosition,
     type BodyRenderMetrics,
 } from "./characterLayout";
 import {
@@ -220,19 +221,24 @@ export function createEntityOverlays(options: CreateEntityOverlaysOptions) {
 
         const offsetX = Number((effectSprite as any).entityFXOffsetX ?? 0);
         const offsetY = Number((effectSprite as any).entityFXOffsetY ?? 0);
-        effectSprite.x = Math.round(container.x + offsetX);
-        effectSprite.y = Math.round(container.y + offsetY);
+        const fxPosition = getFxSpritePosition(
+            effectSprite.texture,
+            offsetX,
+            offsetY,
+        );
+        effectSprite.x = Math.round(container.x + fxPosition.x);
+        effectSprite.y = Math.round(container.y + fxPosition.y);
 
         if (
             !getEntityFXRowContainer(
                 engine,
-                Math.floor(effectSprite.y / TILE_SIZE) + 1,
+                Math.floor(container.y / TILE_SIZE) + 1,
             )
         ) {
             return false;
         }
 
-        syncDisplayObjectToEntityFXRow(engine, effectSprite.y, effectSprite);
+        syncDisplayObjectToEntityFXRow(engine, container.y, effectSprite);
 
         return true;
     };
@@ -311,7 +317,7 @@ export function createEntityOverlays(options: CreateEntityOverlaysOptions) {
             return;
         }
 
-        const effectFrameSpeed = graphicData.speed || 500;
+        const effectFrameSpeed = Math.max(graphicData.speed || 500, 40);
         const effectTimeoutDuration = Math.max(
             options.defaultEntityFxDurationMs,
             effectFrameSpeed * Math.max(graphicData.numFrames, 1),

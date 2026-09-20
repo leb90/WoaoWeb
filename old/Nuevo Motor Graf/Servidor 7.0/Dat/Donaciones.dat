@@ -1,0 +1,707 @@
+[INIT]
+NumPremios=47
+
+[PREMIO1]
+Nombre=Huevo Kong
+NumObj=1526
+Requiere=1500
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Montura Kong nivel 1 aumenta golpe físico y defensa física.
+Foto=1
+
+[PREMIO2]
+Nombre=Huevo Hipogrifo
+NumObj=1523
+Requiere=1500
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Montura Hipogrifo nivel 1 aumenta golpe mágico
+Foto=2
+
+[PREMIO3]
+Nombre=Huevo Dragon Dorado
+NumObj=1524
+Requiere=1000
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Montura Dragón Dorado.
+Foto=3
+
+[PREMIO4]
+Nombre=Capa Hobbit Legendaria
+NumObj=1219
+Requiere=1500
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Otorga invisibilidad al usarla.
+Foto=4
+
+[PREMIO5]
+Nombre=Anillo de paralisis Legendario
+NumObj=1169
+Requiere=1500
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Proporciona una probabilidad de evitar paralisis al tenerlo equipado.
+Foto=5
+
+[PREMIO6]
+Nombre=Amuleto de Salvación
+NumObj=1385
+Requiere=100
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Al morir evita que tus items caigan al piso.
+Foto=6
+
+[PREMIO7]
+Nombre=Diamante de Sangre
+NumObj=1096
+Requiere=1000
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Objeto utilizado para subir de nivel el clan.
+Foto=7
+
+[PREMIO8]
+Nombre=Pack de Fragmentos Perdidos
+NumObj=1558
+Requiere=400
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Pack de 1000 fragmentos perdidos para subir de nivel los items.
+Foto=8
+
+[PREMIO9]
+Nombre=Guardian de Tierra
+NumObj=1375
+Requiere=1000
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=3
+DefensaMaxima=5
+AtaqueMagicoMinimo=2
+AtaqueMagicoMaximo=2
+DefensaMagicaMinima=2
+DefensaMagicaMaxima=2
+Descripcion=Guardian de tierra: Aumenta la experiencia un 5% la defensa fisica/mag. y el ataque mag.
+Foto=9
+
+[PREMIO10]
+Nombre=Guardian de Naturaleza
+NumObj=1376
+Requiere=2000
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=6
+DefensaMaxima=8
+AtaqueMagicoMinimo=4
+AtaqueMagicoMaximo=4
+DefensaMagicaMinima=5
+DefensaMagicaMaxima=5
+Descripcion=Guardian de Naturaleza: Aumenta la experiencia un 10% la defensa fisica/mag. y el ataque mag.
+Foto=10
+
+[PREMIO11]
+Nombre=Guardian de Hielo
+NumObj=1377
+Requiere=3000
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=8
+DefensaMaxima=11
+AtaqueMagicoMinimo=7
+AtaqueMagicoMaximo=7
+DefensaMagicaMinima=8
+DefensaMagicaMaxima=8
+Descripcion=Guardian de Hielo: Aumenta la experiencia un 15% la defensa fisica/mag. y el ataque mag.
+Foto=11
+
+[PREMIO12]
+Nombre=Guardian de Fuego
+NumObj=1378
+Requiere=4000
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=12
+DefensaMaxima=15
+AtaqueMagicoMinimo=9
+AtaqueMagicoMaximo=9
+DefensaMagicaMinima=12
+DefensaMagicaMaxima=12
+Descripcion=Guardian de Fuego: Aumenta la experiencia un 20% la defensa fisica/mag. y el ataque mag.
+Foto=12
+
+[PREMIO13]
+Nombre=Amuleto Ankh
+NumObj=882
+Requiere=1000
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Amuleto Ankh: Requerido para volver a la vida (Remort)
+Foto=13
+
+[PREMIO14]
+Nombre=Corazon Oscuro
+NumObj=1241
+Requiere=1500
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Corazon Oscuro: Requerido para subir de nivel el clan y cajear túnica/armadura del caballero de la muerte.
+Foto=14
+
+[PREMIO15]
+Nombre=Grial
+NumObj=157
+Requiere=2000
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Grial: Necesario para fabrica la Túnica/Armadura Legendaria.
+Foto=16
+
+[PREMIO16]
+Nombre=Tunica Perseus (Altos)
+NumObj=1238
+Requiere=600
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=10
+DefensaMaxima=15
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=25
+DefensaMagicaMaxima=25
+Descripcion=Tunica Perseus para Altos. No se cae.
+Foto=17
+
+[PREMIO17]
+Nombre=Tunica Perseus (Bajos)
+NumObj=1236
+Requiere=600
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=10
+DefensaMaxima=15
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=25
+DefensaMagicaMaxima=25
+Descripcion=Tunica Perseus para Bajos. No se cae.
+Foto=18
+
+[PREMIO18]
+Nombre=Huevo de Dragon
+NumObj=1095
+Requiere=600
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Huevo de dragon: Item necesario para subir de nivel el clan.
+Foto=35
+
+[PREMIO19]
+Nombre=Color Dragon Negro
+NumObj=1537
+Requiere=600
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Con este item cambiarás el color de dragón a Negro.
+Foto=36
+
+[PREMIO20]
+Nombre=Color Dragon Rojo
+NumObj=1538
+Requiere=600
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Con este item cambiarás el color de dragón a Rojo.
+Foto=37
+
+[PREMIO21]
+Nombre=Color Dragon Azul
+NumObj=1539
+Requiere=600
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Con este item cambiarás el color de dragón a Azul.
+Foto=38
+
+[PREMIO22]
+Nombre=Color Dragon Violeta
+NumObj=1540
+Requiere=600
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Con este item cambiarás el color de dragón a Violeta.
+Foto=39
+
+[PREMIO23]
+Nombre=Color Dragon Blanco
+NumObj=1541
+Requiere=600
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Con este item cambiarás el color de dragón a Blanco.
+Foto=40
+
+[PREMIO24]
+Nombre=Color Unicornio Naranja
+NumObj=1542
+Requiere=600
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Con este item cambiarás el color de tu unicornio a Naranja.
+Foto=41
+
+[PREMIO25]
+Nombre=Color Unicornio Rojo
+NumObj=1543
+Requiere=600
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Con este item cambiarás el color de tu unicornio a Rojo.
+Foto=42
+
+[PREMIO26]
+Nombre=Color Nick Alianza
+NumObj=1544
+Requiere=600
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Cambias el color de tu nick a Verde Fluor. (Alianzas)
+Foto=43
+
+[PREMIO27]
+Nombre=Color Nick Horda
+NumObj=1545
+Requiere=600
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Cambias el color de tu nick a Verde Oscuro. (Hordas)
+Foto=44
+
+[PREMIO28]
+Nombre=Meditación Especial
+NumObj=1546
+Requiere=500
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Cambias tu meditación por una increíble.
+Foto=48
+
+[PREMIO29]
+Nombre=Skin Pantera
+NumObj=1547
+Requiere=500
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Disfrazas tu mascota de Pantera.
+Foto=45
+
+[PREMIO30]
+Nombre=Skin Ciervo
+NumObj=1548
+Requiere=500
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Disfrazas tu mascota de Ciervo.
+Foto=46
+
+[PREMIO31]
+Nombre=Skin Hipopotamo
+NumObj=1549
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Disfrazas tu mascota de Hipopotamo.
+Foto=47
+
+[PREMIO32]
+Nombre=Huevo Avestruz
+NumObj=1519
+Requiere=600
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Mascota Avestruz: Podrás obtener esta mascota.
+Foto=19
+
+[PREMIO33]
+Nombre=Huevo Caballo Negro
+NumObj=1520
+Requiere=600
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Mascota Caballo Negro: Podrás obtener esta mascota.
+Foto=20
+
+[PREMIO34]
+Nombre=Huevo Cerbero
+NumObj=1521
+Requiere=600
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Mascota Cerbero: Podrás obtener esta mascota.
+Foto=21
+
+[PREMIO35]
+Nombre=Huevo Rinosaurio
+NumObj=1527
+Requiere=600
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Mascota Rinosaurio: Podrás obtener esta mascota.
+Foto=22
+
+[PREMIO36]
+Nombre=Huevo Tigre
+NumObj=1528
+Requiere=600
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Mascota Tigre: Podrás obtener esta mascota.
+Foto=23
+
+[PREMIO37]
+Nombre=Huevo Unicornio
+NumObj=1529
+Requiere=600
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Mascota Unicornio: Podrás obtener esta mascota.
+Foto=24
+
+[PREMIO38]
+Nombre=Huevo Wyvern
+NumObj=1530
+Requiere=600
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Mascota Wyvern: Podrás obtener esta mascota.
+Foto=25
+
+[PREMIO39]
+Nombre=Gema Azul
+NumObj=407
+Requiere=200
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Requerida para confeccionar la Túnica/Armadura de Dragón.
+Foto=26
+
+[PREMIO40]
+Nombre=Gema Celeste
+NumObj=409
+Requiere=200
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Requerida para confeccionar la Túnica/Armadura de Dragón.
+Foto=27
+
+[PREMIO41]
+Nombre=Gema Lunar
+NumObj=406
+Requiere=200
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Requerida para confeccionar la Túnica/Armadura de Dragón.
+Foto=28
+
+[PREMIO42]
+Nombre=Gema Naranja
+NumObj=408
+Requiere=200
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Requerida para confeccionar la Túnica/Armadura de Dragón.
+Foto=29
+
+[PREMIO43]
+Nombre=Gema Roja
+NumObj=411
+Requiere=200
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Requerida para confeccionar la Túnica/Armadura de Dragón.
+Foto=30
+
+[PREMIO44]
+Nombre=Gema Rosa
+NumObj=410
+Requiere=200
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Requerida para confeccionar la Túnica/Armadura de Dragón.
+Foto=31
+
+[PREMIO45]
+Nombre=Gema Verde
+NumObj=412
+Requiere=200
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Requerida para confeccionar la Túnica/Armadura de Dragón.
+Foto=32
+
+[PREMIO46]
+Nombre=Gema Violeta
+NumObj=413
+Requiere=200
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Requerida para confeccionar la Túnica/Armadura de Dragón.
+Foto=33
+
+[PREMIO47]
+Nombre=Gema Recuperada por Shadow VX
+NumObj=598
+Requiere=15
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Requerida para confeccionar la Túnica/Armadura de Dragón y Construir items mágicos con el ermitaño.
+Foto=34

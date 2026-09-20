@@ -77,7 +77,11 @@ export const CLIENT_PACKET_ID = {
     selfMapMetaDelta: 79,
     spellVisual: 80,
     entityVitalsDelta: 81,
+    characterSwing: 82,
 } as const;
+
+export const CHARACTER_SWING_WEAPON = 1;
+export const CHARACTER_SWING_SHIELD = 2;
 
 export type PanelShare = {
     type: string;
@@ -237,6 +241,12 @@ export interface CharacterSnapshot {
     mana?: number;
     tMana?: number;
     maxMana?: number;
+    sta?: number;
+    maxSta?: number;
+    hambre?: number;
+    maxHambre?: number;
+    sed?: number;
+    maxSed?: number;
     adminSummonedBot?: boolean;
     exp?: number;
     expNextLevel?: number;
@@ -461,6 +471,12 @@ export interface PlayerHudState {
     maxHp?: number;
     mana?: number;
     maxMana?: number;
+    sta?: number;
+    maxSta?: number;
+    hambre?: number;
+    maxHambre?: number;
+    sed?: number;
+    maxSed?: number;
     attrAgilidad?: number;
     attrFuerza?: number;
     attrInteligencia?: number;
@@ -588,6 +604,12 @@ export interface SelfVitalsDelta {
     maxHp: number;
     mana: number;
     maxMana: number;
+    sta?: number;
+    maxSta?: number;
+    hambre?: number;
+    maxHambre?: number;
+    sed?: number;
+    maxSed?: number;
 }
 
 export interface SelfMapMetaDelta {
@@ -690,6 +712,7 @@ export type ParsedServerPacket =
     | { type: "dialog"; payload: DialogPacket }
     | { type: "globalNotice"; payload: GlobalNoticePacket }
     | { type: "animFX"; payload: AnimFXPacket }
+    | { type: "characterSwing"; payload: { id: number; flags: number } }
     | { type: "createProjectile"; payload: CreateProjectilePacket }
     | { type: "spellProjectile"; payload: SpellProjectilePacket }
     | { type: "spellVisual"; payload: SpellVisualPacket }
@@ -1113,6 +1136,14 @@ function parseCharacter(
         snapshot.invisibleSpellRemainingMs = reader.canReadBytes(4)
             ? reader.getInt()
             : undefined;
+        if (reader.canReadBytes(12)) {
+            snapshot.sta = reader.getShort();
+            snapshot.maxSta = reader.getShort();
+            snapshot.hambre = reader.getShort();
+            snapshot.maxHambre = reader.getShort();
+            snapshot.sed = reader.getShort();
+            snapshot.maxSed = reader.getShort();
+        }
     } else {
         snapshot.privileges = reader.getByte();
         snapshot.heading = reader.getByte();
@@ -1297,6 +1328,14 @@ function parseServerPacketById(
                     maxHp: reader.getShort(),
                     mana: reader.getShort(),
                     maxMana: reader.getShort(),
+                    sta: reader.canReadBytes(2) ? reader.getShort() : undefined,
+                    maxSta: reader.canReadBytes(2) ? reader.getShort() : undefined,
+                    hambre: reader.canReadBytes(2) ? reader.getShort() : undefined,
+                    maxHambre: reader.canReadBytes(2)
+                        ? reader.getShort()
+                        : undefined,
+                    sed: reader.canReadBytes(2) ? reader.getShort() : undefined,
+                    maxSed: reader.canReadBytes(2) ? reader.getShort() : undefined,
                 },
             };
         case CLIENT_PACKET_ID.selfMapMetaDelta:
@@ -1555,6 +1594,14 @@ function parseServerPacketById(
                 payload: {
                     id: reader.getDouble(),
                     fxGrh: reader.getShort(),
+                },
+            };
+        case CLIENT_PACKET_ID.characterSwing:
+            return {
+                type: "characterSwing",
+                payload: {
+                    id: reader.getDouble(),
+                    flags: reader.getByte(),
                 },
             };
         case CLIENT_PACKET_ID.createProjectile:
@@ -2256,6 +2303,12 @@ export function toPlayerHudState(snapshot: CharacterSnapshot): PlayerHudState {
         maxHp: snapshot.maxHp,
         mana: snapshot.tMana ?? snapshot.mana,
         maxMana: snapshot.maxMana,
+        sta: snapshot.sta,
+        maxSta: snapshot.maxSta,
+        hambre: snapshot.hambre,
+        maxHambre: snapshot.maxHambre,
+        sed: snapshot.sed,
+        maxSed: snapshot.maxSed,
         attrAgilidad: snapshot.attrAgilidad,
         attrFuerza: snapshot.attrFuerza,
         attrInteligencia: snapshot.attrInteligencia,

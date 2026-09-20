@@ -1,0 +1,326 @@
+[
+  {
+    "fromMap": 34,
+    "key": "ULLA",
+    "map": 1,
+    "x": 50,
+    "y": 50,
+    "cost": 0,
+    "boat": false
+  },
+  {
+    "fromMap": 34,
+    "key": "CAOS",
+    "map": 170,
+    "x": 23,
+    "y": 78,
+    "cost": 0,
+    "boat": false
+  },
+  {
+    "fromMap": 34,
+    "key": "DESCANSO",
+    "map": 81,
+    "x": 85,
+    "y": 58,
+    "cost": 0,
+    "boat": false
+  },
+  {
+    "fromMap": 34,
+    "key": "ATLANTIS",
+    "map": 85,
+    "x": 70,
+    "y": 43,
+    "cost": 0,
+    "boat": true
+  },
+  {
+    "fromMap": 1,
+    "key": "NIX",
+    "map": 34,
+    "x": 57,
+    "y": 79,
+    "cost": 0,
+    "boat": false
+  },
+  {
+    "fromMap": 1,
+    "key": "CAOS",
+    "map": 170,
+    "x": 23,
+    "y": 78,
+    "cost": 0,
+    "boat": false
+  },
+  {
+    "fromMap": 1,
+    "key": "DESCANSO",
+    "map": 81,
+    "x": 85,
+    "y": 58,
+    "cost": 0,
+    "boat": false
+  },
+  {
+    "fromMap": 1,
+    "key": "BANDER",
+    "map": 59,
+    "x": 51,
+    "y": 44,
+    "cost": 0,
+    "boat": false
+  },
+  {
+    "fromMap": 1,
+    "key": "RINKEL",
+    "map": 20,
+    "x": 29,
+    "y": 92,
+    "cost": 0,
+    "boat": false
+  },
+  {
+    "fromMap": 81,
+    "key": "NIX",
+    "map": 34,
+    "x": 57,
+    "y": 79,
+    "cost": 0,
+    "boat": false
+  },
+  {
+    "fromMap": 81,
+    "key": "BANDER",
+    "map": 59,
+    "x": 51,
+    "y": 44,
+    "cost": 0,
+    "boat": false
+  },
+  {
+    "fromMap": 81,
+    "key": "ULLA",
+    "map": 1,
+    "x": 50,
+    "y": 50,
+    "cost": 0,
+    "boat": false
+  },
+  {
+    "fromMap": 81,
+    "key": "CAOS",
+    "map": 170,
+    "x": 23,
+    "y": 78,
+    "cost": 0,
+    "boat": false
+  },
+  {
+    "fromMap": 81,
+    "key": "ARGHAL",
+    "map": 150,
+    "x": 35,
+    "y": 29,
+    "cost": 0,
+    "boat": true
+  },
+  {
+    "fromMap": 20,
+    "key": "ULLA",
+    "map": 1,
+    "x": 50,
+    "y": 50,
+    "cost": 0,
+    "boat": false
+  },
+  {
+    "fromMap": 20,
+    "key": "LINDOS",
+    "map": 63,
+    "x": 54,
+    "y": 14,
+    "cost": 0,
+    "boat": true
+  },
+  {
+    "fromMap": 20,
+    "key": "ATLANTIS",
+    "map": 85,
+    "x": 70,
+    "y": 43,
+    "cost": 0,
+    "boat": true
+  },
+  {
+    "fromMap": 20,
+    "key": "ESPERANZA",
+    "map": 111,
+    "x": 86,
+    "y": 76,
+    "cost": 0,
+    "boat": true
+  },
+  {
+    "fromMap": 170,
+    "key": "NIX",
+    "map": 34,
+    "x": 57,
+    "y": 79,
+    "cost": 0,
+    "boat": false
+  },
+  {
+    "fromMap": 170,
+    "key": "ULLA",
+    "map": 1,
+    "x": 50,
+    "y": 50,
+    "cost": 0,
+    "boat": false
+  },
+  {
+    "fromMap": 170,
+    "key": "LINDOS",
+    "map": 63,
+    "x": 54,
+    "y": 14,
+    "cost": 0,
+    "boat": true
+  },
+  {
+    "fromMap": 170,
+    "key": "DESCANSO",
+    "map": 81,
+    "x": 85,
+    "y": 58,
+    "cost": 0,
+    "boat": false
+  },
+  {
+    "fromMap": 151,
+    "key": "DESCANSO",
+    "map": 81,
+    "x": 36,
+    "y": 86,
+    "cost": 0,
+    "boat": true
+  },
+  {
+    "fromMap": 151,
+    "key": "BANDER",
+    "map": 59,
+    "x": 50,
+    "y": 50,
+    "cost": 0,
+    "boat": true
+  },
+  {
+    "fromMap": 85,
+    "key": "NIX",
+    "map": 34,
+    "x": 50,
+    "y": 50,
+    "cost": 0,
+    "boat": true
+  },
+  {
+    "fromMap": 85,
+    "key": "BANDER",
+    "map": 59,
+    "x": 50,
+    "y": 50,
+    "cost": 0,
+    "boat": true
+  },
+  {
+    "fromMap": 85,
+    "key": "RINKEL",
+    "map": 20,
+    "x": 16,
+    "y": 86,
+    "cost": 0,
+    "boat": true
+  },
+  {
+    "fromMap": 63,
+    "key": "RINKEL",
+    "map": 20,
+    "x": 16,
+    "y": 86,
+    "cost": 0,
+    "boat": true
+  },
+  {
+    "fromMap": 63,
+    "key": "ESPERANZA",
+    "map": 111,
+    "x": 86,
+    "y": 76,
+    "cost": 0,
+    "boat": true
+  },
+  {
+    "fromMap": 63,
+    "key": "CAOS",
+    "map": 170,
+    "x": 24,
+    "y": 78,
+    "cost": 0,
+    "boat": true
+  },
+  {
+    "fromMap": 111,
+    "key": "LINDOS",
+    "map": 63,
+    "x": 54,
+    "y": 14,
+    "cost": 0,
+    "boat": true
+  },
+  {
+    "fromMap": 111,
+    "key": "RINKEL",
+    "map": 20,
+    "x": 16,
+    "y": 86,
+    "cost": 0,
+    "boat": true
+  },
+  {
+    "fromMap": 59,
+    "key": "ULLA",
+    "map": 1,
+    "x": 50,
+    "y": 50,
+    "cost": 0,
+    "boat": true
+  },
+  {
+    "fromMap": 59,
+    "key": "DESCANSO",
+    "map": 81,
+    "x": 38,
+    "y": 86,
+    "cost": 0,
+    "boat": true
+  },
+  {
+    "fromMap": 59,
+    "key": "ATLANTIS",
+    "map": 85,
+    "x": 70,
+    "y": 43,
+    "cost": 0,
+    "boat": true
+  },
+  {
+    "fromMap": 59,
+    "key": "ARGHAL",
+    "map": 150,
+    "x": 35,
+    "y": 29,
+    "cost": 0,
+    "boat": true
+  }
+]

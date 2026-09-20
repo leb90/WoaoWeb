@@ -84,6 +84,13 @@ export async function handleIncomingUiPacket({
             );
             return true;
 
+        case "characterSwing":
+            engine?.startCharacterSwing?.(
+                packet.payload.id,
+                packet.payload.flags,
+            );
+            return true;
+
         case "spellProjectile": {
             if (!engine) {
                 return true;
@@ -151,20 +158,15 @@ export async function handleIncomingUiPacket({
                 );
             }
 
-            if (
-                typeof packet.payload.targetId === "number" &&
-                typeof packet.payload.soundId === "number"
-            ) {
+            const spellSoundId =
+                Number(packet.payload.soundId ?? 0) ||
+                Number(
+                    engine.spellsDB?.[String(packet.payload.spellId ?? "")]
+                        ?.wav ?? 0,
+                );
+            if (spellSoundId > 0) {
                 ctx.soundManagerRef.current?.play({
-                    soundId: packet.payload.soundId,
-                    listener: ctx.resolveEntitySoundPosition(
-                        engine,
-                        engine.user?.id,
-                    ),
-                    source: ctx.resolveEntitySoundPosition(
-                        engine,
-                        packet.payload.targetId,
-                    ),
+                    soundId: spellSoundId,
                 });
             }
 
@@ -189,14 +191,6 @@ export async function handleIncomingUiPacket({
             }
             ctx.soundManagerRef.current?.play({
                 soundId: packet.payload.soundId,
-                listener: ctx.resolveEntitySoundPosition(
-                    engine,
-                    engine.user?.id,
-                ),
-                source: ctx.resolveEntitySoundPosition(
-                    engine,
-                    packet.payload.id,
-                ),
             });
             return true;
 

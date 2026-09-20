@@ -32,10 +32,7 @@ body {
     position: fixed;
     inset: 0;
     overflow: hidden;
-    background:
-        radial-gradient(circle at top, rgba(15, 118, 110, 0.2), transparent 35%),
-        radial-gradient(circle at bottom, rgba(245, 158, 11, 0.12), transparent 30%),
-        linear-gradient(180deg, #020617, #02030a);
+    background: #050403;
     user-select: none;
     -webkit-user-select: none;
     -webkit-touch-callout: none;

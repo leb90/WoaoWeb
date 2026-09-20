@@ -1,0 +1,38 @@
+[Unicornio]
+Mapa=21 ->21
+[Caballo Negro]
+Mapa=202 ->202
+[Tigre Blanco]
+Mapa=190 ->190
+[Elefante]
+Mapa=163 ->163
+[Dragón Dorado]
+Mapa=216
+[Jabalí Gigante]
+Mapa=30 ->30
+[Escarabajo]
+Mapa=16
+[Rinosaurio]
+Mapa=174 ->174
+[Cerbero]
+Mapa=88 ->88
+[Wyvern]
+Mapa=172 ->172
+[Avestruz]
+Mapa=201 ->201
+[Jabalí]
+Mapa=40
+[Esbirro Oscuro (GUERRERO)]
+Mapa=71
+[Esbirro Oscuro (MAGO)]
+Mapa=78
+[Esbirro Oscuro (ARQUERO)]
+Mapa=17
+[Esbirro Oscuro (PALADIN)]
+Mapa=227
+[Kong]
+Mapa=12
+[Crom]
+Mapa=75 ->75
+[Hipogrifo]
+Mapa=4 ->4

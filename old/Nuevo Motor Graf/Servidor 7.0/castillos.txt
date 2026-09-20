@@ -1,0 +1,16 @@
+[INIT]
+castillo4=World of AO
+date4=10/4/2018
+hora4=20:11:13
+castillo2=World of AO
+date2=1/9/2018
+hora2=1:32:23 PM
+castillo1=World of AO
+date1=1/9/2018
+hora1=1:35:17 PM
+castillo3=World of AO
+date3=1/9/2018
+hora3=12:31:15 PM
+fortaleza=World of AO
+date5=1/9/2018
+hora5=11:01:41 AM

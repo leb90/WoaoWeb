@@ -32,11 +32,11 @@ function getCharacterNamePresentation(
     }
 
     if (character.faction === "armada") {
-        return { label: "Armada", color: "#00AFFF" };
+        return { label: "Alianza", color: "#00AFFF" };
     }
 
     if (character.faction === "caos") {
-        return { label: "Caos", color: "#9B0000" };
+        return { label: "Horda", color: "#9B0000" };
     }
 
     if (character.criminal) {

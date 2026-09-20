@@ -1,0 +1,686 @@
+{
+  "1": {
+    "id": 1,
+    "name": "El Comienzo (MAGICOS)",
+    "desc": "Debes matar 5 Lobos, 5 Serpientes y 1 Hormiga Gigante y serás recompensado.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 501,
+        "amount": 5
+      },
+      {
+        "index": 534,
+        "amount": 1
+      },
+      {
+        "index": 504,
+        "amount": 5
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 50,
+    "rewardExp": 5000,
+    "rewardPoints": 1,
+    "rewardObjs": [
+      {
+        "index": 37,
+        "amount": 50
+      },
+      {
+        "index": 38,
+        "amount": 50
+      }
+    ]
+  },
+  "2": {
+    "id": 2,
+    "name": "Adentrando a la Cueva de Nix",
+    "desc": "Debes matar 8 Arañas Gigantes y 10 Trogloditas y serás recompensado.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 510,
+        "amount": 8
+      },
+      {
+        "index": 588,
+        "amount": 10
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 250,
+    "rewardExp": 5725,
+    "rewardPoints": 3,
+    "rewardObjs": [
+      {
+        "index": 400,
+        "amount": 1
+      },
+      {
+        "index": 756,
+        "amount": 1
+      }
+    ]
+  },
+  "3": {
+    "id": 3,
+    "name": "Vamos al Bosque",
+    "desc": "Debes matar 10 Hobbit Gigante y 10 Treant para ser recompensado.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 623,
+        "amount": 10
+      },
+      {
+        "index": 749,
+        "amount": 10
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 2590,
+    "rewardExp": 167500,
+    "rewardPoints": 8,
+    "rewardObjs": [
+      {
+        "index": 58,
+        "amount": 2000
+      }
+    ]
+  },
+  "4": {
+    "id": 4,
+    "name": "Uff, que hace frío",
+    "desc": "Debes matar 15 Abominaciones para recibir la recompensa.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 657,
+        "amount": 15
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 2125,
+    "rewardExp": 63750,
+    "rewardPoints": 10,
+    "rewardObjs": []
+  },
+  "5": {
+    "id": 5,
+    "name": "Maldito Atlantis",
+    "desc": "Debes matar 10 Tritones y 10 Cíclopes para recibir la recompensa.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 582,
+        "amount": 10
+      },
+      {
+        "index": 677,
+        "amount": 10
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 3875,
+    "rewardExp": 340000,
+    "rewardPoints": 18,
+    "rewardObjs": []
+  },
+  "6": {
+    "id": 6,
+    "name": "Peligroso Veril",
+    "desc": "Debes matar 6 Brujos y 20 Medusas para recibir la recompensa.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 583,
+        "amount": 6
+      },
+      {
+        "index": 553,
+        "amount": 20
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 7250,
+    "rewardExp": 880000,
+    "rewardPoints": 30,
+    "rewardObjs": []
+  },
+  "7": {
+    "id": 7,
+    "name": "Bajemos al Gigante",
+    "desc": "Debes matar 10 Gigantes para recibir la recompensa.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 586,
+        "amount": 10
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 20000,
+    "rewardExp": 2500000,
+    "rewardPoints": 35,
+    "rewardObjs": []
+  },
+  "8": {
+    "id": 8,
+    "name": "Bosque Terrorífico",
+    "desc": "Debes matar 8 Devastadores y 7 Trolls para recibir la recompensa.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 600,
+        "amount": 8
+      },
+      {
+        "index": 598,
+        "amount": 7
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 9138,
+    "rewardExp": 1287000,
+    "rewardPoints": 30,
+    "rewardObjs": []
+  },
+  "9": {
+    "id": 9,
+    "name": "Casa Encantada",
+    "desc": "Debes matar 10 Uruks y 5 Centinelas para recibir la recompensa.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 602,
+        "amount": 10
+      },
+      {
+        "index": 601,
+        "amount": 5
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 9375,
+    "rewardExp": 2148000,
+    "rewardPoints": 35,
+    "rewardObjs": []
+  },
+  "10": {
+    "id": 10,
+    "name": "Gran Desafío",
+    "desc": "Debes matar 5 Devir para recibir la recompensa.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 699,
+        "amount": 5
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 18750,
+    "rewardExp": 3000000,
+    "rewardPoints": 25,
+    "rewardObjs": []
+  },
+  "11": {
+    "id": 11,
+    "name": "Templo Marítimo",
+    "desc": "Debes matar 10 Elementales de Agua y 10 Genios de los Mares para recibir la recompensa.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 755,
+        "amount": 10
+      },
+      {
+        "index": 751,
+        "amount": 10
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 4325,
+    "rewardExp": 600000,
+    "rewardPoints": 20,
+    "rewardObjs": []
+  },
+  "12": {
+    "id": 12,
+    "name": "Templo Marítimo II",
+    "desc": "Debes matar 10 Caballos de Mar y 10 Leviatanes para recibir la recompensa.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 741,
+        "amount": 10
+      },
+      {
+        "index": 548,
+        "amount": 10
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 2700,
+    "rewardExp": 215000,
+    "rewardPoints": 13,
+    "rewardObjs": []
+  },
+  "13": {
+    "id": 13,
+    "name": "Mucha Oscuridad",
+    "desc": "Debes matar 8 Señores de la Muerte, 5 Cancerberos y 4 Sirvientes Demoníacos para recibir la recompensa.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 740,
+        "amount": 8
+      },
+      {
+        "index": 745,
+        "amount": 5
+      },
+      {
+        "index": 746,
+        "amount": 4
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 5680,
+    "rewardExp": 815000,
+    "rewardPoints": 30,
+    "rewardObjs": []
+  },
+  "14": {
+    "id": 14,
+    "name": "Mucha Oscuridad II",
+    "desc": "Debes matar 1 Rey Mago y 4 Rey Fantasma para recibir la recompensa.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 761,
+        "amount": 1
+      },
+      {
+        "index": 691,
+        "amount": 4
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 12000,
+    "rewardExp": 1900000,
+    "rewardPoints": 40,
+    "rewardObjs": []
+  },
+  "15": {
+    "id": 15,
+    "name": "Camino al Infierno",
+    "desc": "Debes matar 4 Hidra, 4 Fenix y 8 Genio Infernal para recibir la recompensa.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 753,
+        "amount": 4
+      },
+      {
+        "index": 750,
+        "amount": 4
+      },
+      {
+        "index": 748,
+        "amount": 8
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 6340,
+    "rewardExp": 970000,
+    "rewardPoints": 40,
+    "rewardObjs": []
+  },
+  "16": {
+    "id": 16,
+    "name": "Camino al Infierno II",
+    "desc": "Debes matar 3 Dragón Legendario y 8 Dragón Infernal para recibir la recompensa.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 754,
+        "amount": 3
+      },
+      {
+        "index": 739,
+        "amount": 8
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 76250,
+    "rewardExp": 4060000,
+    "rewardPoints": 55,
+    "rewardObjs": []
+  },
+  "17": {
+    "id": 17,
+    "name": "Frío, mucho Frío",
+    "desc": "Debes matar 2 Caballero Muerto y 3 Gigante de Roca para recibir la recompensa.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 758,
+        "amount": 2
+      },
+      {
+        "index": 752,
+        "amount": 3
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 9500,
+    "rewardExp": 1645000,
+    "rewardPoints": 35,
+    "rewardObjs": []
+  },
+  "18": {
+    "id": 18,
+    "name": "Frío, mucho Frío II",
+    "desc": "Debes matar 1 Caballero Helado para recibir la recompensa.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 633,
+        "amount": 1
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 10000,
+    "rewardExp": 1000000,
+    "rewardPoints": 50,
+    "rewardObjs": []
+  },
+  "19": {
+    "id": 19,
+    "name": "El Comienzo (NO-MAGIA)",
+    "desc": "Debes matar 5 Lobos, 5 Arañas Pequeñas y 1 Hormiga Gigante y serás recompensado.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 529,
+        "amount": 5
+      },
+      {
+        "index": 534,
+        "amount": 1
+      },
+      {
+        "index": 501,
+        "amount": 5
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 50,
+    "rewardExp": 5000,
+    "rewardPoints": 1,
+    "rewardObjs": [
+      {
+        "index": 36,
+        "amount": 20
+      },
+      {
+        "index": 38,
+        "amount": 90
+      },
+      {
+        "index": 39,
+        "amount": 20
+      },
+      {
+        "index": 480,
+        "amount": 50
+      }
+    ]
+  },
+  "20": {
+    "id": 20,
+    "name": "Cazería de Trents Joven",
+    "desc": "Debes matar 10 Treants Jovenes serás recompensado (Mapa 35) Arriba de Nix",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 762,
+        "amount": 10
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 300,
+    "rewardExp": 7750,
+    "rewardPoints": 3,
+    "rewardObjs": [
+      {
+        "index": 36,
+        "amount": 20
+      },
+      {
+        "index": 38,
+        "amount": 90
+      },
+      {
+        "index": 39,
+        "amount": 20
+      },
+      {
+        "index": 480,
+        "amount": 50
+      }
+    ]
+  },
+  "21": {
+    "id": 21,
+    "name": "Acabar con el demonio",
+    "desc": "Debes matar 5 Demonios de Fuego para recibir la recompensa.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 585,
+        "amount": 5
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 20000,
+    "rewardExp": 6000000,
+    "rewardPoints": 40,
+    "rewardObjs": []
+  },
+  "22": {
+    "id": 22,
+    "name": "Cazería de Genios",
+    "desc": "Debes matar 10 Genios del Bosque, serás recompensado.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 593,
+        "amount": 10
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 1250,
+    "rewardExp": 90000,
+    "rewardPoints": 7,
+    "rewardObjs": []
+  },
+  "23": {
+    "id": 23,
+    "name": "Cazería de Arañas",
+    "desc": "Debes matar 10 Viudas Negras, serás recompensado.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 624,
+        "amount": 10
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 750,
+    "rewardExp": 37000,
+    "rewardPoints": 5,
+    "rewardObjs": []
+  },
+  "24": {
+    "id": 24,
+    "name": "Caza de Gollum",
+    "desc": "Debes matar 3 Gollum, serás recompensado.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 594,
+        "amount": 3
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 20000,
+    "rewardExp": 3000000,
+    "rewardPoints": 50,
+    "rewardObjs": []
+  },
+  "25": {
+    "id": 25,
+    "name": "Cazeria de Chamanes",
+    "desc": "Debes matar 3 Chamanes, serás recompensado.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 634,
+        "amount": 3
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 3000,
+    "rewardExp": 150000,
+    "rewardPoints": 10,
+    "rewardObjs": []
+  },
+  "26": {
+    "id": 26,
+    "name": "Cazeria de Hielo",
+    "desc": "Debes matar 10 Panteras Heladas y 1 Golem hielo , serás recompensado.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 763,
+        "amount": 10
+      },
+      {
+        "index": 765,
+        "amount": 1
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 5000,
+    "rewardExp": 1300000,
+    "rewardPoints": 30,
+    "rewardObjs": []
+  },
+  "27": {
+    "id": 27,
+    "name": "Cazeria Oscura",
+    "desc": "Debes matar 10 Medusas Hechizeras y 1 Asesino Oscuro , serás recompensado.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 764,
+        "amount": 10
+      },
+      {
+        "index": 766,
+        "amount": 1
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 5000,
+    "rewardExp": 1400000,
+    "rewardPoints": 30,
+    "rewardObjs": []
+  },
+  "28": {
+    "id": 28,
+    "name": "Camino Del Sendero",
+    "desc": "Debes matar 2 Elemental De la Naturaleza , 3 Jinetes Templarios y 1 Golem de Cristal , serás recompensado.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 771,
+        "amount": 2
+      },
+      {
+        "index": 770,
+        "amount": 3
+      },
+      {
+        "index": 769,
+        "amount": 1
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 6000,
+    "rewardExp": 1600000,
+    "rewardPoints": 45,
+    "rewardObjs": []
+  },
+  "29": {
+    "id": 29,
+    "name": "Mucha Sed",
+    "desc": "Debes matar 5 Momias Con Maza, 4 Momias Con Hacha y 2 Momias Con Espada ,para recibir la recompensa.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 608,
+        "amount": 5
+      },
+      {
+        "index": 609,
+        "amount": 4
+      },
+      {
+        "index": 610,
+        "amount": 2
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 3680,
+    "rewardExp": 800000,
+    "rewardPoints": 30,
+    "rewardObjs": []
+  },
+  "30": {
+    "id": 30,
+    "name": "Mucha Sed II",
+    "desc": "Debes matar 1 Momia Faraon ,para recibir la recompensa.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 611,
+        "amount": 1
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 20000,
+    "rewardExp": 2200000,
+    "rewardPoints": 35,
+    "rewardObjs": []
+  },
+  "31": {
+    "id": 31,
+    "name": "Muerte Segura",
+    "desc": "Debes matar 1 Caballero de la muerte ,para recibir la recompensa.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 726,
+        "amount": 1
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 25000,
+    "rewardExp": 2800000,
+    "rewardPoints": 50,
+    "rewardObjs": []
+  }
+}

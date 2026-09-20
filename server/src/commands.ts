@@ -4,6 +4,7 @@ import type { SocketApi } from "./socket";
 import {
     getFactionColor,
     getFactionConfig,
+    getFactionDisplayName,
     getFactionRankTitle,
     getMaxEligibleFactionRank,
     type CharacterFaction,
@@ -32,6 +33,9 @@ const socket = require("./socket") as SocketApi;
 const game = require("./game") as GameApi;
 const npcs = require("./npcs");
 const vars = require("./vars");
+const itemKinds = require("./itemKinds") as {
+    getEquipObjectType: (obj: { objType?: number; subtipo?: number } | null | undefined) => number;
+};
 const funct = require("./functions");
 const chatAuditLogger = require("./chatAuditLogger");
 const handleProtocol = require("./handleProtocol") as HandleProtocolApi;
@@ -124,9 +128,9 @@ type ClanCharacterSummary = {
 
 type ChatChannel = "global" | "party" | "clan" | "whisper";
 
-const HOME_MAP = 1;
-const HOME_X = 54;
-const HOME_Y = 60;
+const HOME_MAP = 37;
+const HOME_X = 78;
+const HOME_Y = 87;
 const GOVERNOR_NPC_IDS = [13, 150, 151, 152, 153, 9019] as const;
 const GOVERNOR_HOME_COORDS: Record<number, { x: number; y: number }> = {
     13: { x: 54, y: 59 },
@@ -349,18 +353,6 @@ function resolveHomeDestination(user: CommandCharacter) {
         x: HOME_X,
         y: HOME_Y,
     };
-}
-
-function getFactionDisplayName(faction: CharacterFaction) {
-    if (faction === "armada") {
-        return "Armada";
-    }
-
-    if (faction === "caos") {
-        return "Caos";
-    }
-
-    return "ninguna faccion";
 }
 
 function hasOpenClient(idUser: EntityId | undefined) {
@@ -1380,6 +1372,7 @@ function resetCharacterClassState(user: CommandCharacter, classId: number) {
     user.hiddenSkillExpiresAt = 0;
     user.hiddenSkillCooldownUntil = 0;
     user.meditar = false;
+    user.meditarFx = 0;
     user.maxHp = balance.getMaxHpForLevel(classId, baseAttrConstitucion, level);
     user.maxMana = balance.getMaxManaForLevel(classId, baseAttrInteligencia, level);
     user.minHit = balance.getMinHitForLevel(classId, level);
@@ -1395,6 +1388,7 @@ function resetCharacterClassState(user: CommandCharacter, classId: number) {
     }
 
     user.nextMeleeAt = 0;
+    user.nextRangeAt = 0;
     user.nextSpellAt = 0;
     user.nextSpellAfterMeleeAt = 0;
     user.nextMeleeAfterSpellAt = 0;
@@ -1425,7 +1419,9 @@ function rebuildCharacterEquipmentState(user: CommandCharacter) {
             continue;
         }
 
-        if (obj.objType === vars.objType.armaduras) {
+        const equipType = itemKinds.getEquipObjectType(obj);
+
+        if (equipType === vars.objType.armaduras) {
             if (!user.navegando) {
                 user.idBody = obj.anim;
             }
@@ -1433,7 +1429,7 @@ function rebuildCharacterEquipmentState(user: CommandCharacter) {
             continue;
         }
 
-        if (obj.objType === vars.objType.armas) {
+        if (equipType === vars.objType.armas) {
             if (!user.navegando) {
                 user.idWeapon = obj.anim;
             }
@@ -1441,12 +1437,12 @@ function rebuildCharacterEquipmentState(user: CommandCharacter) {
             continue;
         }
 
-        if (obj.objType === vars.objType.anillos) {
+        if (equipType === vars.objType.anillos) {
             user.idItemRing = idPos;
             continue;
         }
 
-        if (obj.objType === vars.objType.escudos) {
+        if (equipType === vars.objType.escudos) {
             if (!user.navegando) {
                 user.idShield = obj.anim;
             }
@@ -1454,7 +1450,7 @@ function rebuildCharacterEquipmentState(user: CommandCharacter) {
             continue;
         }
 
-        if (obj.objType === vars.objType.cascos) {
+        if (equipType === vars.objType.cascos) {
             if (!user.navegando) {
                 user.idHelmet = obj.anim;
             }
@@ -1462,7 +1458,7 @@ function rebuildCharacterEquipmentState(user: CommandCharacter) {
             continue;
         }
 
-        if (obj.objType === vars.objType.flechas) {
+        if (equipType === vars.objType.flechas) {
             user.idItemArrow = idPos;
         }
     }
@@ -2250,7 +2246,8 @@ const command: CommandApi = {
                     break;
                 }
 
-                case "/aceptar": {
+                case "/aceptar":
+                case "/aceptarparty": {
                     const inviterId = user.partyInvitationFrom;
                     const acceptResult = game.acceptPartyInvitation(clientId);
                     handleProtocol.console(
@@ -2272,6 +2269,40 @@ const command: CommandApi = {
                             inviterClient,
                         );
                     }
+                    break;
+                }
+
+                case "/partyinfo": {
+                    if (!user.partyId) {
+                        handleProtocol.console("No estás en una party.", "white", 0, 0, ws as CommandClient);
+                        break;
+                    }
+
+                    const party = vars.parties?.[user.partyId];
+                    const memberIds = Array.isArray(party?.memberIds) ? party.memberIds : [];
+                    handleProtocol.console(
+                        `Party ${memberIds.length}/10`,
+                        "#E69500",
+                        0,
+                        0,
+                        ws as CommandClient,
+                    );
+
+                    memberIds.forEach((memberId: string | number) => {
+                        const member = vars.personajes[memberId];
+                        if (!member) {
+                            return;
+                        }
+
+                        const isLeader = String(party?.leaderId) === String(memberId);
+                        handleProtocol.console(
+                            `${isLeader ? "* " : "- "}${member.nameCharacter}${member.connected ? "" : " (offline)"}`,
+                            "#86EFAC",
+                            0,
+                            0,
+                            ws as CommandClient,
+                        );
+                    });
                     break;
                 }
 
@@ -2915,6 +2946,269 @@ const command: CommandApi = {
                         0,
                         ws as CommandClient,
                     );
+                    break;
+                }
+
+                case "/quest":
+                case "/quests": {
+                    const quests = require("./quests") as typeof import("./quests");
+                    const action = nextText.trim().toLowerCase();
+                    if (action === "aceptar") {
+                        quests.acceptQuest(String(clientId));
+                        break;
+                    }
+
+                    const abandonMatch = action.match(/^abandonar\s+(\d+)$/);
+                    if (abandonMatch) {
+                        quests.abandonQuest(String(clientId), Number(abandonMatch[1]));
+                        break;
+                    }
+
+                    if (commandText === "/quests" || action === "lista" || action === "list") {
+                        quests.listQuests(String(clientId));
+                        break;
+                    }
+
+                    quests.handleQuest(String(clientId));
+                    break;
+                }
+
+                case "/questaceptar": {
+                    require("./quests").acceptQuest(String(clientId));
+                    break;
+                }
+
+                case "/questabandonar": {
+                    require("./quests").abandonQuest(String(clientId), Number(nextText.trim()));
+                    break;
+                }
+
+                case "/montura":
+                case "/mascota": {
+                    require("./mounts").describeMount(String(clientId));
+                    break;
+                }
+
+                case "/woao": {
+                    handleProtocol.console(
+                        "WOAO: /quest /quests /questaceptar /questabandonar /montura /premios /canjear /viaje /comerciar /ranked /hunger /participar /atorneo /remort /ciudades /castillos /castillo /clanpuntos /bloodcastle /guerra /templo /domar /casa /dia /party /aceptar /partyinfo /salirparty",
+                        "#E69500",
+                        1,
+                        0,
+                        ws as CommandClient,
+                    );
+                    break;
+                }
+
+                case "/remort": {
+                    const result = require("./remort").doRemort(String(clientId), nextText);
+                    handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/hunger":
+                case "/hungergames": {
+                    const hungerGames = require("./hungerGames") as typeof import("./hungerGames");
+                    const [action, rawCapacity] = nextText.trim().split(/\s+/);
+                    if (action === "start" && hasAdminPrivileges(user)) {
+                        const result = hungerGames.startEvent(Number(rawCapacity || 6));
+                        handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                        break;
+                    }
+                    if (action === "cancel" && hasAdminPrivileges(user)) {
+                        const result = hungerGames.cancelEvent();
+                        handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                        break;
+                    }
+                    const result = hungerGames.joinEvent(String(clientId));
+                    handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/atorneo": {
+                    if (!hasAdminPrivileges(user)) {
+                        break;
+                    }
+                    const result = require("./tournamentAuto").startEvent(Number(nextText.trim() || 1));
+                    handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/participar": {
+                    const result = require("./tournamentAuto").joinEvent(String(clientId));
+                    handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/cancelartorneo": {
+                    if (!hasAdminPrivileges(user)) {
+                        break;
+                    }
+                    const result = require("./tournamentAuto").cancelEvent();
+                    handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/ranked": {
+                    const result = require("./rankedArena").toggleQueue(String(clientId));
+                    handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/comerciar": {
+                    const result = require("./playerTrade").requestTrade(String(clientId), nextText.trim());
+                    handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/ofertar": {
+                    const [slot, amount] = nextText.trim().split(/\s+/);
+                    const result = require("./playerTrade").offerItem(String(clientId), slot, Number(amount || 1));
+                    handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/ofertaroro": {
+                    const result = require("./playerTrade").offerGold(String(clientId), Number(nextText.trim() || 0));
+                    handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/aceptarcomercio": {
+                    const result = require("./playerTrade").acceptTrade(String(clientId));
+                    handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/cancelarcomercio": {
+                    const result = require("./playerTrade").cancelTrade(String(clientId));
+                    handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/premios": {
+                    require("./premiosShop").listPremios(String(clientId));
+                    break;
+                }
+
+                case "/canjear": {
+                    const result = require("./premiosShop").redeemPremio(String(clientId), Number(nextText.trim()));
+                    handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/viaje": {
+                    const result = require("./fastTravel").travel(String(clientId), nextText.trim());
+                    handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/ciudades": {
+                    for (const line of require("./cityConquest").listCities()) {
+                        handleProtocol.console(line, "#E69500", 1, 0, ws as CommandClient);
+                    }
+                    break;
+                }
+
+                case "/castillos":
+                case "/ct": {
+                    for (const line of require("./clanCastles").listCastles()) {
+                        handleProtocol.console(line, "#E69500", 1, 0, ws as CommandClient);
+                    }
+                    break;
+                }
+
+                case "/castillo": {
+                    const result = require("./clanCastles").teleportToOwnedCastle(String(clientId), nextText);
+                    handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    if (result.ok && result.map && result.x && result.y) {
+                        game.telep(ws, result.map, result.x, result.y, "castillo");
+                    }
+                    break;
+                }
+
+                case "/clanpuntos": {
+                    const result = require("./clanMeta").describeClan(String(clientId));
+                    handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/clanguerra": {
+                    const result = require("./clanMeta").declareRelation(String(clientId), nextText.trim(), "war");
+                    handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/clanalianza": {
+                    const result = require("./clanMeta").declareRelation(String(clientId), nextText.trim(), "ally");
+                    handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/guerra": {
+                    const factionWars = require("./factionWars") as typeof import("./factionWars");
+                    const action = nextText.trim().toLowerCase();
+                    if (action === "start" && hasAdminPrivileges(user)) {
+                        const result = factionWars.startWar();
+                        handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                        break;
+                    }
+                    if (action === "cancel" && hasAdminPrivileges(user)) {
+                        const result = factionWars.cancelWar();
+                        handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                        break;
+                    }
+                    if ((action === "auto" || action === "on" || action === "off") && hasAdminPrivileges(user)) {
+                        const result = factionWars.setAutomatic(action !== "off");
+                        handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                        break;
+                    }
+                    const result = factionWars.joinWar(String(clientId));
+                    handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/templo": {
+                    const result = require("./factionWars").enterTemple(String(clientId));
+                    handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/domar": {
+                    const result = require("./tame").doTame(String(clientId));
+                    handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/casa":
+                case "/casas": {
+                    const result = require("./houses").describeHouses(String(clientId));
+                    handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/dia": {
+                    handleProtocol.console(require("./diaEspecial").describe(), "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/bloodcastle": {
+                    const bloodCastle = require("./bloodCastle") as typeof import("./bloodCastle");
+                    const [action, rawCapacity] = nextText.trim().split(/\s+/);
+                    if (action === "start" && hasAdminPrivileges(user)) {
+                        const result = bloodCastle.startEvent(Number(rawCapacity || 8));
+                        handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                        break;
+                    }
+
+                    if (action === "cancel" && hasAdminPrivileges(user)) {
+                        const result = bloodCastle.cancelEvent();
+                        handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                        break;
+                    }
+
+                    const result = bloodCastle.joinEvent(String(clientId));
+                    handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
                     break;
                 }
 

@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0" xmlns:asmv3="urn:schemas-microsoft-com:asm.v3">
+    <assemblyIdentity name="Iron AO" processorArchitecture="X86" type="win32" version="1.2.0.4" />
+    <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+        <security>
+            <requestedPrivileges>
+                <requestedExecutionLevel level="requireAdministrator" uiAccess="false"/>
+            </requestedPrivileges>
+        </security>
+    </trustInfo> 
+    <file name="wGL_Client.dll">
+        <typelib tlbid="{BCAA90BC-24DB-4470-901A-CD7932B14011}" version="1.0" flags="hasdiskimage" helpdir="" />
+        <comClass clsid="{4D539813-A654-44D0-B7EE-B347AE1BD08A}"/>
+        <comClass clsid="{DCC3659F-FFEF-4B7B-A7B8-77F5BA079986}"/>
+        <comClass clsid="{DCC3659F-FFEF-4B7B-A7B8-77F5BA079988}"/>
+    </file>
+    <file name="Aurora_IO.dll">
+        <typelib tlbid="{A4E7C808-3808-4098-AE01-4381D7860CB6}" version="1.0" flags="hasdiskimage" helpdir="" />
+        <comClass clsid="{AA6289B3-4236-4A8C-A086-4BC5567D7F8B}"/>
+        <comClass clsid="{9F7F20CB-BCD3-481E-A31F-10AA15133504}"/>
+        <comClass clsid="{9B04896A-0906-4B30-BADB-64FAAD2D6CB5}"/>
+        <comClass clsid="{387A2C58-E438-46BF-8E91-6A610C2420DC}"/>
+        <comClass clsid="{142338E0-2151-405D-A3D0-68D8F852FB37}"/>
+    </file>
+</assembly>

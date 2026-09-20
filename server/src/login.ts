@@ -6,6 +6,9 @@ export {};
 const funct = require("./functions");
 const vars = require("./vars");
 const game = require("./game");
+const itemKinds = require("./itemKinds") as {
+    getEquipObjectType: (obj: { objType?: number; subtipo?: number } | null | undefined) => number;
+};
 const socket = require("./socket") as SocketApi;
 const handleProtocol = require("./handleProtocol");
 const arenaManager = require("./arenaManager");
@@ -370,6 +373,18 @@ async function claimPersistedCharacterConnection(characterId: string): Promise<b
     }
 }
 
+function isPersistedCharacterOnline(characterId: string): boolean {
+    return Object.values(vars.personajes).some((personaje) => {
+        const runtime = personaje as RuntimeCharacter | undefined;
+        return Boolean(
+            runtime &&
+                !runtime.cerrado &&
+                !runtime.pvpChar &&
+                runtime._id === characterId,
+        );
+    });
+}
+
 async function releasePersistedCharacterConnection(characterId?: string): Promise<void> {
     if (!characterId) {
         return;
@@ -506,6 +521,12 @@ function Login(this: LoginApi) {
                 }
 
                 await login.disconnectAllCharacters(account);
+                await game.waitForCharacterPersistence(character._id);
+
+                if (!isPersistedCharacterOnline(character._id)) {
+                    await releasePersistedCharacterConnection(character._id);
+                }
+
                 const claimedConnection = await claimPersistedCharacterConnection(character._id);
 
                 if (!claimedConnection) {
@@ -622,6 +643,7 @@ function Login(this: LoginApi) {
 
                 personaje.nextDialogAt = 0;
                 personaje.nextMeleeAt = 0;
+                personaje.nextRangeAt = 0;
                 personaje.nextSpellAt = 0;
                 personaje.nextSpellAfterMeleeAt = 0;
                 personaje.nextMeleeAfterSpellAt = 0;
@@ -668,6 +690,20 @@ function Login(this: LoginApi) {
                     ? 0
                     : Math.min(Math.max(personaje.hp ?? normalizedMaxHp, 0), normalizedMaxHp);
                 personaje.mana = Math.min(Math.max(personaje.mana ?? normalizedMaxMana, 0), normalizedMaxMana);
+                personaje.maxHambre = 100;
+                personaje.maxSed = 100;
+                personaje.maxSta = balance.getMaxStaForLevel(
+                    personaje.attrConstitucion,
+                    personaje.level,
+                );
+                personaje.hambre =
+                    personaje.hambre == null ? 100 : Math.max(0, Math.min(100, Number(personaje.hambre)));
+                personaje.sed =
+                    personaje.sed == null ? 100 : Math.max(0, Math.min(100, Number(personaje.sed)));
+                personaje.sta =
+                    personaje.sta == null
+                        ? personaje.maxSta
+                        : Math.max(0, Math.min(personaje.maxSta, Number(personaje.sta)));
 
                 personaje.seguroActivado = true;
                 personaje.seguroClanActivado = Boolean(personaje.clanId);
@@ -739,29 +775,31 @@ function Login(this: LoginApi) {
                     }
 
                     if (!personaje.dead && item.equipped) {
-                        if (obj.objType == vars.objType.armaduras) {
+                        const equipType = itemKinds.getEquipObjectType(obj);
+
+                        if (equipType == vars.objType.armaduras) {
                             if (!personaje.navegando) {
                                 personaje.idBody = obj.anim;
                             }
                             personaje.idItemBody = idPos;
-                        } else if (obj.objType == vars.objType.armas) {
+                        } else if (equipType == vars.objType.armas) {
                             if (!personaje.navegando) {
                                 personaje.idWeapon = obj.anim;
                             }
                             personaje.idItemWeapon = idPos;
-                        } else if (obj.objType == vars.objType.anillos) {
+                        } else if (equipType == vars.objType.anillos) {
                             personaje.idItemRing = idPos;
-                        } else if (obj.objType == vars.objType.escudos) {
+                        } else if (equipType == vars.objType.escudos) {
                             if (!personaje.navegando) {
                                 personaje.idShield = obj.anim;
                             }
                             personaje.idItemShield = idPos;
-                        } else if (obj.objType == vars.objType.cascos) {
+                        } else if (equipType == vars.objType.cascos) {
                             if (!personaje.navegando) {
                                 personaje.idHelmet = obj.anim;
                             }
                             personaje.idItemHelmet = idPos;
-                        } else if (obj.objType == vars.objType.flechas) {
+                        } else if (equipType == vars.objType.flechas) {
                             personaje.idItemArrow = idPos;
                         }
                     }
@@ -787,6 +825,11 @@ function Login(this: LoginApi) {
                     };
                 });
 
+                if (spells["0"] && !spells["1"]) {
+                    spells["1"] = spells["0"];
+                    delete spells["0"];
+                }
+
                 personaje.spells = spells;
 
                 const classCannotUseMagic =
@@ -801,13 +844,20 @@ function Login(this: LoginApi) {
                 personaje.gold = balance.clampGold(personaje.gold || 0);
                 relocateToJailIfNeeded(personaje);
                 ensureCharacterHasValidMapPosition(personaje);
-                const mapLevelDeniedMessage = relocateCharacterToUllaIfMapLevelDenied(personaje);
+                const fortressDeniedMessage = require("./clanCastles").relocateFromFortressIfNeeded(personaje);
+                const mapLevelDeniedMessage =
+                    fortressDeniedMessage || relocateCharacterToUllaIfMapLevelDenied(personaje);
 
                 personaje.connected = true;
                 personaje.invisibleAdmin = personaje.privileges === 1;
                 personaje.summons = [];
                 personaje.summonTargetNpcId = 0;
+                require("./woaoProgress").hydrateUser(personaje);
                 vars.personajes[ws.id] = personaje;
+
+                if (!personaje.idBody) {
+                    personaje.idBody = game.bodyNaked(personaje.id);
+                }
 
                 vars.clients[ws.id] = ws;
                 ws.connectedAt = Date.now();
@@ -865,6 +915,14 @@ function Login(this: LoginApi) {
                     handleProtocol.sendMyCharacter(personajeWS);
                     socket.send(ws);
                     sendWelcomeConsoleMessage(ws);
+                    handleProtocol.console(
+                        `WOAO> Canje ${personajeWS.puntosCanje ?? 0} | ELO ${personajeWS.elo ?? 300} | Remort ${personajeWS.remorted || "no"} | /woao`,
+                        "#E69500",
+                        1,
+                        0,
+                        ws,
+                    );
+                    require("./diaEspecial").announceTo(String(ws.id));
 
                     if (mapLevelDeniedMessage) {
                         handleProtocol.console(mapLevelDeniedMessage, "white", 1, 0, ws);
@@ -1047,6 +1105,12 @@ function Login(this: LoginApi) {
             maxHp,
             mana: maxMana,
             maxMana,
+            sta: balance.getMaxStaForLevel(baseAttrConstitucion, targetLevel),
+            maxSta: balance.getMaxStaForLevel(baseAttrConstitucion, targetLevel),
+            hambre: 100,
+            maxHambre: 100,
+            sed: 100,
+            maxSed: 100,
             idRaza: character.idRaza,
             idGenero: 1,
             muerto: 0,
@@ -1072,6 +1136,11 @@ function Login(this: LoginApi) {
             ciudadanosMatados: 0,
             criminalesMatados: 0,
             fianza: 0,
+            puntosCanje: 0,
+            elo: 300,
+            remort: 0,
+            remorted: "",
+            pClan: 0,
             homeMap: ULLA_MAP_ID,
             homeX: ULLA_POS_X,
             homeY: ULLA_POS_Y,
@@ -1095,6 +1164,7 @@ function Login(this: LoginApi) {
             moveOffsetY: 0,
             nextDialogAt: 0,
             nextMeleeAt: 0,
+            nextRangeAt: 0,
             nextSpellAt: 0,
             nextSpellAfterMeleeAt: 0,
             nextMeleeAfterSpellAt: 0,
@@ -1147,6 +1217,7 @@ function Login(this: LoginApi) {
             idItemRing: character.idItemRing || 0,
         };
 
+        require("./woaoProgress").hydrateUser(newCharacter);
         vars.personajes[ws.id] = newCharacter;
 
         vars.clients[ws.id] = ws;
@@ -1162,7 +1233,12 @@ function Login(this: LoginApi) {
         ws.lastPacketIntervalMs = 0;
         ws.minPacketIntervalMs = 0;
 
-        const mapLevelDeniedMessage = isAdminSummonedBot ? "" : relocateCharacterToUllaIfMapLevelDenied(newCharacter);
+        const fortressDeniedMessage = isAdminSummonedBot
+            ? ""
+            : require("./clanCastles").relocateFromFortressIfNeeded(newCharacter);
+        const mapLevelDeniedMessage = isAdminSummonedBot
+            ? ""
+            : fortressDeniedMessage || relocateCharacterToUllaIfMapLevelDenied(newCharacter);
 
         relocateCharacterIfNeeded(ws);
 
@@ -1172,6 +1248,14 @@ function Login(this: LoginApi) {
             handleProtocol.sendMyCharacter(newCharacter);
             socket.send(ws);
             sendWelcomeConsoleMessage(ws);
+            handleProtocol.console(
+                `WOAO> Canje ${newCharacter.puntosCanje ?? 0} | ELO ${newCharacter.elo ?? 300} | Remort ${newCharacter.remorted || "no"} | /woao`,
+                "#E69500",
+                1,
+                0,
+                ws,
+            );
+            require("./diaEspecial").announceTo(String(ws.id));
 
             if (mapLevelDeniedMessage) {
                 handleProtocol.console(mapLevelDeniedMessage, "white", 1, 0, ws);

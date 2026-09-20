@@ -11,9 +11,11 @@ import {
     GENDER_ID_MAP,
     getAllowedAppearance,
     getBaseStats,
+    getFactionForRace,
     isValidHeadId,
     RACE_ID_MAP,
     type CharacterClassKey,
+    type GenderKey,
     type RaceKey,
 } from "../lib/characterCreation";
 import { sendPasswordResetEmail } from "../lib/email";
@@ -157,88 +159,64 @@ type StarterInventoryItem = {
     equipped?: boolean;
 };
 
+function getStarterClothesId(raceKey: RaceKey, genderKey: GenderKey): number {
+    if (raceKey === "orco") {
+        return genderKey === "female" ? 737 : 736;
+    }
+
+    switch (raceKey) {
+        case "elfo":
+        case "abisario":
+            return 464;
+        case "elfoDrow":
+        case "vampiro":
+            return 465;
+        case "enano":
+        case "gnomo":
+        case "goblin":
+            return 466;
+        default:
+            return 463;
+    }
+}
+
 function getStarterLoadout(
     classKey: CharacterClassKey,
     raceKey: RaceKey,
+    genderKey: GenderKey,
 ): {
     items: StarterInventoryItem[];
     spells: number[];
 } {
-    const isLowRace = raceKey === "enano" || raceKey === "gnomo";
     const items: StarterInventoryItem[] = [
-        { idItem: 857, amount: 500 },
         { idItem: 467, amount: 100 },
-        { idItem: 468, amount: 50 },
+        { idItem: 468, amount: 100 },
+        { idItem: 460, amount: 1, equipped: true },
+        { idItem: getStarterClothesId(raceKey, genderKey), amount: 1, equipped: true },
     ];
 
-    if (classKey !== "guerrero" && classKey !== "cazador") {
-        items.push({ idItem: 856, amount: 250 });
-    }
-
-    if (classKey !== "mago") {
-        items.push({ idItem: 855, amount: 100 });
-        items.push({ idItem: 858, amount: 100 });
-    }
-
     if (
-        ["mago", "clerigo", "bardo", "druida", "paladin", "asesino"].includes(
-            classKey,
-        )
+        [
+            "arquero",
+            "cazador",
+            "lenador",
+            "minero",
+            "pescador",
+            "ermitano",
+            "domador",
+            "carpintero",
+            "herrero",
+        ].includes(classKey)
     ) {
-        const spells = [2];
-
-        switch (classKey) {
-            case "mago":
-                items.push({ idItem: 862, amount: 1 });
-                items.push({ idItem: isLowRace ? 1045 : 1044, amount: 1 });
-                return { items, spells };
-            case "clerigo":
-                items.push({ idItem: 861, amount: 1 });
-                items.push({ idItem: 1048, amount: 1 });
-                items.push({ idItem: 1051, amount: 1 });
-                items.push({ idItem: isLowRace ? 1047 : 1046, amount: 1 });
-                return { items, spells };
-            case "bardo":
-                items.push({ idItem: 864, amount: 1 });
-                items.push({ idItem: 1051, amount: 1 });
-                items.push({ idItem: isLowRace ? 1045 : 1044, amount: 1 });
-                return { items, spells };
-            case "druida":
-                items.push({ idItem: 863, amount: 1 });
-                items.push({ idItem: isLowRace ? 1045 : 1044, amount: 1 });
-                return { items, spells };
-            case "paladin":
-                items.push({ idItem: 861, amount: 1 });
-                items.push({ idItem: 1048, amount: 1 });
-                items.push({ idItem: 1051, amount: 1 });
-                items.push({ idItem: isLowRace ? 1047 : 1046, amount: 1 });
-                return { items, spells };
-            case "asesino":
-                items.push({ idItem: 460, amount: 1 });
-                items.push({ idItem: 861, amount: 1 });
-                items.push({ idItem: 1048, amount: 1 });
-                items.push({ idItem: 1051, amount: 1 });
-                items.push({ idItem: isLowRace ? 1047 : 1046, amount: 1 });
-                return { items, spells };
-        }
+        items.push({ idItem: 1280, amount: 1 });
+        items.push({ idItem: 1281, amount: 500 });
     }
 
-    switch (classKey) {
-        case "guerrero":
-            items.push({ idItem: 861, amount: 1 });
-            items.push({ idItem: 1048, amount: 1 });
-            items.push({ idItem: 1051, amount: 1 });
-            items.push({ idItem: isLowRace ? 1047 : 1046, amount: 1 });
-            return { items, spells: [] };
-        case "cazador":
-            items.push({ idItem: 859, amount: 1 });
-            items.push({ idItem: 860, amount: 500 });
-            items.push({ idItem: 1052, amount: 1 });
-            items.push({ idItem: isLowRace ? 1047 : 1046, amount: 1 });
-            return { items, spells: [] };
-    }
-
-    return { items, spells: [] };
+    const casterClasses = ["mago", "clerigo", "bardo", "druida", "paladin", "asesino", "ermitano"];
+    return {
+        items,
+        spells: casterClasses.includes(classKey) ? [2] : [],
+    };
 }
 
 function createSessionToken(): string {
@@ -357,10 +335,21 @@ function toAuthCharacterSummary(
         2: "Clérigo",
         3: "Guerrero",
         4: "Asesino",
+        5: "Ladrón",
         6: "Bardo",
         7: "Druida",
         8: "Paladín",
         9: "Cazador",
+        12: "Bandido",
+        13: "Pescador",
+        14: "Herrero",
+        15: "Leñador",
+        16: "Minero",
+        17: "Carpintero",
+        18: "Pirata",
+        19: "Ermitaño",
+        20: "Arquero",
+        21: "Domador",
     };
     const raceNameById: Record<number, string> = {
         1: "Humano",
@@ -368,6 +357,13 @@ function toAuthCharacterSummary(
         3: "Elfo Drow",
         4: "Enano",
         5: "Gnomo",
+        6: "Orco",
+        7: "Vampiro",
+        8: "Abisario",
+        9: "Goblin",
+        10: "Tauros",
+        11: "Licantropo",
+        12: "No-Muerto",
     };
 
     return {
@@ -505,7 +501,7 @@ export async function createCharacterForSession(
     const idGenero = GENDER_ID_MAP[parsed.gender];
     const appearance = getAllowedAppearance(parsed.race, parsed.gender);
     const baseStats = getBaseStats(parsed.class, parsed.race);
-    const starterLoadout = getStarterLoadout(parsed.class, parsed.race);
+    const starterLoadout = getStarterLoadout(parsed.class, parsed.race, parsed.gender);
 
     if (!isValidHeadId(parsed.race, parsed.gender, parsed.headId)) {
         throw new Error(
@@ -566,6 +562,7 @@ export async function createCharacterForSession(
         level,
         dead,
         criminal,
+        faction,
         navegando,
         npc_matados,
         ciudadanos_matados,
@@ -580,9 +577,9 @@ export async function createCharacterForSession(
         $1,
         $2,
         $3,
-        1,
-        50,
-        60,
+        37,
+        78,
+        87,
         0,
         $4,
         $4,
@@ -622,14 +619,15 @@ export async function createCharacterForSession(
         1,
         FALSE,
         FALSE,
+        $17,
         FALSE,
         0,
         0,
         0,
         0,
-        1,
-        54,
-        60,
+        37,
+        78,
+        87,
         FALSE
       )
       RETURNING id
@@ -651,6 +649,7 @@ export async function createCharacterForSession(
                 baseStats.inteligencia,
                 baseStats.constitucion,
                 baseStats.expNextLevel,
+                getFactionForRace(parsed.race),
             ],
         );
 

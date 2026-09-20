@@ -1,0 +1,534 @@
+[INIT]
+NumQuests=31
+ 
+[QUEST1]'Newbie Dungeon
+Nombre=El Comienzo (MAGICOS)
+Desc=Debes matar 5 Lobos, 5 Serpientes y 1 Hormiga Gigante y serás recompensado.
+RequiredLevel=1
+
+RequiredOBJs=0
+ 
+RequiredNPCs=3
+RequiredNPC1=501-5
+RequiredNPC2=534-1
+RequiredNPC3=504-5
+ 
+RewardGLD=50
+RewardEXP=5000
+RewardDragPoints=1
+ 
+RewardOBJs=2
+RewardOBJ1=37-50
+RewardOBJ2=38-50
+ 
+[QUEST2]'Nix
+Nombre=Adentrando a la Cueva de Nix
+Desc=Debes matar 8 Arañas Gigantes y 10 Trogloditas y serás recompensado.
+RequiredLevel=1
+
+RequiredOBJs=0
+ 
+RequiredNPCs=2
+RequiredNPC1=510-8
+RequiredNPC2=588-10
+ 
+RewardGLD=250
+RewardEXP=5725
+RewardDragPoints=3
+ 
+RewardOBJs=2
+RewardOBJ1=400-1
+RewardOBJ2=756-1
+
+[QUEST3]'Mapa 34 medio
+Nombre=Vamos al Bosque
+Desc=Debes matar 10 Hobbit Gigante y 10 Treant para ser recompensado.
+RequiredLevel=1
+ 
+RequiredOBJs=0
+ 
+RequiredNPCs=2
+RequiredNPC1=623-10
+RequiredNPC2=749-10
+
+RewardGLD=2590
+RewardEXP=167500
+RewardDragPoints=8
+ 
+RewardOBJs=1
+RewardOBJ1=58-2000
+
+[QUEST4]'Mapa 88 polo
+Nombre=Uff, que hace frío
+Desc=Debes matar 15 Abominaciones para recibir la recompensa.
+RequiredLevel=1
+ 
+RequiredOBJs=0
+ 
+RequiredNPCs=1
+RequiredNPC1=657-15
+ 
+RewardGLD=2125
+RewardEXP=63750
+RewardDragPoints=10
+ 
+RewardOBJs=0
+
+[QUEST5]'Mapa 85
+Nombre=Maldito Atlantis
+Desc=Debes matar 10 Tritones y 10 Cíclopes para recibir la recompensa.
+RequiredLevel=1
+ 
+RequiredOBJs=0
+ 
+RequiredNPCs=2
+RequiredNPC1=582-10
+RequiredNPC2=677-10
+ 
+RewardGLD=3875
+RewardEXP=340000
+RewardDragPoints=18
+ 
+RewardOBJs=0
+
+[QUEST6]' Mapa 150 Arghal
+Nombre=Peligroso Veril
+Desc=Debes matar 6 Brujos y 20 Medusas para recibir la recompensa.
+RequiredLevel=1
+ 
+RequiredOBJs=0
+ 
+RequiredNPCs=2
+RequiredNPC1=583-6
+RequiredNPC2=553-20
+ 
+RewardGLD=7250
+RewardEXP=880000
+RewardDragPoints=30
+ 
+RewardOBJs=0
+
+[QUEST7]'Esperanza
+Nombre=Bajemos al Gigante
+Desc=Debes matar 10 Gigantes para recibir la recompensa.
+RequiredLevel=1
+ 
+RequiredOBJs=0
+ 
+RequiredNPCs=1
+RequiredNPC1=586-10
+ 
+RewardGLD=20000
+RewardEXP=2500000
+RewardDragPoints=35
+ 
+RewardOBJs=0
+
+[QUEST8]'Esperanza
+Nombre=Bosque Terrorífico
+Desc=Debes matar 8 Devastadores y 7 Trolls para recibir la recompensa.
+RequiredLevel=1
+ 
+RequiredOBJs=0
+ 
+RequiredNPCs=2
+RequiredNPC1=600-8
+RequiredNPC2=598-7
+ 
+RewardGLD=9138
+RewardEXP=1287000
+RewardDragPoints=30
+ 
+RewardOBJs=0
+
+[QUEST9]'Esperanza
+Nombre=Casa Encantada
+Desc=Debes matar 10 Uruks y 5 Centinelas para recibir la recompensa.
+RequiredLevel=1
+ 
+RequiredOBJs=0
+ 
+RequiredNPCs=2
+RequiredNPC1=602-10
+RequiredNPC2=601-5
+ 
+RewardGLD=9375
+RewardEXP=2148000
+RewardDragPoints=35
+ 
+RewardOBJs=0
+
+[QUEST10]'Esperanza
+Nombre=Gran Desafío
+Desc=Debes matar 5 Devir para recibir la recompensa.
+RequiredLevel=1
+ 
+RequiredOBJs=0
+ 
+RequiredNPCs=1
+RequiredNPC1=699-5
+ 
+RewardGLD=18750
+RewardEXP=3000000
+RewardDragPoints=25
+ 
+RewardOBJs=0
+
+[QUEST11]'mapa 86
+Nombre=Templo Marítimo
+Desc=Debes matar 10 Elementales de Agua y 10 Genios de los Mares para recibir la recompensa.
+RequiredLevel=1
+ 
+RequiredOBJs=0
+ 
+RequiredNPCs=2
+RequiredNPC1=755-10
+RequiredNPC2=751-10
+ 
+RewardGLD=4325
+RewardEXP=600000
+RewardDragPoints=20
+
+[QUEST12]'mapa 86
+Nombre=Templo Marítimo II
+Desc=Debes matar 10 Caballos de Mar y 10 Leviatanes para recibir la recompensa.
+RequiredLevel=1
+ 
+RequiredOBJs=0
+ 
+RequiredNPCs=2
+RequiredNPC1=741-10
+RequiredNPC2=548-10
+ 
+RewardGLD=2700
+RewardEXP=215000
+RewardDragPoints=13
+ 
+RewardOBJs=0
+
+[QUEST13]'nix
+Nombre=Mucha Oscuridad
+Desc=Debes matar 8 Señores de la Muerte, 5 Cancerberos y 4 Sirvientes Demoníacos para recibir la recompensa.
+RequiredLevel=1
+ 
+RequiredOBJs=0
+ 
+RequiredNPCs=3
+RequiredNPC1=740-8
+RequiredNPC2=745-5
+RequiredNPC3=746-4
+ 
+RewardGLD=5680
+RewardEXP=815000
+RewardDragPoints=30
+ 
+RewardOBJs=0
+
+[QUEST14]'nix
+Nombre=Mucha Oscuridad II
+Desc=Debes matar 1 Rey Mago y 4 Rey Fantasma para recibir la recompensa.
+RequiredLevel=1
+ 
+RequiredOBJs=0
+ 
+RequiredNPCs=2
+RequiredNPC1=761-1
+RequiredNPC2=691-4
+ 
+RewardGLD=12000
+RewardEXP=1900000
+RewardDragPoints=40
+ 
+RewardOBJs=0
+
+[QUEST15]'isla 47
+Nombre=Camino al Infierno
+Desc=Debes matar 4 Hidra, 4 Fenix y 8 Genio Infernal para recibir la recompensa.
+RequiredLevel=1
+ 
+RequiredOBJs=0
+ 
+RequiredNPCs=3
+RequiredNPC1=753-4
+RequiredNPC2=750-4
+RequiredNPC3=748-8
+ 
+RewardGLD=6340
+RewardEXP=970000
+RewardDragPoints=40
+ 
+RewardOBJs=0
+
+[QUEST16]'isla 47
+Nombre=Camino al Infierno II
+Desc=Debes matar 3 Dragón Legendario y 8 Dragón Infernal para recibir la recompensa.
+RequiredLevel=1
+ 
+RequiredOBJs=0
+ 
+RequiredNPCs=2
+RequiredNPC1=754-3
+RequiredNPC2=739-8
+ 
+RewardGLD=76250
+RewardEXP=4060000
+RewardDragPoints=55
+ 
+RewardOBJs=0
+
+[QUEST17]
+Nombre=Frío, mucho Frío
+Desc=Debes matar 2 Caballero Muerto y 3 Gigante de Roca para recibir la recompensa.
+RequiredLevel=1
+ 
+RequiredOBJs=0
+ 
+RequiredNPCs=2
+RequiredNPC1=758-2
+RequiredNPC2=752-3
+ 
+RewardGLD=9500
+RewardEXP=1645000
+RewardDragPoints=35
+ 
+RewardOBJs=0
+
+[QUEST18]
+Nombre=Frío, mucho Frío II
+Desc=Debes matar 1 Caballero Helado para recibir la recompensa.
+RequiredLevel=1
+ 
+RequiredOBJs=0
+ 
+RequiredNPCs=1
+RequiredNPC1=633-1
+ 
+RewardGLD=10000
+RewardEXP=1000000
+RewardDragPoints=50
+ 
+RewardOBJs=0
+
+[QUEST19]'Newbie Dungeon
+Nombre=El Comienzo (NO-MAGIA)
+Desc=Debes matar 5 Lobos, 5 Arañas Pequeñas y 1 Hormiga Gigante y serás recompensado.
+RequiredLevel=1
+
+RequiredOBJs=0
+ 
+RequiredNPCs=3
+RequiredNPC1=529-5
+RequiredNPC2=534-1
+RequiredNPC3=501-5
+ 
+RewardGLD=50
+RewardEXP=5000
+RewardDragPoints=1
+ 
+RewardOBJs=4
+RewardOBJ1=36-20
+RewardOBJ2=38-90
+RewardOBJ3=39-20
+RewardOBJ4=480-50
+
+[QUEST20]'Mapa 35
+Nombre=Cazería de Trents Joven
+Desc=Debes matar 10 Treants Jovenes serás recompensado (Mapa 35) Arriba de Nix
+RequiredLevel=1
+
+RequiredOBJs=0
+ 
+RequiredNPCs=1
+RequiredNPC1=762-10
+
+RewardGLD=300
+RewardEXP=7750
+RewardDragPoints=3
+ 
+RewardOBJs=4
+RewardOBJ1=36-20
+RewardOBJ2=38-90
+RewardOBJ3=39-20
+RewardOBJ4=480-50
+
+[QUEST21]'Mapa 110
+Nombre=Acabar con el demonio
+Desc=Debes matar 5 Demonios de Fuego para recibir la recompensa.
+RequiredLevel=1
+ 
+RequiredOBJs=0
+ 
+RequiredNPCs=1
+RequiredNPC1=585-5
+ 
+RewardGLD=20000
+RewardEXP=6000000
+RewardDragPoints=40
+ 
+RewardOBJs=0
+
+[QUEST22]'Mapa 45
+Nombre=Cazería de Genios
+Desc=Debes matar 10 Genios del Bosque, serás recompensado.
+RequiredLevel=1
+
+RequiredOBJs=0
+ 
+RequiredNPCs=1
+RequiredNPC1=593-10
+
+RewardGLD=1250
+RewardEXP=90000
+RewardDragPoints=7
+ 
+RewardOBJs=0
+
+[QUEST23]'Mapa catas
+Nombre=Cazería de Arañas
+Desc=Debes matar 10 Viudas Negras, serás recompensado.
+RequiredLevel=1
+
+RequiredOBJs=0
+ 
+RequiredNPCs=1
+RequiredNPC1=624-10
+
+RewardGLD=750
+RewardEXP=37000
+RewardDragPoints=5
+ 
+RewardOBJs=0
+
+[QUEST24]'Mapa Aleatorio
+Nombre=Caza de Gollum
+Desc=Debes matar 3 Gollum, serás recompensado.
+RequiredLevel=1
+
+RequiredOBJs=0
+ 
+RequiredNPCs=1
+RequiredNPC1=594-3
+
+RewardGLD=20000
+RewardEXP=3000000
+RewardDragPoints=50
+ 
+RewardOBJs=0
+
+[QUEST25]'Mapa 69
+Nombre=Cazeria de Chamanes
+Desc=Debes matar 3 Chamanes, serás recompensado.
+RequiredLevel=1
+
+RequiredOBJs=0
+ 
+RequiredNPCs=1
+RequiredNPC1=634-3
+
+RewardGLD=3000
+RewardEXP=150000
+RewardDragPoints=10
+ 
+RewardOBJs=0
+
+[QUEST26]'Mapa 200
+Nombre=Cazeria de Hielo
+Desc=Debes matar 10 Panteras Heladas y 1 Golem hielo , serás recompensado.
+RequiredLevel=1
+
+RequiredOBJs=0
+ 
+RequiredNPCs=2
+RequiredNPC1=763-10
+RequiredNPC2=765-1
+
+RewardGLD=5000
+RewardEXP=1300000
+RewardDragPoints=30
+ 
+RewardOBJs=0
+
+[QUEST27]'Mapa 201
+Nombre=Cazeria Oscura
+Desc=Debes matar 10 Medusas Hechizeras y 1 Asesino Oscuro , serás recompensado.
+RequiredLevel=1
+
+RequiredOBJs=0
+ 
+RequiredNPCs=2
+RequiredNPC1=764-10
+RequiredNPC2=766-1
+
+RewardGLD=5000
+RewardEXP=1400000
+RewardDragPoints=30
+ 
+RewardOBJs=0
+
+[QUEST28]'Mapa 202
+Nombre=Camino Del Sendero
+Desc=Debes matar 2 Elemental De la Naturaleza , 3 Jinetes Templarios y 1 Golem de Cristal , serás recompensado.
+RequiredLevel=1
+
+RequiredOBJs=0
+ 
+RequiredNPCs=3
+RequiredNPC1=771-2
+RequiredNPC2=770-3
+RequiredNPC3=769-1
+
+RewardGLD=6000
+RewardEXP=1600000
+RewardDragPoints=45
+ 
+RewardOBJs=0
+
+[QUEST29]'Desierto Piramide
+Nombre=Mucha Sed
+Desc=Debes matar 5 Momias Con Maza, 4 Momias Con Hacha y 2 Momias Con Espada ,para recibir la recompensa.
+RequiredLevel=1
+ 
+RequiredOBJs=0
+ 
+RequiredNPCs=3
+RequiredNPC1=608-5
+RequiredNPC2=609-4
+RequiredNPC3=610-2
+ 
+RewardGLD=3680
+RewardEXP=800000
+RewardDragPoints=30
+ 
+RewardOBJs=0
+
+[QUEST30]'Piramide Mapa 182
+Nombre=Mucha Sed II
+Desc=Debes matar 1 Momia Faraon ,para recibir la recompensa.
+RequiredLevel=1
+ 
+RequiredOBJs=0
+ 
+RequiredNPCs=1
+RequiredNPC1=611-1
+ 
+RewardGLD=20000
+RewardEXP=2200000
+RewardDragPoints=35
+ 
+RewardOBJs=0
+
+[QUEST31]'Caballero De la muerte
+Nombre=Muerte Segura
+Desc=Debes matar 1 Caballero de la muerte ,para recibir la recompensa.
+RequiredLevel=1
+ 
+RequiredOBJs=0
+ 
+RequiredNPCs=1
+RequiredNPC1=726-1
+ 
+RewardGLD=25000
+RewardEXP=2800000
+RewardDragPoints=50
+ 
+RewardOBJs=0

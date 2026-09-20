@@ -3,10 +3,21 @@ export const CHARACTER_CLASSES = [
     "clerigo",
     "guerrero",
     "asesino",
+    "ladron",
     "bardo",
     "druida",
+    "bandido",
     "paladin",
     "cazador",
+    "pescador",
+    "herrero",
+    "lenador",
+    "minero",
+    "carpintero",
+    "pirata",
+    "ermitano",
+    "arquero",
+    "domador",
 ] as const;
 export const CHARACTER_RACES = [
     "humano",
@@ -14,6 +25,13 @@ export const CHARACTER_RACES = [
     "elfoDrow",
     "enano",
     "gnomo",
+    "orco",
+    "vampiro",
+    "abisario",
+    "goblin",
+    "tauros",
+    "licantropo",
+    "nomuerto",
 ] as const;
 export const CHARACTER_GENDERS = ["male", "female"] as const;
 
@@ -27,17 +45,31 @@ type RaceGenderConfig = {
     endHeadId: number;
 };
 
+type RaceBonus = {
+    fuerza: number;
+    agilidad: number;
+    inteligencia: number;
+    carisma: number;
+    constitucion: number;
+};
+
 type RaceOption = {
     key: RaceKey;
-    baseStats: {
-        fuerza: number;
-        agilidad: number;
-        inteligencia: number;
-        carisma: number;
-        constitucion: number;
-    };
+    baseStats: RaceBonus;
     genders: Record<GenderKey, RaceGenderConfig>;
 };
+
+const BASE_STAT = 18;
+
+function statsFromBonus(bonus: RaceBonus): RaceBonus {
+    return {
+        fuerza: BASE_STAT + bonus.fuerza,
+        agilidad: BASE_STAT + bonus.agilidad,
+        inteligencia: BASE_STAT + bonus.inteligencia,
+        carisma: BASE_STAT + bonus.carisma,
+        constitucion: BASE_STAT + bonus.constitucion,
+    };
+}
 
 type DerivedCreationStats = {
     fuerza: number;
@@ -65,10 +97,21 @@ export const CLASS_ID_MAP: Record<CharacterClassKey, number> = {
     clerigo: 2,
     guerrero: 3,
     asesino: 4,
+    ladron: 5,
     bardo: 6,
     druida: 7,
     paladin: 8,
     cazador: 9,
+    bandido: 12,
+    pescador: 13,
+    herrero: 14,
+    lenador: 15,
+    minero: 16,
+    carpintero: 17,
+    pirata: 18,
+    ermitano: 19,
+    arquero: 20,
+    domador: 21,
 };
 
 export const RACE_ID_MAP: Record<RaceKey, number> = {
@@ -77,7 +120,27 @@ export const RACE_ID_MAP: Record<RaceKey, number> = {
     elfoDrow: 3,
     enano: 4,
     gnomo: 5,
+    orco: 6,
+    vampiro: 7,
+    abisario: 8,
+    goblin: 9,
+    tauros: 10,
+    licantropo: 11,
+    nomuerto: 12,
 };
+
+const ALIANZA_RACES = new Set<RaceKey>([
+    "humano",
+    "elfo",
+    "enano",
+    "gnomo",
+    "tauros",
+    "abisario",
+]);
+
+export function getFactionForRace(raceKey: RaceKey): "armada" | "caos" {
+    return ALIANZA_RACES.has(raceKey) ? "armada" : "caos";
+}
 
 export const GENDER_ID_MAP: Record<GenderKey, number> = {
     male: 1,
@@ -102,6 +165,16 @@ const classProgressById: Record<number, ClassProgress> = {
     9: { vida: 10, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
     10: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
     11: { vida: 10, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+    12: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+    13: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
+    14: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
+    15: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
+    16: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
+    17: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
+    18: { vida: 10, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+    19: { vida: 8.5, manaInicial: 2.5, multMana: 1, hitPre36: 2, hitPost36: 2 },
+    20: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+    21: { vida: 9, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
 };
 
 export const MAX_LEVEL = 50;
@@ -140,7 +213,7 @@ export function getLegacyExpNextLevelForLevel(level: number): number {
 
 export function getHitModifierForLevel(classId: number, level: number): number {
     const safeLevel = clampLevel(level);
-    const classProgress = classProgressById[classId];
+    const classProgress = classProgressById[classId] ?? classProgressById[3];
 
     if (safeLevel <= 1) {
         return 0;
@@ -169,7 +242,7 @@ export function getMaxHpForLevel(
     level: number,
 ): number {
     const safeLevel = clampLevel(level);
-    const classProgress = classProgressById[classId];
+    const classProgress = classProgressById[classId] ?? classProgressById[3];
     const total =
         constitucion +
         (classProgress.vida - (21 - constitucion) * 0.5) * (safeLevel - 1);
@@ -182,7 +255,7 @@ export function getMaxManaForLevel(
     level: number,
 ): number {
     const safeLevel = clampLevel(level);
-    const classProgress = classProgressById[classId];
+    const classProgress = classProgressById[classId] ?? classProgressById[3];
     const total =
         inteligencia * classProgress.manaInicial +
         classProgress.multMana * inteligencia * (safeLevel - 1);
@@ -192,72 +265,98 @@ export function getMaxManaForLevel(
 const raceOptions: Record<RaceKey, RaceOption> = {
     humano: {
         key: "humano",
-        baseStats: {
-            fuerza: 19,
-            agilidad: 19,
-            inteligencia: 18,
-            carisma: 18,
-            constitucion: 20,
-        },
+        baseStats: statsFromBonus({ fuerza: 2, agilidad: 1, inteligencia: 1, carisma: 0, constitucion: 2 }),
         genders: {
-            male: { bodyId: 21, startHeadId: 1, endHeadId: 41 },
-            female: { bodyId: 39, startHeadId: 50, endHeadId: 80 },
+            male: { bodyId: 21, startHeadId: 3, endHeadId: 53 },
+            female: { bodyId: 39, startHeadId: 70, endHeadId: 82 },
         },
     },
     elfo: {
         key: "elfo",
-        baseStats: {
-            fuerza: 18,
-            agilidad: 20,
-            inteligencia: 20,
-            carisma: 19,
-            constitucion: 19,
-        },
+        baseStats: statsFromBonus({ fuerza: -1, agilidad: 3, inteligencia: 2, carisma: 2, constitucion: 1 }),
         genders: {
-            male: { bodyId: 21, startHeadId: 101, endHeadId: 122 },
-            female: { bodyId: 39, startHeadId: 170, endHeadId: 179 },
+            male: { bodyId: 21, startHeadId: 101, endHeadId: 119 },
+            female: { bodyId: 39, startHeadId: 170, endHeadId: 180 },
         },
     },
     elfoDrow: {
         key: "elfoDrow",
-        baseStats: {
-            fuerza: 20,
-            agilidad: 19,
-            inteligencia: 19,
-            carisma: 17,
-            constitucion: 19,
-        },
+        baseStats: statsFromBonus({ fuerza: 2, agilidad: 3, inteligencia: -1, carisma: 0, constitucion: 2 }),
         genders: {
-            male: { bodyId: 32, startHeadId: 201, endHeadId: 221 },
-            female: { bodyId: 40, startHeadId: 270, endHeadId: 279 },
+            male: { bodyId: 32, startHeadId: 201, endHeadId: 216 },
+            female: { bodyId: 40, startHeadId: 270, endHeadId: 277 },
         },
     },
     enano: {
         key: "enano",
-        baseStats: {
-            fuerza: 21,
-            agilidad: 18,
-            inteligencia: 15,
-            carisma: 17,
-            constitucion: 21,
-        },
+        baseStats: statsFromBonus({ fuerza: 3, agilidad: 0, inteligencia: -2, carisma: 0, constitucion: 3 }),
         genders: {
-            male: { bodyId: 53, startHeadId: 301, endHeadId: 319 },
-            female: { bodyId: 60, startHeadId: 370, endHeadId: 379 },
+            male: { bodyId: 53, startHeadId: 401, endHeadId: 411 },
+            female: { bodyId: 60, startHeadId: 470, endHeadId: 476 },
         },
     },
     gnomo: {
         key: "gnomo",
-        baseStats: {
-            fuerza: 16,
-            agilidad: 21,
-            inteligencia: 22,
-            carisma: 20,
-            constitucion: 18,
-        },
+        baseStats: statsFromBonus({ fuerza: -2, agilidad: 3, inteligencia: 4, carisma: 0, constitucion: 0 }),
         genders: {
-            male: { bodyId: 53, startHeadId: 401, endHeadId: 418 },
-            female: { bodyId: 60, startHeadId: 470, endHeadId: 479 },
+            male: { bodyId: 53, startHeadId: 301, endHeadId: 315 },
+            female: { bodyId: 60, startHeadId: 370, endHeadId: 373 },
+        },
+    },
+    orco: {
+        key: "orco",
+        baseStats: statsFromBonus({ fuerza: 3, agilidad: 0, inteligencia: -2, carisma: 0, constitucion: 3 }),
+        genders: {
+            male: { bodyId: 215, startHeadId: 601, endHeadId: 606 },
+            female: { bodyId: 217, startHeadId: 607, endHeadId: 609 },
+        },
+    },
+    vampiro: {
+        key: "vampiro",
+        baseStats: statsFromBonus({ fuerza: -1, agilidad: 3, inteligencia: 2, carisma: 2, constitucion: 1 }),
+        genders: {
+            male: { bodyId: 32, startHeadId: 505, endHeadId: 512 },
+            female: { bodyId: 40, startHeadId: 501, endHeadId: 503 },
+        },
+    },
+    abisario: {
+        key: "abisario",
+        baseStats: statsFromBonus({ fuerza: 3, agilidad: 1, inteligencia: 0, carisma: 0, constitucion: 1 }),
+        genders: {
+            male: { bodyId: 488, startHeadId: 801, endHeadId: 804 },
+            female: { bodyId: 486, startHeadId: 851, endHeadId: 853 },
+        },
+    },
+    goblin: {
+        key: "goblin",
+        baseStats: statsFromBonus({ fuerza: -2, agilidad: 3, inteligencia: 4, carisma: 0, constitucion: 0 }),
+        genders: {
+            male: { bodyId: 178, startHeadId: 705, endHeadId: 712 },
+            female: { bodyId: 212, startHeadId: 701, endHeadId: 704 },
+        },
+    },
+    tauros: {
+        key: "tauros",
+        baseStats: statsFromBonus({ fuerza: 2, agilidad: 3, inteligencia: -1, carisma: 0, constitucion: 2 }),
+        genders: {
+            male: { bodyId: 529, startHeadId: 920, endHeadId: 923 },
+            female: { bodyId: 528, startHeadId: 910, endHeadId: 913 },
+        },
+    },
+    licantropo: {
+        key: "licantropo",
+        baseStats: statsFromBonus({ fuerza: 3, agilidad: 1, inteligencia: 0, carisma: 0, constitucion: 1 }),
+        genders: {
+            male: { bodyId: 531, startHeadId: 900, endHeadId: 903 },
+            female: { bodyId: 530, startHeadId: 890, endHeadId: 893 },
+        },
+    },
+    nomuerto: {
+        key: "nomuerto",
+        baseStats: statsFromBonus({ fuerza: 2, agilidad: 1, inteligencia: 1, carisma: 0, constitucion: 2 }),
+        genders: {
+            male: { bodyId: 527, startHeadId: 860, endHeadId: 863 },
+            female: { bodyId: 526, startHeadId: 880, endHeadId: 883 },
         },
     },
 };
@@ -268,7 +367,6 @@ export function getBaseStats(
 ): DerivedCreationStats {
     const classId = CLASS_ID_MAP[characterClassKey];
     const raceOption = raceOptions[raceKey];
-    const classProgress = classProgressById[classId];
     const { fuerza, agilidad, inteligencia, carisma, constitucion } =
         raceOption.baseStats;
 

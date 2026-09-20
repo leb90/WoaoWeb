@@ -98,7 +98,7 @@ export type InventoryRecord = Record<string, InventoryItem>;
 
 export type SpellRecord = Record<string, SpellSlot>;
 
-export type SpellEffect = "Paraliza" | "Inmoviliza";
+export type SpellEffect = "Paraliza" | "Inmoviliza" | "Envenena";
 
 export type UserSpellEffect =
     | SpellEffect
@@ -106,7 +106,15 @@ export type UserSpellEffect =
     | "Agilidad"
     | "Fuerza"
     | "Invisibilidad"
-    | "RemueveInvisibilidad";
+    | "RemueveInvisibilidad"
+    | "CuraVeneno"
+    | "Ceguera"
+    | "Estupidez"
+    | "Mana"
+    | "Hambre"
+    | "Sed"
+    | "Morph"
+    | "Protec";
 
 export type CombatResult = number | string;
 
@@ -254,6 +262,7 @@ export type RuntimeCharacter = {
     deadWorldTransitionEndsAt?: number;
     deadWorldTimeoutId?: ReturnType<typeof setTimeout> | null;
     meditar?: boolean;
+    meditarFx?: number;
     mana?: number;
     maxMana?: number;
     hp?: number;
@@ -316,9 +325,36 @@ export type RuntimeCharacter = {
     bkAttrAgilidad?: number;
     cooldownFuerza?: number;
     cooldownAgilidad?: number;
+    envenenado?: number;
+    cooldownVeneno?: number;
+    ceguera?: NumericFlag;
+    cooldownCeguera?: number;
+    estupidez?: NumericFlag;
+    cooldownEstupidez?: number;
+    sta?: number;
+    maxSta?: number;
+    hambre?: number;
+    maxHambre?: number;
+    sed?: number;
+    maxSed?: number;
+    lastHungerDrainAt?: number;
+    lastStaRegenAt?: number;
+    protec?: number;
+    cooldownProtec?: number;
+    morphBody?: number;
+    cooldownMorph?: number;
     inmovilizado?: NumericFlag;
     zonaSegura?: NumericFlag;
     navegando?: NumericFlag;
+    mounted?: NumericFlag;
+    mountBodyId?: number;
+    mountTypeId?: number;
+    targetNpcId?: EntityId;
+    puntosCanje?: number;
+    elo?: number;
+    remort?: number;
+    remorted?: string;
+    pClan?: number;
     seguroActivado?: boolean;
     seguroClanActivado?: boolean;
     logoutRequestedAt?: number;
@@ -327,6 +363,7 @@ export type RuntimeCharacter = {
     disconnectOnDeath?: boolean;
     nextDialogAt?: number;
     nextMeleeAt?: number;
+    nextRangeAt?: number;
     nextSpellAt?: number;
     nextSpellAfterMeleeAt?: number;
     nextMeleeAfterSpellAt?: number;
@@ -404,6 +441,7 @@ export type PartyRuntimeState = {
 export type RuntimeNpc = {
     id: EntityId;
     templateNpcIndex?: number;
+    questNumber?: number;
     spawnMapNum?: number;
     spawnOrigin?: Position;
     nameCharacter?: string;

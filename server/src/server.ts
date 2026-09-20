@@ -456,6 +456,18 @@ function trackClientActivity(ws: RuntimeClient, packageID: number) {
         LoadSmeltingRecipes.initialize(),
     ]);
 
+    require("./quests").initialize();
+    require("./mounts").initialize();
+    require("./bloodCastle").initialize();
+    require("./hungerGames").initialize();
+    require("./tournamentAuto").initialize();
+    require("./rankedArena").initialize();
+    require("./cityConquest").initialize();
+    require("./clanMeta").initialize();
+    require("./clanCastles").initialize();
+    require("./factionWars").initialize();
+    require("./diaEspecial").initialize();
+
     vars.serverReady = true;
     const endInitialize = Date.now() - startInitialize;
     const textInitializeServer = `[Servidor] Iniciado en ${endInitialize}ms.`;
@@ -502,6 +514,60 @@ function processPlayerStatusTick(now: number) {
             continue;
         }
 
+        if (Number(user.envenenado ?? 0) > 0 && !user.dead) {
+            const lastPoisonTick = Number(user.cooldownVeneno ?? 0);
+            if (lastPoisonTick <= 0 || now - lastPoisonTick >= 3000) {
+                user.cooldownVeneno = now;
+                user.hp = Math.max(0, Number(user.hp ?? 0) - Number(user.envenenado));
+                const poisonClient = getClientById(idUser);
+                if (poisonClient) {
+                    handleProtocol.console(
+                        "Estás envenenado, si no te curas morirás.",
+                        "red",
+                        1,
+                        0,
+                        poisonClient,
+                    );
+                    handleProtocol.updateHP(user.hp, poisonClient);
+                }
+                if (user.hp <= 0) {
+                    user.envenenado = 0;
+                    user.cooldownVeneno = 0;
+                    game.putBodyAndHeadDead(idUser);
+                    void game.tirarItemsUser(idUser);
+                }
+            }
+        }
+
+        if (Number(user.ceguera ?? 0) > 0 && now - Number(user.cooldownCeguera ?? 0) >= 10000) {
+            user.ceguera = 0;
+            user.cooldownCeguera = 0;
+        }
+
+        if (Number(user.estupidez ?? 0) > 0 && now - Number(user.cooldownEstupidez ?? 0) >= 10000) {
+            user.estupidez = 0;
+            user.cooldownEstupidez = 0;
+        }
+
+        if (Number(user.protec ?? 0) > 0 && now - Number(user.cooldownProtec ?? 0) >= Number(user.protec) * 10000) {
+            user.protec = 0;
+            user.cooldownProtec = 0;
+        }
+
+        if (Number(user.cooldownMorph ?? 0) > 0 && now - Number(user.cooldownMorph ?? 0) >= 60000) {
+            if (Number(user.morphBody ?? 0) > 0 && !user.dead && !user.mounted && !user.navegando) {
+                user.idBody = user.morphBody;
+                game.loopAreaPos(user.map, user.pos, (target: { id?: string | number }) => {
+                    const targetClient = getClientById(target.id);
+                    if (targetClient) {
+                        handleProtocol.changeBody(idUser, targetClient);
+                    }
+                });
+            }
+            user.morphBody = 0;
+            user.cooldownMorph = 0;
+        }
+
         if (user.meditar && user.mana < user.maxMana) {
             game.meditar(idUser);
         }
@@ -540,6 +606,9 @@ function processPlayerStatusTick(now: number) {
         if (user.hiddenSkill && (user.hiddenSkillExpiresAt ?? 0) > 0 && now >= (user.hiddenSkillExpiresAt ?? 0)) {
             game.setHiddenSkill(idUser, false);
         }
+
+        const statusClient = getClientById(idUser);
+        game.tickSurvivalVitals(user, now, statusClient);
 
         const isNorthPoleMap = user.map === 286 || user.map === 287 || user.map === 288;
         const currentHp = Number(user.hp ?? 0);
@@ -657,6 +726,7 @@ function processActionCooldownTick(now: number) {
 
         const nextDialogAt = user.nextDialogAt ?? 0;
         const nextMeleeAt = user.nextMeleeAt ?? 0;
+        const nextRangeAt = user.nextRangeAt ?? 0;
         const nextSpellAt = user.nextSpellAt ?? 0;
         const nextSpellAfterMeleeAt = user.nextSpellAfterMeleeAt ?? 0;
         const nextMeleeAfterSpellAt = user.nextMeleeAfterSpellAt ?? 0;
@@ -669,6 +739,10 @@ function processActionCooldownTick(now: number) {
 
         if (nextMeleeAt > 0 && now >= nextMeleeAt) {
             user.nextMeleeAt = 0;
+        }
+
+        if (nextRangeAt > 0 && now >= nextRangeAt) {
+            user.nextRangeAt = 0;
         }
 
         if (nextSpellAt > 0 && now >= nextSpellAt) {

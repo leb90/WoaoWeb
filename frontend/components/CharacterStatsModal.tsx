@@ -60,14 +60,14 @@ function formatRange(min?: number | null, max?: number | null) {
 function getActiveFactionSnapshot(snapshot: CharacterStatsSnapshot) {
     if (snapshot.factions.activeFaction === "armada") {
         return {
-            label: "Armada",
+            label: "Alianza",
             data: snapshot.factions.armada,
         };
     }
 
     if (snapshot.factions.activeFaction === "caos") {
         return {
-            label: "Caos",
+            label: "Horda",
             data: snapshot.factions.caos,
         };
     }
@@ -501,14 +501,14 @@ export default function CharacterStatsModal({
                                             ) : (
                                                 <>
                                                     <DetailRow
-                                                        label="Puntos de Armada"
+                                                        label="Puntos de Alianza"
                                                         value={formatNumber(
                                                             snapshot.factions
                                                                 .armada.score,
                                                         )}
                                                     />
                                                     <DetailRow
-                                                        label="Puntos de Caos"
+                                                        label="Puntos de Horda"
                                                         value={formatNumber(
                                                             snapshot.factions
                                                                 .caos.score,

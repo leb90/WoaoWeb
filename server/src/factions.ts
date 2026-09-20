@@ -72,7 +72,7 @@ export const FACTIONS: Record<Exclude<CharacterFaction, "none">, FactionConfig> 
         key: "armada",
         enlistNpcId: 72,
         rewardNpcId: 72,
-        color: "#00AFFF",
+        color: "#3B5BDB",
         ranks: ARMADA_RANKS,
         restrictedItemIds: collectRestrictedItems(ARMADA_RANKS),
     },
@@ -96,6 +96,16 @@ export function getFactionConfig(faction: CharacterFaction | undefined | null): 
 
 export function getFactionColor(faction: CharacterFaction | undefined | null): string | null {
     return getFactionConfig(faction)?.color ?? null;
+}
+
+export function getFactionDisplayName(faction: CharacterFaction | undefined | null): string {
+    if (faction === "armada") {
+        return "Alianza";
+    }
+    if (faction === "caos") {
+        return "Horda";
+    }
+    return "Neutral";
 }
 
 export function getFactionRankConfig(faction: CharacterFaction, rank: number): FactionRankConfig | null {

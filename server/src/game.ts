@@ -6,6 +6,14 @@ import {
     getRequiredFactionForItem,
     type CharacterFaction,
 } from "./factions";
+import {
+    applyIncomingHit,
+    getRacialEvasionMultiplier,
+    getRacialMagicResistPercent,
+    modifyOutgoingPhysicalDamage,
+    shouldAvoidParalysis,
+    shouldIgnoreHarmfulSpell,
+} from "./racialPassives";
 import type {
     BankTab,
     ClanRuntimeStateDelta,
@@ -69,7 +77,55 @@ const getPotionRecoveryAmount = (maxStat: number, percentage: number | undefined
     return fixedAmount;
 };
 
-const PARTY_MAX_MEMBERS = 4;
+const SURVIVAL_HAMBRE_MAX = Number(balance.MAX_HAMBRE ?? 100);
+const SURVIVAL_SED_MAX = Number(balance.MAX_SED ?? 100);
+const HUNGER_DRAIN_INTERVAL_MS = 8000;
+const STA_REGEN_INTERVAL_MS = 2000;
+
+function clampVital(value: number, max: number) {
+    return Math.max(0, Math.min(max, Math.floor(Number(value) || 0)));
+}
+
+function ensureSurvivalVitals(user: Record<string, unknown>) {
+    const maxSta = balance.getMaxStaForLevel(
+        Number(user.attrConstitucion ?? 18),
+        Number(user.level ?? 1),
+    );
+    user.maxHambre = SURVIVAL_HAMBRE_MAX;
+    user.maxSed = SURVIVAL_SED_MAX;
+    user.maxSta = maxSta;
+    user.hambre = clampVital(
+        user.hambre == null ? SURVIVAL_HAMBRE_MAX : Number(user.hambre),
+        SURVIVAL_HAMBRE_MAX,
+    );
+    user.sed = clampVital(
+        user.sed == null ? SURVIVAL_SED_MAX : Number(user.sed),
+        SURVIVAL_SED_MAX,
+    );
+    user.sta = clampVital(user.sta == null ? maxSta : Number(user.sta), maxSta);
+}
+
+function buildSelfVitalsPayload(user: Record<string, unknown>) {
+    ensureSurvivalVitals(user);
+    return {
+        hp: Number(user.hp ?? 0),
+        maxHp: Number(user.maxHp ?? 0),
+        mana: Number(user.mana ?? 0),
+        maxMana: Number(user.maxMana ?? 0),
+        sta: Number(user.sta ?? 0),
+        maxSta: Number(user.maxSta ?? 0),
+        hambre: Number(user.hambre ?? 0),
+        maxHambre: Number(user.maxHambre ?? SURVIVAL_HAMBRE_MAX),
+        sed: Number(user.sed ?? 0),
+        maxSed: Number(user.maxSed ?? SURVIVAL_SED_MAX),
+    };
+}
+
+function sendSelfVitals(user: Record<string, unknown>, client: RuntimeClient) {
+    handleProtocol.selfVitalsDelta(buildSelfVitalsPayload(user), client);
+}
+
+const PARTY_MAX_MEMBERS = 10;
 const PARTY_INVITATION_MS = 30000;
 const NEWBIE_MAX_LEVEL = 12;
 const DEAD_WORLD_DELAY_MS = 15000;
@@ -270,6 +326,7 @@ type GameCharacter = RuntimeCharacter & {
     factionRewardsArmada: number;
     factionRewardsCaos: number;
     meditar: boolean;
+    meditarFx?: number;
     navegando: NumericFlag;
     seguroActivado: boolean;
     seguroClanActivado: boolean;
@@ -284,8 +341,27 @@ type GameCharacter = RuntimeCharacter & {
     cooldownParalizado?: number;
     cooldownFuerza: number;
     cooldownAgilidad: number;
+    envenenado?: number;
+    cooldownVeneno?: number;
+    ceguera?: NumericFlag;
+    cooldownCeguera?: number;
+    estupidez?: NumericFlag;
+    cooldownEstupidez?: number;
+    sta?: number;
+    maxSta?: number;
+    hambre?: number;
+    maxHambre?: number;
+    sed?: number;
+    maxSed?: number;
+    lastHungerDrainAt?: number;
+    lastStaRegenAt?: number;
+    protec?: number;
+    cooldownProtec?: number;
+    morphBody?: number;
+    cooldownMorph?: number;
     nextDialogAt: number;
     nextMeleeAt: number;
+    nextRangeAt: number;
     nextSpellAt: number;
     nextSpellAfterMeleeAt: number;
     nextMeleeAfterSpellAt: number;
@@ -346,6 +422,8 @@ type GameNpc = RuntimeNpc & {
     cooldownParalizado?: number;
     paralizado?: NumericFlag;
     inmovilizado?: NumericFlag;
+    envenenado?: number;
+    envenenado?: number;
     aguaValida?: boolean;
     tierraInvalida?: boolean;
     objs?: Record<number, { item: number; cant?: number }>;
@@ -429,6 +507,11 @@ function getInventoryItem(user: GameCharacter, slot: number | string | undefined
 
     return user.inv[String(slot)] ?? null;
 }
+
+const itemKinds = require("./itemKinds") as {
+    isHelmetObject: (obj: DataObject | null | undefined) => boolean;
+    getEquipObjectType: (obj: DataObject | null | undefined) => number;
+};
 
 function getEquippedWeaponData(user: GameCharacter): DataObject | null {
     const item = getInventoryItem(user, user.idItemWeapon);
@@ -563,36 +646,38 @@ function rebuildEquippedInventoryState(user: GameCharacter): void {
             continue;
         }
 
-        if (obj.objType == vars.objType.armaduras) {
+        const equipType = itemKinds.getEquipObjectType(obj);
+
+        if (equipType == vars.objType.armaduras) {
             if (!user.navegando) {
                 user.idBody = obj.anim;
             }
             user.idItemBody = idPos;
-        } else if (obj.objType == vars.objType.armas) {
+        } else if (equipType == vars.objType.armas) {
             if (!user.navegando) {
                 user.idWeapon = obj.anim;
             }
             user.idItemWeapon = idPos;
-        } else if (obj.objType == vars.objType.anillos) {
+        } else if (equipType == vars.objType.anillos) {
             user.idItemRing = idPos;
-        } else if (obj.objType == vars.objType.escudos) {
+        } else if (equipType == vars.objType.escudos) {
             if (!user.navegando) {
                 user.idShield = obj.anim;
             }
             user.idItemShield = idPos;
-        } else if (obj.objType == vars.objType.cascos) {
+        } else if (equipType == vars.objType.cascos) {
             if (!user.navegando) {
                 user.idHelmet = obj.anim;
             }
             user.idItemHelmet = idPos;
-        } else if (obj.objType == vars.objType.flechas) {
+        } else if (equipType == vars.objType.flechas) {
             user.idItemArrow = idPos;
         }
     }
 }
 
 function isArmorRaceRestricted(user: GameCharacter, obj: DataObject): boolean {
-    if (obj.objType !== vars.objType.armaduras) {
+    if (obj.objType !== vars.objType.armaduras || itemKinds.isHelmetObject(obj)) {
         return false;
     }
 
@@ -639,7 +724,7 @@ function restoreAutoEquippedInventoryState(user: GameCharacter): void {
             continue;
         }
 
-        const objType = Number(obj?.objType ?? 0);
+        const objType = itemKinds.getEquipObjectType(obj);
 
         if (
             objType !== vars.objType.armaduras &&
@@ -789,7 +874,11 @@ function applyMagicResistanceToUser(
     const diffSkill = targetMagicResistance - casterMagicSkill;
     const percentReduction = Math.max(
         0,
-        targetItemMagicResistance + targetClassMagicResistance + (diffSkill > 0 ? diffSkill * 2 : 0) - magicPenetration,
+        targetItemMagicResistance +
+            targetClassMagicResistance +
+            getRacialMagicResistPercent(target) +
+            (diffSkill > 0 ? diffSkill * 2 : 0) -
+            magicPenetration,
     );
 
     nextDamage -= Math.floor((nextDamage * percentReduction) / 100);
@@ -1046,6 +1135,60 @@ function isSameClan(leftId: EntityId, rightId: EntityId): boolean {
     return Boolean(left?.clanId && right?.clanId && String(left.clanId) === String(right.clanId));
 }
 
+function isAlliedClan(leftId: EntityId, rightId: EntityId): boolean {
+    if (isSameClan(leftId, rightId)) {
+        return false;
+    }
+
+    const left = getCharacterById(leftId);
+    const right = getCharacterById(rightId);
+    const leftClanName = String(left?.clanName ?? "")
+        .replace(/[<>]/g, "")
+        .trim()
+        .toLowerCase();
+    const rightClanName = String(right?.clanName ?? "")
+        .replace(/[<>]/g, "")
+        .trim()
+        .toLowerCase();
+
+    if (!left?.clanId || !right?.clanId || !leftClanName || !rightClanName) {
+        return false;
+    }
+
+    const clanMeta = require("./clanMeta") as {
+        isAlliedWith: (clanId: string | null | undefined, clanName: string) => boolean;
+    };
+
+    return (
+        clanMeta.isAlliedWith(left.clanId, rightClanName) ||
+        clanMeta.isAlliedWith(right.clanId, leftClanName)
+    );
+}
+
+function getFriendlyFireBlockReason(
+    attackerId: EntityId,
+    victimId: EntityId,
+    challengeRelation?: string | null,
+): string | null {
+    if (isSameEntityId(attackerId, victimId) || challengeRelation === "enemy") {
+        return null;
+    }
+
+    if (isSameParty(attackerId, victimId)) {
+        return "No puedes atacar a un miembro de tu party.";
+    }
+
+    if (isSameClan(attackerId, victimId)) {
+        return "No puedes atacar a un miembro de tu clan.";
+    }
+
+    if (isAlliedClan(attackerId, victimId)) {
+        return "No puedes atacar a gente de clanes aliados.";
+    }
+
+    return null;
+}
+
 function canRenderCharacter(viewerId: EntityId, character: GameCharacter | undefined) {
     if (!character) {
         return false;
@@ -1094,6 +1237,31 @@ function emitCharacterFxToUserArea(entityId: EntityId, fxId: number) {
         }
 
         handleProtocol.animFX(entityId, fxId, targetClient);
+    });
+}
+
+const CHARACTER_SWING_SHIELD = 2;
+
+function emitCharacterSwingToUserArea(entityId: EntityId, flags: number) {
+    if (!flags) {
+        return;
+    }
+
+    loopAreaByUserId(entityId, function (target: AreaTarget) {
+        if (target.isNpc) {
+            return;
+        }
+
+        const targetClient = getClientById(target.id);
+        if (!targetClient) {
+            return;
+        }
+
+        if (!canReceiveCharacterEvent(target.id, entityId)) {
+            return;
+        }
+
+        handleProtocol.characterSwing(entityId, flags, targetClient);
     });
 }
 
@@ -1345,22 +1513,48 @@ function getPvpMapChangeDeniedMessage(
     return `No puedes cambiar de mapa hasta salir de combate (${Math.ceil(remainingMs / 1000)}s).`;
 }
 
+function restoreDismountedAppearance(user: GameCharacter) {
+    if (user.dead) {
+        user.idBody = 8;
+        user.idHead = 500;
+        user.idWeapon = 0;
+        user.idHelmet = 0;
+        user.idShield = 0;
+        return;
+    }
+
+    user.idBody = user.idLastBody;
+    user.idHead = user.idLastHead;
+
+    if (!user.mounted) {
+        user.idWeapon = user.idLastWeapon;
+        user.idHelmet = user.idLastHelmet;
+        user.idShield = user.idLastShield;
+    }
+}
+
+function dismountMount(user: GameCharacter) {
+    if (!user.mounted) {
+        return false;
+    }
+
+    restoreDismountedAppearance(user);
+    user.mounted = 0;
+    user.mountBodyId = 0;
+    user.mountTypeId = 0;
+    return true;
+}
+
 function dismountUser(user: GameCharacter) {
+    if (dismountMount(user)) {
+        return;
+    }
+
     if (!user.navegando) {
         return;
     }
 
-    if (user.dead) {
-        user.idBody = 8;
-        user.idHead = 500;
-    } else {
-        user.idBody = user.idLastBody;
-        user.idHead = user.idLastHead;
-    }
-
-    user.idWeapon = user.idLastWeapon;
-    user.idHelmet = user.idLastHelmet;
-    user.idShield = user.idLastShield;
+    restoreDismountedAppearance(user);
     user.navegando = 0;
 }
 
@@ -1382,6 +1576,19 @@ function applyBoatVisualState(user: GameCharacter) {
     user.idWeapon = 0;
     user.idHelmet = 0;
     user.idShield = 0;
+}
+
+function broadcastAppearance(idUser: EntityId) {
+    loopAreaByUserId(idUser, function (client: AreaTarget) {
+        if (client.isNpc) {
+            return;
+        }
+
+        const targetClient = getClientById(client.id);
+        if (targetClient) {
+            handleProtocol.changeBody(idUser, targetClient);
+        }
+    });
 }
 
 function findNearestLegalPosition(
@@ -1738,11 +1945,16 @@ function hasDragonSlayerSwordInInventory(user: Pick<GameCharacter, "inv" | "priv
 }
 
 function getMapEntryDeniedMessage(
-    user: Pick<GameCharacter, "level" | "privileges" | "inv"> | undefined | null,
+    user: Pick<GameCharacter, "level" | "privileges" | "inv" | "clan" | "clanId"> | undefined | null,
     mapId: number,
 ): string {
     if (Number(user?.privileges ?? 0) === 1) {
         return "";
+    }
+
+    const castleDeniedMessage = require("./clanCastles").getCastleEntryDeniedMessage(user, mapId);
+    if (castleDeniedMessage) {
+        return castleDeniedMessage;
     }
 
     if (mapId === CLAN_RING_MAP_ID) {
@@ -2002,9 +2214,307 @@ function isSupportSpell(datSpell: Record<string, unknown> | undefined): boolean 
             Number(datSpell.revivir ?? 0) === 1 ||
             datSpell.removerParalisis ||
             datSpell.invisibilidad ||
-            datSpell.subeAg ||
-            datSpell.subeFz),
+            datSpell.curaVeneno ||
+            Number(datSpell.subeAg ?? 0) === 1 ||
+            Number(datSpell.subeFz ?? 0) === 1 ||
+            Number(datSpell.subeMana ?? 0) === 1 ||
+            Number(datSpell.subeHam ?? 0) === 1 ||
+            Number(datSpell.subeSed ?? 0) === 1 ||
+            Number(datSpell.protec ?? 0) > 0),
     );
+}
+
+function isOffensiveSpellData(datSpell: Record<string, unknown> | undefined): boolean {
+    if (!datSpell) {
+        return false;
+    }
+
+    const subeHp = Number(datSpell.subeHp ?? 0);
+    const name = String(datSpell.name ?? "").toLowerCase();
+
+    return Boolean(
+        datSpell.paraliza ||
+            datSpell.inmoviliza ||
+            datSpell.paralizaarea ||
+            datSpell.envenena ||
+            datSpell.ceguera ||
+            datSpell.estupidez ||
+            subeHp === 2 ||
+            subeHp === 3 ||
+            subeHp === 4 ||
+            Number(datSpell.subeAg ?? 0) === 2 ||
+            Number(datSpell.subeFz ?? 0) === 2 ||
+            Number(datSpell.subeHam ?? 0) === 2 ||
+            Number(datSpell.subeSed ?? 0) === 2 ||
+            Number(datSpell.subeMana ?? 0) === 2 ||
+            name === "remover invisibilidad",
+    );
+}
+
+const SPELL_SCREEN_RANGE_X = 11;
+const SPELL_SCREEN_RANGE_Y = 7;
+const SPELL_NEAR_RANGE = 2;
+
+let lastSpellAreaTargetIds: EntityId[] = [];
+
+function resetSpellAreaTargets() {
+    lastSpellAreaTargetIds = [];
+}
+
+function rememberSpellAreaTarget(targetId: EntityId) {
+    if (!lastSpellAreaTargetIds.some((id) => isSameEntityId(id, targetId))) {
+        lastSpellAreaTargetIds.push(targetId);
+    }
+}
+
+function getSpellAreaRange(subeHp: number): Position | null {
+    if (subeHp === 3) {
+        return { x: SPELL_NEAR_RANGE, y: SPELL_NEAR_RANGE };
+    }
+
+    if (subeHp === 4) {
+        return { x: SPELL_SCREEN_RANGE_X, y: SPELL_SCREEN_RANGE_Y };
+    }
+
+    return null;
+}
+
+function forEachMapOccupant(
+    map: number,
+    origin: Position,
+    rangeX: number,
+    rangeY: number,
+    callback: (occupant: { id: EntityId; isNpc: boolean; npc?: GameNpc; user?: GameCharacter }) => void,
+) {
+    const seen = new Set<string>();
+    const minX = Math.max(1, origin.x - rangeX);
+    const maxX = Math.min(100, origin.x + rangeX);
+    const minY = Math.max(1, origin.y - rangeY);
+    const maxY = Math.min(100, origin.y + rangeY);
+
+    for (let y = minY; y <= maxY; y++) {
+        for (let x = minX; x <= maxX; x++) {
+            const resolved = resolveAreaTarget(map, x, y);
+
+            if (!resolved) {
+                continue;
+            }
+
+            const key = String(resolved.id);
+
+            if (seen.has(key)) {
+                continue;
+            }
+
+            seen.add(key);
+            callback({
+                id: resolved.id,
+                isNpc: resolved.isNpc,
+                npc: resolved.isNpc ? (resolved.target as GameNpc) : undefined,
+                user: resolved.isNpc ? undefined : (resolved.target as GameCharacter),
+            });
+        }
+    }
+}
+
+function isAreaNpcImmune(npc: GameNpc): boolean {
+    return Boolean(
+        npc.npcType == 6 ||
+            Number(npc.attackable ?? 1) === 0 ||
+            npc.summonedByUserId ||
+            Number(npc.raid ?? 0) > 0 ||
+            Number(npc.hp ?? 0) <= 0,
+    );
+}
+
+function applyNpcSpellDamage(
+    user: GameCharacter,
+    npc: GameNpc,
+    datSpell: { minHp?: number; maxHp?: number },
+): number {
+    const magicCalc = applyMagicBonuses(funct.randomIntFromInterval(datSpell.minHp, datSpell.maxHp), user);
+    let dmg = applyMagicResistanceToNpc(magicCalc.damage, user, npc, magicCalc.magicPenetration);
+
+    if (dmg < 1) {
+        dmg = 1;
+    }
+
+    npc.hp -= dmg;
+    return dmg;
+}
+
+function applyUserSpellDamage(
+    user: GameCharacter,
+    userAttacked: GameCharacter,
+    datSpell: { minHp?: number; maxHp?: number },
+): number | null {
+    if (shouldIgnoreHarmfulSpell(userAttacked)) {
+        return null;
+    }
+
+    const magicCalc = applyMagicBonuses(funct.randomIntFromInterval(datSpell.minHp, datSpell.maxHp), user);
+    let dmg = applyMagicResistanceToUser(magicCalc.damage, user, userAttacked, magicCalc.magicPenetration);
+
+    if (Number(userAttacked.protec ?? 0) > 0) {
+        dmg -= Math.round((dmg * Number(userAttacked.protec)) / 100);
+    }
+
+    if (dmg < 1) {
+        dmg = 1;
+    }
+
+    return applyIncomingHit(userAttacked, dmg, "magic");
+}
+
+function notifyNpcSpellDamage(user: GameCharacter, npc: GameNpc, dmg: number) {
+    withUserClient(user.id, (userClient) => {
+        handleProtocol.console(
+            "Le has quitado " + dmg + " puntos de vida a " + npc.nameCharacter,
+            "red",
+            1,
+            0,
+            userClient,
+        );
+    });
+
+    game.loopAreaPos(npc.map, npc.pos, function (target: GameCharacter) {
+        withUserClient(target.id, (targetClient) => {
+            handleProtocol.playSound(npc.id, npc.snd2 > 0 ? npc.snd2 : vars.arSounds.SND_IMPACTO2, targetClient);
+        });
+    });
+
+    game.calcularExp(user.id, npc.id, dmg);
+    broadcastNpcVitalsDelta(npc);
+}
+
+function notifyUserSpellDamage(user: GameCharacter, userAttacked: GameCharacter, dmg: number) {
+    withUserClient(user.id, (userClient) => {
+        handleProtocol.console(
+            "Le has quitado " + dmg + " puntos de vida a " + userAttacked.nameCharacter,
+            "red",
+            1,
+            0,
+            userClient,
+        );
+    });
+    withUserClient(userAttacked.id, (targetClient) => {
+        handleProtocol.console(user.nameCharacter + " te ha quitado " + dmg + " puntos de vida", "red", 1, 0, targetClient);
+        handleProtocol.updateHP(userAttacked.hp, targetClient);
+    });
+
+    if (isAdminSummonedBot(userAttacked)) {
+        broadcastCharacterVitalsDelta(userAttacked);
+    }
+}
+
+function canAreaSpellUser(user: GameCharacter, target: GameCharacter): boolean {
+    if (isSameEntityId(user.id, target.id) || target.dead || Number(target.privileges ?? 0) > 0) {
+        return false;
+    }
+
+    const arenaCombat = isArenaCombat(user, target);
+    const challengeRelation = getChallengeManager().getCombatRelation(user, target);
+
+    if (challengeRelation === "ally") {
+        return false;
+    }
+
+    if (getFriendlyFireBlockReason(user.id, target.id, challengeRelation)) {
+        return false;
+    }
+
+    if (isJailTile(user) || isJailTile(target)) {
+        return false;
+    }
+
+    if (vars.mapData[user.map]?.pk && !arenaCombat && isBlockedBySafeZone(user, target)) {
+        return false;
+    }
+
+    if (!arenaCombat && Boolean(user.criminal) === Boolean(target.criminal)) {
+        return false;
+    }
+
+    if (arenaCombat || !isBlockedBySafeZone(user, target)) {
+        return true;
+    }
+
+    if (isCitizenClanMember(user) && isCitizenAlignedCharacter(target)) {
+        return false;
+    }
+
+    if (!user.criminal && !target.criminal && user.seguroActivado) {
+        return false;
+    }
+
+    return true;
+}
+
+function applyAreaSpellDamageToNpcs(
+    user: GameCharacter,
+    datSpell: { minHp?: number; maxHp?: number; subeHp?: number },
+    primaryNpcId: EntityId,
+) {
+    const range = getSpellAreaRange(Number(datSpell.subeHp ?? 0));
+
+    if (!range) {
+        return;
+    }
+
+    forEachMapOccupant(user.map, user.pos, range.x, range.y, (occupant) => {
+        if (!occupant.isNpc || !occupant.npc || isSameEntityId(occupant.id, primaryNpcId) || isAreaNpcImmune(occupant.npc)) {
+            return;
+        }
+
+        markNpcAggressor(occupant.id, user.id);
+        const extraDmg = applyNpcSpellDamage(user, occupant.npc, datSpell);
+        rememberSpellAreaTarget(occupant.id);
+        notifyNpcSpellDamage(user, occupant.npc, extraDmg);
+    });
+}
+
+function applyAreaSpellDamageToUsers(
+    user: GameCharacter,
+    datSpell: { minHp?: number; maxHp?: number; subeHp?: number },
+    primaryUserId: EntityId,
+) {
+    const range = getSpellAreaRange(Number(datSpell.subeHp ?? 0));
+
+    if (!range) {
+        return;
+    }
+
+    forEachMapOccupant(user.map, user.pos, range.x, range.y, (occupant) => {
+        if (!occupant.user || occupant.isNpc || isSameEntityId(occupant.id, primaryUserId) || !canAreaSpellUser(user, occupant.user)) {
+            return;
+        }
+
+        const extraDmg = applyUserSpellDamage(user, occupant.user, datSpell);
+
+        if (extraDmg == null) {
+            return;
+        }
+
+        markUsersInPvpCombat(user, occupant.user);
+        rememberSpellAreaTarget(occupant.id);
+        notifyUserSpellDamage(user, occupant.user, extraDmg);
+    });
+}
+
+function applyParalizaAreaToNpcs(user: GameCharacter, primaryNpcId: EntityId) {
+    forEachMapOccupant(user.map, user.pos, SPELL_SCREEN_RANGE_X, SPELL_SCREEN_RANGE_Y, (occupant) => {
+        if (!occupant.isNpc || !occupant.npc || occupant.npc.npcType == 6 || Number(occupant.npc.hp ?? 0) <= 0) {
+            return;
+        }
+
+        occupant.npc.paralizado = 1;
+        occupant.npc.cooldownParalizado = Date.now();
+        broadcastNpcSnapshot(occupant.npc);
+
+        if (!isSameEntityId(occupant.id, primaryNpcId)) {
+            rememberSpellAreaTarget(occupant.id);
+        }
+    });
 }
 
 function isPartyCompatibleWithUser(party: PartyRuntimeState | undefined, user: GameCharacter | undefined): boolean {
@@ -2479,6 +2989,8 @@ export type GameApi = {
     ) => void;
     clearRelationshipStateCache: (idUser: EntityId) => void;
     setSummonTargetNpc: (idUser: EntityId, idNpc: EntityId) => void;
+    getFriendlyFireBlockReason: (attackerId: EntityId, victimId: EntityId) => string | null;
+    consumeSpellAreaTargets: () => EntityId[];
     clearSummonTargetNpc: (idUser: EntityId) => void;
     checkUserLevel: (idUser: EntityId) => void;
     isNewbieCharacter: (user: Pick<GameCharacter, "level"> | undefined | null) => boolean;
@@ -2575,6 +3087,18 @@ export type GameApi = {
     reorderSpell: (idUser: EntityId, sourceSlot: number, targetSlot: number) => Promise<void>;
     accionMeditar: (idUser: EntityId) => void;
     meditar: (idUser: EntityId) => void;
+    ensureSurvivalVitals: (user: RuntimeCharacter) => void;
+    consumeAttackStamina: (
+        user: RuntimeCharacter,
+        client: RuntimeClient,
+        minRequired: number,
+        maxDrain: number,
+    ) => boolean;
+    tickSurvivalVitals: (
+        user: RuntimeCharacter,
+        now: number,
+        client?: RuntimeClient | null,
+    ) => void;
     setHiddenSkill: (idUser: EntityId, enabled: boolean) => void;
     closeForce: (idUser: EntityId) => Promise<void>;
     calcularExp: (idUser: EntityId, idNpc: EntityId, dmg: number) => void;
@@ -2582,6 +3106,7 @@ export type GameApi = {
     distribuirOroNpc: (idUser: EntityId, idNpc: EntityId, totalGold: number) => void;
     markNpcAggressor: (idNpc: EntityId, idAttacker: EntityId) => void;
     forceDismount: (idUser: EntityId) => void;
+    useMount: (idUser: EntityId, idItem: number) => void;
     navegar: (idUser: EntityId, idBarco?: number) => void;
     deleteUserToAllNpcs: (idUser: EntityId) => void;
     hacerCriminal: (idUser: EntityId) => void;
@@ -2796,6 +3321,77 @@ type MarketUiState = {
     myListings: MarketUiListing[];
     claims: MarketUiClaim[];
 };
+
+const FX_MEDITAR_ORBITAL_AZUL = 18;
+const FX_MEDITAR_ORBITAL_ROJO = 21;
+
+function getMeditationFx(user: GameCharacter): number {
+    const level = Number(user.level ?? 0);
+    const isHorde = normalizeFaction(user.faction) === "caos";
+    const isAlliance = normalizeFaction(user.faction) === "armada";
+    const isRemort = Number(user.remort ?? 0) > 0;
+
+    if (isRemort) {
+        if (!user.criminal) {
+            if (level < 10) {
+                return 98;
+            }
+            if (level < 20) {
+                return 127;
+            }
+            if (level < 30) {
+                return 125;
+            }
+            if (level < 40) {
+                return 117;
+            }
+            if (level < 50) {
+                return 97;
+            }
+
+            return 112;
+        }
+
+        if (level < 10) {
+            return 99;
+        }
+        if (level < 20) {
+            return 126;
+        }
+        if (level < 30) {
+            return 124;
+        }
+        if (level < 40) {
+            return 118;
+        }
+        if (level < 50) {
+            return 96;
+        }
+
+        return 111;
+    }
+
+    if (level < 13) {
+        return isHorde ? 136 : 135;
+    }
+    if (level < 20) {
+        return isHorde ? 138 : 137;
+    }
+    if (level < 30) {
+        return isHorde ? 140 : 139;
+    }
+    if (level < 40) {
+        return isHorde ? 143 : 142;
+    }
+    if (level < 50) {
+        return isAlliance ? 70 : 69;
+    }
+    if (level > 60) {
+        return isAlliance ? 131 : 130;
+    }
+
+    return isHorde ? FX_MEDITAR_ORBITAL_ROJO : FX_MEDITAR_ORBITAL_AZUL;
+}
 
 function normalizeFaction(value: unknown): CharacterFaction {
     return value === "armada" || value === "caos" ? value : "none";
@@ -3273,6 +3869,38 @@ async function setBankTabForUser(
     };
 }
 
+const MAX_USER_SPELLS = 50;
+
+function canonicalizeSpellRecord(record: SpellRecord): SpellRecord {
+    const next: SpellRecord = {};
+
+    for (const [idPos, spell] of Object.entries(record)) {
+        if (!spell) {
+            continue;
+        }
+
+        const parsedSlot = Number(idPos);
+        const slot =
+            Number.isFinite(parsedSlot) && parsedSlot >= 1
+                ? Math.min(MAX_USER_SPELLS, parsedSlot)
+                : 0;
+
+        if (slot >= 1 && !next[String(slot)]) {
+            next[String(slot)] = { idSpell: spell.idSpell };
+            continue;
+        }
+
+        for (let candidate = 1; candidate <= MAX_USER_SPELLS; candidate += 1) {
+            if (!next[String(candidate)]) {
+                next[String(candidate)] = { idSpell: spell.idSpell };
+                break;
+            }
+        }
+    }
+
+    return next;
+}
+
 function serializeSpells(record: SpellRecord): SerializedSpellSlot[] {
     return Object.entries(record).map(([idPos, spell]) => ({
         idPos,
@@ -3286,18 +3914,20 @@ function normalizeSpellRecord(spells: SpellRecord | SerializedSpellSlot[] | unde
     }
 
     if (Array.isArray(spells)) {
-        return spells.reduce<SpellRecord>((record, spell, index) => {
+        const record = spells.reduce<SpellRecord>((nextRecord, spell, index) => {
             const idPos = typeof spell?.idPos !== "undefined" ? String(spell.idPos) : String(index + 1);
 
-            record[idPos] = {
+            nextRecord[idPos] = {
                 idSpell: spell.idSpell,
             };
 
-            return record;
+            return nextRecord;
         }, {});
+
+        return canonicalizeSpellRecord(record);
     }
 
-    return spells;
+    return canonicalizeSpellRecord(spells);
 }
 
 async function persistCharacterStorage(user: GameCharacter): Promise<void> {
@@ -3419,6 +4049,7 @@ async function persistCharacterSnapshot(
 
     await queueCharacterPersistence(runtimeUser._id, async () => {
         try {
+            require("./woaoProgress").saveProgress(runtimeUser);
             await funct.fetchUrl(`/character_save/${runtimeUser._id}`, {
                 method: "PUT",
                 body: JSON.stringify(buildCharacterSnapshotPayload(runtimeUser, options)),
@@ -3752,18 +4383,13 @@ function findAvailableRecordSlot(record: Record<string, unknown>): number {
 }
 
 function findAvailableSpellSlot(record: SpellRecord): number {
-    const usedSlots = Object.keys(record)
-        .map((value) => Number(value))
-        .filter((value) => Number.isFinite(value))
-        .sort((left, right) => left - right);
-
-    let nextSlot = usedSlots.length === 0 || usedSlots[0] === 0 ? 0 : 1;
-
-    while (usedSlots.includes(nextSlot)) {
-        nextSlot++;
+    for (let slot = 1; slot <= MAX_USER_SPELLS; slot += 1) {
+        if (!record[String(slot)]) {
+            return slot;
+        }
     }
 
-    return nextSlot;
+    return 0;
 }
 
 function addItemToRecord(
@@ -4218,9 +4844,35 @@ function Game(this: GameApi) {
                     break;
                 }
                 case vars.objType.comida:
-                case vars.objType.bebidas:
+                case vars.objType.bebidas: {
+                    ensureSurvivalVitals(user as unknown as Record<string, unknown>);
+                    if (obj.objType === vars.objType.comida) {
+                        const restored = Math.max(
+                            1,
+                            Number(obj.minHam ?? obj.maxHam ?? 25),
+                        );
+                        user.hambre = Math.min(
+                            Number(user.maxHambre ?? SURVIVAL_HAMBRE_MAX),
+                            Number(user.hambre ?? 0) + restored,
+                        );
+                    } else {
+                        const restored = Math.max(
+                            1,
+                            Number(obj.minAgu ?? obj.minSed ?? obj.maxSed ?? 25),
+                        );
+                        user.sed = Math.min(
+                            Number(user.maxSed ?? SURVIVAL_SED_MAX),
+                            Number(user.sed ?? 0) + restored,
+                        );
+                    }
+                    sendSelfVitals(user as unknown as Record<string, unknown>, ws);
                     game.quitarUserInvItem(clientId, idPos, 1);
                     await persistCharacterItems(user);
+
+                    const consumeSound =
+                        obj.objType === vars.objType.comida
+                            ? vars.arSounds.SND_COMIDA
+                            : vars.arSounds.SND_BEBER;
 
                     game.loopArea(ws, function (client: AreaTarget) {
                         if (!client.isNpc) {
@@ -4228,10 +4880,11 @@ function Game(this: GameApi) {
                                 return;
                             }
 
-                            handleProtocol.playSound(user.id, vars.arSounds.SND_BEBER, vars.clients[client.id]);
+                            handleProtocol.playSound(user.id, consumeSound, vars.clients[client.id]);
                         }
                     });
                     break;
+                }
                 case vars.objType.pergaminos:
                     user.spells = normalizeSpellRecord(user.spells);
 
@@ -4256,6 +4909,17 @@ function Game(this: GameApi) {
                         handleProtocol.console("Este hechizo ya lo has aprendido.", "white", 0, 0, ws);
                     } else {
                         const idPosFinal = findAvailableSpellSlot(user.spells);
+
+                        if (idPosFinal < 1) {
+                            handleProtocol.console(
+                                "No tienes espacio para más hechizos.",
+                                "white",
+                                0,
+                                0,
+                                ws,
+                            );
+                            return;
+                        }
 
                         user.spells[idPosFinal] = {
                             idSpell: obj.spellIndex,
@@ -4308,6 +4972,9 @@ function Game(this: GameApi) {
                     break;
                 case vars.objType.barcos:
                     game.navegar(clientId, idItem);
+                    break;
+                case vars.objType.mascotas:
+                    game.useMount(clientId, idItem);
                     break;
                 case vars.objType.teleport: {
                     const mapChangeDeniedMessage = getPvpMapChangeDeniedMessage(user);
@@ -5783,6 +6450,9 @@ function Game(this: GameApi) {
                                             handleProtocol.sendCharacter(user, areaTarget.id);
                                             withUserClient(areaTarget.id, (targetClient) => {
                                                 socket.send(targetClient);
+                                                if (user.meditar && Number(user.meditarFx ?? 0) > 0) {
+                                                    handleProtocol.animFX(user.id, user.meditarFx, targetClient);
+                                                }
                                             });
                                         }
 
@@ -5859,6 +6529,12 @@ function Game(this: GameApi) {
                     ws,
                 );
                 handleProtocol.areaCharactersSnapshot(visibleCharactersForUser, clientId, ws);
+                for (const visibleCharacter of visibleCharactersForUser) {
+                    const meditationFx = Number((visibleCharacter as GameCharacter).meditarFx ?? 0);
+                    if ((visibleCharacter as GameCharacter).meditar && meditationFx > 0) {
+                        handleProtocol.animFX(visibleCharacter.id, meditationFx, ws);
+                    }
+                }
                 handleProtocol.areaNpcsSnapshot(visibleNpcsForUser, ws);
                 handleProtocol.areaItemsSnapshot(visibleItemsForUser, ws);
 
@@ -6298,57 +6974,29 @@ function Game(this: GameApi) {
     this.bodyNaked = function (idUser: EntityId): number {
         try {
             const user = vars.personajes[idUser];
-            let $idBody = 0;
+            const isFemale = user.idGenero == vars.genero.mujer;
+            const nakedBodiesByRace: Record<number, { male: number; female: number }> =
+                {
+                    [vars.razas.humano]: { male: 21, female: 39 },
+                    [vars.razas.elfo]: { male: 210, female: 259 },
+                    [vars.razas.elfoDrow]: { male: 32, female: 40 },
+                    [vars.razas.enano]: { male: 53, female: 60 },
+                    [vars.razas.gnomo]: { male: 222, female: 260 },
+                    [vars.razas.orco]: { male: 215, female: 217 },
+                    [vars.razas.vampiro]: { male: 32, female: 40 },
+                    [vars.razas.abisario]: { male: 488, female: 486 },
+                    [vars.razas.goblin]: { male: 178, female: 212 },
+                    [vars.razas.tauros]: { male: 529, female: 528 },
+                    [vars.razas.licantropo]: { male: 531, female: 530 },
+                    [vars.razas.nomuerto]: { male: 527, female: 526 },
+                };
+            const raceBodies = nakedBodiesByRace[user.idRaza];
 
-            if (user.idGenero == vars.genero.hombre) {
-                switch (user.idRaza) {
-                    case vars.razas.humano:
-                        $idBody = 21;
-                        break;
-
-                    case vars.razas.elfo:
-                        $idBody = 210;
-                        break;
-
-                    case vars.razas.elfoDrow:
-                        $idBody = 32;
-                        break;
-
-                    case vars.razas.enano:
-                        $idBody = 53;
-                        break;
-
-                    case vars.razas.gnomo:
-                        $idBody = 222;
-                        break;
-                }
+            if (!raceBodies) {
+                return 0;
             }
 
-            if (user.idGenero == vars.genero.mujer) {
-                switch (user.idRaza) {
-                    case vars.razas.humano:
-                        $idBody = 39;
-                        break;
-
-                    case vars.razas.elfo:
-                        $idBody = 259;
-                        break;
-
-                    case vars.razas.elfoDrow:
-                        $idBody = 40;
-                        break;
-
-                    case vars.razas.enano:
-                        $idBody = 60;
-                        break;
-
-                    case vars.razas.gnomo:
-                        $idBody = 260;
-                        break;
-                }
-            }
-
-            return $idBody;
+            return isFemale ? raceBodies.female : raceBodies.male;
         } catch (err) {
             funct.dumpError(err);
             return 0;
@@ -6384,6 +7032,11 @@ function Game(this: GameApi) {
             user.idShield = 0;
             resetFuerzaAgilidadBuffs(user, userClient ?? undefined);
             user.dead = 1;
+            require("./bloodCastle").onUserDied(String(idUser));
+            require("./hungerGames").onUserDied(String(idUser));
+            require("./tournamentAuto").onUserDied(String(idUser));
+            require("./rankedArena").onUserDied(String(idUser));
+            require("./playerTrade").onUserLeft(String(idUser));
             user.deadWorldActive = false;
             user.invisibleSpell = false;
             user.hiddenSkill = false;
@@ -6531,7 +7184,7 @@ function Game(this: GameApi) {
             }
 
             if (party.memberIds.length >= PARTY_MAX_MEMBERS) {
-                return { ok: false, message: "La party ya alcanzó el máximo de 4 miembros." };
+                return { ok: false, message: "La party ya alcanzó el máximo de 10 miembros." };
             }
         }
 
@@ -6601,7 +7254,7 @@ function Game(this: GameApi) {
 
         if (party.memberIds.length >= PARTY_MAX_MEMBERS) {
             clearPartyInvitation(user);
-            return { ok: false, message: "La party ya alcanzó el máximo de 4 miembros." };
+            return { ok: false, message: "La party ya alcanzó el máximo de 10 miembros." };
         }
 
         if (!isPartyCompatibleWithUser(party, user)) {
@@ -6776,12 +7429,7 @@ function Game(this: GameApi) {
             }
 
             handleProtocol.selfVitalsDelta(
-                {
-                    hp: user.hp,
-                    maxHp: user.maxHp,
-                    mana: user.mana,
-                    maxMana: user.maxMana,
-                },
+                buildSelfVitalsPayload(user as unknown as Record<string, unknown>),
                 client,
             );
             handleProtocol.selfMapMetaDelta(
@@ -6904,6 +7552,27 @@ function Game(this: GameApi) {
         }
     };
 
+    this.consumeSpellAreaTargets = function (): EntityId[] {
+        const targetIds = lastSpellAreaTargetIds;
+        lastSpellAreaTargetIds = [];
+        return targetIds;
+    };
+
+    this.getFriendlyFireBlockReason = function (attackerId: EntityId, victimId: EntityId): string | null {
+        const attacker = getCharacterById(attackerId);
+        const victim = getCharacterById(victimId);
+
+        if (!attacker || !victim || attacker.isNpc || victim.isNpc) {
+            return null;
+        }
+
+        return getFriendlyFireBlockReason(
+            attackerId,
+            victimId,
+            getChallengeManager().getCombatRelation(attacker, victim),
+        );
+    };
+
     this.setSummonTargetNpc = function (idUser: EntityId, idNpc: EntityId) {
         try {
             const user = vars.personajes[idUser] as GameCharacter | undefined;
@@ -6913,7 +7582,12 @@ function Game(this: GameApi) {
                 return;
             }
 
-            if (!npc || npc.map !== user.map || npc.hp <= 0 || npc.summonedByUserId) {
+            if (!npc || npc.map !== user.map || npc.hp <= 0) {
+                user.summonTargetNpcId = 0;
+                return;
+            }
+
+            if (npc.summonedByUserId && String(npc.summonedByUserId) === String(idUser)) {
                 user.summonTargetNpcId = 0;
                 return;
             }
@@ -6998,11 +7672,25 @@ function Game(this: GameApi) {
         const sourceSpell = user.spells[sourceKey];
         const targetSpell = user.spells[targetKey];
 
-        if (!sourceSpell || !targetSpell) {
+        if (
+            sourceSlot < 1 ||
+            targetSlot < 1 ||
+            sourceSlot > MAX_USER_SPELLS ||
+            targetSlot > MAX_USER_SPELLS
+        ) {
             return;
         }
 
-        user.spells[sourceKey] = targetSpell;
+        if (!sourceSpell) {
+            return;
+        }
+
+        if (targetSpell) {
+            user.spells[sourceKey] = targetSpell;
+        } else {
+            delete user.spells[sourceKey];
+        }
+
         user.spells[targetKey] = sourceSpell;
 
         await persistCharacterSpells(user);
@@ -7017,6 +7705,7 @@ function Game(this: GameApi) {
      */
     this.userSpellNpc = function (idUser: EntityId, idNpc: EntityId, idSpell: number): number | SpellEffect {
         try {
+            resetSpellAreaTargets();
             const user = getCharacterById(idUser);
             const npc = vars.npcs[idNpc];
 
@@ -7025,7 +7714,17 @@ function Game(this: GameApi) {
             }
 
             const datSpell = vars.datSpell[idSpell];
-            const isHostileSpell = Boolean(datSpell.paraliza || datSpell.inmoviliza || datSpell.subeHp == 2);
+            const isHostileSpell = isOffensiveSpellData(datSpell);
+
+            if (isHostileSpell) {
+                const castleDeniedMessage = require("./clanCastles").getCastleAttackDeniedMessage(user, npc);
+                if (castleDeniedMessage) {
+                    withUserClient(idUser, (userClient) => {
+                        handleProtocol.console(castleDeniedMessage, "white", 1, 0, userClient);
+                    });
+                    return 0;
+                }
+            }
 
             if (Number(datSpell?.subeHp ?? 0) === 1) {
                 withUserClient(idUser, (userClient) => {
@@ -7047,7 +7746,7 @@ function Game(this: GameApi) {
                 markNpcAggressor(idNpc, idUser);
             }
 
-            if (datSpell.paraliza) {
+            if (datSpell.paraliza || datSpell.paralizaarea) {
                 if (npc.npcType == 6) {
                     withUserClient(idUser, (userClient) => {
                         handleProtocol.console(
@@ -7058,13 +7757,25 @@ function Game(this: GameApi) {
                             userClient,
                         );
                     });
-                    return 0;
+                    if (!datSpell.paralizaarea) {
+                        return 0;
+                    }
                 } else {
                     npc.paralizado = 1;
                     npc.cooldownParalizado = +Date.now();
                     broadcastNpcSnapshot(npc);
 
                     spellEffect = "Paraliza";
+                }
+
+                if (datSpell.paralizaarea) {
+                    applyParalizaAreaToNpcs(user, npc.id);
+                    if (!spellEffect && lastSpellAreaTargetIds.length > 0) {
+                        spellEffect = "Paraliza";
+                    }
+                    if (!spellEffect) {
+                        return 0;
+                    }
                 }
             } else if (datSpell.inmoviliza) {
                 if (npc.npcType == 6) {
@@ -7103,19 +7814,29 @@ function Game(this: GameApi) {
                     npc.hp += curo;
 
                     dmg = -curo;
-                } else if (datSpell.subeHp == 2) {
-                    //Resta HP
-                    const magicCalc = applyMagicBonuses(
-                        funct.randomIntFromInterval(datSpell.minHp, datSpell.maxHp),
-                        user,
-                    );
-                    dmg = applyMagicResistanceToNpc(magicCalc.damage, user, npc, magicCalc.magicPenetration);
-
-                    if (dmg < 1) {
-                        dmg = 1;
+                } else if (datSpell.subeHp == 2 || datSpell.subeHp == 3 || datSpell.subeHp == 4) {
+                    if (Number(datSpell.subeHp) === 3) {
+                        if (
+                            npc.pos.x > user.pos.x + 1 ||
+                            npc.pos.x < user.pos.x - 1 ||
+                            npc.pos.y > user.pos.y + 10 ||
+                            npc.pos.y < user.pos.y - 10
+                        ) {
+                            withUserClient(idUser, (userClient) => {
+                                handleProtocol.console("El objetivo está demasiado lejos.", "white", 1, 0, userClient);
+                            });
+                            return 0;
+                        }
                     }
 
-                    npc.hp -= dmg;
+                    dmg = applyNpcSpellDamage(user, npc, datSpell);
+
+                    if (Number(datSpell.subeHp) === 3 || Number(datSpell.subeHp) === 4) {
+                        applyAreaSpellDamageToNpcs(user, datSpell, npc.id);
+                    }
+                } else if (Number(datSpell.envenena ?? 0) > 0) {
+                    npc.envenenado = Number(datSpell.envenena);
+                    spellEffect = "Envenena";
                 }
             }
 
@@ -7187,6 +7908,7 @@ function Game(this: GameApi) {
         idSpell: number,
     ): number | UserSpellEffect {
         try {
+            resetSpellAreaTargets();
             const user = getCharacterById(idUser);
             const userAttacked = getCharacterById(idUserAttacked);
 
@@ -7230,10 +7952,7 @@ function Game(this: GameApi) {
 
             const datSpell = vars.datSpell[idSpell];
             const removesInvisibility = String(datSpell.name ?? "").toLowerCase() === "remover invisibilidad";
-            const isOffensiveSpell = Boolean(
-                idUser !== idUserAttacked &&
-                (datSpell.paraliza || datSpell.inmoviliza || datSpell.subeHp == 2 || removesInvisibility),
-            );
+            const isOffensiveSpell = idUser !== idUserAttacked && isOffensiveSpellData(datSpell);
 
             if (datSpell.invisibilidad && getChallengeManager().isCharacterInActiveMatch(user)) {
                 withUserClient(idUser, (userClient) => {
@@ -7261,30 +7980,18 @@ function Game(this: GameApi) {
                 return 0;
             }
 
-            if (
-                challengeCombatRelation !== "enemy" &&
-                isSameParty(idUser, idUserAttacked) &&
-                idUser !== idUserAttacked &&
-                isOffensiveSpell
-            ) {
-                withUserClient(idUser, (userClient) => {
-                    handleProtocol.console("No puedes atacar a un miembro de tu party.", "white", 0, 0, userClient);
-                });
-                return 0;
-            }
-
-            if (
-                challengeCombatRelation !== "enemy" &&
-                user.seguroClanActivado &&
-                isSameClan(idUser, idUserAttacked) &&
-                idUser !== idUserAttacked &&
-                isOffensiveSpell &&
-                isBlockedBySafeZone(user, userAttacked)
-            ) {
-                withUserClient(idUser, (userClient) => {
-                    handleProtocol.console("No puedes atacar a un miembro de tu clan.", "white", 0, 0, userClient);
-                });
-                return 0;
+            if (isOffensiveSpell) {
+                const friendlyFireReason = getFriendlyFireBlockReason(
+                    idUser,
+                    idUserAttacked,
+                    challengeCombatRelation,
+                );
+                if (friendlyFireReason) {
+                    withUserClient(idUser, (userClient) => {
+                        handleProtocol.console(friendlyFireReason, "white", 0, 0, userClient);
+                    });
+                    return 0;
+                }
             }
 
             if (
@@ -7319,9 +8026,18 @@ function Game(this: GameApi) {
                 | "Fuerza"
                 | "Invisibilidad"
                 | "RemueveInvisibilidad"
+                | "Envenena"
+                | "CuraVeneno"
+                | "Ceguera"
+                | "Estupidez"
+                | "Mana"
+                | "Hambre"
+                | "Sed"
+                | "Morph"
+                | "Protec"
                 | null = null;
 
-            if (datSpell.paraliza) {
+            if (datSpell.paraliza || datSpell.paralizaarea) {
                 if (idUser == idUserAttacked) {
                     withUserClient(idUser, (userClient) => {
                         handleProtocol.console("¡No puedes atacarte a ti mismo!", "white", 1, 0, userClient);
@@ -7341,6 +8057,13 @@ function Game(this: GameApi) {
                 }
 
                 markUsersInPvpCombat(user, userAttacked);
+
+                if (shouldAvoidParalysis(userAttacked)) {
+                    withUserClient(idUser, (userClient) => {
+                        handleProtocol.console("El objetivo evitó la parálisis.", "white", 1, 0, userClient);
+                    });
+                    return 0;
+                }
 
                 const controlAppliedAt = Date.now();
                 userAttacked.paralizado = 1;
@@ -7420,6 +8143,43 @@ function Game(this: GameApi) {
             } else if (removesInvisibility) {
                 setSpellInvisibility(idUserAttacked, false);
                 spellEffect = "RemueveInvisibilidad";
+            } else if (Number(datSpell.protec ?? 0) > 0) {
+                if (idUser !== idUserAttacked) {
+                    withUserClient(idUser, (userClient) => {
+                        handleProtocol.console(
+                            "No puedes lanzar este hechizo sobre otros usuarios.",
+                            "white",
+                            1,
+                            0,
+                            userClient,
+                        );
+                    });
+                    return 0;
+                }
+
+                userAttacked.protec = Number(datSpell.protec);
+                userAttacked.cooldownProtec = Date.now();
+                spellEffect = "Protec";
+            } else if (Number(datSpell.morph ?? 0) === 1) {
+                const morphBodies = [5, 6, 9, 10, 13, 42, 51, 59, 68, 71, 73, 88];
+                if (userAttacked.navegando || userAttacked.dead || userAttacked.mounted) {
+                    withUserClient(idUser, (userClient) => {
+                        handleProtocol.console(
+                            "No puedes usar este hechizo contra una mascota.",
+                            "white",
+                            1,
+                            0,
+                            userClient,
+                        );
+                    });
+                    return 0;
+                }
+
+                userAttacked.morphBody = Number(userAttacked.idBody ?? 0);
+                userAttacked.cooldownMorph = Date.now();
+                userAttacked.idBody = morphBodies[funct.randomIntFromInterval(0, morphBodies.length - 1)];
+                broadcastAppearance(idUserAttacked);
+                spellEffect = "Morph";
             } else {
                 if (datSpell.subeHp === 1) {
                     //Cura HP
@@ -7438,7 +8198,7 @@ function Game(this: GameApi) {
                     userAttacked.hp += curo;
 
                     dmg = -curo;
-                } else if (datSpell.subeHp == 2) {
+                } else if (datSpell.subeHp == 2 || datSpell.subeHp == 3 || datSpell.subeHp == 4) {
                     //Resta HP
                     if (idUser == idUserAttacked) {
                         withUserClient(idUser, (userClient) => {
@@ -7455,27 +8215,171 @@ function Game(this: GameApi) {
 
                     breakUserInvisibilityOnPvPDamageAttack(idUser);
 
-                    const magicCalc = applyMagicBonuses(
-                        funct.randomIntFromInterval(datSpell.minHp, datSpell.maxHp),
-                        user,
-                    );
-                    dmg = applyMagicResistanceToUser(magicCalc.damage, user, userAttacked, magicCalc.magicPenetration);
-
-                    if (dmg < 1) {
-                        dmg = 1;
+                    const resisted = applyUserSpellDamage(user, userAttacked, datSpell);
+                    if (resisted == null) {
+                        withUserClient(idUser, (userClient) => {
+                            handleProtocol.console("El objetivo evitó el hechizo.", "white", 1, 0, userClient);
+                        });
+                        return 0;
                     }
 
-                    userAttacked.hp -= dmg;
-                } else if (datSpell.subeAg === 1) {
+                    dmg = resisted;
+
+                    if (Number(datSpell.subeHp) === 3 || Number(datSpell.subeHp) === 4) {
+                        applyAreaSpellDamageToUsers(user, datSpell, idUserAttacked);
+                    }
+                }
+
+                if (datSpell.subeAg === 1) {
                     withUserClient(idUserAttacked, (targetClient) => {
                         refreshAgilityBuff(userAttacked, datSpell.minAg, datSpell.maxAg, targetClient);
                     });
-                    spellEffect = "Agilidad";
-                } else if (datSpell.subeFz === 1) {
+                    spellEffect = spellEffect ?? "Agilidad";
+                } else if (datSpell.subeAg === 2) {
+                    if (idUser !== idUserAttacked && !applyOpenWorldAttackRules(user, userAttacked, arenaCombat)) {
+                        return 0;
+                    }
+                    userAttacked.attrAgilidad = Math.max(
+                        1,
+                        Number(userAttacked.attrAgilidad ?? 1) -
+                            funct.randomIntFromInterval(datSpell.minAg, datSpell.maxAg),
+                    );
+                    spellEffect = spellEffect ?? "Agilidad";
+                }
+
+                if (datSpell.subeFz === 1) {
                     withUserClient(idUserAttacked, (targetClient) => {
                         refreshStrengthBuff(userAttacked, datSpell.minFz, datSpell.maxFz, targetClient);
                     });
-                    spellEffect = "Fuerza";
+                    spellEffect = spellEffect ?? "Fuerza";
+                } else if (datSpell.subeFz === 2) {
+                    if (idUser !== idUserAttacked && !applyOpenWorldAttackRules(user, userAttacked, arenaCombat)) {
+                        return 0;
+                    }
+                    userAttacked.attrFuerza = Math.max(
+                        1,
+                        Number(userAttacked.attrFuerza ?? 1) -
+                            funct.randomIntFromInterval(datSpell.minFz, datSpell.maxFz),
+                    );
+                    spellEffect = spellEffect ?? "Fuerza";
+                }
+
+                if (Number(datSpell.subeMana ?? 0) === 1) {
+                    const restored = funct.randomIntFromInterval(
+                        Number(datSpell.minMana ?? 0),
+                        Number(datSpell.maxMana ?? 0),
+                    );
+                    const nextMana = Math.min(
+                        Number(userAttacked.maxMana ?? 0),
+                        Number(userAttacked.mana ?? 0) + Math.max(1, restored),
+                    );
+                    userAttacked.mana = nextMana;
+                    withUserClient(idUserAttacked, (targetClient) => {
+                        handleProtocol.updateMana(userAttacked.mana, targetClient);
+                    });
+                    spellEffect = spellEffect ?? "Mana";
+                }
+
+                if (Number(datSpell.subeHam ?? 0) === 1 || Number(datSpell.subeHam ?? 0) === 2) {
+                    userAttacked.maxHambre = Number(userAttacked.maxHambre ?? 100);
+                    userAttacked.hambre = Number(userAttacked.hambre ?? userAttacked.maxHambre);
+                    const hamDelta = funct.randomIntFromInterval(
+                        Number(datSpell.minHam ?? 0),
+                        Number(datSpell.maxHam ?? 0),
+                    );
+                    if (Number(datSpell.subeHam) === 1) {
+                        userAttacked.hambre = Math.min(userAttacked.maxHambre, userAttacked.hambre + hamDelta);
+                    } else {
+                        if (idUser !== idUserAttacked && !applyOpenWorldAttackRules(user, userAttacked, arenaCombat)) {
+                            return 0;
+                        }
+                        userAttacked.hambre = Math.max(1, userAttacked.hambre - hamDelta);
+                    }
+                    spellEffect = spellEffect ?? "Hambre";
+                    withUserClient(idUserAttacked, (targetClient) => {
+                        sendSelfVitals(
+                            userAttacked as unknown as Record<string, unknown>,
+                            targetClient,
+                        );
+                    });
+                }
+
+                if (Number(datSpell.subeSed ?? 0) === 1 || Number(datSpell.subeSed ?? 0) === 2) {
+                    userAttacked.maxSed = Number(userAttacked.maxSed ?? 100);
+                    userAttacked.sed = Number(userAttacked.sed ?? userAttacked.maxSed);
+                    const sedDelta = funct.randomIntFromInterval(
+                        Number(datSpell.minSed ?? 0),
+                        Number(datSpell.maxSed ?? 0),
+                    );
+                    if (Number(datSpell.subeSed) === 1) {
+                        userAttacked.sed = Math.min(userAttacked.maxSed, userAttacked.sed + sedDelta);
+                    } else {
+                        if (idUser !== idUserAttacked && !applyOpenWorldAttackRules(user, userAttacked, arenaCombat)) {
+                            return 0;
+                        }
+                        userAttacked.sed = Math.max(1, userAttacked.sed - sedDelta);
+                    }
+                    spellEffect = spellEffect ?? "Sed";
+                    withUserClient(idUserAttacked, (targetClient) => {
+                        sendSelfVitals(
+                            userAttacked as unknown as Record<string, unknown>,
+                            targetClient,
+                        );
+                    });
+                }
+
+                if (Number(datSpell.envenena ?? 0) > 0) {
+                    if (idUser === idUserAttacked) {
+                        withUserClient(idUser, (userClient) => {
+                            handleProtocol.console("¡No puedes atacarte a ti mismo!", "white", 1, 0, userClient);
+                        });
+                        return 0;
+                    }
+
+                    if (!applyOpenWorldAttackRules(user, userAttacked, arenaCombat)) {
+                        return 0;
+                    }
+
+                    markUsersInPvpCombat(user, userAttacked);
+                    userAttacked.envenenado = Number(datSpell.envenena);
+                    userAttacked.cooldownVeneno = Date.now();
+                    spellEffect = "Envenena";
+                } else if (datSpell.curaVeneno) {
+                    userAttacked.envenenado = 0;
+                    userAttacked.cooldownVeneno = 0;
+                    spellEffect = "CuraVeneno";
+                } else if (datSpell.ceguera) {
+                    if (idUser === idUserAttacked) {
+                        withUserClient(idUser, (userClient) => {
+                            handleProtocol.console("¡No puedes atacarte a ti mismo!", "white", 1, 0, userClient);
+                        });
+                        return 0;
+                    }
+
+                    if (!applyOpenWorldAttackRules(user, userAttacked, arenaCombat)) {
+                        return 0;
+                    }
+
+                    markUsersInPvpCombat(user, userAttacked);
+                    userAttacked.ceguera = 1;
+                    userAttacked.cooldownCeguera = Date.now();
+                    spellEffect = "Ceguera";
+                } else if (datSpell.estupidez) {
+                    if (idUser === idUserAttacked) {
+                        withUserClient(idUser, (userClient) => {
+                            handleProtocol.console("¡No puedes atacarte a ti mismo!", "white", 1, 0, userClient);
+                        });
+                        return 0;
+                    }
+
+                    if (!applyOpenWorldAttackRules(user, userAttacked, arenaCombat)) {
+                        return 0;
+                    }
+
+                    markUsersInPvpCombat(user, userAttacked);
+                    userAttacked.estupidez = 1;
+                    userAttacked.cooldownEstupidez = Date.now();
+                    spellEffect = "Estupidez";
                 }
             }
 
@@ -7577,6 +8481,7 @@ function Game(this: GameApi) {
             let dmgArma = 0;
             let dmgMaxArma = 0;
             let modClase = 0;
+            let isRanged = false;
 
             if (user.idItemWeapon) {
                 const itemInventary = getInventoryItem(user, user.idItemWeapon);
@@ -7603,6 +8508,7 @@ function Game(this: GameApi) {
                     dmgArma += funct.randomIntFromInterval(itemArrow.minHit, itemArrow.maxHit);
 
                     modClase = vars.modDmgProyectiles[user.idClase];
+                    isRanged = true;
                 } else {
                     modClase = vars.modDmgArmas[user.idClase];
                 }
@@ -7621,7 +8527,11 @@ function Game(this: GameApi) {
                 (3 * dmgArma + (dmgMaxArma / 5) * Math.max(0, user.attrFuerza - 15) + dmgUser) * modClase,
             );
 
-            return dmg;
+            return require("./mounts").applyOutgoingDamage(
+                user,
+                modifyOutgoingPhysicalDamage(user, dmg, isRanged ? "ranged" : "melee"),
+                isRanged ? "ranged" : "melee",
+            );
         } catch (err) {
             funct.dumpError(err);
             return 0;
@@ -7640,6 +8550,14 @@ function Game(this: GameApi) {
             const npc = vars.npcs[idNpc];
 
             if (!user || !npc) {
+                return 0;
+            }
+
+            const castleDeniedMessage = require("./clanCastles").getCastleAttackDeniedMessage(user, npc);
+            if (castleDeniedMessage) {
+                withUserClient(idUser, (userClient) => {
+                    handleProtocol.console(castleDeniedMessage, "white", 1, 0, userClient);
+                });
                 return 0;
             }
 
@@ -7805,21 +8723,14 @@ function Game(this: GameApi) {
                 return 0;
             }
 
-            if (challengeCombatRelation !== "enemy" && isSameParty(idUser, idUserAttacked)) {
+            const friendlyFireReason = getFriendlyFireBlockReason(
+                idUser,
+                idUserAttacked,
+                challengeCombatRelation,
+            );
+            if (friendlyFireReason) {
                 withUserClient(idUser, (userClient) => {
-                    handleProtocol.console("No puedes atacar a un miembro de tu party.", "white", 0, 0, userClient);
-                });
-                return 0;
-            }
-
-            if (
-                challengeCombatRelation !== "enemy" &&
-                user.seguroClanActivado &&
-                isSameClan(idUser, idUserAttacked) &&
-                isBlockedBySafeZone(user, userAttacked)
-            ) {
-                withUserClient(idUser, (userClient) => {
-                    handleProtocol.console("No puedes atacar a un miembro de tu clan.", "white", 0, 0, userClient);
+                    handleProtocol.console(friendlyFireReason, "white", 0, 0, userClient);
                 });
                 return 0;
             }
@@ -7935,7 +8846,14 @@ function Game(this: GameApi) {
                     dmg = 1;
                 }
 
-                userAttacked.hp -= dmg;
+                const attackerWeapon = user.idItemWeapon
+                    ? vars.datObj[getInventoryItem(user, user.idItemWeapon)?.idItem ?? 0]
+                    : null;
+                dmg = applyIncomingHit(
+                    userAttacked,
+                    dmg,
+                    attackerWeapon?.proyectil ? "ranged" : "melee",
+                );
 
                 stabResult = {
                     stabbed: false,
@@ -8152,6 +9070,7 @@ function Game(this: GameApi) {
 
                 if (rechazo) {
                     emitCharacterFxToUserArea(idUserAttacked, COMBAT_SHIELD_BLOCK_FX_ID);
+                    emitCharacterSwingToUserArea(idUserAttacked, CHARACTER_SWING_SHIELD);
                     withUserClient(idUserAttacked, (targetClient) => {
                         handleProtocol.console(
                             "¡Has bloqueado el golpe con el escudo a " + user.nameCharacter + "!",
@@ -8217,24 +9136,13 @@ function Game(this: GameApi) {
 
             if (userAttacked.meditar) {
                 userAttacked.meditar = false;
+                userAttacked.meditarFx = 0;
 
                 withUserClient(idUserAttacked, (targetClient) => {
                     handleProtocol.console("Terminas de meditar.", "white", 0, 0, targetClient);
                 });
 
-                loopAreaByUserId(idUserAttacked, function (client: AreaTarget) {
-                    if (!client.isNpc) {
-                        const targetClient = getClientById(client.id);
-
-                        if (targetClient) {
-                            if (!canReceiveCharacterEvent(client.id, idUserAttacked)) {
-                                return;
-                            }
-
-                            handleProtocol.animFX(idUserAttacked, 0, targetClient);
-                        }
-                    }
-                });
+                emitCharacterFxToUserArea(idUserAttacked, 0);
             }
 
             return attackMissed ? "¡Fallas!" : stabResult.stabbed ? `¡${stabResult.totalDamage}!` : dmg;
@@ -8523,7 +9431,7 @@ function Game(this: GameApi) {
                 (skillTacticasCombate + (skillTacticasCombate / 33) * user.attrAgilidad) *
                 vars.modEvasion[user.idClase];
 
-            return tmpCalc + 2.5 * Math.max(user.level - 12, 0);
+            return (tmpCalc + 2.5 * Math.max(user.level - 12, 0)) * getRacialEvasionMultiplier(user);
         } catch (err) {
             funct.dumpError(err);
             return 0;
@@ -8801,7 +9709,7 @@ function Game(this: GameApi) {
                 return;
             }
 
-            if (obj.llave) {
+            if (obj.llave && !require("./houses").canOpenLockedDoor(String(idUser))) {
                 withUserClient(idUser, (userClient) => {
                     handleProtocol.console("La puerta está cerrada con llave.", "white", 1, 0, userClient);
                 });
@@ -9281,25 +10189,13 @@ function Game(this: GameApi) {
 
             if (user.meditar) {
                 user.meditar = false;
+                user.meditarFx = 0;
 
                 withUserClient(idUser, (userClient) => {
                     handleProtocol.console("Terminas de meditar.", "white", 0, 0, userClient);
                 });
 
-                loopAreaByUserId(idUser, function (client: AreaTarget) {
-                    if (!client.isNpc) {
-                        const targetClient = getClientById(client.id);
-
-                        if (targetClient) {
-                            if (!canReceiveCharacterEvent(client.id, idUser)) {
-                                return;
-                            }
-
-                            handleProtocol.animFX(idUser, 0, targetClient);
-                        }
-                    }
-                });
-
+                emitCharacterFxToUserArea(idUser, 0);
                 return;
             }
 
@@ -9324,35 +10220,15 @@ function Game(this: GameApi) {
                 return;
             }
 
-            let fxMeditar = 0;
+            const fxMeditar = getMeditationFx(user);
+            user.meditarFx = fxMeditar;
+            user.meditar = true;
 
-            if (user.level < 13) {
-                fxMeditar = vars.meditacion.chica;
-            } else if (user.level < 25) {
-                fxMeditar = vars.meditacion.mediana;
-            } else if (user.level < 35) {
-                fxMeditar = vars.meditacion.grande;
-            } else if (user.level < 42) {
-                fxMeditar = vars.meditacion.xgrande;
-            } else {
-                fxMeditar = vars.meditacion.xxgrande;
-            }
-
-            loopAreaByUserId(idUser, function (client: AreaTarget) {
-                if (!client.isNpc) {
-                    const targetClient = getClientById(client.id);
-
-                    if (targetClient) {
-                        if (!canReceiveCharacterEvent(client.id, idUser)) {
-                            return;
-                        }
-
-                        handleProtocol.animFX(idUser, fxMeditar, targetClient);
-                    }
-                }
+            withUserClient(idUser, (userClient) => {
+                handleProtocol.console("Comenzas a meditar.", "white", 0, 0, userClient);
             });
 
-            user.meditar = true;
+            emitCharacterFxToUserArea(idUser, fxMeditar);
         } catch (err) {
             funct.dumpError(err);
         }
@@ -9386,24 +10262,13 @@ function Game(this: GameApi) {
 
             if (user.maxMana == user.mana) {
                 user.meditar = false;
+                user.meditarFx = 0;
 
                 withUserClient(idUser, (userClient) => {
                     handleProtocol.console("Terminas de meditar.", "white", 0, 0, userClient);
                 });
 
-                loopAreaByUserId(idUser, function (client: AreaTarget) {
-                    if (!client.isNpc) {
-                        const targetClient = getClientById(client.id);
-
-                        if (targetClient) {
-                            if (!canReceiveCharacterEvent(client.id, idUser)) {
-                                return;
-                            }
-
-                            handleProtocol.animFX(idUser, 0, targetClient);
-                        }
-                    }
-                });
+                emitCharacterFxToUserArea(idUser, 0);
             }
         } catch (err) {
             funct.dumpError(err);
@@ -9436,6 +10301,11 @@ function Game(this: GameApi) {
      */
     this.closeForce = async function (idUser: EntityId) {
         try {
+            require("./rankedArena").onUserLeft(String(idUser));
+            require("./playerTrade").onUserLeft(String(idUser));
+            require("./hungerGames").onUserDied(String(idUser));
+            require("./tournamentAuto").onUserDied(String(idUser));
+            require("./factionWars").onUserLeft(String(idUser));
             const client = getClientById(idUser);
 
             if (client) {
@@ -9499,8 +10369,9 @@ function Game(this: GameApi) {
                 return;
             }
 
-            npc.hitExpAwarded = Math.max(0, Number(npc.hitExpAwarded ?? 0)) + exp;
-            distribuirExpNpcEscalada(idUser, npc, exp);
+            const rewarded = require("./diaEspecial").scaleExp(npc, exp);
+            npc.hitExpAwarded = Math.max(0, Number(npc.hitExpAwarded ?? 0)) + rewarded;
+            distribuirExpNpcEscalada(idUser, npc, rewarded);
         } catch (err) {
             funct.dumpError(err);
         }
@@ -9545,7 +10416,58 @@ function Game(this: GameApi) {
                 return;
             }
 
+            const wasMounted = Boolean(user.mounted);
             dismountUser(user);
+
+            if (wasMounted) {
+                broadcastAppearance(idUser);
+            }
+        } catch (err) {
+            funct.dumpError(err);
+        }
+    };
+
+    this.useMount = function (idUser: EntityId, idItem: number) {
+        try {
+            const user = getCharacterById(idUser);
+
+            if (!user) {
+                return;
+            }
+
+            if (user.navegando) {
+                withUserClient(idUser, (userClient) => {
+                    handleProtocol.console("No puedes usar mascotas mientras navegas.", "white", 0, 0, userClient);
+                });
+                return;
+            }
+
+            if (user.mounted) {
+                dismountMount(user);
+                broadcastAppearance(idUser);
+                return;
+            }
+
+            const obj = vars.datObj[idItem] as { anim?: number; name?: string; subtipo?: number } | undefined;
+            const mountBodyId = Number(obj?.anim ?? 0);
+
+            if (mountBodyId <= 0) {
+                withUserClient(idUser, (userClient) => {
+                    handleProtocol.console("Esa mascota no tiene un cuerpo valido.", "white", 0, 0, userClient);
+                });
+                return;
+            }
+
+            user.idLastBody = Number(user.idBody ?? user.idLastBody ?? 0);
+            user.idLastHead = Number(user.idHead ?? user.idLastHead ?? 0);
+            user.idLastWeapon = Number(user.idWeapon ?? 0);
+            user.idLastHelmet = Number(user.idHelmet ?? 0);
+            user.idLastShield = Number(user.idShield ?? 0);
+            user.idBody = mountBodyId;
+            user.mounted = 1;
+            user.mountBodyId = mountBodyId;
+            require("./mounts").prepareMount(user, idItem);
+            broadcastAppearance(idUser);
         } catch (err) {
             funct.dumpError(err);
         }
@@ -9969,6 +10891,72 @@ function Game(this: GameApi) {
     };
 
     this.logCharacterActivity = logCharacterActivity;
+
+    this.ensureSurvivalVitals = function (user: RuntimeCharacter) {
+        ensureSurvivalVitals(user as unknown as Record<string, unknown>);
+    };
+
+    this.consumeAttackStamina = function (
+        user: RuntimeCharacter,
+        client: RuntimeClient,
+        minRequired: number,
+        maxDrain: number,
+    ) {
+        const record = user as unknown as Record<string, unknown>;
+        ensureSurvivalVitals(record);
+        if (Number(user.privileges ?? 0) > 0) {
+            return true;
+        }
+
+        const sta = Number(user.sta ?? 0);
+        if (sta < minRequired) {
+            handleProtocol.console("Estás muy cansado.", "#bf0000", 0, 0, client);
+            return false;
+        }
+
+        user.sta = Math.max(0, sta - funct.randomIntFromInterval(1, maxDrain));
+        sendSelfVitals(record, client);
+        return true;
+    };
+
+    this.tickSurvivalVitals = function (
+        user: RuntimeCharacter,
+        now: number,
+        client?: RuntimeClient | null,
+    ) {
+        const record = user as unknown as Record<string, unknown>;
+        ensureSurvivalVitals(record);
+        let changed = false;
+
+        if (!user.dead) {
+            const lastHunger = Number(user.lastHungerDrainAt ?? 0);
+            if (now - lastHunger >= HUNGER_DRAIN_INTERVAL_MS) {
+                user.lastHungerDrainAt = now;
+                const nextHambre = Math.max(0, Number(user.hambre ?? 0) - 1);
+                const nextSed = Math.max(0, Number(user.sed ?? 0) - 1);
+                if (nextHambre !== Number(user.hambre ?? 0) || nextSed !== Number(user.sed ?? 0)) {
+                    user.hambre = nextHambre;
+                    user.sed = nextSed;
+                    changed = true;
+                }
+            }
+
+            const lastSta = Number(user.lastStaRegenAt ?? 0);
+            if (now - lastSta >= STA_REGEN_INTERVAL_MS) {
+                user.lastStaRegenAt = now;
+                const maxSta = Number(user.maxSta ?? 0);
+                const nextSta = Math.min(maxSta, Number(user.sta ?? 0) + 2);
+                if (nextSta !== Number(user.sta ?? 0)) {
+                    user.sta = nextSta;
+                    changed = true;
+                }
+            }
+        }
+
+        if (changed && client) {
+            sendSelfVitals(record, client);
+        }
+    };
 }
 
 module.exports = game;

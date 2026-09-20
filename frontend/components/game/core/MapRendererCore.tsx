@@ -186,7 +186,11 @@ interface MapRendererProps {
         name: string;
         token: number;
     } | null;
-    chatRequest?: { message: string; token: number } | null;
+    chatRequest?: {
+        message?: string;
+        messages?: Array<{ text: string; id: number }>;
+        token: number;
+    } | null;
     runtimeTiming?: RuntimeTimingConfig;
     hotkeySettings?: HotkeySettings;
     macros?: Array<StoredMacro | null>;
@@ -283,7 +287,10 @@ const DIALOG_BUBBLE_MAX_WIDTH = 180;
 const CAST_BAR_WIDTH = 40;
 const CAST_BAR_HEIGHT = 5;
 const DEFAULT_ENTITY_FX_DURATION_MS = 450;
-const PERSISTENT_ENTITY_FX_IDS = new Set([4, 5, 6, 16, 34]);
+const PERSISTENT_ENTITY_FX_IDS = new Set([
+    4, 5, 6, 16, 17, 18, 21, 34, 69, 70, 96, 97, 98, 99, 111, 112, 117, 118, 124, 125, 126, 127, 130, 131, 132, 135,
+    136, 137, 138, 139, 140, 142, 143,
+]);
 const ENTITY_FX_ALPHA = 0.75;
 
 const getDialogMessageDuration = (text: string): number =>
@@ -327,10 +334,8 @@ function shouldHideRemoteCharacterBody(
 }
 
 const STEP_SOUNDS = {
-    bosque: [201, 69],
+    bosque: [201, 202],
     nieve: [199, 200],
-    caballo: [70, 71],
-    dungeon: [23, 24],
     desierto: [197, 198],
     piso: [23, 24],
     agua: [50, 50],
@@ -372,24 +377,18 @@ function resolveEntitySoundPosition(
     };
 }
 
-function getTileTerrainFileNumber(
+function getLayer1GrhIndex(
     engine: Engine,
     mapNumber: number,
     x: number,
     y: number,
 ): number {
-    if (!engine.mapData || !engine.graphicsDB) {
+    if (!engine.mapData) {
         return 0;
     }
 
     const tile = getTileAt(engine.mapData, mapNumber, x, y);
-    const layer1 = tile?.graphics?.["1"];
-
-    if (!layer1) {
-        return 0;
-    }
-
-    return Number(engine.graphicsDB[layer1.toString()]?.numFile ?? 0);
+    return Number(tile?.graphics?.["1"] ?? 0);
 }
 
 function resolveStepTerrain(engine: Engine, character: Character): StepTerrain {
@@ -397,54 +396,23 @@ function resolveStepTerrain(engine: Engine, character: Character): StepTerrain {
         return "agua";
     }
 
-    const tile = engine.mapData
-        ? getTileAt(
-              engine.mapData,
-              character.map,
-              character.pos.x,
-              character.pos.y,
-          )
-        : undefined;
-    const terrainFileNum = getTileTerrainFileNumber(
+    const grhIndex = getLayer1GrhIndex(
         engine,
         character.map,
         character.pos.x,
         character.pos.y,
     );
-    const layer2 = Number(tile?.graphics?.["2"] ?? 0);
 
-    if (
-        (terrainFileNum >= 6000 && terrainFileNum <= 6004) ||
-        (terrainFileNum >= 550 && terrainFileNum <= 552) ||
-        (terrainFileNum >= 6018 && terrainFileNum <= 6020)
-    ) {
+    if (grhIndex >= 6000 && grhIndex <= 6559) {
         return "bosque";
     }
 
-    if (
-        (terrainFileNum >= 7501 && terrainFileNum <= 7507) ||
-        terrainFileNum === 7500 ||
-        terrainFileNum === 7508 ||
-        terrainFileNum === 1533 ||
-        terrainFileNum === 2508
-    ) {
-        return "dungeon";
-    }
-
-    if (terrainFileNum >= 5000 && terrainFileNum <= 5004) {
+    if (grhIndex >= 20000 && grhIndex <= 20015) {
         return "nieve";
     }
 
-    if (
-        (terrainFileNum >= 6018 && terrainFileNum <= 6021) ||
-        terrainFileNum === 186 ||
-        terrainFileNum === 8007
-    ) {
+    if (grhIndex >= 7700 && grhIndex <= 7720) {
         return "desierto";
-    }
-
-    if (terrainFileNum === 20 && layer2 === 0) {
-        return "agua";
     }
 
     return "piso";
@@ -798,8 +766,20 @@ export default function MapRenderer({
             return;
         }
 
-        socket.send(createDialogPacket(pendingChatRequest.message));
-        lastSentChatTokenRef.current = pendingChatRequest.token;
+        const items = pendingChatRequest.messages?.length
+            ? pendingChatRequest.messages
+            : pendingChatRequest.message
+              ? [{ text: pendingChatRequest.message, id: pendingChatRequest.token }]
+              : [];
+
+        for (const item of items) {
+            if (item.id <= lastSentChatTokenRef.current) {
+                continue;
+            }
+
+            socket.send(createDialogPacket(item.text));
+            lastSentChatTokenRef.current = item.id;
+        }
     };
 
     useEffect(() => {
@@ -1228,7 +1208,6 @@ export default function MapRenderer({
         clearExpiredCombatCooldowns,
         clearTargetingMode,
         getEquippedWeaponItem,
-        hasEquippedMeleeWeapon,
         hasEquippedRangedWeapon,
         isFishingRodItem,
         isMiningToolItem,
@@ -1315,7 +1294,6 @@ export default function MapRenderer({
         canProcessMovementInput,
         clearMovementInputState,
         clearTargetingMode,
-        hasEquippedMeleeWeapon,
         hasEquippedRangedWeapon,
         recordClientGameAction,
         resolveBlockedGameplayKeyboardReason,
@@ -1963,7 +1941,7 @@ export default function MapRenderer({
                 style={{ touchAction: "none" }}
             >
                 <div
-                    className="relative overflow-hidden bg-black"
+                    className="relative overflow-hidden rounded-none bg-black"
                     style={{
                         width: canvasDisplaySize.width,
                         height: canvasDisplaySize.height,
@@ -1996,7 +1974,7 @@ export default function MapRenderer({
         >
             <div
                 ref={rendererRootRef}
-                className="relative overflow-hidden rounded-[22px] bg-black"
+                className="relative overflow-hidden rounded-none bg-black"
                 style={{
                     width: canvasDisplaySize.width,
                     height: canvasDisplaySize.height,

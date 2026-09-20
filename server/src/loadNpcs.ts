@@ -76,6 +76,11 @@ class LoadNpcs {
 
         const datNpc = vars.datNpc[npcIndex];
 
+        if (!datNpc) {
+            console.warn(`[NPCS] Se omitio el NPC ${npcIndex} en ${mapNum}@${x},${y}: no existe el template.`);
+            return;
+        }
+
         tmpNPC.pos.x = parseInt(x);
         tmpNPC.pos.y = parseInt(y);
         tmpNPC.nameCharacter = datNpc.name;
@@ -116,6 +121,7 @@ class LoadNpcs {
         tmpNPC.aguaValida = datNpc.aguaValida;
         tmpNPC.tierraInvalida = datNpc.tierraInvalida ?? 0;
         if (datNpc.desc) tmpNPC.desc = datNpc.desc;
+        if (datNpc.questNumber) tmpNPC.questNumber = Number(datNpc.questNumber);
 
         if (forceRandomSpawn) {
             const respawnPos = game.respawnNpc(mapNum, Boolean(tmpNPC.aguaValida), Boolean(tmpNPC.tierraInvalida));

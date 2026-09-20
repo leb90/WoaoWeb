@@ -19,6 +19,12 @@ import type {
 } from "./types/runtime";
 import { setNpcRespawnCooldown, type NpcRespawnEntry } from "./npcRespawnCooldowns";
 import * as safeZone from "./safeZone";
+import {
+    applyIncomingHit,
+    getRacialMagicResistPercent,
+    shouldAvoidParalysis,
+    shouldIgnoreHarmfulSpell,
+} from "./racialPassives";
 
 export {};
 
@@ -148,6 +154,29 @@ function emitCharacterFxToUserArea(entityId: EntityId, fxId: number) {
 
         withUserClient(target.id, (targetClient) => {
             handleProtocol.animFX(entityId, fxId, targetClient);
+        });
+    });
+}
+
+const CHARACTER_SWING_SHIELD = 2;
+
+function emitCharacterSwingToUserArea(entityId: EntityId, flags: number) {
+    if (!flags) {
+        return;
+    }
+
+    const userClient = getClientById(entityId);
+    if (!userClient) {
+        return;
+    }
+
+    game.loopArea(userClient, function (target) {
+        if (target.isNpc) {
+            return;
+        }
+
+        withUserClient(target.id, (targetClient) => {
+            handleProtocol.characterSwing(entityId, flags, targetClient);
         });
     });
 }
@@ -357,7 +386,10 @@ function getUserClassMagicResistanceBonus(user: PlayerCharacter): number {
 
 function applyNpcSpellDamageToUser(baseDamage: number, user: PlayerCharacter): number {
     let damage = baseDamage;
-    const magicResistance = getUserMagicResistanceBonus(user) + getUserClassMagicResistanceBonus(user);
+    const magicResistance =
+        getUserMagicResistanceBonus(user) +
+        getUserClassMagicResistanceBonus(user) +
+        getRacialMagicResistPercent(user);
 
     if (magicResistance > 0) {
         damage -= Math.floor((damage * magicResistance) / 100);
@@ -588,6 +620,9 @@ function tryNpcCastSpell(
         game.interruptPendingLogoutOnAttack(target.id, "[Servidor] La salida se canceló porque una criatura te atacó.");
 
         if (datSpell.paraliza) {
+            if (shouldAvoidParalysis(target)) {
+                return true;
+            }
             target.paralizado = 1;
             target.cooldownParalizado = now;
 
@@ -614,6 +649,9 @@ function tryNpcCastSpell(
         }
 
         if (datSpell.subeHp === 2) {
+            if (shouldIgnoreHarmfulSpell(target)) {
+                return true;
+            }
             let damage = applyNpcSpellDamageToUser(
                 funct.randomIntFromInterval(Number(datSpell.minHp ?? 0), Number(datSpell.maxHp ?? 0)),
                 target,
@@ -623,7 +661,7 @@ function tryNpcCastSpell(
                 damage = 1;
             }
 
-            target.hp -= damage;
+            damage = applyIncomingHit(target, damage, "magic");
             withUserClient(target.id, (targetClient) => {
                 handleProtocol.updateHP(target.hp, targetClient);
                 handleProtocol.console(
@@ -1355,6 +1393,10 @@ function getRecentAggressorTarget(npc: NpcCharacter, visibleUsers: EntityId[]) {
         return;
     }
 
+    if (require("./clanCastles").isProtectedByCastle(user, npc.map)) {
+        return;
+    }
+
     return user;
 }
 
@@ -1377,6 +1419,10 @@ function selectNpcTarget(npc: NpcCharacter, targetPressure: Map<EntityId, number
 
         if (!user || user.cerrado || user.map !== npc.map || user.hp <= 0 || isInvisibleToNpc(user)) {
             removeUserFromNpcArea(npc.id, idUser);
+            continue;
+        }
+
+        if (require("./clanCastles").isProtectedByCastle(user, npc.map)) {
             continue;
         }
 
@@ -2238,6 +2284,7 @@ function Npcs(this: NpcsApi) {
     this.muereNpc = function (idNpc: EntityId) {
         try {
             const npc = getNpc(idNpc);
+            require("./bloodCastle").onNpcDied(Number(npc?.templateNpcIndex ?? 0));
 
             if (isSummonedNpc(npc)) {
                 despawnSummon(npc);
@@ -2535,7 +2582,7 @@ function Npcs(this: NpcsApi) {
                         dmg = 1;
                     }
 
-                    user.hp -= dmg;
+                    dmg = applyIncomingHit(user, dmg, "melee");
                     user.lastCombatActivityAt = Date.now();
                     emitCharacterFxToUserArea(idUser, COMBAT_HIT_FX_ID);
                     withUserClient(idUser, (userClient) => {
@@ -2676,6 +2723,7 @@ function Npcs(this: NpcsApi) {
 
                     if (rechazo) {
                         emitCharacterFxToUserArea(idUser, COMBAT_SHIELD_BLOCK_FX_ID);
+                        emitCharacterSwingToUserArea(idUser, CHARACTER_SWING_SHIELD);
                         withUserClient(idUser, (userClient) => {
                             handleProtocol.console("¡Has bloqueado el golpe con el escudo!", "red", 1, 0, userClient);
                         });
@@ -2707,6 +2755,7 @@ function Npcs(this: NpcsApi) {
 
                 if (user.meditar) {
                     user.meditar = false;
+                    user.meditarFx = 0;
                     withUserClient(idUser, (userClient) => {
                         handleProtocol.console("Terminas de meditar.", "white", 0, 0, userClient);
                     });

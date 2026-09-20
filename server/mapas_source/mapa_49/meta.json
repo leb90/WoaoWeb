@@ -1,1 +1,1 @@
-{"id":49,"name":"Mapa de GMs.","musicNum":10,"magiaSinEfecto":0,"noEncriptarMp":0,"terreno":"BOSQUE","zona":"DUNGEON","restringir":"GM","maxLevel":0,"backup":1,"pk":0}
+{"id":49,"name":"GM","musicNum":99,"magiaSinEfecto":0,"noEncriptarMp":0,"terreno":"","zona":"","restringir":"","minLevel":0,"maxLevel":0,"backup":0,"pk":1}

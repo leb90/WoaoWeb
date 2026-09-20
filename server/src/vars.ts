@@ -55,19 +55,19 @@ function Vars(this: any) {
             fuerzaAgilidadBuffMs: 90000,
             invisibilitySpellMs: 20000,
             hiddenSkillMs: 15000,
-            npcAttackMs: 2000,
+            npcAttackMs: 2300,
         },
         actionCooldowns: {
             dialogMs: 500,
             clickMs: 150,
             doorToggleMs: 250,
-            meleeMs: 950,
-            rangeMs: 950,
-            spellMs: 850,
-            meleeToSpellMs: 800,
-            spellToMeleeMs: 800,
-            useItemMs: 250,
-            meleeToUseItemMs: 550,
+            meleeMs: 650,
+            rangeMs: 450,
+            spellMs: 560,
+            meleeToSpellMs: 0,
+            spellToMeleeMs: 0,
+            useItemMs: 50,
+            meleeToUseItemMs: 0,
             dropItemMs: 150,
             equipToggleMs: 125,
             hiddenSkillMs: 150,
@@ -115,11 +115,8 @@ function Vars(this: any) {
     };
 
     this.meditacion = {
-        chica: 4,
-        mediana: 5,
-        grande: 6,
-        xgrande: 16,
-        xxgrande: 34,
+        orbitalAzul: 18,
+        orbitalRojo: 21,
     };
 
     this.multiplicadorExp = 5;
@@ -131,10 +128,21 @@ function Vars(this: any) {
         clerigo: 2,
         guerrero: 3,
         asesino: 4,
+        ladron: 5,
         bardo: 6,
         druida: 7,
         paladin: 8,
         cazador: 9,
+        bandido: 12,
+        pescador: 13,
+        herrero: 14,
+        lenador: 15,
+        minero: 16,
+        carpintero: 17,
+        pirata: 18,
+        ermitano: 19,
+        arquero: 20,
+        domador: 21,
     };
 
     this.nameClases = [];
@@ -146,6 +154,17 @@ function Vars(this: any) {
     this.nameClases[this.clases.druida] = "Druida";
     this.nameClases[this.clases.paladin] = "Paladín";
     this.nameClases[this.clases.cazador] = "Cazador";
+    this.nameClases[this.clases.ladron] = "Ladrón";
+    this.nameClases[this.clases.bandido] = "Bandido";
+    this.nameClases[this.clases.pescador] = "Pescador";
+    this.nameClases[this.clases.herrero] = "Herrero";
+    this.nameClases[this.clases.lenador] = "Leñador";
+    this.nameClases[this.clases.minero] = "Minero";
+    this.nameClases[this.clases.carpintero] = "Carpintero";
+    this.nameClases[this.clases.pirata] = "Pirata";
+    this.nameClases[this.clases.ermitano] = "Ermitaño";
+    this.nameClases[this.clases.arquero] = "Arquero";
+    this.nameClases[this.clases.domador] = "Domador";
 
     this.genero = {
         hombre: 1,
@@ -158,6 +177,13 @@ function Vars(this: any) {
         elfoDrow: 3,
         enano: 4,
         gnomo: 5,
+        orco: 6,
+        vampiro: 7,
+        abisario: 8,
+        goblin: 9,
+        tauros: 10,
+        licantropo: 11,
+        nomuerto: 12,
     };
 
     this.nameRazas = [];
@@ -166,6 +192,13 @@ function Vars(this: any) {
     this.nameRazas[this.razas.elfoDrow] = "Elfo Drow";
     this.nameRazas[this.razas.enano] = "Enano";
     this.nameRazas[this.razas.gnomo] = "Gnomo";
+    this.nameRazas[this.razas.orco] = "Orco";
+    this.nameRazas[this.razas.vampiro] = "Vampiro";
+    this.nameRazas[this.razas.abisario] = "Abisario";
+    this.nameRazas[this.razas.goblin] = "Goblin";
+    this.nameRazas[this.razas.tauros] = "Tauros";
+    this.nameRazas[this.razas.licantropo] = "Licantropo";
+    this.nameRazas[this.razas.nomuerto] = "No-Muerto";
 
     applyBalanceDataToVars(this, createDefaultBalanceData());
 
@@ -182,6 +215,11 @@ function Vars(this: any) {
         sacerdoteNewbie: 9,
         comerciante: 10,
         subastador: 12,
+        viajero: 43,
+        reyCastillo: 33,
+        defensorFortaleza: 61,
+        ettinCastillo: 77,
+        puertaCastillo: 78,
     };
 
     this.typePociones = {
@@ -225,6 +263,7 @@ function Vars(this: any) {
         flores: 30,
         barcos: 31,
         flechas: 32,
+        mascotas: 60,
         botellasVacias: 33,
         botellasLlenas: 34,
         manchas: 35,
@@ -604,6 +643,8 @@ function Vars(this: any) {
         SND_GRILLO2: 29,
         SND_SACARARMA: 25,
         SND_ESCUDO: 37,
+        SND_IMPACTO_ARROW: 203,
+        SND_COMIDA: 7,
         SND_BEBER: 46,
     };
 

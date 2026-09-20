@@ -23,7 +23,6 @@ type UseKeyboardGameplayOptions = {
     canProcessMovementInput: () => boolean;
     clearMovementInputState: (engine?: Engine | null) => void;
     clearTargetingMode: () => void;
-    hasEquippedMeleeWeapon: () => boolean;
     hasEquippedRangedWeapon: () => boolean;
     recordClientGameAction: (
         action: string,
@@ -49,7 +48,6 @@ export function useKeyboardGameplay({
     canProcessMovementInput,
     clearMovementInputState,
     clearTargetingMode,
-    hasEquippedMeleeWeapon,
     hasEquippedRangedWeapon,
     recordClientGameAction,
     resolveBlockedGameplayKeyboardReason,
@@ -196,18 +194,14 @@ export function useKeyboardGameplay({
             }
 
             if (isHotkeyMatch(e, settings.attackOrTarget) && !e.repeat) {
-                if (hasEquippedMeleeWeapon()) {
-                    activeEngine?.sendMeleeAttackPacket?.();
-                    e.preventDefault();
-                    return;
-                }
-
                 if (hasEquippedRangedWeapon()) {
                     setTargetingMode({ type: "range" });
                     e.preventDefault();
                     return;
                 }
 
+                activeEngine?.sendMeleeAttackPacket?.();
+                e.preventDefault();
                 return;
             }
 
@@ -329,7 +323,6 @@ export function useKeyboardGameplay({
         clearMovementInputState,
         clearTargetingMode,
         engineRef,
-        hasEquippedMeleeWeapon,
         hasEquippedRangedWeapon,
         hotkeySettingsRef,
         isMounted,

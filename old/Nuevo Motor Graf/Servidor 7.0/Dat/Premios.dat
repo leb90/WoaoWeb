@@ -1,0 +1,603 @@
+[INIT]
+NumPremios=43
+
+[PREMIO1]
+Nombre=Túnica Desterrada(Druida)(Alto/as)
+NumObj=1342
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=20
+DefensaMaxima=30
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=30
+DefensaMagicaMaxima=30
+Descripcion=Habilidad Especial: +200 Mana.
+
+[PREMIO2]
+Nombre=Túnica Desterrada(Druida)(Bajo/as)
+NumObj=1344
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=20
+DefensaMaxima=30
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=30
+DefensaMagicaMaxima=30
+Descripcion=(BAJOS) Habilidad Especial: +200 Mana. 
+
+[PREMIO3]
+Nombre=Corona de Plumas(DRUIDA)
+NumObj=1356
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=20
+DefensaMaxima=25
+AtaqueMagicoMinimo=22
+AtaqueMagicoMaximo=22
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Corona proveniente de bosques elficos sagrados.
+
+[PREMIO4]
+Nombre=Anillo Naturaleza(DRUIDA)
+NumObj=1358
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=20
+AtaqueMagicoMaximo=20
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Anillo proveniente de bosques elficos sagrados.
+
+[PREMIO5]
+Nombre=Báculo Desterrado(DRUIDA)
+NumObj=1374
+Requiere=650
+AtaqueMinimo=6
+AtaqueMaximo=10
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=37
+AtaqueMagicoMaximo=37
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Báculo proveniente de bosques elficos sagrados.
+
+[PREMIO6]
+Nombre=Túnica Desterrada(Mago)(Alto/as)
+NumObj=1341
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=20
+DefensaMaxima=30
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=30
+DefensaMagicaMaxima=30
+Descripcion=Habilidad Especial: +300 Mana.
+
+[PREMIO7]
+Nombre=Túnica Desterrada(Mago)(Bajos)
+NumObj=1343
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=20
+DefensaMaxima=30
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=30
+DefensaMagicaMaxima=30
+Descripcion=(BAJOS) Habilidad Especial: +300 Mana.
+
+[PREMIO8]
+Nombre=Capucha Mágica(MAGO)
+NumObj=1355
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=20
+DefensaMaxima=25
+AtaqueMagicoMinimo=22
+AtaqueMagicoMaximo=22
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Esta capucha fue creada por los mejores magos de World of AO.
+
+[PREMIO9]
+Nombre=Anillo Mágico(MAGO)
+NumObj=1357
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=22
+AtaqueMagicoMaximo=22
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Anillo cercano al poder mágico de un dios.
+
+[PREMIO10]
+Nombre=Báculo Desterrado(MAGO)
+NumObj=1373
+Requiere=650
+AtaqueMinimo=4
+AtaqueMaximo=6
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=37
+AtaqueMagicoMaximo=37
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+
+[PREMIO11]
+Nombre=Armadura del Caido(PALADIN)(Altos)
+NumObj=1348
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=20
+DefensaMaxima=30
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=30
+DefensaMagicaMaxima=30
+Descripcion=Habilidad Especial: +5 Fuerza
+
+[PREMIO12]
+Nombre=Armadura del Caido(PALADIN)(Bajos)
+NumObj=1353
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=20
+DefensaMaxima=30
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=30
+DefensaMagicaMaxima=30
+Descripcion=(BAJOS) Habilidad Especial: +5 Fuerza
+
+[PREMIO13]
+Nombre=Escudo del Caído(PALADIN)
+NumObj=1360
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=12
+DefensaMaxima=22
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Habilidad Especial: +2 Fuerza
+
+[PREMIO14]
+Nombre=Casco del Caído(PALADIN)
+NumObj=1365
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=12
+DefensaMaxima=22
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Habilidad Especial: +200 Mana
+
+[PREMIO15]
+Nombre=Espada del Caído(PALADIN)
+NumObj=1372
+Requiere=650
+AtaqueMinimo=32
+AtaqueMaximo=36
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Habilidad Especial: +2 Fuerza
+
+[PREMIO16]
+Nombre=Armadura del Caido(CLERIGO)(Altos)
+NumObj=1345
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=20
+DefensaMaxima=30
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=30
+DefensaMagicaMaxima=30
+Descripcion=Habilidad Especial: +3 Fuerza
+
+[PREMIO17]
+Nombre=Armadura del Caido(CLERIGO)(BAJOS)
+NumObj=1350
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=20
+DefensaMaxima=30
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=30
+DefensaMagicaMaxima=30
+Descripcion=(BAJOS) Habilidad Especial: +3 Fuerza
+
+[PREMIO18]
+Nombre=Escudo del Caído(CLERIGO)
+NumObj=1359
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=12
+DefensaMaxima=22
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Habilidad Especial: +2 Fuerza
+
+[PREMIO19]
+Nombre=Casco del Caído(CLERIGO)
+NumObj=1364
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=12
+DefensaMaxima=22
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Habilidad Especial: +2 Agilidad
+
+[PREMIO20]
+Nombre=Espada del Caído(CLERIGO)
+NumObj=1371
+Requiere=650
+AtaqueMinimo=31
+AtaqueMaximo=34
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Habilidad Especial: +2 Fuerza
+
+[PREMIO21]
+Nombre=Escudo del Caído(ARQ/CAZ)
+NumObj=1363
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=12
+DefensaMaxima=22
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Habilidad Especial: +2 Fuerza
+
+[PREMIO22]
+Nombre=Casco del Caído(ARQ/CAZ)
+NumObj=1368
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=12
+DefensaMaxima=22
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Habilidad Especial: +2 Agilidad
+
+[PREMIO23]
+Nombre=Armadura Caid.(ARQ/CAZ)(Altos)
+NumObj=1349
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=20
+DefensaMaxima=30
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=30
+DefensaMagicaMaxima=30
+Descripcion=Habilidad Especial: +3 Fuerza
+
+[PREMIO24]
+Nombre=Armadura Caid.(ARQ/CAZ)(Bajos)
+NumObj=1354
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=20
+DefensaMaxima=30
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=30
+DefensaMagicaMaxima=30
+Descripcion=(BAJOS) Habilidad Especial: +3 Fuerza
+
+[PREMIO25]
+Nombre=Arco Desterrado(ARQ/CAZ)
+NumObj=1052
+Requiere=650
+AtaqueMinimo=8
+AtaqueMaximo=15
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Habilidad Especial: Ahorra 33% Flechas
+
+[PREMIO26]
+Nombre=Armadura Desterrado(Asesino)
+NumObj=1181
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=20
+DefensaMaxima=30
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=30
+DefensaMagicaMaxima=30
+Descripcion=Habilidad Especial: +3 Fuerza
+
+[PREMIO27]
+Nombre=Armadura Desterrado(Asesino)(Bajos)
+NumObj=196
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=20
+DefensaMaxima=30
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=30
+DefensaMagicaMaxima=30
+Descripcion=(BAJOS) Habilidad Especial: +3 Fuerza
+
+[PREMIO28]
+Nombre=Escudo Desterrado(Asesino)
+NumObj=1256
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=12
+DefensaMaxima=22
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Habilidad Especial: +2 Fuerza
+
+[PREMIO29]
+Nombre=Casco Desterrado(Asesino)
+NumObj=1159
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=12
+DefensaMaxima=18
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Habilidad Especial: +2 Agilidad
+
+[PREMIO30]
+Nombre=Puñal Desterrado(Asesino)
+NumObj=1054
+Requiere=650
+AtaqueMinimo=17
+AtaqueMaximo=19
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Habilidad Especial: +3 Fuerza
+
+[PREMIO31]
+Nombre=Armadura Cai.(GUER/PIR)(Bajos)
+NumObj=1352
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=20
+DefensaMaxima=30
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=30
+DefensaMagicaMaxima=30
+Descripcion=(BAJOS) Habilidad Especial: +5 Fuerza
+
+[PREMIO32]
+Nombre=Armadura Cai.(GUER/PIR)(Altos)
+NumObj=1347
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=20
+DefensaMaxima=30
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=30
+DefensaMagicaMaxima=30
+Descripcion=Habilidad Especial: +5 Fuerza
+
+[PREMIO33]
+Nombre=Escudo del Caído(GUER/PIR)
+NumObj=1362
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=16
+DefensaMaxima=26
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Habilidad Especial: +5 Fuerza
+
+[PREMIO34]
+Nombre=Casco del Caído(GUER/PIR)
+NumObj=1367
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=16
+DefensaMaxima=26
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Habilidad Especial: +5 Agilidad
+
+[PREMIO35]
+Nombre=Espada del Caído(GUER/PIR)
+NumObj=1369
+Requiere=650
+AtaqueMinimo=34
+AtaqueMaximo=45
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Habilidad Especial: +3 Fuerza
+
+[PREMIO36]
+Nombre=Lanza Desterrada(Bardo)
+NumObj=1087
+Requiere=650
+AtaqueMinimo=30
+AtaqueMaximo=37
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Es la arma mas filosa de World of AO.
+
+[PREMIO37]
+Nombre=Armadura del Caido(BARDO)(Altos)
+NumObj=1346
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=20
+DefensaMaxima=30
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=30
+DefensaMagicaMaxima=30
+Descripcion=Habilidad Especial: +3 Fuerza
+
+[PREMIO38]
+Nombre=Armadura del Caido(BARDO)(BAJOS)
+NumObj=1351
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=20
+DefensaMaxima=30
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=30
+DefensaMagicaMaxima=30
+Descripcion=(BAJOS) Habilidad Especial: +3 Fuerza
+
+[PREMIO39]
+Nombre=Escudo del Caído(BARDO)
+NumObj=1361
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=12
+DefensaMaxima=22
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Habilidad Especial: +2 Agilidad
+
+[PREMIO40]
+Nombre=Casco del Caído(BARDO)
+NumObj=1366
+Requiere=650
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=16
+DefensaMaxima=26
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Casco perfecto para emitir melodías.
+
+[PREMIO41]
+Nombre=Guardian de Tierra(5% Exp)
+NumObj=1375
+Requiere=2000
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=3
+DefensaMaxima=5
+AtaqueMagicoMinimo=2
+AtaqueMagicoMaximo=2
+DefensaMagicaMinima=2
+DefensaMagicaMaxima=2
+Descripcion=Caidas del cielo (Brindan 15% de experiencia extra).
+
+[PREMIO42]
+Nombre=Amuleto de Salvacion
+NumObj=1385
+Requiere=200
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Este amuleto salvará tus items al morir y se sacrifica por ellos.
+
+[PREMIO43]
+Nombre=Capa Hobbit
+NumObj=1015
+Requiere=100
+AtaqueMinimo=0
+AtaqueMaximo=0
+DefensaMinima=0
+DefensaMaxima=0
+AtaqueMagicoMinimo=0
+AtaqueMagicoMaximo=0
+DefensaMagicaMinima=0
+DefensaMagicaMaxima=0
+Descripcion=Usala para hacerte invisible.

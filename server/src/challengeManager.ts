@@ -818,6 +818,7 @@ const challengeManager = {
         game.setSpellInvisibility(user.id, false);
         restoreEquipment(user, matchParticipant.equipment);
         user.meditar = false;
+        user.meditarFx = 0;
         user.navegando = 0;
         user.hiddenSkill = false;
         user.hiddenSkillStartedAt = 0;

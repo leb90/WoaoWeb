@@ -38,6 +38,8 @@ type MacroBarProps = {
     onRangeAttackRequest: () => void;
     onCastSpell: (spell: SpellEntry) => void;
     onSendCommand: (command: string) => void;
+    compact?: boolean;
+    hidden?: boolean;
 };
 
 function ItemGraphic({
@@ -154,6 +156,8 @@ export default function MacroBar({
     onRangeAttackRequest,
     onCastSpell,
     onSendCommand,
+    compact = false,
+    hidden = false,
 }: MacroBarProps) {
     const items = React.useMemo(
         () => (hud?.inventory ?? []).slice().sort((a, b) => a.slot - b.slot),
@@ -659,10 +663,18 @@ export default function MacroBar({
             ? graphicsDB?.[draftItem.grhIndex.toString()]
             : undefined;
 
+    if (hidden) {
+        return null;
+    }
+
     return (
         <div
             ref={rootRef}
-            className="relative pointer-events-auto mx-auto w-[90%] rounded-[22px] border border-[#6d5336] bg-[linear-gradient(180deg,rgba(45,30,20,0.96),rgba(19,13,10,0.98))] px-2 py-1.5 shadow-[0_20px_45px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,220,180,0.08)]"
+            className={
+                compact
+                    ? "relative pointer-events-auto h-full w-full bg-transparent px-0 py-0"
+                    : "relative pointer-events-auto mx-auto w-full rounded-md border border-[#6d5336] bg-[linear-gradient(180deg,rgba(45,30,20,0.96),rgba(19,13,10,0.98))] px-2 py-1.5 shadow-[0_20px_45px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,220,180,0.08)]"
+            }
         >
             <div className="grid grid-cols-8 gap-1">
                 {macros.map((macro, index) => {

@@ -1,5 +1,11 @@
 export {};
-import { getFactionColor, getFactionRankTitle, getMaxEligibleFactionRank, type CharacterFaction } from "./factions";
+import {
+    getFactionColor,
+    getFactionDisplayName,
+    getFactionRankTitle,
+    getMaxEligibleFactionRank,
+    type CharacterFaction,
+} from "./factions";
 import type {
     DataObject,
     EntityId,
@@ -15,8 +21,13 @@ import type { LoginApi } from "./login";
 import type { PackageApi } from "./package";
 import type { SocketApi } from "./socket";
 import { getCharacterById, getClientById } from "./runtimeRegistry";
+import { applyElfManaRestore, getSpellManaCost } from "./racialPassives";
 
 const game = require("./game");
+const itemKinds = require("./itemKinds") as {
+    isHelmetObject: (obj: DataObject | null | undefined) => boolean;
+    getEquipObjectType: (obj: DataObject | null | undefined) => number;
+};
 const login = require("./login") as LoginApi;
 const socket = require("./socket") as SocketApi;
 const funct = require("./functions");
@@ -44,18 +55,6 @@ const MARKET_NOTICE_COOLDOWN_MS = 3000;
 
 function normalizeFaction(value: unknown): CharacterFaction {
     return value === "armada" || value === "caos" ? value : "none";
-}
-
-function getFactionDisplayName(faction: CharacterFaction): string {
-    if (faction === "armada") {
-        return "Armada";
-    }
-
-    if (faction === "caos") {
-        return "Caos";
-    }
-
-    return "Sin faccion";
 }
 
 function isActionRateLimited(
@@ -120,8 +119,13 @@ function isSupportSpell(datSpell: Record<string, unknown> | undefined): boolean 
             Number(datSpell.revivir ?? 0) === 1 ||
             datSpell.removerParalisis ||
             datSpell.invisibilidad ||
-            datSpell.subeAg ||
-            datSpell.subeFz),
+            datSpell.curaVeneno ||
+            Number(datSpell.subeAg ?? 0) === 1 ||
+            Number(datSpell.subeFz ?? 0) === 1 ||
+            Number(datSpell.subeMana ?? 0) === 1 ||
+            Number(datSpell.subeHam ?? 0) === 1 ||
+            Number(datSpell.subeSed ?? 0) === 1 ||
+            Number(datSpell.protec ?? 0) > 0),
     );
 }
 
@@ -153,14 +157,6 @@ function getChallengeManager() {
     return require("./challengeManager") as {
         isCharacterInActiveMatch: (user: RuntimeCharacter | undefined) => boolean;
     };
-}
-
-function getSimulatedSkill(user: RuntimeCharacter) {
-    return Math.min(100, Number(user.level ?? 0) * 3);
-}
-
-function getRequiredLevelForSpell(minSkill: number | undefined) {
-    return Math.ceil(Math.max(0, Number(minSkill ?? 0)) / 3);
 }
 
 function getNewbieLabel(user: Pick<RuntimeCharacter, "level"> | undefined) {
@@ -440,6 +436,81 @@ function withClientFlushGroups<T>(clients: RuntimeClient[], callback: () => T): 
     }
 }
 
+const CHARACTER_SWING_WEAPON = 1;
+const CHARACTER_SWING_SHIELD = 2;
+
+function getCharacterSwingFlags(user: { idItemShield?: number | string | null }) {
+    return user.idItemShield ? CHARACTER_SWING_WEAPON | CHARACTER_SWING_SHIELD : CHARACTER_SWING_WEAPON;
+}
+
+function sendCharacterSwingToViewers(
+    ws: RuntimeClient,
+    attackerId: EntityId,
+    flags: number,
+) {
+    if (!flags) {
+        return;
+    }
+
+    const sentClientIds = new Set<number>();
+    const sendToViewer = (viewerId: EntityId, targetClient: RuntimeClient) => {
+        const numericViewerId = Number(viewerId);
+        if (sentClientIds.has(numericViewerId)) {
+            return;
+        }
+
+        if (!canReceiveCharacterEvent(viewerId, attackerId)) {
+            return;
+        }
+
+        sentClientIds.add(numericViewerId);
+        handleProtocol.characterSwing(attackerId, flags, targetClient);
+    };
+
+    sendToViewer(attackerId, ws);
+
+    game.loopArea(ws, function (target: AreaTarget) {
+        if (target.isNpc) {
+            return;
+        }
+
+        withTargetClient(target.id, (targetClient) => {
+            sendToViewer(target.id, targetClient);
+        });
+    });
+}
+
+function emitMeleeAirSwing(ws: RuntimeClient, attackerId: EntityId, user: { idItemShield?: number | string | null }) {
+    sendCharacterSwingToViewers(ws, attackerId, getCharacterSwingFlags(user));
+
+    const sentClientIds = new Set<number>();
+    const playSwingSound = (viewerId: EntityId, targetClient: RuntimeClient) => {
+        const numericViewerId = Number(viewerId);
+        if (sentClientIds.has(numericViewerId)) {
+            return;
+        }
+
+        if (!canReceiveCharacterEvent(viewerId, attackerId)) {
+            return;
+        }
+
+        sentClientIds.add(numericViewerId);
+        handleProtocol.playSound(attackerId, vars.arSounds.SND_SWING, targetClient);
+    };
+
+    playSwingSound(attackerId, ws);
+
+    game.loopArea(ws, function (target: AreaTarget) {
+        if (target.isNpc) {
+            return;
+        }
+
+        withTargetClient(target.id, (targetClient) => {
+            playSwingSound(target.id, targetClient);
+        });
+    });
+}
+
 function sendProjectileToCombatViewers(
     ws: RuntimeClient,
     attackerId: EntityId,
@@ -612,7 +683,44 @@ function resolveOwnSummonCombatRedirect(ownerId: EntityId, target: AreaTarget | 
 }
 
 function isHostileCombatSpell(datSpell: Record<string, unknown> | undefined) {
-    return Boolean(datSpell && (datSpell.paraliza || datSpell.inmoviliza || datSpell.subeHp === 2));
+    if (!datSpell) {
+        return false;
+    }
+
+    const subeHp = Number(datSpell.subeHp ?? 0);
+    const name = String(datSpell.name ?? "").toLowerCase();
+
+    return Boolean(
+        datSpell.paraliza ||
+            datSpell.inmoviliza ||
+            datSpell.paralizaarea ||
+            datSpell.envenena ||
+            datSpell.ceguera ||
+            datSpell.estupidez ||
+            subeHp === 2 ||
+            subeHp === 3 ||
+            subeHp === 4 ||
+            Number(datSpell.subeAg ?? 0) === 2 ||
+            Number(datSpell.subeFz ?? 0) === 2 ||
+            Number(datSpell.subeHam ?? 0) === 2 ||
+            Number(datSpell.subeSed ?? 0) === 2 ||
+            Number(datSpell.subeMana ?? 0) === 2 ||
+            name === "remover invisibilidad",
+    );
+}
+
+function blockFriendlyFire(ws: RuntimeClient, attackerId: EntityId, target: { isNpc?: boolean; id?: EntityId } | undefined) {
+    if (!target || target.isNpc || !target.id) {
+        return false;
+    }
+
+    const reason = game.getFriendlyFireBlockReason(attackerId, target.id);
+    if (!reason) {
+        return false;
+    }
+
+    handleProtocol.console(reason, "white", 0, 0, ws);
+    return true;
 }
 
 function isHealingSpell(datSpell: Record<string, unknown> | undefined) {
@@ -633,7 +741,15 @@ function isReviveSpell(datSpell: Record<string, unknown> | undefined) {
 
 function isSelfTargetFallbackEligibleSpell(datSpell: Record<string, unknown> | undefined) {
     return Boolean(
-        datSpell && (datSpell.removerParalisis || datSpell.invisibilidad || datSpell.subeAg || datSpell.subeFz),
+        datSpell &&
+            (datSpell.removerParalisis ||
+                datSpell.invisibilidad ||
+                datSpell.curaVeneno ||
+                datSpell.subeAg ||
+                datSpell.subeFz ||
+                datSpell.subeMana ||
+                Number(datSpell.subeHp ?? 0) === 1 ||
+                Number(datSpell.protec ?? 0) > 0),
     );
 }
 
@@ -1087,6 +1203,7 @@ function stopMeditation(ws: RuntimeClient, user: RuntimeCharacter) {
     }
 
     user.meditar = false;
+    user.meditarFx = 0;
 
     handleProtocol.console("Terminas de meditar.", "white", 0, 0, ws);
 
@@ -2062,6 +2179,7 @@ function processUserMovement(ws: RuntimeClient, heading: number, moveId: number,
     }
 
     cancelPendingLogout(user, ws, LOGOUT_CANCELLED_MESSAGE);
+    require("./tileEvents").onWalk(String(ws.id));
 
     syncSafeZoneState(ws, user);
 
@@ -2433,8 +2551,26 @@ function eventClick(ws: RuntimeClient) {
                 return;
             }
 
+            if (selectedNpc) {
+                user.targetNpcId = selectedId;
+            }
+
             if (selectedNpc?.desc) {
                 handleProtocol.dialog(selectedId, selectedNpc.desc, "", "white", 0, ws);
+            }
+
+            if (selectedNpc && require("./quests").getNpcQuestNumber(selectedNpc) && !user.dead) {
+                const npcTmp = vars.npcs[selectedId];
+                if (!isOriginalNpcInteractionOutOfRange(user, npcTmp, 5)) {
+                    require("./quests").handleQuest(String(ws.id));
+                }
+            }
+
+            if (selectedNpc && selectedNpc.npcType === vars.npcType.viajero && !user.dead) {
+                const npcTmp = vars.npcs[selectedId];
+                if (!isOriginalNpcInteractionOutOfRange(user, npcTmp, 5)) {
+                    require("./fastTravel").listRoutes(String(ws.id));
+                }
             }
 
             if (
@@ -2824,14 +2960,20 @@ function equiparItem(ws: RuntimeClient) {
             }
 
             if (
-                (item.razaEnana && !game.isRazaEnana(user.idRaza) && item.objType == vars.objType.armaduras) ||
-                (!item.razaEnana && game.isRazaEnana(user.idRaza) && item.objType == vars.objType.armaduras)
+                (item.razaEnana &&
+                    !game.isRazaEnana(user.idRaza) &&
+                    item.objType == vars.objType.armaduras &&
+                    !itemKinds.isHelmetObject(item)) ||
+                (!item.razaEnana &&
+                    game.isRazaEnana(user.idRaza) &&
+                    item.objType == vars.objType.armaduras &&
+                    !itemKinds.isHelmetObject(item))
             ) {
                 handleProtocol.console("Tu raza no puede equipar ese item.", "white", 0, 0, ws);
                 return;
             }
 
-            switch (item.objType) {
+            switch (itemKinds.getEquipObjectType(item)) {
                 case vars.objType.armaduras: //Ropa
                     const previousBodySlot = user.idItemBody;
 
@@ -3284,6 +3426,7 @@ function setCombatCooldowns(
     now: number,
     options: {
         meleeMs?: number;
+        rangeMs?: number;
         spellMs?: number;
         meleeToSpellMs?: number;
         spellToMeleeMs?: number;
@@ -3292,6 +3435,10 @@ function setCombatCooldowns(
 ) {
     if (typeof options.meleeMs === "number") {
         user.nextMeleeAt = Math.max(user.nextMeleeAt || 0, now + options.meleeMs);
+    }
+
+    if (typeof options.rangeMs === "number") {
+        user.nextRangeAt = Math.max(user.nextRangeAt || 0, now + options.rangeMs);
     }
 
     if (typeof options.spellMs === "number") {
@@ -3314,6 +3461,10 @@ function setCombatCooldowns(
 function clearExpiredCombatCooldowns(user: RuntimeCharacter, now: number) {
     if ((user.nextMeleeAt ?? 0) > 0 && now >= (user.nextMeleeAt ?? 0)) {
         user.nextMeleeAt = 0;
+    }
+
+    if ((user.nextRangeAt ?? 0) > 0 && now >= (user.nextRangeAt ?? 0)) {
+        user.nextRangeAt = 0;
     }
 
     if ((user.nextSpellAt ?? 0) > 0 && now >= (user.nextSpellAt ?? 0)) {
@@ -3395,6 +3546,10 @@ function attackMele(ws: RuntimeClient) {
             meleeToUseItemMs: vars.timing.actionCooldowns.meleeToUseItemMs,
         });
 
+        if (!game.consumeAttackStamina(user, ws, 5, 5)) {
+            return;
+        }
+
         if (!canKeepHiddenSkillWhileActing(user)) {
             stopHiddenSkill(ws, user, getHiddenSkillAfterHitCooldownMs());
         }
@@ -3425,6 +3580,7 @@ function attackMele(ws: RuntimeClient) {
         }
 
         if (!targetTile || !recibe) {
+            emitMeleeAirSwing(ws, clientId, user);
             return;
         }
 
@@ -3435,6 +3591,7 @@ function attackMele(ws: RuntimeClient) {
         }
 
         if (!pjSelected) {
+            emitMeleeAirSwing(ws, clientId, user);
             return;
         }
 
@@ -3446,6 +3603,7 @@ function attackMele(ws: RuntimeClient) {
             isInvisibleAdmin(combatTarget as RuntimeCharacter) &&
             combatTarget.id !== clientId
         ) {
+            emitMeleeAirSwing(ws, clientId, user);
             return;
         }
 
@@ -3455,12 +3613,12 @@ function attackMele(ws: RuntimeClient) {
         }
 
         if (combatTarget.dead) {
-            handleProtocol.console("No puedes atacar a un usuario muerto.", "white", 0, 0, ws);
+            emitMeleeAirSwing(ws, clientId, user);
             return;
         }
 
         if (isNonAttackableNpcTarget(combatTarget)) {
-            handleProtocol.console("No puedes atacar a ese NPC.", "white", 0, 0, ws);
+            emitMeleeAirSwing(ws, clientId, user);
             return;
         }
 
@@ -3469,53 +3627,62 @@ function attackMele(ws: RuntimeClient) {
             return;
         }
 
+        if (blockFriendlyFire(ws, clientId, combatTarget)) {
+            emitMeleeAirSwing(ws, clientId, user);
+            return;
+        }
+
         const resolvedTarget = combatTarget as any;
 
-        if (resolvedTarget.hp > 0) {
-            const flushGroupClients = collectCombatFlushGroupClients(ws, {
-                extraClientIds: [
-                    resolvedTarget.isNpc
-                        ? (resolvedTarget.summonedByUserId as EntityId | undefined)
-                        : resolvedTarget.id,
-                ],
-            });
-
-            withClientFlushGroups(flushGroupClients, () => {
-                user.lastCombatActivityAt = now;
-
-                let dmg: number | string = 0;
-
-                if (!resolvedTarget.isNpc) {
-                    game.clearSummonTargetNpc(ws.id);
-                }
-
-                if (resolvedTarget.isNpc) {
-                    dmg = game.userDmgNpc(ws.id, resolvedTarget.id);
-                } else {
-                    dmg = game.userDmgUser(ws.id, resolvedTarget.id);
-                }
-
-                if (dmg) {
-                    game.loopArea(ws, function (target: AreaTarget) {
-                        if (!target.isNpc) {
-                            withTargetClient(target.id, (targetClient) => {
-                                if (!canReceiveCharacterEvent(target.id, ws.id)) {
-                                    return;
-                                }
-
-                                handleProtocol.dialog(ws.id, "" + dmg, "", "red", 0, targetClient);
-                            });
-                        }
-                    });
-
-                    if (resolvedTarget.isNpc && dmg !== "¡Fallas!") {
-                        game.setSummonTargetNpc(ws.id, resolvedTarget.id);
-                    }
-
-                    respawn.muere(ws, resolvedTarget.id);
-                }
-            });
+        if (!(resolvedTarget.hp > 0)) {
+            emitMeleeAirSwing(ws, clientId, user);
+            return;
         }
+
+        const flushGroupClients = collectCombatFlushGroupClients(ws, {
+            extraClientIds: [
+                resolvedTarget.isNpc
+                    ? (resolvedTarget.summonedByUserId as EntityId | undefined)
+                    : resolvedTarget.id,
+            ],
+        });
+
+        withClientFlushGroups(flushGroupClients, () => {
+            user.lastCombatActivityAt = now;
+            sendCharacterSwingToViewers(ws, clientId, getCharacterSwingFlags(user));
+
+            let dmg: number | string = 0;
+
+            if (!resolvedTarget.isNpc) {
+                game.clearSummonTargetNpc(ws.id);
+            }
+
+            if (resolvedTarget.isNpc) {
+                dmg = game.userDmgNpc(ws.id, resolvedTarget.id);
+            } else {
+                dmg = game.userDmgUser(ws.id, resolvedTarget.id);
+            }
+
+            if (dmg) {
+                game.loopArea(ws, function (target: AreaTarget) {
+                    if (!target.isNpc) {
+                        withTargetClient(target.id, (targetClient) => {
+                            if (!canReceiveCharacterEvent(target.id, ws.id)) {
+                                return;
+                            }
+
+                            handleProtocol.dialog(ws.id, "" + dmg, "", "red", 0, targetClient);
+                        });
+                    }
+                });
+
+                if (resolvedTarget.isNpc && dmg !== "¡Fallas!") {
+                    game.setSummonTargetNpc(ws.id, resolvedTarget.id);
+                }
+
+                respawn.muere(ws, resolvedTarget.id);
+            }
+        });
     } catch (err) {
         funct.dumpError(err);
     }
@@ -3586,20 +3753,19 @@ function attackRange(ws: RuntimeClient) {
         const now = Date.now();
         clearExpiredCombatCooldowns(user, now);
 
-        if (
-            (user.nextSpellAt ?? 0) > now ||
-            (user.nextSpellAfterMeleeAt ?? 0) > now ||
-            (user.nextMeleeAfterSpellAt ?? 0) > now
-        ) {
+        if ((user.nextRangeAt ?? 0) > now) {
             return;
         }
 
         cancelPendingLogout(user, ws, "[Servidor] La salida se canceló porque atacaste.");
 
         setCombatCooldowns(user, now, {
-            spellMs: vars.timing.actionCooldowns.rangeMs,
-            spellToMeleeMs: vars.timing.actionCooldowns.spellToMeleeMs,
+            rangeMs: vars.timing.actionCooldowns.rangeMs,
         });
+
+        if (!game.consumeAttackStamina(user, ws, 10, 10)) {
+            return;
+        }
 
         if (!pkg.canReadBytes(2)) {
             return;
@@ -3664,6 +3830,10 @@ function attackRange(ws: RuntimeClient) {
                 return;
             }
 
+            if (blockFriendlyFire(ws, clientId, combatTarget)) {
+                return;
+            }
+
             if (!combatTarget.isNpc && !canKeepHiddenSkillWhileActing(user)) {
                 stopHiddenSkill(ws, user, getHiddenSkillAfterHitCooldownMs());
             }
@@ -3686,6 +3856,7 @@ function attackRange(ws: RuntimeClient) {
 
                 withClientFlushGroups(flushGroupClients, () => {
                     user.lastCombatActivityAt = now;
+                    sendCharacterSwingToViewers(ws, clientId, getCharacterSwingFlags(user));
                     sendProjectileToCombatViewers(
                         ws,
                         clientId,
@@ -3814,9 +3985,9 @@ function attackSpell(ws: RuntimeClient) {
         const isPartialInvisibilityRemoval = isPartialInvisibilityRemovalSpell(datSpell);
         const reviveSpell = isReviveSpell(datSpell);
 
-        if (getSimulatedSkill(user) < Number(datSpell.minSkill ?? 0)) {
+        if (Number(user.level ?? 0) < Number(datSpell.minNivel ?? 0)) {
             handleProtocol.console(
-                "Necesitas ser nivel " + getRequiredLevelForSpell(datSpell.minSkill) + " para lanzar ese hechizo.",
+                "Necesitas nivel " + Number(datSpell.minNivel) + " para poder lanzar este hechizo.",
                 "white",
                 0,
                 0,
@@ -3825,7 +3996,8 @@ function attackSpell(ws: RuntimeClient) {
             return;
         }
 
-        if (user.mana < datSpell.manaRequired) {
+        const manaCost = getSpellManaCost(user, datSpell, Number(datSpell.manaRequired ?? 0));
+        if (user.mana < manaCost) {
             handleProtocol.console("No tienes mana suficiente para lanzar ese hechizo.", "white", 0, 0, ws);
             return;
         }
@@ -3873,15 +4045,24 @@ function attackSpell(ws: RuntimeClient) {
                 return;
             }
 
-            const summonId = npcs.spawnSummon(ws.id, idSpell, pos);
+            const summonCount = Math.max(1, Number(datSpell.cant ?? 1));
+            const summonedIds: EntityId[] = [];
 
-            if (!summonId) {
+            for (let i = 0; i < summonCount; i++) {
+                const summonId = npcs.spawnSummon(ws.id, idSpell, pos);
+                if (summonId) {
+                    summonedIds.push(summonId);
+                }
+            }
+
+            if (!summonedIds.length) {
                 handleProtocol.console("No hay una posición válida para invocar esa criatura.", "white", 0, 0, ws);
                 user.spellsErrados++;
                 return;
             }
 
-            user.mana -= datSpell.manaRequired;
+            user.mana -= manaCost;
+            applyElfManaRestore(user);
 
             game.loopArea(ws, function (client: AreaTarget) {
                 if (!client.isNpc) {
@@ -3890,11 +4071,13 @@ function attackSpell(ws: RuntimeClient) {
                             return;
                         }
 
-                        if (Number(datSpell.fxGrh ?? 0) > 0) {
-                            handleProtocol.animFX(summonId, datSpell.fxGrh, targetClient);
-                        }
+                        for (const summonId of summonedIds) {
+                            if (Number(datSpell.fxGrh ?? 0) > 0) {
+                                handleProtocol.animFX(summonId, datSpell.fxGrh, targetClient);
+                            }
 
-                        handleProtocol.playSound(summonId, datSpell.wav, targetClient);
+                            handleProtocol.playSound(summonId, datSpell.wav, targetClient);
+                        }
 
                         if (String(datSpell.palabrasMagicas ?? "").trim().length > 0) {
                             handleProtocol.dialog(ws.id, datSpell.palabrasMagicas, "", "#E69500", 0, targetClient);
@@ -3934,6 +4117,19 @@ function attackSpell(ws: RuntimeClient) {
                 ? (resolveOwnSummonCombatRedirect(clientId, pjSelected) ?? pjSelected)
                 : pjSelected;
             const targetCharacter = !spellTarget.isNpc ? (spellTarget as RuntimeCharacter) : null;
+            const spellTargetKind = Number(datSpell.target ?? 3);
+
+            if (spellTargetKind === 1 && spellTarget.isNpc) {
+                handleProtocol.console("Este hechizo actúa solo sobre usuarios.", "white", 0, 0, ws);
+                user.spellsErrados++;
+                return;
+            }
+
+            if (spellTargetKind === 2 && !spellTarget.isNpc) {
+                handleProtocol.console("Este hechizo solo afecta a los npcs.", "white", 0, 0, ws);
+                user.spellsErrados++;
+                return;
+            }
 
             if (
                 spellTarget &&
@@ -3989,6 +4185,10 @@ function attackSpell(ws: RuntimeClient) {
                 return;
             }
 
+            if (isHostileCombatSpell(datSpell) && blockFriendlyFire(ws, clientId, spellTarget)) {
+                return;
+            }
+
             if (isNonAttackableNpcTarget(spellTarget) && isHostileCombatSpell(datSpell)) {
                 handleProtocol.console("No puedes atacar a ese NPC.", "white", 0, 0, ws);
                 return;
@@ -4036,6 +4236,7 @@ function attackSpell(ws: RuntimeClient) {
             }
 
             if (dmg !== 0) {
+                const extraTargetIds = game.consumeSpellAreaTargets() as EntityId[];
                 const flushGroupClients = collectCombatFlushGroupClients(ws, {
                     includeTargetArea: {
                         mapId: user.map,
@@ -4043,16 +4244,30 @@ function attackSpell(ws: RuntimeClient) {
                     },
                     extraClientIds: [
                         spellTarget.isNpc ? (spellTarget.summonedByUserId as EntityId | undefined) : spellTarget.id,
+                        ...extraTargetIds,
                     ],
                 });
 
                 withClientFlushGroups(flushGroupClients, () => {
-                    user.mana -= datSpell.manaRequired;
+                    user.mana -= manaCost;
+                    applyElfManaRestore(user);
                     sendSpellImpactToAreaViewers(ws, clientId, spellTarget.id, {
                         fxGrh: datSpell.fxGrh,
                         soundId: datSpell.wav,
                         msg: datSpell.palabrasMagicas,
                     });
+
+                    for (const extraTargetId of extraTargetIds) {
+                        if (String(extraTargetId) === String(spellTarget.id)) {
+                            continue;
+                        }
+
+                        sendSpellImpactToAreaViewers(ws, clientId, extraTargetId, {
+                            fxGrh: datSpell.fxGrh,
+                            soundId: datSpell.wav,
+                        });
+                        respawn.muere(ws, extraTargetId);
+                    }
 
                     if (spellTarget.isNpc) {
                         game.setSummonTargetNpc(ws.id, spellTarget.id);
@@ -4061,6 +4276,8 @@ function attackSpell(ws: RuntimeClient) {
                     handleProtocol.updateMana(user.mana, ws);
                     respawn.muere(ws, spellTarget.id);
                 });
+            } else {
+                game.consumeSpellAreaTargets();
             }
 
             if (!spellTarget.isNpc) {
@@ -4087,7 +4304,13 @@ async function reorderSpell(ws: RuntimeClient) {
         const sourceSlot = pkg.getByte();
         const targetSlot = pkg.getByte();
 
-        if (sourceSlot === targetSlot) {
+        if (
+            sourceSlot < 1 ||
+            targetSlot < 1 ||
+            sourceSlot > 50 ||
+            targetSlot > 50 ||
+            sourceSlot === targetSlot
+        ) {
             return;
         }
 

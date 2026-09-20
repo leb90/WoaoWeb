@@ -37,7 +37,11 @@ import {
     loadSpellsDB,
     loadWeaponsDB,
 } from "../../../utils/gameLoader";
-import { type CharacterSnapshot } from "../../../lib/aowProtocol";
+import {
+    CHARACTER_SWING_SHIELD,
+    CHARACTER_SWING_WEAPON,
+    type CharacterSnapshot,
+} from "../../../lib/aowProtocol";
 import {
     DEFAULT_RUNTIME_TIMING,
     type RuntimeTimingConfig,
@@ -54,7 +58,7 @@ import {
     getHelmetSpritePosition,
     getNameLabelPosition,
     type BodyRenderMetrics,
-    updateAnimatedCharacterLayer,
+    syncCharacterLayerPlayback,
 } from "../rendering/characterLayout";
 import {
     CLAN_TAG_HIGHLIGHT_COLOR,
@@ -196,6 +200,8 @@ export interface Character {
     bodyAnimationStartedAt?: number;
     weaponAnimationStartedAt?: number;
     shieldAnimationStartedAt?: number;
+    equipmentAttackFlags?: number;
+    equipmentAttackStartedAt?: number;
     movementStartedAt?: number;
     movementDurationMs?: number;
     animationIdleStartedAt?: number;
@@ -257,11 +263,23 @@ function debugBodyAnimation(
     console.debug(`[BodyAnimation] ${event}`, payload);
 }
 
+function resolveGraphicFrameCount(graphicData: GraphicData): number {
+    const listedFrames = Object.keys(graphicData.frames ?? {}).length;
+    return Math.max(graphicData.numFrames || 0, listedFrames, 1);
+}
+
 function getBodyAnimationSpeed(bodyGraphicData: GraphicData): number {
-    const frameCount = Math.max(bodyGraphicData.numFrames || 1, 1);
+    const frameCount = resolveGraphicFrameCount(bodyGraphicData);
 
     if (frameCount <= 1) {
         return Math.max(bodyGraphicData.speed || 500, 1);
+    }
+
+    if (
+        typeof bodyGraphicData.speed === "number" &&
+        bodyGraphicData.speed >= 20
+    ) {
+        return bodyGraphicData.speed;
     }
 
     return Math.max(Math.round(BODY_ANIMATION_CYCLE_MS / frameCount), 1);
@@ -271,10 +289,14 @@ function getEquipmentAnimationSpeed(
     graphicData: GraphicData,
     kind: "weapon" | "shield",
 ): number {
-    const frameCount = Math.max(graphicData.numFrames || 1, 1);
+    const frameCount = resolveGraphicFrameCount(graphicData);
 
     if (frameCount <= 1) {
         return Math.max(graphicData.speed || 500, 1);
+    }
+
+    if (typeof graphicData.speed === "number" && graphicData.speed >= 20) {
+        return graphicData.speed;
     }
 
     const cycleMs =
@@ -676,6 +698,8 @@ export class Engine {
             bodyAnimationStartedAt: undefined,
             weaponAnimationStartedAt: undefined,
             shieldAnimationStartedAt: undefined,
+            equipmentAttackFlags: 0,
+            equipmentAttackStartedAt: undefined,
             movementStartedAt: undefined,
             movementDurationMs: undefined,
             idBody: snapshot.idBody ?? 1,
@@ -974,7 +998,7 @@ export class Engine {
         bodyGraphicData: GraphicData,
         now: number,
     ): number {
-        const frameCount = Math.max(bodyGraphicData.numFrames || 1, 1);
+        const frameCount = resolveGraphicFrameCount(bodyGraphicData);
         if (frameCount <= 1) {
             return 1;
         }
@@ -997,7 +1021,7 @@ export class Engine {
         now: number,
         kind: "weapon" | "shield",
     ): number {
-        const frameCount = Math.max(graphicData.numFrames || 1, 1);
+        const frameCount = resolveGraphicFrameCount(graphicData);
         if (frameCount <= 1) {
             return 1;
         }
@@ -1017,6 +1041,162 @@ export class Engine {
         );
 
         return (elapsedFrames % frameCount) + 1;
+    }
+
+    isEquipmentAttacking(
+        character: Character,
+        kind: "weapon" | "shield",
+    ): boolean {
+        const flags = character.equipmentAttackFlags ?? 0;
+        if (kind === "weapon") {
+            return (flags & CHARACTER_SWING_WEAPON) !== 0;
+        }
+        return (flags & CHARACTER_SWING_SHIELD) !== 0;
+    }
+
+    playLocalCombatSwing(): void {
+        if (!this.user) {
+            return;
+        }
+
+        this.startCharacterSwing(
+            this.user.id,
+            this.user.idShield
+                ? CHARACTER_SWING_WEAPON | CHARACTER_SWING_SHIELD
+                : CHARACTER_SWING_WEAPON,
+        );
+    }
+
+    startCharacterSwing(id: number, flags: number): void {
+        const character =
+            this.user && Number(this.user.id) === Number(id)
+                ? this.user
+                : (this.personajes[id] ?? this.personajes[Number(id)]);
+        if (!character || !flags) {
+            return;
+        }
+
+        const now = this.timestamp();
+        character.equipmentAttackFlags = flags;
+        character.equipmentAttackStartedAt = now;
+
+        if (flags & CHARACTER_SWING_WEAPON) {
+            character.weaponAnimationStartedAt = now;
+            character.frameCounterWeapon = 1;
+        }
+        if (flags & CHARACTER_SWING_SHIELD) {
+            character.shieldAnimationStartedAt = now;
+            character.frameCounterShield = 1;
+        }
+    }
+
+    getEquipmentAttackFrameCounter(
+        character: Character,
+        graphicData: GraphicData | undefined,
+        now: number,
+        kind: "weapon" | "shield",
+        textureCount = 0,
+    ): number | null {
+        if (!this.isEquipmentAttacking(character, kind)) {
+            return null;
+        }
+
+        const startedAt = character.equipmentAttackStartedAt;
+        if (typeof startedAt !== "number") {
+            return null;
+        }
+
+        const frameCount = Math.max(
+            graphicData ? resolveGraphicFrameCount(graphicData) : 1,
+            textureCount,
+            1,
+        );
+        const speed = graphicData
+            ? getEquipmentAnimationSpeed(graphicData, kind)
+            : 80;
+        const elapsedFrames = Math.floor(Math.max(0, now - startedAt) / speed);
+
+        if (elapsedFrames >= Math.max(frameCount, 2)) {
+            return null;
+        }
+
+        return Math.min(elapsedFrames + 1, Math.max(frameCount, 1));
+    }
+
+    private finishEquipmentAttack(
+        character: Character,
+        kind: "weapon" | "shield",
+    ): void {
+        const mask =
+            kind === "weapon" ? CHARACTER_SWING_WEAPON : CHARACTER_SWING_SHIELD;
+        character.equipmentAttackFlags = (character.equipmentAttackFlags ?? 0) & ~mask;
+        if (!character.equipmentAttackFlags) {
+            character.equipmentAttackStartedAt = undefined;
+        }
+        if (kind === "weapon") {
+            character.frameCounterWeapon = 1;
+            character.weaponAnimationStartedAt = undefined;
+        } else {
+            character.frameCounterShield = 1;
+            character.shieldAnimationStartedAt = undefined;
+        }
+    }
+
+    private syncEquipmentLayer(
+        sprite: AnimatedSprite | undefined,
+        character: Character,
+        graphicData: GraphicData | undefined,
+        now: number,
+        kind: "weapon" | "shield",
+        walking: boolean,
+    ): void {
+        const attackFrame = this.getEquipmentAttackFrameCounter(
+            character,
+            graphicData,
+            now,
+            kind,
+            sprite?.textures?.length ?? 0,
+        );
+
+        if (attackFrame != null) {
+            if (kind === "weapon") {
+                character.frameCounterWeapon = attackFrame;
+            } else {
+                character.frameCounterShield = attackFrame;
+            }
+
+            if (sprite && sprite.textures && sprite.textures.length > 0) {
+                sprite.stop();
+                const frameIndex = Math.max(
+                    0,
+                    Math.min(attackFrame - 1, sprite.textures.length - 1),
+                );
+                if (sprite.currentFrame !== frameIndex) {
+                    sprite.gotoAndStop(frameIndex);
+                }
+            }
+            return;
+        }
+
+        if (this.isEquipmentAttacking(character, kind)) {
+            this.finishEquipmentAttack(character, kind);
+        }
+
+        if (walking && graphicData) {
+            const walkFrame = this.getEquipmentAnimationFrameCounter(
+                character,
+                graphicData,
+                now,
+                kind,
+            );
+            if (kind === "weapon") {
+                character.frameCounterWeapon = walkFrame;
+            } else {
+                character.frameCounterShield = walkFrame;
+            }
+        }
+
+        syncCharacterLayerPlayback(sprite, walking);
     }
 
     startCharacterMovement(
@@ -1318,12 +1498,16 @@ export class Engine {
         character.addtoUserPos = { x: 0, y: 0 };
         if (!options?.preserveAnimationFrame) {
             character.frameCounter = 1;
-            character.frameCounterWeapon = 1;
-            character.frameCounterShield = 1;
             character.bodyAnimationStartedAt = undefined;
-            character.weaponAnimationStartedAt = undefined;
-            character.shieldAnimationStartedAt = undefined;
             character.animationIdleStartedAt = undefined;
+            if (!this.isEquipmentAttacking(character, "weapon")) {
+                character.frameCounterWeapon = 1;
+                character.weaponAnimationStartedAt = undefined;
+            }
+            if (!this.isEquipmentAttacking(character, "shield")) {
+                character.frameCounterShield = 1;
+                character.shieldAnimationStartedAt = undefined;
+            }
         } else if (typeof character.animationIdleStartedAt !== "number") {
             character.animationIdleStartedAt = now;
         }
@@ -1815,26 +1999,6 @@ export class Engine {
                         bodyGraphicData,
                         now,
                     );
-
-                    if (weaponGraphicData) {
-                        entity.frameCounterWeapon =
-                            this.getEquipmentAnimationFrameCounter(
-                                entity,
-                                weaponGraphicData,
-                                now,
-                                "weapon",
-                            );
-                    }
-
-                    if (shieldGraphicData) {
-                        entity.frameCounterShield =
-                            this.getEquipmentAnimationFrameCounter(
-                                entity,
-                                shieldGraphicData,
-                                now,
-                                "shield",
-                            );
-                    }
                 }
             }
 
@@ -1898,19 +2062,27 @@ export class Engine {
                 );
 
             if (bodySprite && bodySprite.textures.length > 0) {
-                const shouldAnimateBody = entity.moving;
-                const previousBodyFrame = bodySprite.currentFrame;
-                const nextBodyFrameCounter = shouldAnimateBody
-                    ? entity.frameCounter
-                    : 1;
-                updateAnimatedCharacterLayer(bodySprite, nextBodyFrameCounter);
-                updateAnimatedCharacterLayer(
-                    weaponSprite,
-                    shouldAnimateBody ? entity.frameCounterWeapon : 1,
+                const shouldAnimateBody = this.shouldHoldMovementAnimation(
+                    entity,
+                    now,
                 );
-                updateAnimatedCharacterLayer(
+                const previousBodyFrame = bodySprite.currentFrame;
+                syncCharacterLayerPlayback(bodySprite, shouldAnimateBody);
+                this.syncEquipmentLayer(
+                    weaponSprite,
+                    entity,
+                    weaponGraphicData,
+                    now,
+                    "weapon",
+                    shouldAnimateBody,
+                );
+                this.syncEquipmentLayer(
                     shieldSprite,
-                    shouldAnimateBody ? entity.frameCounterShield : 1,
+                    entity,
+                    shieldGraphicData,
+                    now,
+                    "shield",
+                    shouldAnimateBody,
                 );
 
                 if (bodySprite.currentFrame !== previousBodyFrame) {
@@ -2410,20 +2582,6 @@ export class Engine {
         const direction = this.user.heading.toString();
         const grhRopa = bodyData[direction as keyof typeof bodyData] as number;
         const grhRopaData = this.graphicsDB[grhRopa.toString()];
-        const weaponData = this.user.idWeapon
-            ? this.weaponsDB?.[this.user.idWeapon.toString()]
-            : undefined;
-        const shieldData = this.user.idShield
-            ? this.shieldsDB?.[this.user.idShield.toString()]
-            : undefined;
-        const grhWeapon = weaponData?.[direction as keyof typeof weaponData];
-        const grhShield = shieldData?.[direction as keyof typeof shieldData];
-        const grhWeaponData = grhWeapon
-            ? this.graphicsDB[grhWeapon.toString()]
-            : undefined;
-        const grhShieldData = grhShield
-            ? this.graphicsDB[grhShield.toString()]
-            : undefined;
 
         // Only update if we have valid data and delta time
         if (grhRopaData && this.delta > 0) {
@@ -2439,34 +2597,9 @@ export class Engine {
                     grhRopaData,
                     now,
                 );
-
-                if (grhWeaponData) {
-                    this.user.frameCounterWeapon =
-                        this.getEquipmentAnimationFrameCounter(
-                            this.user,
-                            grhWeaponData,
-                            now,
-                            "weapon",
-                        );
-                }
-
-                if (grhShieldData) {
-                    this.user.frameCounterShield =
-                        this.getEquipmentAnimationFrameCounter(
-                            this.user,
-                            grhShieldData,
-                            now,
-                            "shield",
-                        );
-                }
             } else {
-                // Reset frame counter when not moving (like engine.js)
                 this.user.frameCounter = 1;
-                this.user.frameCounterWeapon = 1;
-                this.user.frameCounterShield = 1;
                 this.user.bodyAnimationStartedAt = undefined;
-                this.user.weaponAnimationStartedAt = undefined;
-                this.user.shieldAnimationStartedAt = undefined;
                 this.user.animationIdleStartedAt = undefined;
             }
         }
@@ -2485,7 +2618,7 @@ export class Engine {
             if (!sprite.parent || !sprite.visible) continue;
 
             const { graphicData, loop = true } = data;
-            const baseSpeed = graphicData.speed || 500; // Default 500ms per frame
+            const baseSpeed = Math.max(graphicData.speed || 500, 40);
             const speed = this.isWaterGraphic(Number(data.graphicId))
                 ? baseSpeed * WATER_ANIMATION_SPEED_MULTIPLIER
                 : baseSpeed;
@@ -2594,21 +2727,13 @@ export class Engine {
             }
         }
 
-        // Check if direction changed - need to re-render player
         if (
             lastDirection !== undefined &&
             lastDirection !== this.user.heading.toString()
         ) {
-            // Direction changed, re-render player
-            const renderPlayerFn = (this as any).renderPlayerFn as
-                | ((engine: Engine) => Promise<void>)
-                | undefined;
-            if (renderPlayerFn) {
-                // Re-render player with new direction (async, but we don't await in ticker)
-                renderPlayerFn(this).catch((err) => {
-                    console.error("Error re-rendering player:", err);
-                });
-            }
+            (this.playerContainer as any).lastDirection =
+                this.user.heading.toString();
+            this.requestCharacterRerender?.(this.user.id);
         }
 
         // Position player container at screen center while it lives in map space
@@ -2688,40 +2813,17 @@ export class Engine {
                     this.user,
                     now,
                 );
-
+                syncCharacterLayerPlayback(spriteToUpdate, shouldAnimateBody);
                 if (shouldAnimateBody) {
-                    const totalFrames = spriteToUpdate.textures.length;
-                    const frameIndex = Math.max(
-                        0,
-                        Math.min(
-                            Math.ceil(this.user.frameCounter) - 1,
-                            totalFrames - 1,
-                        ),
-                    );
-                    if (spriteToUpdate.currentFrame !== frameIndex) {
-                        spriteToUpdate.currentFrame = frameIndex;
-                        const tex = spriteToUpdate.textures[frameIndex];
-                        if (tex instanceof Texture) {
-                            spriteToUpdate.texture = tex;
-                        }
-                        debugBodyAnimation("playerFrame", {
-                            id: this.user.id,
-                            frameIndex,
-                            frameCounter: this.user.frameCounter,
-                            bodyAnimationCycleMs: BODY_ANIMATION_CYCLE_MS,
-                            moving: this.user.moving,
-                            holdingAnimation: !this.user.moving,
-                            idleStartedAt: this.user.animationIdleStartedAt,
-                        });
-                    }
-                } else {
-                    if (spriteToUpdate.currentFrame !== 0) {
-                        spriteToUpdate.currentFrame = 0;
-                        const first = spriteToUpdate.textures[0];
-                        if (first instanceof Texture) {
-                            spriteToUpdate.texture = first;
-                        }
-                    }
+                    debugBodyAnimation("playerFrame", {
+                        id: this.user.id,
+                        frameIndex: spriteToUpdate.currentFrame,
+                        frameCounter: this.user.frameCounter,
+                        bodyAnimationCycleMs: BODY_ANIMATION_CYCLE_MS,
+                        moving: this.user.moving,
+                        holdingAnimation: !this.user.moving,
+                        idleStartedAt: this.user.animationIdleStartedAt,
+                    });
                 }
             }
 
@@ -2782,14 +2884,38 @@ export class Engine {
                 this.user,
                 this.timestamp(),
             );
+            const equipmentNow = this.timestamp();
+            const playerWeaponData = this.user.idWeapon
+                ? this.weaponsDB?.[this.user.idWeapon.toString()]
+                : undefined;
+            const playerShieldData = this.user.idShield
+                ? this.shieldsDB?.[this.user.idShield.toString()]
+                : undefined;
+            const playerDirection = this.user.heading.toString();
+            const playerWeaponGraphicId =
+                playerWeaponData?.[playerDirection as keyof typeof playerWeaponData];
+            const playerShieldGraphicId =
+                playerShieldData?.[playerDirection as keyof typeof playerShieldData];
 
-            updateAnimatedCharacterLayer(
+            this.syncEquipmentLayer(
                 weaponSprite,
-                shouldAnimateEquipment ? this.user.frameCounterWeapon : 1,
+                this.user,
+                playerWeaponGraphicId
+                    ? this.graphicsDB[playerWeaponGraphicId.toString()]
+                    : undefined,
+                equipmentNow,
+                "weapon",
+                shouldAnimateEquipment,
             );
-            updateAnimatedCharacterLayer(
+            this.syncEquipmentLayer(
                 shieldSprite,
-                shouldAnimateEquipment ? this.user.frameCounterShield : 1,
+                this.user,
+                playerShieldGraphicId
+                    ? this.graphicsDB[playerShieldGraphicId.toString()]
+                    : undefined,
+                equipmentNow,
+                "shield",
+                shouldAnimateEquipment,
             );
 
             if (headSprite && this.bodiesDB && spriteToUpdate) {
@@ -2835,6 +2961,7 @@ export class Engine {
                         bodyData,
                         helmetSprite.texture,
                         helmetData,
+                        headSprite?.texture ?? helmetSprite.texture,
                     );
                     helmetSprite.x = Math.round(helmetPosition.x);
                     helmetSprite.y = Math.round(helmetPosition.y);

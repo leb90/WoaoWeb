@@ -1,1 +1,1 @@
-{"id":77,"name":"Bosque al noreste de Ullathorpe.","musicNum":98,"magiaSinEfecto":0,"noEncriptarMp":0,"terreno":"BOSQUE","zona":"CAMPO","restringir":"No","maxLevel":0,"backup":1,"pk":0}
+{"id":77,"name":"Bosque","musicNum":9,"magiaSinEfecto":0,"noEncriptarMp":0,"terreno":"NIEVE","zona":"CAMPO","restringir":"No","minLevel":0,"maxLevel":0,"backup":0,"pk":0}

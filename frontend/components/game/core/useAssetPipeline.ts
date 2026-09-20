@@ -22,6 +22,59 @@ type LoadingStage =
     | "Renderizando mundo"
     | "Precargando alrededores";
 
+function resolveGraphicRect(
+    graphicData: GraphicData | number[] | undefined,
+): {
+    numFile: string | number;
+    sX: number;
+    sY: number;
+    width: number;
+    height: number;
+} | null {
+    if (!graphicData) {
+        return null;
+    }
+
+    if (Array.isArray(graphicData)) {
+        const [numFile, sX, sY, width, height] = graphicData;
+        if (numFile == null || width == null || height == null) {
+            return null;
+        }
+
+        return { numFile, sX, sY, width, height };
+    }
+
+    const compact = graphicData as GraphicData & {
+        n?: number;
+        x?: number;
+        y?: number;
+        w?: number;
+        h?: number;
+    };
+
+    if (compact.n != null && compact.w != null && compact.h != null) {
+        return {
+            numFile: compact.n,
+            sX: compact.x ?? 0,
+            sY: compact.y ?? 0,
+            width: compact.w,
+            height: compact.h,
+        };
+    }
+
+    if (graphicData.numFile == null) {
+        return null;
+    }
+
+    return {
+        numFile: graphicData.numFile,
+        sX: graphicData.sX,
+        sY: graphicData.sY,
+        width: graphicData.width,
+        height: graphicData.height,
+    };
+}
+
 type UseAssetPipelineOptions = {
     getGraphicImagePaths: (imageFile: string | number) => string[];
     updateLoadingProgress: (
@@ -279,29 +332,37 @@ export function useAssetPipeline({
         ): Promise<Texture[] | null> => {
             if (!engine.graphicsDB || engine.isDestroyed) return null;
 
-            if (graphicData.numFrames > 1) {
-                const frameTextures: Texture[] = [];
-                for (
-                    let frameIndex = 1;
-                    frameIndex <= graphicData.numFrames;
-                    frameIndex++
-                ) {
-                    const frameGraphicId =
-                        graphicData.frames[frameIndex.toString()];
-                    if (!frameGraphicId) {
-                        continue;
-                    }
+            const compactFrameIds = (
+                graphicData as GraphicData & { r?: number[] }
+            ).r;
+            const frameIds =
+                Array.isArray(compactFrameIds) && compactFrameIds.length > 0
+                    ? compactFrameIds.map(String)
+                    : Object.keys(graphicData.frames ?? {})
+                          .sort((left, right) => Number(left) - Number(right))
+                          .map((key) => String(graphicData.frames[key]))
+                          .filter(Boolean);
+            const frameCount = Math.max(
+                graphicData.numFrames || 0,
+                (graphicData as GraphicData & { f?: number }).f || 0,
+                frameIds.length,
+                1,
+            );
 
+            if (frameCount > 1) {
+                const frameTextures: Texture[] = [];
+                for (const frameGraphicId of frameIds) {
                     const frameGraphicData =
                         engine.graphicsDB[frameGraphicId.toString()];
-                    if (!frameGraphicData) {
+                    const frameRect = resolveGraphicRect(frameGraphicData);
+                    if (!frameRect) {
                         continue;
                     }
 
                     try {
                         const baseTexture = await loadBaseTexture(
                             engine,
-                            getGraphicImagePaths(frameGraphicData.numFile),
+                            getGraphicImagePaths(frameRect.numFile),
                         );
                         if (engine.isDestroyed) {
                             return null;
@@ -309,10 +370,10 @@ export function useAssetPipeline({
                         const frameTexture = new Texture({
                             source: baseTexture.source,
                             frame: new Rectangle(
-                                frameGraphicData.sX,
-                                frameGraphicData.sY,
-                                frameGraphicData.width,
-                                frameGraphicData.height,
+                                frameRect.sX,
+                                frameRect.sY,
+                                frameRect.width,
+                                frameRect.height,
                             ),
                         });
                         frameTextures.push(frameTexture);
@@ -327,9 +388,14 @@ export function useAssetPipeline({
             }
 
             try {
+                const graphicRect = resolveGraphicRect(graphicData);
+                if (!graphicRect) {
+                    return null;
+                }
+
                 const baseTexture = await loadBaseTexture(
                     engine,
-                    getGraphicImagePaths(graphicData.numFile),
+                    getGraphicImagePaths(graphicRect.numFile),
                 );
                 if (engine.isDestroyed) {
                     return null;
@@ -337,10 +403,10 @@ export function useAssetPipeline({
                 const singleTexture = new Texture({
                     source: baseTexture.source,
                     frame: new Rectangle(
-                        graphicData.sX,
-                        graphicData.sY,
-                        graphicData.width,
-                        graphicData.height,
+                        graphicRect.sX,
+                        graphicRect.sY,
+                        graphicRect.width,
+                        graphicRect.height,
                     ),
                 });
                 return [singleTexture];

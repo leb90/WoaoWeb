@@ -341,14 +341,21 @@ export function useHudStateController({
 
             const sourceSpell =
                 currentHud.spells.find((entry) => entry.slot === sourceSlot) ??
-                null;
+                (sourceSlot === 1
+                    ? (currentHud.spells.find((entry) => entry.slot < 1) ??
+                      null)
+                    : null);
 
             if (!sourceSpell) {
                 return;
             }
 
             const nextSpells = currentHud.spells.map((entry) => {
-                if (entry.slot === sourceSlot) {
+                const isSource =
+                    entry.slot === sourceSlot ||
+                    (sourceSlot === 1 && entry.slot < 1);
+
+                if (isSource) {
                     return { ...entry, slot: targetSlot };
                 }
 

@@ -1,0 +1,14 @@
+{
+  "1": { "id": 1, "name": "Unicornio", "topeLevel": 30, "vidaPorLevel": 35, "golpePorLevel": 13, "aumentoCuerpo": 0, "aumentoFlecha": 0, "aumentoMagia": 15, "aumentoEvasion": 6, "expStep": 400 },
+  "2": { "id": 2, "name": "Caballo Negro", "topeLevel": 30, "vidaPorLevel": 30, "golpePorLevel": 13, "aumentoCuerpo": 0, "aumentoFlecha": 0, "aumentoMagia": 15, "aumentoEvasion": 1, "expStep": 400 },
+  "3": { "id": 3, "name": "Tigre", "topeLevel": 30, "vidaPorLevel": 35, "golpePorLevel": 13, "aumentoCuerpo": 0, "aumentoFlecha": 4, "aumentoMagia": 0, "aumentoEvasion": 6, "expStep": 400 },
+  "4": { "id": 4, "name": "Elefante", "topeLevel": 30, "vidaPorLevel": 50, "golpePorLevel": 13, "aumentoCuerpo": 6, "aumentoFlecha": 0, "aumentoMagia": 0, "aumentoEvasion": 0, "expStep": 400 },
+  "5": { "id": 5, "name": "Dragon", "topeLevel": 16, "vidaPorLevel": 80, "golpePorLevel": 28, "aumentoCuerpo": 6, "aumentoFlecha": 6, "aumentoMagia": 6, "aumentoEvasion": 6, "expStep": 1800 },
+  "6": { "id": 6, "name": "Jabato", "topeLevel": 16, "vidaPorLevel": 7, "golpePorLevel": 13, "aumentoCuerpo": 1, "aumentoFlecha": 0, "aumentoMagia": 0, "aumentoEvasion": 0, "expStep": 20 },
+  "7": { "id": 7, "name": "Kong", "topeLevel": 17, "vidaPorLevel": 80, "golpePorLevel": 35, "aumentoCuerpo": 6, "aumentoFlecha": 6, "aumentoMagia": 6, "aumentoEvasion": 6, "expStep": 1800 },
+  "8": { "id": 8, "name": "Hipogrifo", "topeLevel": 17, "vidaPorLevel": 80, "golpePorLevel": 35, "aumentoCuerpo": 6, "aumentoFlecha": 6, "aumentoMagia": 6, "aumentoEvasion": 6, "expStep": 1800 },
+  "9": { "id": 9, "name": "Rinosaurio", "topeLevel": 30, "vidaPorLevel": 55, "golpePorLevel": 13, "aumentoCuerpo": 6, "aumentoFlecha": 0, "aumentoMagia": 0, "aumentoEvasion": 0, "expStep": 400 },
+  "10": { "id": 10, "name": "Cerbero", "topeLevel": 30, "vidaPorLevel": 45, "golpePorLevel": 13, "aumentoCuerpo": 0, "aumentoFlecha": 6, "aumentoMagia": 0, "aumentoEvasion": 2, "expStep": 400 },
+  "11": { "id": 11, "name": "Wyvern", "topeLevel": 30, "vidaPorLevel": 40, "golpePorLevel": 13, "aumentoCuerpo": 0, "aumentoFlecha": 0, "aumentoMagia": 6, "aumentoEvasion": 3, "expStep": 400 },
+  "12": { "id": 12, "name": "Avestruz", "topeLevel": 30, "vidaPorLevel": 35, "golpePorLevel": 13, "aumentoCuerpo": 0, "aumentoFlecha": 6, "aumentoMagia": 0, "aumentoEvasion": 2, "expStep": 400 }
+}

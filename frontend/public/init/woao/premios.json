@@ -1,0 +1,303 @@
+{
+  "1": {
+    "id": 1,
+    "name": "Túnica Desterrada(Druida)(Alto/as)",
+    "objIndex": 1342,
+    "cost": 650,
+    "desc": "Habilidad Especial: +200 Mana."
+  },
+  "2": {
+    "id": 2,
+    "name": "Túnica Desterrada(Druida)(Bajo/as)",
+    "objIndex": 1344,
+    "cost": 650,
+    "desc": "(BAJOS) Habilidad Especial: +200 Mana."
+  },
+  "3": {
+    "id": 3,
+    "name": "Corona de Plumas(DRUIDA)",
+    "objIndex": 1356,
+    "cost": 650,
+    "desc": "Corona proveniente de bosques elficos sagrados."
+  },
+  "4": {
+    "id": 4,
+    "name": "Anillo Naturaleza(DRUIDA)",
+    "objIndex": 1358,
+    "cost": 650,
+    "desc": "Anillo proveniente de bosques elficos sagrados."
+  },
+  "5": {
+    "id": 5,
+    "name": "Báculo Desterrado(DRUIDA)",
+    "objIndex": 1374,
+    "cost": 650,
+    "desc": "Báculo proveniente de bosques elficos sagrados."
+  },
+  "6": {
+    "id": 6,
+    "name": "Túnica Desterrada(Mago)(Alto/as)",
+    "objIndex": 1341,
+    "cost": 650,
+    "desc": "Habilidad Especial: +300 Mana."
+  },
+  "7": {
+    "id": 7,
+    "name": "Túnica Desterrada(Mago)(Bajos)",
+    "objIndex": 1343,
+    "cost": 650,
+    "desc": "(BAJOS) Habilidad Especial: +300 Mana."
+  },
+  "8": {
+    "id": 8,
+    "name": "Capucha Mágica(MAGO)",
+    "objIndex": 1355,
+    "cost": 650,
+    "desc": "Esta capucha fue creada por los mejores magos de World of AO."
+  },
+  "9": {
+    "id": 9,
+    "name": "Anillo Mágico(MAGO)",
+    "objIndex": 1357,
+    "cost": 650,
+    "desc": "Anillo cercano al poder mágico de un dios."
+  },
+  "10": {
+    "id": 10,
+    "name": "Báculo Desterrado(MAGO)",
+    "objIndex": 1373,
+    "cost": 650,
+    "desc": ""
+  },
+  "11": {
+    "id": 11,
+    "name": "Armadura del Caido(PALADIN)(Altos)",
+    "objIndex": 1348,
+    "cost": 650,
+    "desc": "Habilidad Especial: +5 Fuerza"
+  },
+  "12": {
+    "id": 12,
+    "name": "Armadura del Caido(PALADIN)(Bajos)",
+    "objIndex": 1353,
+    "cost": 650,
+    "desc": "(BAJOS) Habilidad Especial: +5 Fuerza"
+  },
+  "13": {
+    "id": 13,
+    "name": "Escudo del Caído(PALADIN)",
+    "objIndex": 1360,
+    "cost": 650,
+    "desc": "Habilidad Especial: +2 Fuerza"
+  },
+  "14": {
+    "id": 14,
+    "name": "Casco del Caído(PALADIN)",
+    "objIndex": 1365,
+    "cost": 650,
+    "desc": "Habilidad Especial: +200 Mana"
+  },
+  "15": {
+    "id": 15,
+    "name": "Espada del Caído(PALADIN)",
+    "objIndex": 1372,
+    "cost": 650,
+    "desc": "Habilidad Especial: +2 Fuerza"
+  },
+  "16": {
+    "id": 16,
+    "name": "Armadura del Caido(CLERIGO)(Altos)",
+    "objIndex": 1345,
+    "cost": 650,
+    "desc": "Habilidad Especial: +3 Fuerza"
+  },
+  "17": {
+    "id": 17,
+    "name": "Armadura del Caido(CLERIGO)(BAJOS)",
+    "objIndex": 1350,
+    "cost": 650,
+    "desc": "(BAJOS) Habilidad Especial: +3 Fuerza"
+  },
+  "18": {
+    "id": 18,
+    "name": "Escudo del Caído(CLERIGO)",
+    "objIndex": 1359,
+    "cost": 650,
+    "desc": "Habilidad Especial: +2 Fuerza"
+  },
+  "19": {
+    "id": 19,
+    "name": "Casco del Caído(CLERIGO)",
+    "objIndex": 1364,
+    "cost": 650,
+    "desc": "Habilidad Especial: +2 Agilidad"
+  },
+  "20": {
+    "id": 20,
+    "name": "Espada del Caído(CLERIGO)",
+    "objIndex": 1371,
+    "cost": 650,
+    "desc": "Habilidad Especial: +2 Fuerza"
+  },
+  "21": {
+    "id": 21,
+    "name": "Escudo del Caído(ARQ/CAZ)",
+    "objIndex": 1363,
+    "cost": 650,
+    "desc": "Habilidad Especial: +2 Fuerza"
+  },
+  "22": {
+    "id": 22,
+    "name": "Casco del Caído(ARQ/CAZ)",
+    "objIndex": 1368,
+    "cost": 650,
+    "desc": "Habilidad Especial: +2 Agilidad"
+  },
+  "23": {
+    "id": 23,
+    "name": "Armadura Caid.(ARQ/CAZ)(Altos)",
+    "objIndex": 1349,
+    "cost": 650,
+    "desc": "Habilidad Especial: +3 Fuerza"
+  },
+  "24": {
+    "id": 24,
+    "name": "Armadura Caid.(ARQ/CAZ)(Bajos)",
+    "objIndex": 1354,
+    "cost": 650,
+    "desc": "(BAJOS) Habilidad Especial: +3 Fuerza"
+  },
+  "25": {
+    "id": 25,
+    "name": "Arco Desterrado(ARQ/CAZ)",
+    "objIndex": 1052,
+    "cost": 650,
+    "desc": "Habilidad Especial: Ahorra 33% Flechas"
+  },
+  "26": {
+    "id": 26,
+    "name": "Armadura Desterrado(Asesino)",
+    "objIndex": 1181,
+    "cost": 650,
+    "desc": "Habilidad Especial: +3 Fuerza"
+  },
+  "27": {
+    "id": 27,
+    "name": "Armadura Desterrado(Asesino)(Bajos)",
+    "objIndex": 196,
+    "cost": 650,
+    "desc": "(BAJOS) Habilidad Especial: +3 Fuerza"
+  },
+  "28": {
+    "id": 28,
+    "name": "Escudo Desterrado(Asesino)",
+    "objIndex": 1256,
+    "cost": 650,
+    "desc": "Habilidad Especial: +2 Fuerza"
+  },
+  "29": {
+    "id": 29,
+    "name": "Casco Desterrado(Asesino)",
+    "objIndex": 1159,
+    "cost": 650,
+    "desc": "Habilidad Especial: +2 Agilidad"
+  },
+  "30": {
+    "id": 30,
+    "name": "Puñal Desterrado(Asesino)",
+    "objIndex": 1054,
+    "cost": 650,
+    "desc": "Habilidad Especial: +3 Fuerza"
+  },
+  "31": {
+    "id": 31,
+    "name": "Armadura Cai.(GUER/PIR)(Bajos)",
+    "objIndex": 1352,
+    "cost": 650,
+    "desc": "(BAJOS) Habilidad Especial: +5 Fuerza"
+  },
+  "32": {
+    "id": 32,
+    "name": "Armadura Cai.(GUER/PIR)(Altos)",
+    "objIndex": 1347,
+    "cost": 650,
+    "desc": "Habilidad Especial: +5 Fuerza"
+  },
+  "33": {
+    "id": 33,
+    "name": "Escudo del Caído(GUER/PIR)",
+    "objIndex": 1362,
+    "cost": 650,
+    "desc": "Habilidad Especial: +5 Fuerza"
+  },
+  "34": {
+    "id": 34,
+    "name": "Casco del Caído(GUER/PIR)",
+    "objIndex": 1367,
+    "cost": 650,
+    "desc": "Habilidad Especial: +5 Agilidad"
+  },
+  "35": {
+    "id": 35,
+    "name": "Espada del Caído(GUER/PIR)",
+    "objIndex": 1369,
+    "cost": 650,
+    "desc": "Habilidad Especial: +3 Fuerza"
+  },
+  "36": {
+    "id": 36,
+    "name": "Lanza Desterrada(Bardo)",
+    "objIndex": 1087,
+    "cost": 650,
+    "desc": "Es la arma mas filosa de World of AO."
+  },
+  "37": {
+    "id": 37,
+    "name": "Armadura del Caido(BARDO)(Altos)",
+    "objIndex": 1346,
+    "cost": 650,
+    "desc": "Habilidad Especial: +3 Fuerza"
+  },
+  "38": {
+    "id": 38,
+    "name": "Armadura del Caido(BARDO)(BAJOS)",
+    "objIndex": 1351,
+    "cost": 650,
+    "desc": "(BAJOS) Habilidad Especial: +3 Fuerza"
+  },
+  "39": {
+    "id": 39,
+    "name": "Escudo del Caído(BARDO)",
+    "objIndex": 1361,
+    "cost": 650,
+    "desc": "Habilidad Especial: +2 Agilidad"
+  },
+  "40": {
+    "id": 40,
+    "name": "Casco del Caído(BARDO)",
+    "objIndex": 1366,
+    "cost": 650,
+    "desc": "Casco perfecto para emitir melodías."
+  },
+  "41": {
+    "id": 41,
+    "name": "Guardian de Tierra(5% Exp)",
+    "objIndex": 1375,
+    "cost": 2000,
+    "desc": "Caidas del cielo (Brindan 15% de experiencia extra)."
+  },
+  "42": {
+    "id": 42,
+    "name": "Amuleto de Salvacion",
+    "objIndex": 1385,
+    "cost": 200,
+    "desc": "Este amuleto salvará tus items al morir y se sacrifica por ellos."
+  },
+  "43": {
+    "id": 43,
+    "name": "Capa Hobbit",
+    "objIndex": 1015,
+    "cost": 100,
+    "desc": "Usala para hacerte invisible."
+  }
+}

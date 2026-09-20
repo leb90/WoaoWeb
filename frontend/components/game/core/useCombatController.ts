@@ -74,10 +74,6 @@ const SPELL_TOO_FAST_MESSAGE = "No puedes lanzar hechizos tan rápido.";
 const SPELL_AFTER_HIT_MESSAGE =
     "No puedes lanzar tan rápido después de un golpe.";
 const RANGE_TOO_FAST_MESSAGE = "No puedes disparar flechas tan rápido.";
-const RANGE_AFTER_HIT_MESSAGE =
-    "No puedes disparar tan rápido después de un golpe.";
-const RANGE_AFTER_SPELL_MESSAGE =
-    "No puedes disparar tan rápido después de un hechizo.";
 const CLIENT_RESOURCE_REACTION_WINDOW_MS = 10 * 60 * 1000;
 const CLIENT_RESOURCE_REACTION_MS_THRESHOLD = 90;
 const CLIENT_RESOURCE_REACTION_JITTER_MS = 60;
@@ -376,14 +372,6 @@ export function useCombatController(options: UseCombatControllerOptions) {
             }
 
             if (action === "range") {
-                if (cooldowns.nextSpellAfterMeleeAt > now) {
-                    pushSystemMessage(RANGE_AFTER_HIT_MESSAGE, "#fca5a5");
-                    return false;
-                }
-                if (cooldowns.nextMeleeAfterSpellAt > now) {
-                    pushSystemMessage(RANGE_AFTER_SPELL_MESSAGE, "#fca5a5");
-                    return false;
-                }
                 if (cooldowns.nextRangeAt > now) {
                     pushSystemMessage(RANGE_TOO_FAST_MESSAGE, "#fca5a5");
                     return false;
@@ -424,10 +412,6 @@ export function useCombatController(options: UseCombatControllerOptions) {
             if (action === "range") {
                 cooldowns.nextRangeAt =
                     now + runtimeTimingRef.current.actionCooldowns.rangeMs;
-                cooldowns.nextMeleeAt =
-                    now + runtimeTimingRef.current.actionCooldowns.meleeMs;
-                cooldowns.nextSpellAt =
-                    now + runtimeTimingRef.current.actionCooldowns.spellMs;
                 return;
             }
 
@@ -591,15 +575,6 @@ export function useCombatController(options: UseCombatControllerOptions) {
             ) ?? null
         );
     }, [playerHudRef]);
-
-    const hasEquippedMeleeWeapon = useCallback(() => {
-        const weapon = getEquippedWeaponItem();
-        const objectsDB = engineRef.current?.objectsDB;
-        if (!weapon || !objectsDB) {
-            return false;
-        }
-        return !objectsDB[weapon.idItem.toString()]?.proyectil;
-    }, [engineRef, getEquippedWeaponItem]);
 
     const hasEquippedRangedWeapon = useCallback(() => {
         const weapon = getEquippedWeaponItem();
@@ -881,7 +856,6 @@ export function useCombatController(options: UseCombatControllerOptions) {
         clearExpiredCombatCooldowns,
         clearTargetingMode,
         getEquippedWeaponItem,
-        hasEquippedMeleeWeapon,
         hasEquippedRangedWeapon,
         isFishingRodItem,
         isMiningToolItem,

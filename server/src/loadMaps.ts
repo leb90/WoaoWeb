@@ -159,7 +159,7 @@ class LoadMaps {
         const arMapsToLoad: Array<Promise<unknown>> = [];
         const extraTestMaps = [500, 501, 502, 503, 504, 505, 506];
 
-        for (let i = 1; i < 291; i++) {
+        for (let i = 1; i < 310; i++) {
             if (this.mapFilesExist(i)) {
                 arMapsToLoad.push(this.readMap(i));
             }

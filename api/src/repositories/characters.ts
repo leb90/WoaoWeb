@@ -145,6 +145,7 @@ const characterPatchSchema = z
         factionRankCaos: z.coerce.number().int().optional(),
         factionRewardsArmada: z.coerce.number().int().optional(),
         factionRewardsCaos: z.coerce.number().int().optional(),
+        factionTreachery: z.coerce.number().int().optional(),
         jailMinutes: z.coerce.number().int().optional(),
         jailReason: z.string().nullable().optional(),
         connected: z
@@ -221,6 +222,7 @@ const fieldMap = [
     ["factionRankCaos", "faction_rank_caos"],
     ["factionRewardsArmada", "faction_rewards_armada"],
     ["factionRewardsCaos", "faction_rewards_caos"],
+    ["factionTreachery", "faction_treachery"],
     ["skills", "skills"],
     ["skillPts", "skill_pts"],
     ["jailMinutes", "jail_minutes"],
@@ -298,6 +300,7 @@ function toCharacterResponse(
         factionRankCaos: character.faction_rank_caos,
         factionRewardsArmada: character.faction_rewards_armada,
         factionRewardsCaos: character.faction_rewards_caos,
+        factionTreachery: character.faction_treachery,
         skills: Array.isArray(character.skills) ? character.skills : null,
         skillPts: character.skill_pts ?? null,
         jailMinutes: character.jail_minutes,

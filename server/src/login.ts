@@ -581,6 +581,7 @@ function Login(this: LoginApi) {
                 personaje.factionRankCaos = Number(personaje.factionRankCaos ?? 0);
                 personaje.factionRewardsArmada = Number(personaje.factionRewardsArmada ?? 0);
                 personaje.factionRewardsCaos = Number(personaje.factionRewardsCaos ?? 0);
+                personaje.factionTreachery = Number(personaje.factionTreachery ?? 0);
                 personaje.clanId = personaje.clanId ?? null;
                 personaje.clanAlignment = personaje.clanAlignment ?? null;
                 personaje.clanMinJoinLevel = personaje.clanMinJoinLevel ?? null;
@@ -1159,6 +1160,7 @@ function Login(this: LoginApi) {
             homeMap: ULLA_MAP_ID,
             homeX: ULLA_POS_X,
             homeY: ULLA_POS_Y,
+            factionTreachery: 0,
             factionScoreArmada: 0,
             factionScoreCaos: 0,
             factionRankArmada: 0,

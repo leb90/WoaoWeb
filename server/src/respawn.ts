@@ -1,6 +1,6 @@
 export {};
 import { getCharacterById, getClientById } from "./runtimeRegistry";
-import { calculateBaseFactionScore, type CharacterFaction } from "./factions";
+import { calculateBaseFactionScore, getFactionDisplayName, type CharacterFaction } from "./factions";
 const game = require("./game");
 const vars = require("./vars");
 const npcs = require("./npcs");
@@ -146,6 +146,21 @@ function Respawn(this: any) {
                             } else {
                                 user.ciudadanosMatados++;
                             }
+                        }
+
+                        const attackerFaction = normalizeFaction(user.faction);
+                        const victimFaction = normalizeFaction(pjSelected.faction);
+
+                        if (attackerFaction !== "none" && attackerFaction === victimFaction) {
+                            user.factionTreachery = Number(user.factionTreachery ?? 0) + 1;
+                            handleProtocol.console(
+                                `Has traicionado a ${getFactionDisplayName(attackerFaction)} matando a uno de los tuyos. ` +
+                                    "Pagarás un 10% más en todas las tiendas hasta que pagues tu multa con /pagarmulta.",
+                                "white",
+                                1,
+                                0,
+                                ws,
+                            );
                         }
 
                         expGanada = vars.exp * vars.multiplicadorExp;

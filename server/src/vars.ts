@@ -345,6 +345,7 @@ function Vars(this: any) {
         "factionRankCaos",
         "factionRewardsArmada",
         "factionRewardsCaos",
+        "factionTreachery",
         "homeMap",
         "homeX",
         "homeY",

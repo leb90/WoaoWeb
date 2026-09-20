@@ -77,6 +77,7 @@ type CommandCharacter = RuntimeCharacter & {
     seguroActivado: boolean;
     seguroClanActivado?: boolean;
     segCritico?: boolean;
+    factionTreachery?: number;
     npcMatados?: number;
     ciudadanosMatados?: number;
     criminalesMatados?: number;
@@ -3006,7 +3007,7 @@ const command: CommandApi = {
 
                 case "/woao": {
                     handleProtocol.console(
-                        "WOAO: /quest /quests /questaceptar /questabandonar /montura /premios /canjear /viaje /comerciar /ranked /hunger /participar /atorneo /remort /ciudades /castillos /castillo /clanpuntos /bloodcastle /guerra /templo /domar /robar /critico /casa /dia /party /aceptar /partyinfo /salirparty",
+                        "WOAO: /quest /quests /questaceptar /questabandonar /montura /premios /canjear /viaje /comerciar /ranked /hunger /participar /atorneo /remort /ciudades /castillos /castillo /clanpuntos /bloodcastle /guerra /templo /domar /robar /critico /pagarmulta /casa /dia /party /aceptar /partyinfo /salirparty",
                         "#E69500",
                         1,
                         0,
@@ -3198,6 +3199,42 @@ const command: CommandApi = {
                 case "/robar": {
                     const result = require("./steal").doRobar(String(clientId), nextText.trim());
                     handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/pagarmulta": {
+                    const treachery = Number(user.factionTreachery ?? 0);
+
+                    if (treachery <= 0) {
+                        handleProtocol.console("No tenés ninguna multa pendiente.", "#E69500", 1, 0, ws as CommandClient);
+                        break;
+                    }
+
+                    const { FACTION_TREACHERY_FINE_PER_POINT } = require("./factions");
+                    const cost = treachery * FACTION_TREACHERY_FINE_PER_POINT;
+
+                    if (user.gold < cost) {
+                        handleProtocol.console(
+                            `Necesitás ${cost} de oro para pagar tu multa (tenés ${user.gold}).`,
+                            "#E69500",
+                            1,
+                            0,
+                            ws as CommandClient,
+                        );
+                        break;
+                    }
+
+                    user.gold = balance.clampGold(user.gold - cost);
+                    user.factionTreachery = 0;
+                    handleProtocol.actGold(user.gold, ws as CommandClient);
+                    handleProtocol.console(
+                        `Pagaste ${cost} de oro y limpiaste tu reputación. Las tiendas vuelven a cobrarte precio normal.`,
+                        "#E69500",
+                        1,
+                        0,
+                        ws as CommandClient,
+                    );
+                    await game.persistCharacterSnapshot(user, { connected: true });
                     break;
                 }
 

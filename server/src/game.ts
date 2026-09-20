@@ -328,6 +328,7 @@ type GameCharacter = RuntimeCharacter & {
     factionRankCaos: number;
     factionRewardsArmada: number;
     factionRewardsCaos: number;
+    factionTreachery?: number;
     skills?: number[];
     skillPts?: number;
     segCritico?: boolean;
@@ -10052,7 +10053,13 @@ function Game(this: GameApi) {
                     return;
                 }
 
-                if (Math.floor((objItem.valor * cantBuy) / 2) > user.gold) {
+                const treacheryPriceMultiplier =
+                    Number(user.factionTreachery ?? 0) > 0
+                        ? 1 + require("./factions").FACTION_TREACHERY_PRICE_SURCHARGE
+                        : 1;
+                const buyTotalCost = Math.floor(((objItem.valor * cantBuy) / 2) * treacheryPriceMultiplier);
+
+                if (buyTotalCost > user.gold) {
                     withUserClient(idUser, (userClient) => {
                         handleProtocol.console("No tienes oro suficiente.", "white", 1, 0, userClient);
                     });
@@ -10072,7 +10079,7 @@ function Game(this: GameApi) {
                     return;
                 }
 
-                user.gold = balance.clampGold(user.gold - Math.floor((objItem.valor * cantBuy) / 2));
+                user.gold = balance.clampGold(user.gold - buyTotalCost);
 
                 withUserClient(idUser, (userClient) => {
                     for (const slot of slots) {
@@ -10089,11 +10096,11 @@ function Game(this: GameApi) {
                     itemId: itemNpc.item,
                     itemName: objItem.name ?? null,
                     amount: cantBuy,
-                    goldDelta: -Math.floor((objItem.valor * cantBuy) / 2),
+                    goldDelta: -buyTotalCost,
                     details: {
                         npcId: Number(user.npcTrade ?? 0),
                         tradeSlot: Number(idPos),
-                        unitPrice: Math.floor(objItem.valor / 2),
+                        unitPrice: Math.floor((objItem.valor / 2) * treacheryPriceMultiplier),
                     },
                 });
                 await persistCharacterEconomyState(user);

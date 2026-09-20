@@ -165,3 +165,9 @@ export function calculateBaseFactionScore(attackerLevel: number, victimLevel: nu
     void victimLevel;
     return 10;
 }
+
+// Traición: matar a un personaje de tu propia facción. No es un sistema del viejo AO,
+// es nuevo — el costo de matar a los tuyos es un recargo fijo en todas las tiendas
+// mientras tengas puntos de traición sin pagar, y una multa en oro para limpiarlos.
+export const FACTION_TREACHERY_PRICE_SURCHARGE = 0.1;
+export const FACTION_TREACHERY_FINE_PER_POINT = 500;

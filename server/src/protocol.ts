@@ -1151,6 +1151,7 @@ dictionaryServer[pkg.serverPacketID.retosAction] = retosAction;
 dictionaryServer[pkg.serverPacketID.toggleHiddenSkill] = toggleHiddenSkill;
 dictionaryServer[pkg.serverPacketID.useItemU] = useItemU;
 dictionaryServer[pkg.serverPacketID.craftItem] = craftItem;
+dictionaryServer[pkg.serverPacketID.assignSkill] = assignSkill;
 
 function Protocol(this: ProtocolApi) {
     try {
@@ -1269,7 +1270,7 @@ function getHiddenSkillChance(user: RuntimeCharacter): number {
 }
 
 function getHiddenSkillDurationMs(user: RuntimeCharacter): number {
-    const skill = game.getSkillOcultarse(user.id) || 0;
+    const skill = Math.min(100, game.getSkillOcultarse(user.id) || 0);
     const interval = 500;
     const missingSkill = 100 - skill;
     let durationCounter =
@@ -1355,6 +1356,7 @@ function toggleHiddenSkill(ws: RuntimeClient) {
     user.hiddenSkillExpiresAt = now + getHiddenSkillDurationMs(user);
 
     handleProtocol.console("Te ocultas entre las sombras.", "white", 0, 0, ws);
+    require("./skills").applyTraining(user, require("./skills").SKILLS.ocultarse);
 }
 
 function clearPendingMoveTimer(user: RuntimeCharacter & { pendingMoveTimerId?: ReturnType<typeof setTimeout> | null }) {
@@ -2814,6 +2816,28 @@ function useItemClick(ws: RuntimeClient) {
     }
 }
 
+function assignSkill(ws: RuntimeClient) {
+    try {
+        if (!pkg.canReadBytes(1)) {
+            return;
+        }
+
+        const skillId = pkg.getByte();
+        const user = getCharacterById(ws.id!);
+        const skills = require("./skills");
+
+        if (!user) {
+            return;
+        }
+
+        if (skills.assignSkillPoint(user, skillId)) {
+            skills.sendSkillsState(user);
+        }
+    } catch (err) {
+        funct.dumpError(err);
+    }
+}
+
 function useItemU(ws: RuntimeClient) {
     try {
         if (!pkg.canReadBytes(4)) {
@@ -4000,6 +4024,29 @@ function attackSpell(ws: RuntimeClient) {
         if (user.mana < manaCost) {
             handleProtocol.console("No tienes mana suficiente para lanzar ese hechizo.", "white", 0, 0, ws);
             return;
+        }
+
+        // Racial: Humano puede lanzar Remover Parálisis (id 10) y No-Muerto puede lanzar
+        // Paralizar (id 9) sin cumplir el mínimo de skill, siempre que tengan suficiente maná
+        // (modHechizos.bas: PuedeLanzar). El costo ya sale reducido de getSpellManaCost.
+        const { WOAO_RACE } = require("./racialPassives");
+        const bypassesMinSkill =
+            (idSpell === 10 && Number(user.idRaza) === WOAO_RACE.humano) ||
+            (idSpell === 9 && Number(user.idRaza) === WOAO_RACE.nomuerto);
+
+        if (!bypassesMinSkill) {
+            const skillsModule = require("./skills");
+            const skillMagia = skillsModule.getSkill(user, skillsModule.SKILLS.magia);
+            if (skillMagia < Number(datSpell.minSkill ?? 0)) {
+                handleProtocol.console(
+                    "No tienes suficientes puntos en la habilidad APRENDIZAJE DE ARTES MAGICAS para lanzar este hechizo.",
+                    "white",
+                    0,
+                    0,
+                    ws,
+                );
+                return;
+            }
         }
 
         if (!pkg.canReadBytes(2)) {

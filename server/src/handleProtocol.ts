@@ -416,6 +416,7 @@ export type HandleProtocolApi = {
     openAdminIntervals: (client: RuntimeClient) => void;
     panelSnapshot: (snapshot: unknown, client: RuntimeClient) => void;
     characterStatsSnapshot: (snapshot: unknown, client: RuntimeClient) => void;
+    skillsState: (payload: { skillPts: number; values: number[] }, client: RuntimeClient) => void;
     partyState: (delta: PartyRuntimeStateDelta, client: RuntimeClient) => void;
     clanState: (delta: ClanRuntimeStateDelta, client: RuntimeClient) => void;
     startCastBar: (idUser: EntityId, durationMs: number, client: RuntimeClient) => void;
@@ -457,7 +458,27 @@ function getSpell(idSpell: number) {
 }
 
 function isRazaEnana(idRaza: number) {
-    return idRaza === vars.razas.gnomo || idRaza === vars.razas.enano;
+    return idRaza === vars.razas.gnomo || idRaza === vars.razas.enano || idRaza === vars.razas.goblin;
+}
+
+function isRazaElfa(idRaza: number) {
+    return idRaza === vars.razas.elfo || idRaza === vars.razas.elfoDrow;
+}
+
+// InvUsuario.bas: EquiparObjeto solo bloquea en un sentido (si el item exige una raza,
+// solo esa raza lo puede usar); no bloquea a esa raza de usar armaduras "normales".
+function isArmorBlockedByRace(obj: DataObject, idRaza: number) {
+    if (obj.objType !== vars.objType.armaduras) {
+        return false;
+    }
+
+    return Boolean(
+        (obj.razaEnana && !isRazaEnana(idRaza)) ||
+            (obj.razaElfa && !isRazaElfa(idRaza)) ||
+            (obj.razaVampiro && idRaza !== vars.razas.vampiro) ||
+            (obj.razaHumana && idRaza !== vars.razas.humano) ||
+            (obj.razaOrca && idRaza !== vars.razas.orco),
+    );
 }
 
 function itemValidUser(idUser: EntityId, idItem: number) {
@@ -471,8 +492,7 @@ function itemValidUser(idUser: EntityId, idItem: number) {
     if (
         (obj.clasesNoPermitidas && obj.clasesNoPermitidas.indexOf(user.idClase) >= 0) ||
         (getRequiredFactionForItem(idItem) !== "none" && user.faction !== getRequiredFactionForItem(idItem)) ||
-        (obj.razaEnana && !isRazaEnana(user.idRaza) && obj.objType === vars.objType.armaduras) ||
-        (!obj.razaEnana && isRazaEnana(user.idRaza) && obj.objType === vars.objType.armaduras)
+        isArmorBlockedByRace(obj, user.idRaza)
     ) {
         return 0;
     }
@@ -1642,6 +1662,19 @@ const handleServer: HandleProtocolApi = {
             pkg.writeString(chunk);
             socket.send(client);
         });
+    },
+
+    skillsState(payload, client) {
+        pkg.setPackageID(pkg.clientPacketID.skillsState);
+        pkg.writeShort(Math.max(0, Math.floor(Number(payload?.skillPts) || 0)));
+
+        const values = Array.isArray(payload?.values) ? payload.values : [];
+
+        for (let index = 0; index < 31; index++) {
+            pkg.writeByte(Math.max(0, Math.min(200, Math.floor(Number(values[index]) || 0))));
+        }
+
+        socket.send(client);
     },
 
     characterStatsSnapshot(snapshot, client) {

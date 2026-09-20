@@ -94,6 +94,7 @@ export type IncomingPacketHandlerContext = {
     onAdminIntervalsOpen?: (() => void) | undefined;
     onAdminOverviewSnapshot?: ((snapshot: any) => void) | undefined;
     onCharacterStatsSnapshot?: ((snapshot: any) => void) | undefined;
+    onSkillsState?: ((state: any) => void) | undefined;
     upsertSpell: (payload: any) => void;
     clearTargetingMode: () => void;
     showDialogBubble: (id: number, msg: string, color?: string) => void;

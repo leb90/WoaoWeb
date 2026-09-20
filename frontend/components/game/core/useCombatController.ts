@@ -547,7 +547,7 @@ export function useCombatController(options: UseCombatControllerOptions) {
 
     const isFishingRodItem = useCallback((item: InventoryItem | null) => {
         if (!item) return false;
-        return /cañ?a de pesca/i.test(item.name);
+        return /cañ?a de pesca|red de pesca/i.test(item.name);
     }, []);
     const isWoodcuttingToolItem = useCallback((item: InventoryItem | null) => {
         if (!item) return false;

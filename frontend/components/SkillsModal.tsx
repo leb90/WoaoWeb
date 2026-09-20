@@ -2,10 +2,16 @@
 
 import React from "react";
 import { Plus, X } from "lucide-react";
+import {
+    MAX_SKILL_POINTS,
+    NUM_SKILLS,
+    type SkillsState,
+} from "../lib/aowProtocol";
 
 type SkillsModalProps = {
     isOpen: boolean;
-    level: number;
+    skillsState?: SkillsState | null;
+    onAssignSkill?: (skillId: number) => void;
     onClose: () => void;
 };
 
@@ -43,15 +49,18 @@ const SKILL_NAMES = [
     "Esquivar Proyectiles",
 ] as const;
 
-const MAX_SKILL_POINTS = 100;
+function getSkillValues(skillsState?: SkillsState | null) {
+    const values = Array.from({ length: NUM_SKILLS }, (_, index) =>
+        Math.max(0, Math.min(MAX_SKILL_POINTS, Number(skillsState?.values?.[index]) || 0)),
+    );
 
-function getSkillValue(level: number): number {
-    return Math.min(MAX_SKILL_POINTS, Math.max(0, level) * 3);
+    return values;
 }
 
 export default function SkillsModal({
     isOpen,
-    level,
+    skillsState,
+    onAssignSkill,
     onClose,
 }: SkillsModalProps) {
     React.useEffect(() => {
@@ -73,8 +82,8 @@ export default function SkillsModal({
         return null;
     }
 
-    const skillValue = getSkillValue(level);
-    const remainingPoints = 0;
+    const values = getSkillValues(skillsState);
+    const remainingPoints = Math.max(0, Math.floor(Number(skillsState?.skillPts) || 0));
 
     return (
         <div className="fixed inset-0 z-[84] flex items-center justify-center bg-black/45 px-4 backdrop-blur-[3px]">
@@ -106,34 +115,48 @@ export default function SkillsModal({
                 </div>
                 <div className="min-h-0 flex-1 overflow-y-auto px-5 py-3">
                     <div className="divide-y divide-white/6">
-                        {SKILL_NAMES.map((name) => (
-                            <div
-                                key={name}
-                                className="flex items-center justify-between gap-3 py-1.5"
-                            >
-                                <span className="text-sm text-stone-300">
-                                    {name}
-                                </span>
-                                <div className="flex items-center gap-2">
-                                    <span className="w-8 text-right text-sm font-semibold tabular-nums text-amber-100">
-                                        {skillValue}
+                        {SKILL_NAMES.map((name, index) => {
+                            const skillId = index + 1;
+                            const skillValue = values[index] ?? 0;
+                            const canAssign =
+                                remainingPoints > 0 && skillValue < MAX_SKILL_POINTS;
+
+                            return (
+                                <div
+                                    key={name}
+                                    className="flex items-center justify-between gap-3 py-1.5"
+                                >
+                                    <span className="text-sm text-stone-300">
+                                        {name}
                                     </span>
-                                    <button
-                                        type="button"
-                                        disabled
-                                        className="flex h-6 w-6 items-center justify-center border border-amber-200/20 bg-black/25 text-amber-100/40"
-                                        aria-label={`Sumar ${name}`}
-                                        title="No tienes puntos de skill libres"
-                                    >
-                                        <Plus
-                                            aria-hidden="true"
-                                            className="h-3.5 w-3.5"
-                                            strokeWidth={2}
-                                        />
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        <span className="w-16 text-right text-sm font-semibold tabular-nums text-amber-100">
+                                            {skillValue}/{MAX_SKILL_POINTS}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            disabled={!canAssign}
+                                            onClick={() => onAssignSkill?.(skillId)}
+                                            className="flex h-6 w-6 items-center justify-center border border-amber-200/20 bg-black/25 text-amber-100 disabled:text-amber-100/40"
+                                            aria-label={`Sumar ${name}`}
+                                            title={
+                                                canAssign
+                                                    ? `Asignar 1 punto a ${name}`
+                                                    : remainingPoints < 1
+                                                      ? "No tienes puntos de skill libres"
+                                                      : "Este skill ya está al máximo"
+                                            }
+                                        >
+                                            <Plus
+                                                aria-hidden="true"
+                                                className="h-3.5 w-3.5"
+                                                strokeWidth={2}
+                                            />
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             </div>

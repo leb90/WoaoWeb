@@ -39,6 +39,7 @@ import type {
     BailOffer,
     CraftingState,
     CharacterStatsSnapshot,
+    SkillsState,
     ChatChannel,
     MarketPriceSort,
     PanelSnapshot,
@@ -83,16 +84,16 @@ const DESKTOP_CONSOLE_HEIGHT = 110;
 const CHAT_TABS_ESTIMATED_HEIGHT = 32;
 const CHAT_INPUT_ROW_HEIGHT = 36;
 const EXP_BAR_ESTIMATED_HEIGHT = 34;
-const MAX_CHARACTER_LEVEL = 50;
 const RIGHT_COLUMN_ACTIONS_ESTIMATED_HEIGHT = 112;
 const SHELL_VERTICAL_PADDING = 16;
 const SHELL_TOP_PADDING = 64;
 const SHELL_TOP_PADDING_FULLSCREEN = 0;
 const SHELL_BOTTOM_PADDING_FULLSCREEN = 0;
 const SHELL_HORIZONTAL_PADDING = 12;
-const SHELL_HORIZONTAL_PADDING_FULLSCREEN = 12;
+const SHELL_HORIZONTAL_PADDING_FULLSCREEN = 0;
 const COLUMN_SECTION_GAP = 6;
 const EXP_SECTION_GAP = 0;
+const SESSION_FOOTER_ESTIMATED_HEIGHT = 64;
 const MAX_HUD_SCALE = 2.5;
 const FULLSCREEN_HINT_DURATION_MS = 2600;
 const FULLSCREEN_PROMPT_MAX_WIDTH = 1200;
@@ -645,7 +646,7 @@ function ScaledHudFrame({
 
     return (
         <div
-            className="relative overflow-hidden"
+            className="relative overflow-visible"
             style={{
                 width: frameWidth || undefined,
                 height: frameHeight || undefined,
@@ -707,6 +708,11 @@ function HomeContent() {
     const [useItemURequest, setUseItemURequest] = useState<UseRequest | null>(
         null,
     );
+    const [assignSkillRequest, setAssignSkillRequest] = useState<{
+        skillId: number;
+        token: number;
+    } | null>(null);
+    const [skillsState, setSkillsState] = useState<SkillsState | null>(null);
     const [dropRequest, setDropRequest] = useState<DropRequest | null>(null);
     const [buyRequest, setBuyRequest] = useState<BuyRequest | null>(null);
     const [sellRequest, setSellRequest] = useState<SellRequest | null>(null);
@@ -1524,22 +1530,19 @@ function HomeContent() {
             return 1;
         }
 
-        const showExperienceBar = (hud?.level ?? 0) < MAX_CHARACTER_LEVEL;
         const centerColumnBaseHeight =
             (isDesktopConsoleLayout ? topHudSectionSize.height : 0) +
             CANVAS_BASE_HEIGHT +
-            (showExperienceBar
-                ? EXP_SECTION_GAP + EXP_BAR_ESTIMATED_HEIGHT
-                : 0);
-        const totalBaseHeight = Math.max(
-            centerColumnBaseHeight,
-            rightColumnSize.height,
-        );
+            (isFullscreen ? 0 : EXP_SECTION_GAP + EXP_BAR_ESTIMATED_HEIGHT);
+        const totalBaseHeight = centerColumnBaseHeight;
         const totalBaseWidth =
             CANVAS_BASE_WIDTH + HUD_GAP + rightColumnSize.width;
         const availableWidth = viewport.width - shellHorizontalPadding * 2;
         const availableHeight =
-            viewport.height - shellTopPadding - shellBottomPadding;
+            viewport.height -
+            shellTopPadding -
+            shellBottomPadding -
+            (isFullscreen ? 2 : 0);
         const widthScale = availableWidth / totalBaseWidth;
         const heightScale = availableHeight / totalBaseHeight;
         const nextScale = Math.min(widthScale, heightScale);
@@ -1552,8 +1555,7 @@ function HomeContent() {
         return Math.min(maxScale, nextScale);
     }, [
         isDesktopConsoleLayout,
-        hud?.level,
-        rightColumnSize.height,
+        isFullscreen,
         rightColumnSize.width,
         shellHorizontalPadding,
         shellBottomPadding,
@@ -2777,9 +2779,17 @@ function HomeContent() {
                 }}
             >
                 <div
-                    className="pointer-events-auto flex flex-col"
+                    className="pointer-events-auto relative flex flex-col"
                     style={{ gap: `${HUD_GAP}px` }}
                 >
+                    {isDesktopConsoleLayout && !isFullscreen ? (
+                        <div
+                            className="pointer-events-none absolute right-0 z-40"
+                            style={{ bottom: "100%", marginBottom: "8px" }}
+                        >
+                            {fullscreenToggleControl}
+                        </div>
+                    ) : null}
                     <div
                         className="flex items-start"
                         style={{ gap: `${HUD_GAP}px` }}
@@ -2891,6 +2901,7 @@ function HomeContent() {
                                 <BuffStatusSidebar
                                     hud={hud}
                                     runtimeTiming={runtimeTiming}
+                                    skillsState={skillsState}
                                 />
                                 <MapRenderer
                                     embedded
@@ -2901,6 +2912,7 @@ function HomeContent() {
                                     equipRequest={equipRequest}
                                     useItemClickRequest={useItemClickRequest}
                                     useItemURequest={useItemURequest}
+                                    assignSkillRequest={assignSkillRequest}
                                     dropRequest={dropRequest}
                                     buyRequest={buyRequest}
                                     sellRequest={sellRequest}
@@ -2950,6 +2962,7 @@ function HomeContent() {
                                         setCharacterStatsLoading(false);
                                         setCharacterStatsOpen(true);
                                     }}
+                                    onSkillsState={setSkillsState}
                                 />
 
                                 {!arenaMode &&
@@ -3051,7 +3064,7 @@ function HomeContent() {
                                               : "16px",
                                     }}
                                 >
-                                    {!isDesktopConsoleLayout
+                                    {!isDesktopConsoleLayout && !isFullscreen
                                         ? fullscreenToggleControl
                                         : null}
                                 </div>
@@ -3258,13 +3271,64 @@ function HomeContent() {
                                         </div>
                                     </div>
                                 ) : null}
+                                {isFullscreen ? (
+                                    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20">
+                                        <div className="border-t border-[#6f5734] bg-[#0c0907] px-3 py-1.5">
+                                            <div className="mb-1 flex items-center justify-between text-[9px] uppercase tracking-[0.14em] text-stone-400/90">
+                                                <span>Experiencia</span>
+                                                <span className="tabular-nums tracking-normal text-amber-100">
+                                                    {hud
+                                                        ? `${Math.round(
+                                                              Math.max(
+                                                                  0,
+                                                                  Math.min(
+                                                                      100,
+                                                                      ((hud.exp ||
+                                                                          0) /
+                                                                          Math.max(
+                                                                              1,
+                                                                              hud.expNextLevel ||
+                                                                                  1,
+                                                                          )) *
+                                                                          100,
+                                                                  ),
+                                                              ),
+                                                          )}% (${formatNumber(hud.exp || 0)} / ${formatNumber(hud.expNextLevel || 0)})`
+                                                        : "-"}
+                                                </span>
+                                            </div>
+                                            <div className="relative h-[7px] overflow-hidden rounded-[2px] border border-[#8b6b3e]/80 bg-black/55">
+                                                <div
+                                                    className="h-full bg-linear-to-r from-[#547a24] via-[#7cb63b] to-[#b6e05a]"
+                                                    style={{
+                                                        width: `${
+                                                            hud?.expNextLevel
+                                                                ? Math.max(
+                                                                      0,
+                                                                      Math.min(
+                                                                          100,
+                                                                          ((hud.exp ||
+                                                                              0) /
+                                                                              hud.expNextLevel) *
+                                                                              100,
+                                                                      ),
+                                                                  )
+                                                                : 0
+                                                        }%`,
+                                                    }}
+                                                />
+                                                <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-white/20 to-transparent" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : null}
                             </div>
-                            {(hud?.level ?? 0) < MAX_CHARACTER_LEVEL ? (
-                                <ScaledHudFrame
-                                    scale={hudScale}
-                                    baseWidth={CANVAS_BASE_WIDTH}
-                                >
-                                    <div className="border-t border-[#6f5734] bg-[#0c0907] px-3 py-1.5">
+                            {!isFullscreen ? (
+                            <ScaledHudFrame
+                                scale={hudScale}
+                                baseWidth={CANVAS_BASE_WIDTH}
+                            >
+                                <div className="border-t border-[#6f5734] bg-[#0c0907] px-3 py-1.5">
                                         <div className="mb-1 flex items-center justify-between text-[9px] uppercase tracking-[0.14em] text-stone-400/90">
                                             <span>Experiencia</span>
                                             <span className="tabular-nums tracking-normal text-amber-100">
@@ -3354,11 +3418,6 @@ function HomeContent() {
                                 className="relative flex w-[320px] flex-col"
                                 style={{ gap: `${COLUMN_SECTION_GAP}px` }}
                             >
-                                {isDesktopConsoleLayout ? (
-                                    <div className="pointer-events-none absolute right-0 top-0 z-30 -translate-y-[calc(100%+8px)]">
-                                        {fullscreenToggleControl}
-                                    </div>
-                                ) : null}
                                 <InventoryFloatingPanel
                                     hud={hud}
                                     mapName={status.worldName}
@@ -3366,7 +3425,26 @@ function HomeContent() {
                                     characterStatsSnapshot={
                                         characterStatsSnapshot
                                     }
-                                    panelHeight={`${CANVAS_BASE_HEIGHT + CHAT_TABS_ESTIMATED_HEIGHT + DESKTOP_CONSOLE_HEIGHT + CHAT_INPUT_ROW_HEIGHT + ((hud?.level ?? 0) < MAX_CHARACTER_LEVEL ? EXP_SECTION_GAP + EXP_BAR_ESTIMATED_HEIGHT : 0)}px`}
+                                    skillsState={skillsState}
+                                    onAssignSkill={(skillId) =>
+                                        setAssignSkillRequest((current) => ({
+                                            skillId,
+                                            token: (current?.token ?? 0) + 1,
+                                        }))
+                                    }
+                                    panelHeight={`${Math.max(
+                                        CANVAS_BASE_HEIGHT,
+                                        (isDesktopConsoleLayout
+                                            ? topHudSectionSize.height
+                                            : DESKTOP_CONSOLE_HEIGHT) +
+                                            CANVAS_BASE_HEIGHT +
+                                            (isFullscreen
+                                                ? 0
+                                                : EXP_SECTION_GAP +
+                                                  EXP_BAR_ESTIMATED_HEIGHT) -
+                                            COLUMN_SECTION_GAP -
+                                            SESSION_FOOTER_ESTIMATED_HEIGHT,
+                                    )}px`}
                                     portalTarget={gameShellElement}
                                     minimapHost={minimapHost}
                                     minimapVisible={isMinimapVisible}

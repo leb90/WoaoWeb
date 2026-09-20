@@ -853,6 +853,7 @@ function Login(this: LoginApi) {
                 personaje.summons = [];
                 personaje.summonTargetNpcId = 0;
                 require("./woaoProgress").hydrateUser(personaje);
+                require("./skills").ensureSkills(personaje);
                 vars.personajes[ws.id] = personaje;
 
                 if (!personaje.idBody) {
@@ -882,6 +883,8 @@ function Login(this: LoginApi) {
                 const bodyPersonaje = {
                     ip: personaje.ip,
                     connected: true,
+                    skills: personaje.skills,
+                    skillPts: personaje.skillPts,
                     ...(classCannotUseMagic
                         ? {
                               mana: 0,
@@ -915,6 +918,18 @@ function Login(this: LoginApi) {
                     handleProtocol.sendMyCharacter(personajeWS);
                     socket.send(ws);
                     sendWelcomeConsoleMessage(ws);
+                    require("./skills").sendSkillsState(personajeWS);
+
+                    if (Number(personajeWS.skillPts) > 0) {
+                        handleProtocol.console(
+                            `Tienes ${personajeWS.skillPts} skillpoints para asignar.`,
+                            "white",
+                            1,
+                            0,
+                            ws,
+                        );
+                    }
+
                     handleProtocol.console(
                         `WOAO> Canje ${personajeWS.puntosCanje ?? 0} | ELO ${personajeWS.elo ?? 300} | Remort ${personajeWS.remorted || "no"} | /woao`,
                         "#E69500",
@@ -1218,6 +1233,7 @@ function Login(this: LoginApi) {
         };
 
         require("./woaoProgress").hydrateUser(newCharacter);
+        require("./skills").ensureSkills(newCharacter);
         vars.personajes[ws.id] = newCharacter;
 
         vars.clients[ws.id] = ws;

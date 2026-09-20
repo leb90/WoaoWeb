@@ -15,6 +15,7 @@ import {
     createDialogPacket,
     type ChatChannel,
     type CharacterStatsSnapshot,
+    type SkillsState,
     type PanelSnapshot,
     type BailOffer,
     type CraftingState,
@@ -138,6 +139,7 @@ interface MapRendererProps {
     equipRequest?: { slot: number; token: number } | null;
     useItemClickRequest?: { slot: number; token: number } | null;
     useItemURequest?: { slot: number; token: number } | null;
+    assignSkillRequest?: { skillId: number; token: number } | null;
     dropRequest?: { slot: number; amount: number; token: number } | null;
     buyRequest?: { slot: number; amount: number; token: number } | null;
     sellRequest?: { slot: number; amount: number; token: number } | null;
@@ -208,6 +210,7 @@ interface MapRendererProps {
     onAdminIntervalsOpen?: () => void;
     onAdminOverviewSnapshot?: (snapshot: PanelSnapshot) => void;
     onCharacterStatsSnapshot?: (snapshot: CharacterStatsSnapshot) => void;
+    onSkillsState?: (state: SkillsState) => void;
     onPerformanceSample?: (sample: PerformanceSample) => void;
 }
 
@@ -629,6 +632,7 @@ export default function MapRenderer({
     equipRequest,
     useItemClickRequest,
     useItemURequest,
+    assignSkillRequest,
     dropRequest,
     buyRequest,
     sellRequest,
@@ -662,6 +666,7 @@ export default function MapRenderer({
     onAdminIntervalsOpen,
     onAdminOverviewSnapshot,
     onCharacterStatsSnapshot,
+    onSkillsState,
     onPerformanceSample,
 }: MapRendererProps) {
     const canvasRef = useRef<HTMLDivElement>(null);
@@ -1327,6 +1332,7 @@ export default function MapRenderer({
         equipRequest,
         useItemClickRequest,
         useItemURequest,
+        assignSkillRequest,
         dropRequest,
         buyRequest,
         sellRequest,
@@ -1805,6 +1811,7 @@ export default function MapRenderer({
                 onAdminIntervalsOpen,
                 onAdminOverviewSnapshot,
                 onCharacterStatsSnapshot,
+                onSkillsState,
                 upsertSpell,
                 clearTargetingMode,
                 showDialogBubble,
@@ -1843,6 +1850,7 @@ export default function MapRenderer({
         onAdminIntervalsOpen,
         onAdminOverviewSnapshot,
         onCharacterStatsSnapshot,
+        onSkillsState,
         onConsoleMessage,
         onGlobalNotice,
         playStepSound,

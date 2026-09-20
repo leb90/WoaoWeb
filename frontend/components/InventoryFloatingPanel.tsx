@@ -54,12 +54,15 @@ import {
 } from "../lib/hardware-acceleration";
 import WoaoHubModal, { type WoaoHubTab } from "./WoaoHubModal";
 import SkillsModal from "./SkillsModal";
+import type { SkillsState } from "../lib/aowProtocol";
 
 type InventoryFloatingPanelProps = {
     hud: PlayerHudState | null;
     mapName?: string;
     connected?: boolean;
     characterStatsSnapshot?: CharacterStatsSnapshot | null;
+    skillsState?: SkillsState | null;
+    onAssignSkill?: (skillId: number) => void;
     panelHeight?: number | string;
     portalTarget?: HTMLElement | null;
     minimapHost?: HTMLElement | null;
@@ -681,6 +684,8 @@ export default function InventoryFloatingPanel({
     hud,
     mapName,
     characterStatsSnapshot,
+    skillsState,
+    onAssignSkill,
     panelHeight,
     portalTarget,
     minimapHost,
@@ -3334,7 +3339,8 @@ export default function InventoryFloatingPanel({
 
             <SkillsModal
                 isOpen={isSkillsOpen}
-                level={hud?.level ?? 1}
+                skillsState={skillsState}
+                onAssignSkill={onAssignSkill}
                 onClose={() => setIsSkillsOpen(false)}
             />
 

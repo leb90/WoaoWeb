@@ -115,6 +115,7 @@ const clientPacketID = {
     spellVisual: 80,
     entityVitalsDelta: 81,
     characterSwing: 82,
+    skillsState: 83,
 } as const;
 
 const serverPacketID = {
@@ -148,6 +149,7 @@ const serverPacketID = {
     closeTrade: 190,
     marketAction: 239,
     retosAction: 248,
+    assignSkill: 249,
 } as const;
 
 type PacketChunk = Buffer | ArrayBuffer | ArrayBufferView | string;

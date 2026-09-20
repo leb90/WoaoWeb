@@ -146,6 +146,8 @@ export type CharacterRecord = {
     faction_rank_caos: number;
     faction_rewards_armada: number;
     faction_rewards_caos: number;
+    skills: number[] | null;
+    skill_pts: number | null;
     jail_minutes: number;
     jail_reason: string | null;
     connected: boolean;
@@ -281,6 +283,8 @@ export type CharacterApiResponse = {
     factionRankCaos: number;
     factionRewardsArmada: number;
     factionRewardsCaos: number;
+    skills: number[] | null;
+    skillPts: number | null;
     jailMinutes: number;
     jailReason: string | null;
     connected: boolean;

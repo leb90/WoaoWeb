@@ -76,6 +76,7 @@ type CommandCharacter = RuntimeCharacter & {
     pos: { x: number; y: number };
     seguroActivado: boolean;
     seguroClanActivado?: boolean;
+    segCritico?: boolean;
     npcMatados?: number;
     ciudadanosMatados?: number;
     criminalesMatados?: number;
@@ -1326,14 +1327,28 @@ function itemBlockedForClass(user: CommandCharacter, classId: number, itemId: nu
         return true;
     }
 
-    const isDwarfRace = user.idRaza === vars.razas.gnomo || user.idRaza === vars.razas.enano;
+    const isDwarfRace =
+        user.idRaza === vars.razas.gnomo || user.idRaza === vars.razas.enano || user.idRaza === vars.razas.goblin;
+    const isElfRace = user.idRaza === vars.razas.elfo || user.idRaza === vars.razas.elfoDrow;
 
     if (obj.objType === vars.objType.armaduras) {
         if (obj.razaEnana && !isDwarfRace) {
             return true;
         }
 
-        if (!obj.razaEnana && isDwarfRace) {
+        if (obj.razaElfa && !isElfRace) {
+            return true;
+        }
+
+        if (obj.razaVampiro && user.idRaza !== vars.razas.vampiro) {
+            return true;
+        }
+
+        if (obj.razaHumana && user.idRaza !== vars.razas.humano) {
+            return true;
+        }
+
+        if (obj.razaOrca && user.idRaza !== vars.razas.orco) {
             return true;
         }
     }
@@ -2991,7 +3006,7 @@ const command: CommandApi = {
 
                 case "/woao": {
                     handleProtocol.console(
-                        "WOAO: /quest /quests /questaceptar /questabandonar /montura /premios /canjear /viaje /comerciar /ranked /hunger /participar /atorneo /remort /ciudades /castillos /castillo /clanpuntos /bloodcastle /guerra /templo /domar /casa /dia /party /aceptar /partyinfo /salirparty",
+                        "WOAO: /quest /quests /questaceptar /questabandonar /montura /premios /canjear /viaje /comerciar /ranked /hunger /participar /atorneo /remort /ciudades /castillos /castillo /clanpuntos /bloodcastle /guerra /templo /domar /robar /critico /casa /dia /party /aceptar /partyinfo /salirparty",
                         "#E69500",
                         1,
                         0,
@@ -3177,6 +3192,26 @@ const command: CommandApi = {
                 case "/domar": {
                     const result = require("./tame").doTame(String(clientId));
                     handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/robar": {
+                    const result = require("./steal").doRobar(String(clientId), nextText.trim());
+                    handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/critico": {
+                    user.segCritico = !user.segCritico;
+                    handleProtocol.console(
+                        user.segCritico
+                            ? "Seguro de golpes críticos activado."
+                            : "Seguro de golpes críticos desactivado.",
+                        "#E69500",
+                        1,
+                        0,
+                        ws as CommandClient,
+                    );
                     break;
                 }
 

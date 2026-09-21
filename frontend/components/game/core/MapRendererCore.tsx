@@ -778,7 +778,7 @@ export default function MapRenderer({
               : [];
 
         for (const item of items) {
-            if (item.id <= lastSentChatTokenRef.current) {
+            if (item.id <= (lastSentChatTokenRef.current ?? 0)) {
                 continue;
             }
 

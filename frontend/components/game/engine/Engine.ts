@@ -2902,7 +2902,7 @@ export class Engine {
                 weaponSprite,
                 this.user,
                 playerWeaponGraphicId
-                    ? this.graphicsDB[playerWeaponGraphicId.toString()]
+                    ? this.graphicsDB?.[playerWeaponGraphicId.toString()]
                     : undefined,
                 equipmentNow,
                 "weapon",
@@ -2912,7 +2912,7 @@ export class Engine {
                 shieldSprite,
                 this.user,
                 playerShieldGraphicId
-                    ? this.graphicsDB[playerShieldGraphicId.toString()]
+                    ? this.graphicsDB?.[playerShieldGraphicId.toString()]
                     : undefined,
                 equipmentNow,
                 "shield",

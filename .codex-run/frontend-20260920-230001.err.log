@@ -1,0 +1,3 @@
+$ next dev --turbopack --hostname 0.0.0.0
+⚠ Slow filesystem detected. The benchmark took 552ms. If D:\AProgramacion\Proyectos 2024\WoaoWeb\frontend\.next/dev is a network drive, consider moving it to a local folder.
+See more: https://nextjs.org/docs/app/guides/local-development

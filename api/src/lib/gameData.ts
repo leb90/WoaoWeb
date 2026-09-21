@@ -32,6 +32,7 @@ export type GameObjectRecordData = {
     resistenciaMagica?: number;
     staffDamageBonus?: number;
     magicDamageBonus?: number;
+    magicDamagePercent?: number;
     magicPenetration?: number;
     minDefMag?: number;
     maxDefMag?: number;
@@ -136,6 +137,7 @@ const OBJECT_DEFAULTS: Record<string, unknown> = {
     resistenciaMagica: 0,
     staffDamageBonus: 0,
     magicDamageBonus: 0,
+    magicDamagePercent: 0,
     magicPenetration: 0,
     minDefMag: 0,
     maxDefMag: 0,
@@ -197,13 +199,19 @@ export function computeChecksum(value: unknown): string {
 export function normalizeObjectData(
     data: GameObjectRecordData,
 ): GameObjectRecordData {
-    return {
+    const normalized = {
         ...OBJECT_DEFAULTS,
         ...data,
         clasesNoPermitidas: Array.isArray(data.clasesNoPermitidas)
             ? data.clasesNoPermitidas
             : [],
     } as GameObjectRecordData;
+
+    if (Number(normalized.minDefMag ?? 0) > 0 && Number(normalized.maxDefMag ?? 0) <= 0) {
+        normalized.maxDefMag = normalized.minDefMag;
+    }
+
+    return normalized;
 }
 
 export function normalizeNpcData(data: GameNpcRecordData): GameNpcRecordData {

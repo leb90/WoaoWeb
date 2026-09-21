@@ -89,6 +89,25 @@ function clampVital(value: number, max: number) {
     return Math.max(0, Math.min(max, Math.floor(Number(value) || 0)));
 }
 
+function safeNumber(value: unknown): number {
+    const numericValue = Number(value ?? 0);
+    return Number.isFinite(numericValue) ? numericValue : 0;
+}
+
+function rollInclusiveRange(minValue: unknown, maxValue: unknown): number {
+    const min = Math.floor(safeNumber(minValue));
+    const rawMax = Math.floor(safeNumber(maxValue));
+    const max = rawMax > 0 ? rawMax : min;
+    const lower = Math.min(min, max);
+    const upper = Math.max(min, max);
+
+    if (upper <= 0) {
+        return 0;
+    }
+
+    return funct.randomIntFromInterval(lower, upper);
+}
+
 function ensureSurvivalVitals(user: Record<string, unknown>) {
     const maxSta = balance.getMaxStaForLevel(
         Number(user.attrConstitucion ?? 18),
@@ -885,6 +904,24 @@ function getTargetMagicResistanceBonus(target: GameCharacter): number {
     return total;
 }
 
+function getTargetMagicDefenseRoll(target: GameCharacter): number {
+    const helmet = getEquippedHelmetData(target);
+    const body = getEquippedBodyData(target);
+    const shield = getEquippedShieldData(target);
+    const ring = getEquippedRingData(target);
+    let total = 0;
+
+    for (const item of [helmet, body, shield, ring]) {
+        if (!item) {
+            continue;
+        }
+
+        total += rollInclusiveRange(item.minDefMag, item.maxDefMag);
+    }
+
+    return total;
+}
+
 function getClassMagicResistanceBonus(classId: number): number {
     const modifier = Number(vars.modResistenciaMagica?.[classId] ?? 0);
     return Number.isFinite(modifier) ? modifier : 0;
@@ -899,14 +936,17 @@ function applyMagicBonuses(baseDamage: number, caster: GameCharacter) {
     let damage = baseDamage + Math.round((baseDamage * (3 * caster.level)) / 100);
     let magicPenetration = 0;
     const weapon = getEquippedWeaponData(caster);
+    const helmet = getEquippedHelmetData(caster);
+    const body = getEquippedBodyData(caster);
     const ring = getEquippedRingData(caster);
 
-    for (const item of [weapon, ring]) {
+    for (const item of [weapon, helmet, body, ring]) {
         if (!item) {
             continue;
         }
 
-        damage += Math.round((damage * Number(item.magicDamageBonus ?? 0)) / 100);
+        damage += safeNumber(item.magicDamageBonus);
+        damage += Math.round((damage * safeNumber(item.magicDamagePercent)) / 100);
         magicPenetration += Number(item.magicPenetration ?? 0);
     }
 
@@ -958,6 +998,7 @@ function applyMagicResistanceToUser(
     );
 
     nextDamage -= Math.floor((nextDamage * percentReduction) / 100);
+    nextDamage -= getTargetMagicDefenseRoll(target);
     return nextDamage;
 }
 
@@ -2455,7 +2496,11 @@ function notifyNpcSpellDamage(user: GameCharacter, npc: GameNpc, dmg: number) {
 
     game.loopAreaPos(npc.map, npc.pos, function (target: GameCharacter) {
         withUserClient(target.id, (targetClient) => {
-            handleProtocol.playSound(npc.id, npc.snd2 > 0 ? npc.snd2 : vars.arSounds.SND_IMPACTO2, targetClient);
+            handleProtocol.playSound(
+                npc.id,
+                Number(npc.snd2 ?? 0) > 0 ? Number(npc.snd2) : vars.arSounds.SND_IMPACTO2,
+                targetClient,
+            );
         });
     });
 
@@ -7834,7 +7879,7 @@ function Game(this: GameApi) {
             }
 
             let dmg = 0;
-            let spellEffect: "Paraliza" | "Inmoviliza" | null = null;
+            let spellEffect: "Paraliza" | "Inmoviliza" | "Envenena" | null = null;
 
             if (isHostileSpell) {
                 markNpcAggressor(idNpc, idUser);
@@ -7959,7 +8004,7 @@ function Game(this: GameApi) {
                     withUserClient(target.id, (targetClient) => {
                         handleProtocol.playSound(
                             idNpc,
-                            npc.snd2 > 0 ? npc.snd2 : vars.arSounds.SND_IMPACTO2,
+                            Number(npc.snd2 ?? 0) > 0 ? Number(npc.snd2) : vars.arSounds.SND_IMPACTO2,
                             targetClient,
                         );
                     });
@@ -8589,7 +8634,7 @@ function Game(this: GameApi) {
                 const idItem = itemInventary.idItem;
                 const itemWeapon = vars.datObj[idItem];
 
-                dmgArma = funct.randomIntFromInterval(itemWeapon.minHit, itemWeapon.maxHit);
+                dmgArma = rollInclusiveRange(itemWeapon.minHit, itemWeapon.maxHit);
 
                 if (itemWeapon.proyectil) {
                     const itemInventaryArrow = getInventoryItem(user, user.idItemArrow);
@@ -8601,7 +8646,7 @@ function Game(this: GameApi) {
                     const idItemArrow = itemInventaryArrow.idItem;
                     const itemArrow = vars.datObj[idItemArrow];
 
-                    dmgArma += funct.randomIntFromInterval(itemArrow.minHit, itemArrow.maxHit);
+                    dmgArma += rollInclusiveRange(itemArrow.minHit, itemArrow.maxHit);
 
                     modClase = vars.modDmgProyectiles[user.idClase];
                     isRanged = true;
@@ -8609,7 +8654,7 @@ function Game(this: GameApi) {
                     modClase = vars.modDmgArmas[user.idClase];
                 }
 
-                dmgMaxArma = itemWeapon.maxHit;
+                dmgMaxArma = safeNumber(itemWeapon.maxHit);
             } else {
                 dmgArma = funct.randomIntFromInterval(4, 9);
                 modClase = vars.modDmgWrestling[user.idClase];
@@ -8617,7 +8662,7 @@ function Game(this: GameApi) {
                 dmgMaxArma = 9;
             }
 
-            const dmgUser = funct.randomIntFromInterval(user.minHit, user.maxHit);
+            const dmgUser = rollInclusiveRange(user.minHit, user.maxHit);
 
             const dmg = Math.floor(
                 (3 * dmgArma + (dmgMaxArma / 5) * Math.max(0, user.attrFuerza - 15) + dmgUser) * modClase,
@@ -8759,7 +8804,7 @@ function Game(this: GameApi) {
                         handleProtocol.playSound(idUser, vars.arSounds.SND_IMPACTO, targetClient);
                         handleProtocol.playSound(
                             idNpc,
-                            npc.snd2 > 0 ? npc.snd2 : vars.arSounds.SND_IMPACTO2,
+                            Number(npc.snd2 ?? 0) > 0 ? Number(npc.snd2) : vars.arSounds.SND_IMPACTO2,
                             targetClient,
                         );
                     });
@@ -8926,7 +8971,7 @@ function Game(this: GameApi) {
                             const idItemHelmet = itemInventaryHelmet.idItem;
                             const itemHelmet = vars.datObj[idItemHelmet];
 
-                            absorbeDmg = funct.randomIntFromInterval(itemHelmet.minDef, itemHelmet.maxDef);
+                            absorbeDmg = rollInclusiveRange(itemHelmet.minDef, itemHelmet.maxDef);
                         }
 
                         break;
@@ -8941,8 +8986,8 @@ function Game(this: GameApi) {
                                 const idItemBody = itemInventaryBody.idItem;
                                 const itemBody = vars.datObj[idItemBody];
 
-                                minDef = itemBody.minDef;
-                                maxDef = itemBody.maxDef;
+                                minDef = safeNumber(itemBody.minDef);
+                                maxDef = safeNumber(itemBody.maxDef);
                             }
                         }
 
@@ -8953,14 +8998,12 @@ function Game(this: GameApi) {
                                 const idItemShield = itemInventaryShield.idItem;
                                 const itemShield = vars.datObj[idItemShield];
 
-                                minDef += itemShield.minDef;
-                                maxDef += itemShield.maxDef;
+                                minDef += safeNumber(itemShield.minDef);
+                                maxDef += safeNumber(itemShield.maxDef);
                             }
                         }
 
-                        if (maxDef > 0) {
-                            absorbeDmg = funct.randomIntFromInterval(minDef, maxDef);
-                        }
+                        absorbeDmg = rollInclusiveRange(minDef, maxDef);
                         break;
                 }
 

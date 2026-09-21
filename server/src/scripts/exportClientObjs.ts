@@ -18,6 +18,7 @@ type SourceObject = {
     proyectil?: number;
     staffDamageBonus?: number;
     magicDamageBonus?: number;
+    magicDamagePercent?: number;
 };
 
 type ClientObject = {
@@ -35,6 +36,7 @@ type ClientObject = {
     proyectil?: number;
     staffDamageBonus?: number;
     magicDamageBonus?: number;
+    magicDamagePercent?: number;
 };
 
 type ObjectsMap = Record<string, SourceObject>;
@@ -79,6 +81,7 @@ function toClientObject(source: SourceObject): ClientObject {
     addOptionalNumber(clientObject, "proyectil", source.proyectil);
     addOptionalNumber(clientObject, "staffDamageBonus", source.staffDamageBonus);
     addOptionalNumber(clientObject, "magicDamageBonus", source.magicDamageBonus);
+    addOptionalNumber(clientObject, "magicDamagePercent", source.magicDamagePercent);
 
     return clientObject as ClientObject;
 }

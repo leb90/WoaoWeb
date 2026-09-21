@@ -195,6 +195,7 @@ export type DataObject = {
     maxModificador?: number;
     tipoPocion?: number;
     magicDamageBonus?: number;
+    magicDamagePercent?: number;
     magicPenetration?: number;
     spellIndex?: number;
     item?: number;

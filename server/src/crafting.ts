@@ -186,7 +186,11 @@ function getCraftedItemStats(obj: DataObject) {
             }
 
             if (obj.magicDamageBonus) {
-                parts.push(`Bonus daño mágico: ${obj.magicDamageBonus}%`);
+                parts.push(`Ataque mágico: +${obj.magicDamageBonus}`);
+            }
+
+            if (obj.magicDamagePercent) {
+                parts.push(`Bonus daño mágico: ${obj.magicDamagePercent}%`);
             }
 
             return parts.join(" | ");
@@ -200,12 +204,20 @@ function getCraftedItemStats(obj: DataObject) {
         case vars.objType.cascos: {
             const parts = [`Defensa: ${obj.minDef ?? 0}/${obj.maxDef ?? 0}`];
 
-            if (obj.objType === vars.objType.cascos && obj.minDefMag && obj.maxDefMag) {
+            if (obj.minDefMag && obj.maxDefMag) {
                 parts.push(`Defensa Mágica: ${obj.minDefMag}/${obj.maxDefMag}`);
             }
 
             if (obj.resistenciaMagica) {
                 parts.push(`Resistencia mágica: ${obj.resistenciaMagica}%`);
+            }
+
+            if (obj.magicDamageBonus) {
+                parts.push(`Ataque mágico: +${obj.magicDamageBonus}`);
+            }
+
+            if (obj.magicDamagePercent) {
+                parts.push(`Bonus daño mágico: ${obj.magicDamagePercent}%`);
             }
 
             return parts.join(" | ");
@@ -223,7 +235,11 @@ function getCraftedItemStats(obj: DataObject) {
             }
 
             if (obj.magicDamageBonus) {
-                parts.push(`Bonus daño mágico: ${obj.magicDamageBonus}%`);
+                parts.push(`Ataque mágico: +${obj.magicDamageBonus}`);
+            }
+
+            if (obj.magicDamagePercent) {
+                parts.push(`Bonus daño mágico: ${obj.magicDamagePercent}%`);
             }
 
             return parts.join(" | ");

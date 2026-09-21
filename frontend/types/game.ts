@@ -29,6 +29,7 @@ export interface ObjectData {
     apu?: number;
     proyectil?: number;
     magicDamageBonus?: number;
+    magicDamagePercent?: number;
 }
 
 // NPC data structure from npcs.json

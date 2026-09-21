@@ -499,7 +499,7 @@ function convertObjects(): JsonRecord {
             minDef: toInt(getValue(section, "MinDef") ?? getValue(section, "MINDEF")),
             maxDef: toInt(getValue(section, "MaxDef") ?? getValue(section, "MAXDEF")),
             minDefMag: toInt(getValue(section, "MinDefMag") ?? getValue(section, "DefMagic")),
-            maxDefMag: toInt(getValue(section, "MaxDefMag") ?? getValue(section, "MaxDefMag")),
+            maxDefMag: toInt(getValue(section, "MaxDefMag") ?? getValue(section, "DefMagic")),
             resistenciaMagica: toInt(getValue(section, "ResistenciaMagica")),
             tipoPocion: toInt(getValue(section, "TipoPocion")),
             minModificador: toInt(getValue(section, "MinModificador")),
@@ -513,7 +513,8 @@ function convertObjects(): JsonRecord {
             agarrable: toInt(getValue(section, "Agarrable"), 1),
             noSeCae: toInt(getValue(section, "NoSeCae") ?? getValue(section, "nocaer")),
             staffDamageBonus: toInt(getValue(section, "StaffDamageBonus")),
-            magicDamageBonus: toInt(getValue(section, "MagicDamageBonus")),
+            magicDamageBonus: toInt(getValue(section, "MagicDamageBonus") ?? getValue(section, "Magia")),
+            magicDamagePercent: toInt(getValue(section, "MagicDamagePercent")),
             porcentaje: toInt(getValue(section, "Porcentaje")),
             indexAbierta: toInt(getValue(section, "IndexAbierta")),
             indexCerrada: toInt(getValue(section, "IndexCerrada")),
@@ -549,6 +550,7 @@ function toClientObjects(objects: JsonRecord): JsonRecord {
             "proyectil",
             "staffDamageBonus",
             "magicDamageBonus",
+            "magicDamagePercent",
         ]) {
             const value = Number(objectData[key] ?? 0);
             if (value) {

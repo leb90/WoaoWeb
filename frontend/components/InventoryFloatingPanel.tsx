@@ -1540,9 +1540,22 @@ export default function InventoryFloatingPanel({
             return null;
         }
 
+        const hasProjectileWeapon = items.some((item) => {
+            if (!item.equipped || item.objType !== OBJECT_TYPE.armas) {
+                return false;
+            }
+
+            return Boolean(objectsDB[item.idItem.toString()]?.proyectil);
+        });
+
         return items.reduce(
             (total, item) => {
-                if (!item.equipped || item.objType !== OBJECT_TYPE.armas) {
+                if (
+                    !item.equipped ||
+                    (item.objType !== OBJECT_TYPE.armas &&
+                        (item.objType !== OBJECT_TYPE.flechas ||
+                            !hasProjectileWeapon))
+                ) {
                     return total;
                 }
 

@@ -1,0 +1,37 @@
+{
+  "character": {
+    "id": "4cf62c54-0d51-40a8-ae26-872254c9e677",
+    "name": "Codexjbcoiiw",
+    "connected": false
+  },
+  "items": [
+    {
+      "character_id": "4cf62c54-0d51-40a8-ae26-872254c9e677",
+      "id_pos": 1,
+      "id_item": 467,
+      "cant": 100,
+      "equipped": false
+    },
+    {
+      "character_id": "4cf62c54-0d51-40a8-ae26-872254c9e677",
+      "id_pos": 2,
+      "id_item": 468,
+      "cant": 100,
+      "equipped": false
+    },
+    {
+      "character_id": "4cf62c54-0d51-40a8-ae26-872254c9e677",
+      "id_pos": 3,
+      "id_item": 460,
+      "cant": 1,
+      "equipped": true
+    },
+    {
+      "character_id": "4cf62c54-0d51-40a8-ae26-872254c9e677",
+      "id_pos": 4,
+      "id_item": 463,
+      "cant": 1,
+      "equipped": true
+    }
+  ]
+}

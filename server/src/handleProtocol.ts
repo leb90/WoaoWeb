@@ -516,7 +516,11 @@ function dataObj(idItem: number) {
                 }
 
                 if (obj.magicDamageBonus) {
-                    data += ` | Bonus daño mágico: ${obj.magicDamageBonus}%`;
+                    data += ` | Ataque mágico: +${obj.magicDamageBonus}`;
+                }
+
+                if (obj.magicDamagePercent) {
+                    data += ` | Bonus daño mágico: ${obj.magicDamagePercent}%`;
                 }
                 break;
 
@@ -532,7 +536,11 @@ function dataObj(idItem: number) {
                 }
 
                 if (obj.magicDamageBonus) {
-                    parts.push(`Bonus daño mágico: ${obj.magicDamageBonus}%`);
+                    parts.push(`Ataque mágico: +${obj.magicDamageBonus}`);
+                }
+
+                if (obj.magicDamagePercent) {
+                    parts.push(`Bonus daño mágico: ${obj.magicDamagePercent}%`);
                 }
 
                 data = parts.join(" | ");
@@ -544,12 +552,20 @@ function dataObj(idItem: number) {
             case vars.objType.cascos:
                 data = `Defensa: ${obj.minDef}/${obj.maxDef}`;
 
-                if (obj.objType === vars.objType.cascos && obj.minDefMag && obj.maxDefMag) {
+                if (obj.minDefMag && obj.maxDefMag) {
                     data += ` | Defensa Mágica: ${obj.minDefMag}/${obj.maxDefMag}`;
                 }
 
                 if (obj.resistenciaMagica) {
                     data += ` | Resistencia mágica: ${obj.resistenciaMagica}%`;
+                }
+
+                if (obj.magicDamageBonus) {
+                    data += ` | Ataque mágico: +${obj.magicDamageBonus}`;
+                }
+
+                if (obj.magicDamagePercent) {
+                    data += ` | Bonus daño mágico: ${obj.magicDamagePercent}%`;
                 }
                 break;
 

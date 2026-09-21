@@ -5202,6 +5202,11 @@ function Game(this: GameApi) {
                 const item = game.objMap(user.map, user.pos)!;
                 const datObj = vars.datObj[item.objIndex];
 
+                if (!datObj) {
+                    handleProtocol.console(`Objeto ${item.objIndex} no esta definido.`, "white", 0, 0, ws);
+                    return;
+                }
+
                 if (datObj.agarrable) {
                     return;
                 }
@@ -5264,6 +5269,10 @@ function Game(this: GameApi) {
             }
 
             const datObj = vars.datObj[idItem];
+
+            if (!datObj) {
+                return;
+            }
 
             if (datObj.objType == vars.objType.dinero) {
                 user.gold = balance.clampGold(user.gold + cant);
@@ -6562,7 +6571,7 @@ function Game(this: GameApi) {
                                 const item = game.objMap(user.map, pos)!;
                                 const obj = vars.datObj[item.objIndex];
 
-                                if (obj.objType == vars.objType.puerta) {
+                                if (obj && obj.objType == vars.objType.puerta) {
                                     if (item.objIndex == obj.indexAbierta) {
                                         blockedTilesForUser.push(
                                             {

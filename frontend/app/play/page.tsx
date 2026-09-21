@@ -2266,7 +2266,7 @@ function HomeContent() {
             return [];
         }
 
-        const tradeItemsBySlot = new Map(
+        const tradeItemsBySlot = new globalThis.Map<number, TradeItem>(
             tradeState.playerItems.map((item) => [item.slot, item]),
         );
 

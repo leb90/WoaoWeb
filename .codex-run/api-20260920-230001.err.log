@@ -1,0 +1,2 @@
+$ tsx watch src/server.ts
+[API] pg_stat_statements no pudo habilitarse automaticamente: pg_stat_statements must be loaded via "shared_preload_libraries"

@@ -43,25 +43,37 @@ async function insertRevision(client: PoolClient, entityId: number, checksum: st
 }
 
 async function ensureSeededInternal(): Promise<void> {
-  const countResult = await pool.query<{ count: string }>("SELECT COUNT(*)::text AS count FROM game_objects");
-  if (Number(countResult.rows[0]?.count ?? 0) > 0) {
+  const rows = loadSeedObjectsJson();
+  const existingResult = await pool.query<{ id: number }>(
+    "SELECT id FROM game_objects WHERE id = ANY($1::int[])",
+    [rows.map((row) => row.id)],
+  );
+  const existingIds = new Set(existingResult.rows.map((row) => Number(row.id)));
+  const missingRows = rows.filter((row) => !existingIds.has(row.id));
+
+  if (missingRows.length === 0) {
     return;
   }
 
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    const rows = loadSeedObjectsJson();
-    for (const row of rows) {
+    for (const row of missingRows) {
       const checksum = computeChecksum(row.data);
-      await client.query(
+      const insertResult = await client.query<{ id: number }>(
         `
           INSERT INTO game_objects (id, name, obj_type, data, checksum, version, updated_at)
           VALUES ($1, $2, $3, $4::jsonb, $5, 0, NOW())
           ON CONFLICT (id) DO NOTHING
+          RETURNING id
         `,
         [row.id, row.data.name, row.data.objType, JSON.stringify(row.data), checksum],
       );
+
+      if (!insertResult.rows.length) {
+        continue;
+      }
+
       const version = await insertRevision(client, row.id, checksum);
       await client.query("UPDATE game_objects SET version = $2 WHERE id = $1", [row.id, version]);
     }

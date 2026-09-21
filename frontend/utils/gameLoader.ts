@@ -105,8 +105,10 @@ async function fetchJsonWithFallback<T>(
     }
 
     const requestPromise = (async () => {
-        void options;
-        const candidatePaths = [localPath, fallbackPath].filter(
+        const preferredPaths = options?.preferLocal
+            ? [localPath, fallbackPath]
+            : [fallbackPath, localPath];
+        const candidatePaths = preferredPaths.filter(
             (value, index, array) => array.indexOf(value) === index,
         );
         let lastError: string | null = null;

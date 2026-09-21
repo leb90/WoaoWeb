@@ -3007,7 +3007,7 @@ const command: CommandApi = {
 
                 case "/woao": {
                     handleProtocol.console(
-                        "WOAO: /quest /quests /questaceptar /questabandonar /montura /premios /canjear /viaje /comerciar /ranked /hunger /participar /atorneo /remort /ciudades /castillos /castillo /clanpuntos /bloodcastle /guerra /templo /domar /robar /critico /pagarmulta /casa /dia /party /aceptar /partyinfo /salirparty",
+                        "WOAO: /quest /quests /questaceptar /questabandonar /montura /premios /canjear /viaje /comerciar /ranked /hunger /torneo /participar /atorneo /remort /ciudades /castillos /castillo /clanpuntos /bloodcastle /guerra /templo /domar /robar /critico /pagarmulta /casa /dia /party /aceptar /partyinfo /salirparty",
                         "#E69500",
                         1,
                         0,
@@ -3038,6 +3038,12 @@ const command: CommandApi = {
                     }
                     const result = hungerGames.joinEvent(String(clientId));
                     handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/torneo": {
+                    const result = require("./tournamentDuel").enterTournament(String(clientId));
+                    handleProtocol.console(result.message, result.ok ? "#E69500" : "white", 1, 0, ws as CommandClient);
                     break;
                 }
 

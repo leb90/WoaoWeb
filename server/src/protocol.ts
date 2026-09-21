@@ -1653,7 +1653,7 @@ function updateUserAreaAfterMovement(ws: RuntimeClient, user: RuntimeCharacter, 
                     const item = game.objMap(user.map, pos);
                     const obj = vars.datObj[item.objIndex];
 
-                    if (obj.objType == vars.objType.puerta) {
+                    if (obj && obj.objType == vars.objType.puerta) {
                         if (item.objIndex == obj.indexAbierta) {
                             handleProtocol.blockMap(user.map, pos, 0, ws);
                             handleProtocol.blockMap(
@@ -1767,7 +1767,7 @@ function updateUserAreaAfterMovement(ws: RuntimeClient, user: RuntimeCharacter, 
                     const item = game.objMap(user.map, pos);
                     const obj = vars.datObj[item.objIndex];
 
-                    if (obj.objType == vars.objType.puerta) {
+                    if (obj && obj.objType == vars.objType.puerta) {
                         if (item.objIndex == obj.indexAbierta) {
                             handleProtocol.blockMap(user.map, pos, 0, ws);
                             handleProtocol.blockMap(
@@ -1881,7 +1881,7 @@ function updateUserAreaAfterMovement(ws: RuntimeClient, user: RuntimeCharacter, 
                     const item = game.objMap(user.map, pos);
                     const obj = vars.datObj[item.objIndex];
 
-                    if (obj.objType == vars.objType.puerta) {
+                    if (obj && obj.objType == vars.objType.puerta) {
                         if (item.objIndex == obj.indexAbierta) {
                             handleProtocol.blockMap(user.map, pos, 0, ws);
                             handleProtocol.blockMap(
@@ -1995,7 +1995,7 @@ function updateUserAreaAfterMovement(ws: RuntimeClient, user: RuntimeCharacter, 
                     const item = game.objMap(user.map, pos);
                     const obj = vars.datObj[item.objIndex];
 
-                    if (obj.objType == vars.objType.puerta) {
+                    if (obj && obj.objType == vars.objType.puerta) {
                         if (item.objIndex == obj.indexAbierta) {
                             handleProtocol.blockMap(user.map, pos, 0, ws);
                             handleProtocol.blockMap(
@@ -2448,13 +2448,13 @@ function eventClick(ws: RuntimeClient) {
 
         if (game.hayObj(user.map, pos)) {
             objMap = game.objMap(user.map, pos) as MapObjectInfo;
-            obj = vars.datObj[objMap.objIndex] as DataObject;
+            obj = (vars.datObj[objMap.objIndex] as DataObject | undefined) ?? null;
 
-            if (obj.objType == vars.objType.puerta) {
+            if (obj && obj.objType == vars.objType.puerta) {
                 game.openDoor(clientId, pos, objMap, obj);
             }
 
-            handleProtocol.console(obj.name + " - " + objMap.amount, "white", 1, 0, ws);
+            handleProtocol.console((obj?.name ?? `Objeto ${objMap.objIndex}`) + " - " + objMap.amount, "white", 1, 0, ws);
         } else if (
             game.hayObj(user.map, {
                 x: pos.x + 1,
@@ -2466,9 +2466,9 @@ function eventClick(ws: RuntimeClient) {
                 y: pos.y,
             }) as MapObjectInfo;
 
-            obj = vars.datObj[objMap.objIndex] as DataObject;
+            obj = (vars.datObj[objMap.objIndex] as DataObject | undefined) ?? null;
 
-            if (obj.objType == vars.objType.puerta) {
+            if (obj && obj.objType == vars.objType.puerta) {
                 game.openDoor(
                     ws.id,
                     {
@@ -2480,7 +2480,7 @@ function eventClick(ws: RuntimeClient) {
                 );
             }
 
-            handleProtocol.console(obj.name + " - " + objMap.amount, "white", 1, 0, ws);
+            handleProtocol.console((obj?.name ?? `Objeto ${objMap.objIndex}`) + " - " + objMap.amount, "white", 1, 0, ws);
         } else if (
             game.hayObj(user.map, {
                 x: pos.x + 1,
@@ -2491,9 +2491,9 @@ function eventClick(ws: RuntimeClient) {
                 x: pos.x + 1,
                 y: pos.y + 1,
             }) as MapObjectInfo;
-            obj = vars.datObj[objMap.objIndex] as DataObject;
+            obj = (vars.datObj[objMap.objIndex] as DataObject | undefined) ?? null;
 
-            if (obj.objType == vars.objType.puerta) {
+            if (obj && obj.objType == vars.objType.puerta) {
                 game.openDoor(
                     ws.id,
                     {
@@ -2505,7 +2505,7 @@ function eventClick(ws: RuntimeClient) {
                 );
             }
 
-            handleProtocol.console(obj.name + " - " + objMap.amount, "white", 1, 0, ws);
+            handleProtocol.console((obj?.name ?? `Objeto ${objMap.objIndex}`) + " - " + objMap.amount, "white", 1, 0, ws);
         } else if (
             game.hayObj(user.map, {
                 x: pos.x,
@@ -2516,9 +2516,9 @@ function eventClick(ws: RuntimeClient) {
                 x: pos.x,
                 y: pos.y + 1,
             }) as MapObjectInfo;
-            obj = vars.datObj[objMap.objIndex] as DataObject;
+            obj = (vars.datObj[objMap.objIndex] as DataObject | undefined) ?? null;
 
-            if (obj.objType == vars.objType.puerta) {
+            if (obj && obj.objType == vars.objType.puerta) {
                 game.openDoor(
                     ws.id,
                     {
@@ -2530,7 +2530,7 @@ function eventClick(ws: RuntimeClient) {
                 );
             }
 
-            handleProtocol.console(obj.name + " - " + objMap.amount, "white", 1, 0, ws);
+            handleProtocol.console((obj?.name ?? `Objeto ${objMap.objIndex}`) + " - " + objMap.amount, "white", 1, 0, ws);
         }
 
         let selectedTarget = resolveAreaTarget(user.map, x, y);
@@ -2556,6 +2556,10 @@ function eventClick(ws: RuntimeClient) {
             if (selectedNpc) {
                 user.targetNpcId = selectedId;
             }
+
+            const selectedNpcIsClassicTournament = selectedNpc
+                ? (require("./tournamentDuel") as typeof import("./tournamentDuel")).isClassicTournamentNpc(selectedNpc)
+                : false;
 
             if (selectedNpc?.desc) {
                 handleProtocol.dialog(selectedId, selectedNpc.desc, "", "white", 0, ws);
@@ -2590,7 +2594,12 @@ function eventClick(ws: RuntimeClient) {
                 }
             }
 
-            if (selectedNpc && selectedNpc.npcType === vars.npcType.comerciante && !user.dead) {
+            if (
+                selectedNpc &&
+                !selectedNpcIsClassicTournament &&
+                selectedNpc.npcType === vars.npcType.comerciante &&
+                !user.dead
+            ) {
                 game.closeTradeSession(ws.id);
                 user.npcTrade = selectedId;
                 user.tradeMode = "merchant";

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { AuthErrorResponse, AuthSession } from "@/lib/auth";
+import InstallAppButton from "./InstallAppButton";
 
 type AppChromeProps = {
     children: React.ReactNode;
@@ -141,6 +142,7 @@ export default function AppChrome({ children }: AppChromeProps) {
                     </nav>
 
                     <div className="flex items-center gap-3">
+                        <InstallAppButton />
                         {session ? (
                             <>
                                 <span className="hidden items-baseline gap-1.5 text-xs uppercase tracking-[0.12em] sm:inline-flex">

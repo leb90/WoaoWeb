@@ -1,0 +1,31 @@
+name: Deploy Hostinger
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-hostinger
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd /opt/woaoweb
+            git fetch origin main
+            git reset --hard origin/main
+            cd deploy
+            docker compose -f docker-compose.hostinger.yml --env-file .env up -d --build
+            docker compose -f docker-compose.hostinger.yml --env-file .env ps

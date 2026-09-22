@@ -1,0 +1,17 @@
+{
+	email {$ACME_EMAIL}
+}
+
+{$APP_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy frontend:3000
+}
+
+{$API_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy api:3100
+}
+
+{$WS_DOMAIN} {
+	reverse_proxy game-server:7666
+}

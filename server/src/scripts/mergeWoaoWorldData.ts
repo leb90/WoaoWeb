@@ -143,6 +143,54 @@ function decodeLatin1(value: string): string {
     return value.replace(/\s+/g, " ").trim();
 }
 
+const OLD_CLASS_ID_BY_NAME: Record<string, number> = {
+    MAGO: 1,
+    CLERIGO: 2,
+    GUERRERO: 3,
+    ASESINO: 4,
+    LADRON: 5,
+    BARDO: 6,
+    DRUIDA: 7,
+    PALADIN: 8,
+    CAZADOR: 9,
+    BANDIDO: 12,
+    PESCADOR: 13,
+    HERRERO: 14,
+    LENADOR: 15,
+    MINERO: 16,
+    CARPINTERO: 17,
+    PIRATA: 18,
+    ERMITANO: 19,
+    ARQUERO: 20,
+    DOMADOR: 21,
+};
+
+function normalizeOldClassName(value: string | undefined): string {
+    return decodeLatin1(value ?? "")
+        .replace(/^"+|"+$/g, "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toUpperCase();
+}
+
+function convertClassRestrictions(section: IniSection): number[] {
+    const classes = new Set<number>();
+
+    for (let index = 1; index <= 21; index++) {
+        const className = normalizeOldClassName(getValue(section, `CP${index}`));
+        if (!className) {
+            continue;
+        }
+
+        const classId = OLD_CLASS_ID_BY_NAME[className];
+        if (classId) {
+            classes.add(classId);
+        }
+    }
+
+    return Array.from(classes).sort((left, right) => left - right);
+}
+
 function readJson<T>(filePath: string): T | null {
     if (!fs.existsSync(filePath)) {
         return null;
@@ -515,6 +563,8 @@ function convertObjects(): JsonRecord {
             staffDamageBonus: toInt(getValue(section, "StaffDamageBonus")),
             magicDamageBonus: toInt(getValue(section, "MagicDamageBonus") ?? getValue(section, "Magia")),
             magicDamagePercent: toInt(getValue(section, "MagicDamagePercent")),
+            objetoEspecial: toInt(getValue(section, "ObjetoEspecial") ?? getValue(section, "objetoespecial")),
+            mataHobbits: toInt(getValue(section, "MataHobbits")),
             porcentaje: toInt(getValue(section, "Porcentaje")),
             indexAbierta: toInt(getValue(section, "IndexAbierta")),
             indexCerrada: toInt(getValue(section, "IndexCerrada")),
@@ -522,6 +572,7 @@ function convertObjects(): JsonRecord {
             cerrada: toInt(getValue(section, "Cerrada")),
             minSkill: toInt(getValue(section, "MinSkill")),
             subtipo: toInt(getValue(section, "Subtipo")),
+            clasesNoPermitidas: convertClassRestrictions(section),
         };
     }
 
@@ -551,11 +602,19 @@ function toClientObjects(objects: JsonRecord): JsonRecord {
             "staffDamageBonus",
             "magicDamageBonus",
             "magicDamagePercent",
+            "objetoEspecial",
+            "mataHobbits",
+            "subtipo",
         ]) {
             const value = Number(objectData[key] ?? 0);
             if (value) {
                 clientObject[key] = value;
             }
+        }
+
+        const blockedClasses = objectData.clasesNoPermitidas;
+        if (Array.isArray(blockedClasses) && blockedClasses.length > 0) {
+            clientObject.clasesNoPermitidas = blockedClasses;
         }
 
         client[id] = clientObject;

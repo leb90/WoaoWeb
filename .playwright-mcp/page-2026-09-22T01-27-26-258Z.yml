@@ -1,0 +1,128 @@
+- generic [active] [ref=f1e1]:
+  - button "Open Next.js Dev Tools" [ref=f1e56] [cursor=pointer]
+  - alert [ref=f1e180]
+  - generic [ref=f1e182]:
+    - button "Entrar en pantalla completa" [ref=f1e183]
+    - generic [ref=f1e189]:
+      - generic [ref=f1e190]:
+        - generic [ref=f1e195]:
+          - generic [ref=f1e196]:
+            - generic [ref=f1e197]:
+              - button "Consola" [ref=f1e198]
+              - button "Global" [ref=f1e199]
+              - button "Party" [ref=f1e200]
+              - button "Clan" [ref=f1e201]
+              - button "Privados" [ref=f1e202]
+              - button "Ocultar minimapa" [pressed] [ref=f1e203]
+            - generic [ref=f1e206]:
+              - generic [ref=f1e207]: Conectado como Wind
+              - generic [ref=f1e208]:
+                - text: Bienvenido a AOWeb. Si quieres enterarte de las últimas actualizaciones del juego, puedes ingresar a nuestro
+                - link "Discord" [ref=f1e209] [cursor=pointer]:
+                  - /url: https://discord.gg/sf8rWAvgxs
+                - text: .
+              - generic [ref=f1e210]:
+                - text: "- Si quieres reportar erorres o sugerir cambios, puedes hacerlo en:"
+                - link "https://forms.gle/Df2cmGExTBjjJhAR8" [ref=f1e211] [cursor=pointer]:
+                  - /url: https://forms.gle/Df2cmGExTBjjJhAR8
+              - generic [ref=f1e212]: "- Está completamente prohibido el uso de personajes cámara, cheats o cualquier programa externo que modifique el juego, como auto tomar pociones o auto removerse. El uso de los mismos terminará en un ban permanente, sin previo aviso."
+              - generic [ref=f1e213]: Tienes 33 skillpoints para asignar.
+              - generic [ref=f1e214]: WOAO> Canje 0 | ELO 300 | Remort no | /woao
+              - generic [ref=f1e215]: "WOAO> Bicho del dia: Cancerbero. +50% de experiencia al cazarlo."
+          - button "Abrir mapa del mundo" [ref=f1e218]:
+            - img "Nix" [ref=f1e219]
+        - generic [ref=f1e229]:
+          - generic [ref=f1e230]: Experiencia
+          - generic [ref=f1e231]: 26% (583 / 2.256)
+      - generic [ref=f1e236]:
+        - generic [ref=f1e239]:
+          - generic [ref=f1e241]:
+            - generic [ref=f1e242]:
+              - generic [ref=f1e243]: "7"
+              - button "Habilidades" [ref=f1e244]
+            - generic [ref=f1e246]:
+              - paragraph [ref=f1e247]: Personaje
+              - heading "Wind" [level=3] [ref=f1e248]
+              - paragraph [ref=f1e249]: 603 oro
+            - button "Abrir ajustes" [ref=f1e250]
+          - generic [ref=f1e255]:
+            - generic [ref=f1e256]:
+              - button "Inventario" [ref=f1e257]
+              - button "Hechizos" [ref=f1e258]
+            - generic [ref=f1e261]:
+              - button "Manzana Roja (Newbies) 100" [ref=f1e262]:
+                - generic "Manzana Roja (Newbies)" [ref=f1e264]
+                - generic: "100"
+              - button "Botella de agua (Newbies) 100" [ref=f1e265]:
+                - generic "Botella de agua (Newbies)" [ref=f1e267]
+                - generic: "100"
+              - button "Daga (Newbies 1-3)" [ref=f1e268]:
+                - generic "Daga (Newbies 1-3)" [ref=f1e270]
+              - button "Vestimentas Comunes (Newbies) E" [ref=f1e271]:
+                - generic "Vestimentas Comunes (Newbies)" [ref=f1e273]
+                - generic: E
+              - button "Báculo Mágico (+20 DM) E" [ref=f1e274]:
+                - generic "Báculo Mágico (+20 DM)" [ref=f1e276]
+                - generic: E
+              - button [ref=f1e277]
+              - button [ref=f1e278]
+              - button [ref=f1e279]
+              - button [ref=f1e280]
+              - button [ref=f1e281]
+              - button [ref=f1e282]
+              - button [ref=f1e283]
+              - button [ref=f1e284]
+              - button [ref=f1e285]
+              - button [ref=f1e286]
+              - button [ref=f1e287]
+              - button [ref=f1e288]
+              - button [ref=f1e289]
+              - button [ref=f1e290]
+              - button [ref=f1e291]
+              - button [ref=f1e292]
+          - generic [ref=f1e293]:
+            - generic [ref=f1e294]:
+              - generic [ref=f1e295]:
+                - button "Abrir mapa del mundo" [ref=f1e296]: Nix
+                - generic [ref=f1e297]:
+                  - generic [ref=f1e298]:
+                    - generic [ref=f1e299]: Energia
+                    - generic [ref=f1e302]: 69/69
+                  - generic [ref=f1e303]:
+                    - generic [ref=f1e304]: Vida
+                    - generic [ref=f1e307]: 6/64
+                  - generic [ref=f1e308]:
+                    - generic [ref=f1e309]: Mana
+                    - generic [ref=f1e312]: 276/276
+                  - generic [ref=f1e313]:
+                    - generic [ref=f1e314]: Hambre
+                    - generic [ref=f1e317]: 97/100
+                  - generic [ref=f1e318]:
+                    - generic [ref=f1e319]: Sed
+                    - generic [ref=f1e322]: 97/100
+              - generic [ref=f1e323]:
+                - button "Party" [ref=f1e324]
+                - button "Clanes" [ref=f1e330]
+                - button "Misiones" [ref=f1e333]
+                - button "Montura" [ref=f1e334]
+                - button "Premios" [ref=f1e335]
+                - button "Ranked" [ref=f1e336]
+                - button "Viajes" [ref=f1e337]
+                - button "WOAO" [ref=f1e338]
+            - generic [ref=f1e339]:
+              - 'generic "Defensa: 0/0" [ref=f1e340]': 0/0
+              - 'generic "Daño: 3/8" [ref=f1e345]': 3/8
+              - 'generic "Fuerza: 20" [ref=f1e352]':
+                - img "Fuerza" [ref=f1e354]
+                - generic [ref=f1e355]: "20"
+              - 'generic "Agilidad: 19" [ref=f1e356]':
+                - img "Agilidad" [ref=f1e358]
+                - generic [ref=f1e359]: "19"
+            - generic: v0.0.75
+        - generic [ref=f1e360]:
+          - generic [ref=f1e361]:
+            - link "Arenas" [ref=f1e362] [cursor=pointer]:
+              - /url: /arenas
+            - link "Cambiar personaje" [ref=f1e363] [cursor=pointer]:
+              - /url: /characters
+          - generic [ref=f1e364]: En zona insegura cerrá el personaje con /salir.

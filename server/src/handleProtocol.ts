@@ -22,6 +22,8 @@ export {};
 
 type ConsoleChannel = "console" | "global" | "party" | "clan" | "whisper";
 
+const DRAGON_SLAYER_SWORD_ITEM_ID = 402;
+
 type CraftingOpenPayload = {
     profession: "carpentry" | "blacksmith" | "tailoring";
     title: string;
@@ -490,7 +492,9 @@ function itemValidUser(idUser: EntityId, idItem: number) {
     }
 
     if (
-        (obj.clasesNoPermitidas && obj.clasesNoPermitidas.indexOf(user.idClase) >= 0) ||
+        (idItem !== DRAGON_SLAYER_SWORD_ITEM_ID &&
+            Array.isArray(obj.clasesNoPermitidas) &&
+            obj.clasesNoPermitidas.includes(user.idClase)) ||
         (getRequiredFactionForItem(idItem) !== "none" && user.faction !== getRequiredFactionForItem(idItem)) ||
         isArmorBlockedByRace(obj, user.idRaza)
     ) {

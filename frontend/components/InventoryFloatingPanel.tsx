@@ -187,10 +187,21 @@ const classLabels: Record<number, string> = {
     2: "Clerigo",
     3: "Guerrero",
     4: "Asesino",
+    5: "Ladron",
     6: "Bardo",
     7: "Druida",
     8: "Paladin",
     9: "Cazador",
+    12: "Bandido",
+    13: "Pescador",
+    14: "Herrero",
+    15: "Lenador",
+    16: "Minero",
+    17: "Carpintero",
+    18: "Pirata",
+    19: "Ermitano",
+    20: "Arquero",
+    21: "Domador",
 };
 
 const clanNamePattern = /^[A-Za-z ]+$/;
@@ -2240,6 +2251,28 @@ export default function InventoryFloatingPanel({
         );
     }, [inventoryStartSlot, items, totalSlots]);
 
+    const isItemBlockedForClass = React.useCallback(
+        (item: InventoryItem) => {
+            const classId = hud?.idClase;
+            const objectData = objectsDB?.[item.idItem.toString()];
+
+            return (
+                typeof classId === "number" &&
+                Array.isArray(objectData?.clasesNoPermitidas) &&
+                objectData.clasesNoPermitidas.includes(classId)
+            );
+        },
+        [hud?.idClase, objectsDB],
+    );
+
+    const currentClassLabel =
+        typeof hud?.idClase === "number"
+            ? (classLabels[hud.idClase] ?? `Clase ${hud.idClase}`)
+            : "tu clase";
+    const hoveredItemBlockedForClass = hoveredItem
+        ? isItemBlockedForClass(hoveredItem)
+        : false;
+
     const showTooltipWithDelay = (item: InventoryItem) => {
         if (hoverTimerRef.current) {
             window.clearTimeout(hoverTimerRef.current);
@@ -2435,6 +2468,12 @@ export default function InventoryFloatingPanel({
                                                           item.grhIndex.toString()
                                                       ]
                                                     : undefined;
+                                                const isInvalidForUser = item
+                                                    ? !item.validForUser ||
+                                                      isItemBlockedForClass(
+                                                          item,
+                                                      )
+                                                    : false;
 
                                                 return (
                                                     <button
@@ -2445,7 +2484,7 @@ export default function InventoryFloatingPanel({
                                                         }
                                                         className={`relative flex aspect-square items-center justify-center border text-left transition focus:outline-none focus-visible:outline-none ${
                                                             item
-                                                                ? !item.validForUser
+                                                                ? isInvalidForUser
                                                                     ? selectedSlot ===
                                                                       item.slot
                                                                         ? "border-rose-300/85 bg-[#3b2026]"
@@ -2513,6 +2552,12 @@ export default function InventoryFloatingPanel({
                                                             )
                                                         }
                                                         onBlur={clearTooltip}
+                                                        title={
+                                                            item &&
+                                                            isInvalidForUser
+                                                                ? `No permitido para ${currentClassLabel}`
+                                                                : item?.name
+                                                        }
                                                     >
                                                         {item ? (
                                                             <>
@@ -2537,7 +2582,7 @@ export default function InventoryFloatingPanel({
                                                                         E
                                                                     </span>
                                                                 )}
-                                                                {!item.validForUser && (
+                                                                {isInvalidForUser && (
                                                                     <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(244,63,94,0.18),rgba(0,0,0,0))]" />
                                                                 )}
                                                             </>
@@ -2556,6 +2601,11 @@ export default function InventoryFloatingPanel({
                                             {hoveredItem.details ? (
                                                 <p className="mt-1 whitespace-pre-wrap text-stone-300/90">
                                                     {hoveredItem.details}
+                                                </p>
+                                            ) : null}
+                                            {hoveredItemBlockedForClass ? (
+                                                <p className="mt-1 font-semibold text-rose-200">
+                                                    No permitido para {currentClassLabel}
                                                 </p>
                                             ) : null}
                                         </div>

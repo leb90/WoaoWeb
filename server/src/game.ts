@@ -156,6 +156,7 @@ const DROP_RENDER_BATCH_SIZE = 4;
 const TELEPORT_CLIENT_MOVEMENT_LOCK_MS = 75;
 const PVP_MAP_CHANGE_BLOCK_MS = 5000;
 const DRAGON_SLAYER_SWORD_ITEM_ID = 402;
+const HOBBIT_CLOAK_OBJECT_TYPE = 50;
 const CLAN_RING_MAP_ID = 273;
 const MERCHANT_NPC_TYPE = 10;
 
@@ -598,6 +599,102 @@ function isDragonSlayerSword(itemId: number): boolean {
     return itemId === DRAGON_SLAYER_SWORD_ITEM_ID;
 }
 
+function isItemBlockedByClass(user: GameCharacter, obj: DataObject | undefined, itemId: number): boolean {
+    if (!obj || isDragonSlayerSword(itemId)) {
+        return false;
+    }
+
+    return Array.isArray(obj.clasesNoPermitidas) && obj.clasesNoPermitidas.includes(user.idClase);
+}
+
+type EquipmentSpecialBonuses = {
+    fuerza: number;
+    agilidad: number;
+    maxMana: number;
+};
+
+function getObjectSpecialBonuses(obj: DataObject | null | undefined): EquipmentSpecialBonuses {
+    switch (safeNumber(obj?.objetoEspecial)) {
+        case 2:
+            return { fuerza: 5, agilidad: 0, maxMana: 0 };
+        case 3:
+            return { fuerza: 2, agilidad: 0, maxMana: 0 };
+        case 4:
+            return { fuerza: 3, agilidad: 0, maxMana: 0 };
+        case 5:
+            return { fuerza: 0, agilidad: 5, maxMana: 0 };
+        case 6:
+            return { fuerza: 0, agilidad: 2, maxMana: 0 };
+        case 7:
+            return { fuerza: 0, agilidad: 3, maxMana: 0 };
+        case 8:
+            return { fuerza: 0, agilidad: 0, maxMana: 100 };
+        case 9:
+            return { fuerza: 0, agilidad: 0, maxMana: 200 };
+        case 10:
+            return { fuerza: 0, agilidad: 0, maxMana: 300 };
+        case 12:
+            return { fuerza: 1, agilidad: 3, maxMana: 0 };
+        case 13:
+            return { fuerza: 2, agilidad: 2, maxMana: 0 };
+        case 14:
+            return { fuerza: 5, agilidad: 2, maxMana: 0 };
+        case 15:
+            return { fuerza: 3, agilidad: 2, maxMana: 0 };
+        case 16:
+            return { fuerza: 1, agilidad: 1, maxMana: 0 };
+        case 17:
+            return { fuerza: 0, agilidad: 2, maxMana: 200 };
+        case 18:
+            return { fuerza: 0, agilidad: 1, maxMana: 0 };
+        case 19:
+            return { fuerza: 0, agilidad: 0, maxMana: 55 };
+        default:
+            return { fuerza: 0, agilidad: 0, maxMana: 0 };
+    }
+}
+
+function getEquippedSpecialBonuses(user: GameCharacter): EquipmentSpecialBonuses {
+    const total = { fuerza: 0, agilidad: 0, maxMana: 0 };
+
+    for (const slot of [
+        user.idItemWeapon,
+        user.idItemBody,
+        user.idItemShield,
+        user.idItemHelmet,
+        user.idItemRing,
+    ]) {
+        const inventoryItem = getInventoryItem(user, slot);
+        if (!inventoryItem) {
+            continue;
+        }
+
+        const bonus = getObjectSpecialBonuses(vars.datObj[inventoryItem.idItem] as DataObject | undefined);
+        total.fuerza += bonus.fuerza;
+        total.agilidad += bonus.agilidad;
+        total.maxMana += bonus.maxMana;
+    }
+
+    return total;
+}
+
+function getEffectiveFuerza(user: GameCharacter): number {
+    return safeNumber(user.attrFuerza) + getEquippedSpecialBonuses(user).fuerza;
+}
+
+function getEffectiveAgilidad(user: GameCharacter): number {
+    return safeNumber(user.attrAgilidad) + getEquippedSpecialBonuses(user).agilidad;
+}
+
+function isClass(user: GameCharacter, classId: number): boolean {
+    return Number(user.idClase) === classId;
+}
+
+function hasEquippedWeaponItem(user: GameCharacter, itemId: number): boolean {
+    const equippedWeapon = getInventoryItem(user, user.idItemWeapon);
+    return Number(equippedWeapon?.idItem ?? 0) === itemId;
+}
+
 function syncUnequippedItemVisuals(user: GameCharacter, normalizedPos: string): void {
     let removedBody = false;
     let removedWeapon = false;
@@ -789,12 +886,12 @@ function isArmorRaceRestricted(user: GameCharacter, obj: DataObject): boolean {
     return false;
 }
 
-function canAutoEquipInventoryItem(user: GameCharacter, obj: DataObject | undefined): boolean {
+function canAutoEquipInventoryItem(user: GameCharacter, obj: DataObject | undefined, itemId: number): boolean {
     if (!obj) {
         return false;
     }
 
-    if (Array.isArray(obj.clasesNoPermitidas) && obj.clasesNoPermitidas.includes(user.idClase)) {
+    if (isItemBlockedByClass(user, obj, itemId)) {
         return false;
     }
 
@@ -815,7 +912,7 @@ function restoreAutoEquippedInventoryState(user: GameCharacter): void {
     for (const [idPos, item] of Object.entries(user.inv)) {
         const obj = vars.datObj[item.idItem] as DataObject | undefined;
 
-        if (!canAutoEquipInventoryItem(user, obj)) {
+        if (!canAutoEquipInventoryItem(user, obj, item.idItem)) {
             continue;
         }
 
@@ -927,6 +1024,10 @@ function getClassMagicResistanceBonus(classId: number): number {
     return Number.isFinite(modifier) ? modifier : 0;
 }
 
+function hasMagicResistanceRing(target: GameCharacter): boolean {
+    return safeNumber(getEquippedRingData(target)?.subtipo) === 4;
+}
+
 function getMagicDamageModifier(classId: number): number {
     const modifier = Number(vars.modDmgMagia?.[classId] ?? 1);
     return Number.isFinite(modifier) ? modifier : 1;
@@ -998,6 +1099,9 @@ function applyMagicResistanceToUser(
     );
 
     nextDamage -= Math.floor((nextDamage * percentReduction) / 100);
+    if (hasMagicResistanceRing(target)) {
+        nextDamage -= Math.round(nextDamage / 30);
+    }
     nextDamage -= getTargetMagicDefenseRoll(target);
     return nextDamage;
 }
@@ -4876,6 +4980,15 @@ function Game(this: GameApi) {
 
             const obj = vars.datObj[idItem];
 
+            if (!obj) {
+                return;
+            }
+
+            if (isItemBlockedByClass(user, obj, idItem)) {
+                handleProtocol.console("Tu clase no puede usar ese item.", "white", 0, 0, ws);
+                return;
+            }
+
             if (obj.newbie && !isNewbieCharacter(user)) {
                 handleProtocol.console("Solo los personajes newbie pueden usar este item.", "white", 0, 0, ws);
                 return;
@@ -4884,6 +4997,62 @@ function Game(this: GameApi) {
             if (user.dead && obj.objType !== vars.objType.barcos) {
                 handleProtocol.console("Los muertos no pueden usar items.", "white", 0, 0, ws);
                 return;
+            }
+
+            switch (safeNumber(obj.objetoEspecial)) {
+                case 50: {
+                    if (!isClass(user, vars.clases.mago)) {
+                        handleProtocol.console("Solo los Magos pueden usar este objeto.", "white", 0, 0, ws);
+                        return;
+                    }
+
+                    if (!hasEquippedWeaponItem(user, 842)) {
+                        handleProtocol.console("No tienes equipado el objeto.", "white", 0, 0, ws);
+                        return;
+                    }
+
+                    const recoveredMana = Math.max(1, Math.floor((safeNumber(user.maxMana) * 10) / 100));
+                    user.mana = Math.min(safeNumber(user.maxMana), safeNumber(user.mana) + recoveredMana);
+                    handleProtocol.updateMana(user.mana, ws);
+                    game.loopArea(ws, function (client: AreaTarget) {
+                        if (!client.isNpc && canReceiveCharacterEvent(client.id, user.id)) {
+                            handleProtocol.playSound(user.id, 47, vars.clients[client.id]);
+                        }
+                    });
+                    return;
+                }
+                case 51: {
+                    if (!isClass(user, vars.clases.mago) && !isClass(user, vars.clases.clerigo)) {
+                        handleProtocol.console("Solo los Clerigos o Magos pueden usar este objeto.", "white", 0, 0, ws);
+                        return;
+                    }
+
+                    user.hp = Math.min(safeNumber(user.maxHp), safeNumber(user.hp) + 50);
+                    handleProtocol.updateHP(user.hp, ws);
+                    game.loopArea(ws, function (client: AreaTarget) {
+                        if (!client.isNpc && canReceiveCharacterEvent(client.id, user.id)) {
+                            handleProtocol.playSound(user.id, 47, vars.clients[client.id]);
+                        }
+                    });
+                    return;
+                }
+                case 52: {
+                    if (!hasEquippedWeaponItem(user, 840)) {
+                        handleProtocol.console("No tienes equipado el objeto.", "white", 0, 0, ws);
+                        return;
+                    }
+
+                    ensureSurvivalVitals(user as unknown as Record<string, unknown>);
+                    user.hambre = Math.min(safeNumber(user.maxHambre), safeNumber(user.hambre) + 50);
+                    user.sed = Math.min(safeNumber(user.maxSed), safeNumber(user.sed) + 50);
+                    sendSelfVitals(user as unknown as Record<string, unknown>, ws);
+                    game.loopArea(ws, function (client: AreaTarget) {
+                        if (!client.isNpc && canReceiveCharacterEvent(client.id, user.id)) {
+                            handleProtocol.playSound(user.id, 47, vars.clients[client.id]);
+                        }
+                    });
+                    return;
+                }
             }
 
             switch (obj.objType) {
@@ -4998,6 +5167,30 @@ function Game(this: GameApi) {
                             handleProtocol.playSound(user.id, consumeSound, vars.clients[client.id]);
                         }
                     });
+                    break;
+                }
+                case HOBBIT_CLOAK_OBJECT_TYPE: {
+                    const mapId = Number(user.map ?? 0);
+                    const isBlockedMap = (mapId > 199 && mapId < 212) || mapId === 182 || mapId === 92 || mapId === 279;
+
+                    if (isBlockedMap || !vars.mapData[mapId]?.pk) {
+                        handleProtocol.console("No puedes usar la Capa Hobbit en este mapa.", "white", 0, 0, ws);
+                        return;
+                    }
+
+                    if (user.morphBody || user.mounted || user.navegando) {
+                        handleProtocol.console("No puedes usar la Capa Hobbit transformado, montado o navegando.", "white", 0, 0, ws);
+                        return;
+                    }
+
+                    setSpellInvisibility(clientId, !user.invisibleSpell);
+                    handleProtocol.console(
+                        user.invisibleSpell ? "Te ocultas bajo la Capa Hobbit." : "Te quitas la Capa Hobbit.",
+                        "white",
+                        0,
+                        0,
+                        ws,
+                    );
                     break;
                 }
                 case vars.objType.pergaminos:
@@ -8664,8 +8857,9 @@ function Game(this: GameApi) {
 
             const dmgUser = rollInclusiveRange(user.minHit, user.maxHit);
 
+            const effectiveFuerza = getEffectiveFuerza(user);
             const dmg = Math.floor(
-                (3 * dmgArma + (dmgMaxArma / 5) * Math.max(0, user.attrFuerza - 15) + dmgUser) * modClase,
+                (3 * dmgArma + (dmgMaxArma / 5) * Math.max(0, effectiveFuerza - 15) + dmgUser) * modClase,
             );
 
             return require("./mounts").applyOutgoingDamage(
@@ -9612,8 +9806,9 @@ function Game(this: GameApi) {
             const skillTacticasCombate = game.getSkillTacticasCombate(idUser);
             const n = skillTacticasCombate / 66;
 
+            const effectiveAgilidad = getEffectiveAgilidad(user);
             const tmpCalc =
-                (user.attrAgilidad + Math.round(skillTacticasCombate / 2) + n * user.attrAgilidad) *
+                (effectiveAgilidad + Math.round(skillTacticasCombate / 2) + n * effectiveAgilidad) *
                 vars.modEvasion[user.idClase];
 
             return (tmpCalc + 2.5 * Math.max(user.level - 12, 0)) * getRacialEvasionMultiplier(user);
@@ -9680,7 +9875,8 @@ function Game(this: GameApi) {
             }
 
             const n = skill / 66;
-            const poderAtaqueArmaTmp = (user.attrAgilidad + Math.round(skill / 2) + n * user.attrAgilidad) * modifier;
+            const effectiveAgilidad = getEffectiveAgilidad(user);
+            const poderAtaqueArmaTmp = (effectiveAgilidad + Math.round(skill / 2) + n * effectiveAgilidad) * modifier;
 
             let poderAtaqueArma = poderAtaqueArmaTmp + 2.5 * Math.max(user.level - 12, 0);
 

@@ -197,6 +197,9 @@ export type DataObject = {
     magicDamageBonus?: number;
     magicDamagePercent?: number;
     magicPenetration?: number;
+    objetoEspecial?: number;
+    mataHobbits?: number;
+    subtipo?: number;
     spellIndex?: number;
     item?: number;
     amount?: number;

@@ -30,6 +30,10 @@ export interface ObjectData {
     proyectil?: number;
     magicDamageBonus?: number;
     magicDamagePercent?: number;
+    objetoEspecial?: number;
+    mataHobbits?: number;
+    subtipo?: number;
+    clasesNoPermitidas?: number[];
 }
 
 // NPC data structure from npcs.json

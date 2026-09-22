@@ -19,6 +19,10 @@ type SourceObject = {
     staffDamageBonus?: number;
     magicDamageBonus?: number;
     magicDamagePercent?: number;
+    objetoEspecial?: number;
+    mataHobbits?: number;
+    subtipo?: number;
+    clasesNoPermitidas?: number[];
 };
 
 type ClientObject = {
@@ -37,7 +41,15 @@ type ClientObject = {
     staffDamageBonus?: number;
     magicDamageBonus?: number;
     magicDamagePercent?: number;
+    objetoEspecial?: number;
+    mataHobbits?: number;
+    subtipo?: number;
+    clasesNoPermitidas?: number[];
 };
+
+type NumericClientObjectKey = {
+    [K in keyof ClientObject]-?: ClientObject[K] extends number | undefined ? K : never;
+}[keyof ClientObject];
 
 type ObjectsMap = Record<string, SourceObject>;
 
@@ -53,7 +65,7 @@ function resolveCliPath(value: string | undefined, fallback: string) {
 
 function addOptionalNumber(
     target: Partial<ClientObject>,
-    key: Exclude<keyof ClientObject, "name" | "grhIndex">,
+    key: NumericClientObjectKey,
     value: number | undefined,
 ) {
     if (typeof value !== "number" || value === 0) {
@@ -82,6 +94,13 @@ function toClientObject(source: SourceObject): ClientObject {
     addOptionalNumber(clientObject, "staffDamageBonus", source.staffDamageBonus);
     addOptionalNumber(clientObject, "magicDamageBonus", source.magicDamageBonus);
     addOptionalNumber(clientObject, "magicDamagePercent", source.magicDamagePercent);
+    addOptionalNumber(clientObject, "objetoEspecial", source.objetoEspecial);
+    addOptionalNumber(clientObject, "mataHobbits", source.mataHobbits);
+    addOptionalNumber(clientObject, "subtipo", source.subtipo);
+
+    if (Array.isArray(source.clasesNoPermitidas) && source.clasesNoPermitidas.length > 0) {
+        clientObject.clasesNoPermitidas = source.clasesNoPermitidas;
+    }
 
     return clientObject as ClientObject;
 }

@@ -86,6 +86,9 @@ const OBJECT_DEFAULTS: Record<string, unknown> = {
     magicDamageBonus: 0,
     magicDamagePercent: 0,
     magicPenetration: 0,
+    objetoEspecial: 0,
+    mataHobbits: 0,
+    subtipo: 0,
     magicAbsoluteBonus: 0,
     improvedMeleeHitChance: 0,
     improvedRangedHitChance: 0,
@@ -148,6 +151,37 @@ const outputDir = process.argv[2]
 
 const originalObjsPath = path.resolve(__dirname, "../../../../AOOriginal/originalRecursosAO/Dat/obj.dat");
 const originalNpcsPath = path.resolve(__dirname, "../../../../AOOriginal/originalRecursosAO/Dat/npcs.dat");
+
+const OLD_CLASS_ID_BY_NAME: Record<string, number> = {
+    MAGO: 1,
+    CLERIGO: 2,
+    GUERRERO: 3,
+    ASESINO: 4,
+    LADRON: 5,
+    BARDO: 6,
+    DRUIDA: 7,
+    PALADIN: 8,
+    CAZADOR: 9,
+    BANDIDO: 12,
+    PESCADOR: 13,
+    HERRERO: 14,
+    LENADOR: 15,
+    MINERO: 16,
+    CARPINTERO: 17,
+    PIRATA: 18,
+    ERMITANO: 19,
+    ARQUERO: 20,
+    DOMADOR: 21,
+};
+
+function normalizeOldClassName(value: string): string {
+    return value
+        .trim()
+        .replace(/^"+|"+$/g, "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toUpperCase();
+}
 
 function parseIntSafe(value: string | undefined): number | undefined {
     if (!value) {
@@ -223,6 +257,7 @@ function parseOriginalObjs(): RecordMap {
             ["IndexAbierta", "indexAbierta"],
             ["HechizoIndex", "spellIndex"],
             ["RazaEnana", "razaEnana"],
+            ["Subtipo", "subtipo"],
             ["Apuñala", "apu"],
             ["Porcentaje", "porcentaje"],
             ["ResistenciaMagica", "resistenciaMagica"],
@@ -235,6 +270,9 @@ function parseOriginalObjs(): RecordMap {
             ["MagicDamageBonus", "magicDamageBonus"],
             ["MagicDamagePercent", "magicDamagePercent"],
             ["MagicPenetration", "magicPenetration"],
+            ["ObjetoEspecial", "objetoEspecial"],
+            ["objetoespecial", "objetoEspecial"],
+            ["MataHobbits", "mataHobbits"],
             ["MagicAbsoluteBonus", "magicAbsoluteBonus"],
             ["ImprovedMeleeHitChance", "improvedMeleeHitChance"],
             ["ImprovedRangedHitChance", "improvedRangedHitChance"],
@@ -253,11 +291,16 @@ function parseOriginalObjs(): RecordMap {
             }
         }
 
-        for (let i = 1; i <= 11; i += 1) {
+        for (let i = 1; i <= 21; i += 1) {
             const className = readValue(line, `CP${i}`);
-            if (className && className.toLowerCase() !== "bandido") {
-                const list = current.clasesNoPermitidas as string[];
-                list.push(className.trim().toLowerCase());
+            if (className) {
+                const classId = OLD_CLASS_ID_BY_NAME[normalizeOldClassName(className)];
+                if (classId) {
+                    const list = current.clasesNoPermitidas as number[];
+                    if (!list.includes(classId)) {
+                        list.push(classId);
+                    }
+                }
             }
         }
     }

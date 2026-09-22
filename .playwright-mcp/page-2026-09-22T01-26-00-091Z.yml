@@ -1,0 +1,95 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e52] [cursor=pointer]
+  - alert [ref=e56]
+  - banner [ref=e494]:
+    - generic [ref=e495]:
+      - link "AO AOWeb" [ref=e496] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e497]: AO
+        - generic [ref=e498]: AOWeb
+      - navigation [ref=e499]:
+        - link "Inicio" [ref=e500] [cursor=pointer]:
+          - /url: /
+        - link "Personajes" [ref=e504] [cursor=pointer]:
+          - /url: /characters
+        - link "Arenas" [ref=e508] [cursor=pointer]:
+          - /url: /arenas
+        - link "Ranking" [ref=e518] [cursor=pointer]:
+          - /url: /ranking
+        - link "Wiki" [ref=e525] [cursor=pointer]:
+          - /url: /wiki/equipment
+        - link "Discord" [ref=e529] [cursor=pointer]:
+          - /url: https://discord.gg/sf8rWAvgxs
+      - generic [ref=e532]:
+        - generic [ref=e533]: Wind
+        - button "Cerrar sesion" [ref=e534]
+  - main [ref=e538]:
+    - generic [ref=e539]:
+      - paragraph [ref=e542]: Seleccion de personaje
+      - generic [ref=e543]:
+        - generic [ref=e544]:
+          - link "Crear personaje" [ref=e546] [cursor=pointer]:
+            - /url: /createcharacter
+          - generic [ref=e547]:
+            - button [ref=e548] [cursor=pointer]:
+              - paragraph [ref=e554]: Wind
+              - generic [ref=e555]:
+                - generic [ref=e556]:
+                  - paragraph [ref=e557]: Druida Elfo Drow
+                  - paragraph [ref=e558]: Nivel 7
+                  - paragraph [ref=e559]: Mapa 34
+                - button "Borrar Wind" [ref=e561]
+            - button [ref=e565] [cursor=pointer]:
+              - paragraph [ref=e571]: Codexjbcoiiw
+              - generic [ref=e572]:
+                - generic [ref=e573]:
+                  - paragraph [ref=e574]: Mago Humano
+                  - paragraph [ref=e575]: Nivel 1
+                  - paragraph [ref=e576]: Mapa 34
+                - button "Borrar Codexjbcoiiw" [ref=e578]
+            - button [ref=e582] [cursor=pointer]:
+              - paragraph [ref=e588]: Codexoauuiiw
+              - generic [ref=e589]:
+                - generic [ref=e590]:
+                  - paragraph [ref=e591]: Mago Humano
+                  - paragraph [ref=e592]: Nivel 1
+                  - paragraph [ref=e593]: Mapa 37
+                - button "Borrar Codexoauuiiw" [ref=e595]
+            - button [ref=e599] [cursor=pointer]:
+              - paragraph [ref=e605]: DuelAotocjiw
+              - generic [ref=e606]:
+                - generic [ref=e607]:
+                  - paragraph [ref=e608]: Mago Humano
+                  - paragraph [ref=e609]: Nivel 1
+                  - paragraph [ref=e610]: Mapa 164
+                - button "Borrar DuelAotocjiw" [ref=e612]
+            - button [ref=e616] [cursor=pointer]:
+              - paragraph [ref=e622]: DuelAeyyjjiw
+              - generic [ref=e623]:
+                - generic [ref=e624]:
+                  - paragraph [ref=e625]: Mago Humano
+                  - paragraph [ref=e626]: Nivel 1
+                  - paragraph [ref=e627]: Mapa 164
+                - button "Borrar DuelAeyyjjiw" [ref=e629]
+        - complementary [ref=e633]:
+          - generic [ref=e634]:
+            - generic [ref=e635]:
+              - generic [ref=e636]:
+                - paragraph [ref=e637]: Changelog
+                - button "Mostrar mas" [ref=e638]
+              - article [ref=e640]:
+                - generic [ref=e641]: Update 28
+                - list [ref=e642]:
+                  - listitem [ref=e643]:
+                    - generic [ref=e645]: Ahora la invisibilidad se va al hacer daño a un usuario.
+                  - listitem [ref=e646]:
+                    - generic [ref=e648]: Los ítems ahora se agrupan al levantarlos del suelo en un máximo de 10.000 por stack.
+                  - listitem [ref=e649]:
+                    - generic [ref=e651]: Se le asignó la tecla N al /meditar, si ya la tenían usada pueden configurar una nueva.
+            - generic [ref=e652]:
+              - generic [ref=e653]:
+                - paragraph [ref=e654]: Roadmap
+                - button "Mostrar mas" [ref=e655]
+              - article [ref=e657]:
+                - paragraph [ref=e658]: Hechizos
+                - list

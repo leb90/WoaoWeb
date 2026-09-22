@@ -34,6 +34,9 @@ export type GameObjectRecordData = {
     magicDamageBonus?: number;
     magicDamagePercent?: number;
     magicPenetration?: number;
+    objetoEspecial?: number;
+    mataHobbits?: number;
+    subtipo?: number;
     minDefMag?: number;
     maxDefMag?: number;
     [key: string]: unknown;
@@ -139,6 +142,9 @@ const OBJECT_DEFAULTS: Record<string, unknown> = {
     magicDamageBonus: 0,
     magicDamagePercent: 0,
     magicPenetration: 0,
+    objetoEspecial: 0,
+    mataHobbits: 0,
+    subtipo: 0,
     minDefMag: 0,
     maxDefMag: 0,
 };

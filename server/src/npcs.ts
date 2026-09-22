@@ -2304,6 +2304,7 @@ function Npcs(this: NpcsApi) {
         try {
             const npc = getNpc(idNpc);
             require("./bloodCastle").onNpcDied(Number(npc?.templateNpcIndex ?? 0));
+            require("./summonRoom").onNpcDied(npc);
 
             if (isSummonedNpc(npc)) {
                 despawnSummon(npc);

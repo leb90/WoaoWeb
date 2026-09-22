@@ -193,9 +193,36 @@ const npcs = require("./npcs") as NpcsApi;
 const runtimeTiming = require("./runtimeTiming");
 const handleProtocol = require("./handleProtocol") as HandleProtocolApi;
 const environment = require("./environment");
+const summonRoom = require("./summonRoom");
 
 function handleHttpRequest(request: any, response: any) {
-    void request;
+    const isSummonRoomDebugEndpoint =
+        request.url === "/debug/summon-room" || request.url === "/debug/summon-room/freeze-active-demon";
+
+    if (config.isTestDeployment && isSummonRoomDebugEndpoint && request.method === "OPTIONS") {
+        response.statusCode = 204;
+        response.setHeader("Access-Control-Allow-Origin", "*");
+        response.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+        response.setHeader("Access-Control-Allow-Headers", "Content-Type");
+        response.end();
+        return;
+    }
+
+    if (config.isTestDeployment && request.url === "/debug/summon-room/freeze-active-demon") {
+        response.statusCode = 200;
+        response.setHeader("Access-Control-Allow-Origin", "*");
+        response.setHeader("Content-Type", "application/json; charset=utf-8");
+        response.end(JSON.stringify(summonRoom.freezeActiveDemonForDebug()));
+        return;
+    }
+
+    if (config.isTestDeployment && request.url === "/debug/summon-room") {
+        response.statusCode = 200;
+        response.setHeader("Access-Control-Allow-Origin", "*");
+        response.setHeader("Content-Type", "application/json; charset=utf-8");
+        response.end(JSON.stringify(summonRoom.getDebugSnapshot()));
+        return;
+    }
 
     response.statusCode = 404;
     response.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -1014,6 +1041,7 @@ createDynamicScheduler(
         fishing.processTick(now);
         harvesting.processTick(now);
         smelting.processTick(now);
+        summonRoom.tickSummonRoom();
         npcs.processPendingMovements();
         protocol.processPendingMovements();
         processPendingLogoutTick(now);

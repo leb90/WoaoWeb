@@ -40,12 +40,14 @@ type WikiItemReference = {
     itemId: number;
     itemName: string;
     quantity: number;
+    chancePercent?: number;
 };
 
 type WikiNpcReference = {
     npcId: number;
     npcName: string;
     quantity: number;
+    chancePercent?: number;
 };
 
 type WikiSpellSourceReference = {
@@ -280,6 +282,22 @@ function toNumber(value: unknown): number {
     return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
+function toOptionalChancePercent(value: unknown): number | undefined {
+    const parsed = typeof value === "number" ? value : Number(value);
+    return Number.isFinite(parsed) ? Math.min(100, Math.max(0, parsed)) : undefined;
+}
+
+function getDropChancePercent(entry: Record<string, unknown>): number | undefined {
+    for (const key of ["chancePercent", "chance", "probabilityPercent", "probabilidad"]) {
+        const chancePercent = toOptionalChancePercent(entry[key]);
+        if (typeof chancePercent === "number") {
+            return chancePercent;
+        }
+    }
+
+    return undefined;
+}
+
 function normalizeSearchText(value: string): string {
     return value
         .normalize("NFD")
@@ -511,15 +529,15 @@ export async function getPublicWiki(): Promise<PublicWikiResponse> {
                       .map((item) => {
                           const trade = item as Record<string, unknown>;
                           const itemId = toNumber(trade.item);
-                          return {
-                              itemId,
-                              itemName: String(
-                                  objectsById.get(itemId)?.name ??
-                                      `Objeto ${itemId}`,
-                              ),
-                              quantity: toNumber(trade.cant),
-                          };
-                      })
+                           return {
+                               itemId,
+                               itemName: String(
+                                   objectsById.get(itemId)?.name ??
+                                       `Objeto ${itemId}`,
+                               ),
+                               quantity: toNumber(trade.cant),
+                           };
+                       })
                       .filter((item) => item.itemId > 0)
                 : [];
 
@@ -535,6 +553,7 @@ export async function getPublicWiki(): Promise<PublicWikiResponse> {
                                       `Objeto ${itemId}`,
                               ),
                               quantity: toNumber(trade.cant),
+                              chancePercent: getDropChancePercent(trade),
                           };
                       })
                       .filter((item) => item.itemId > 0)
@@ -556,6 +575,7 @@ export async function getPublicWiki(): Promise<PublicWikiResponse> {
                     npcId: entry.id,
                     npcName: String(data.name ?? `NPC ${entry.id}`),
                     quantity: item.quantity,
+                    chancePercent: item.chancePercent,
                 });
                 droppedByObject.set(item.itemId, references);
             }

@@ -101,10 +101,19 @@ function parseTradeItemStats(details: string) {
     const tier = details.match(/Tier:\s*(\d+)/i)?.[1] ?? null;
     const magicResistance =
         details.match(/Resistencia mágica:\s*(\d+%)/i)?.[1] ?? null;
+    const magicAttack =
+        details.match(/Ataque mágico:\s*\+?(\d+)/i)?.[1] ?? null;
     const magicDamageBonus =
         details.match(/Bonus daño mágico:\s*(\d+%)/i)?.[1] ?? null;
 
-    return { defense, damage, tier, magicResistance, magicDamageBonus };
+    return {
+        defense,
+        damage,
+        tier,
+        magicResistance,
+        magicAttack,
+        magicDamageBonus,
+    };
 }
 
 function ItemOverlayMeta({
@@ -121,7 +130,9 @@ function ItemOverlayMeta({
     const stats = parseTradeItemStats(details);
     const combatLabel = stats.magicResistance
         ? `RM ${stats.magicResistance}`
-        : stats.magicDamageBonus
+        : stats.magicAttack
+          ? `MAG +${stats.magicAttack}`
+          : stats.magicDamageBonus
           ? `MAG ${stats.magicDamageBonus}`
           : stats.defense
             ? `DEF ${stats.defense}`

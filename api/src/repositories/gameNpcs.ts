@@ -5,6 +5,7 @@ import {
     computeChecksum,
     loadSeedNpcsJson,
     normalizeNpcData,
+    type GameNpcDropEntry,
     type GameNpcRecordData,
 } from "../lib/gameData";
 
@@ -44,7 +45,7 @@ export type FrontendNpcExportData = {
     def?: number;
     poderAtaque?: number;
     poderEvasion?: number;
-    drop?: Array<{ item: number; cant: number }>;
+    drop?: Array<{ item: number; cant: number; chancePercent?: number }>;
 };
 
 export async function listNpcSoldItemIds(): Promise<number[]> {
@@ -75,6 +76,13 @@ const tradeEntrySchema = z.object({
     cant: z.coerce.number().int().nonnegative(),
 });
 
+const dropEntrySchema = tradeEntrySchema.extend({
+    chancePercent: z.coerce.number().min(0).max(100).optional(),
+    chance: z.coerce.number().min(0).max(100).optional(),
+    probabilityPercent: z.coerce.number().min(0).max(100).optional(),
+    probabilidad: z.coerce.number().min(0).max(100).optional(),
+});
+
 const gameNpcSchema = z
     .object({
         name: z.string().trim().min(1),
@@ -83,9 +91,37 @@ const gameNpcSchema = z
         idBody: z.coerce.number().int().nonnegative(),
         movement: z.coerce.number().int().nonnegative(),
         objs: z.array(tradeEntrySchema).optional(),
-        drop: z.array(tradeEntrySchema).optional(),
+        drop: z.array(dropEntrySchema).optional(),
     })
     .catchall(z.unknown());
+
+const DROP_CHANCE_KEYS = ["chancePercent", "chance", "probabilityPercent", "probabilidad"] as const;
+
+function toDropChancePercent(entry: GameNpcDropEntry): number | undefined {
+    for (const key of DROP_CHANCE_KEYS) {
+        const rawValue = entry[key];
+        const value = typeof rawValue === "number" ? rawValue : Number(rawValue);
+        if (Number.isFinite(value)) {
+            return Math.min(100, Math.max(0, value));
+        }
+    }
+
+    return undefined;
+}
+
+function compactDropEntry(entry: GameNpcDropEntry): { item: number; cant: number; chancePercent?: number } {
+    const compacted: { item: number; cant: number; chancePercent?: number } = {
+        item: entry.item,
+        cant: entry.cant,
+    };
+    const chancePercent = toDropChancePercent(entry);
+
+    if (typeof chancePercent === "number") {
+        compacted.chancePercent = chancePercent;
+    }
+
+    return compacted;
+}
 
 const listFiltersSchema = z.object({
     search: z.string().trim().optional(),
@@ -181,10 +217,7 @@ function compactFrontendNpcData(
     }
 
     if (dropEntries.length > 0) {
-        frontendNpc.drop = dropEntries.map((entry) => ({
-            item: entry.item,
-            cant: entry.cant,
-        }));
+        frontendNpc.drop = dropEntries.map(compactDropEntry);
     }
 
     return frontendNpc;

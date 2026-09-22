@@ -192,6 +192,14 @@ export default function CharacterStatsModal({
             return null;
         }
 
+        const hasProjectileWeapon = hud.inventory.some((item) => {
+            if (!item.equipped || item.objType !== OBJECT_TYPE.armas) {
+                return false;
+            }
+
+            return Boolean(objectsDB[item.idItem.toString()]?.proyectil);
+        });
+
         return hud.inventory.reduce(
             (total, item) => {
                 if (!item.equipped) {
@@ -222,13 +230,15 @@ export default function CharacterStatsModal({
 
                 if (
                     item.objType === OBJECT_TYPE.armas ||
-                    item.objType === OBJECT_TYPE.flechas
+                    (item.objType === OBJECT_TYPE.flechas &&
+                        hasProjectileWeapon)
                 ) {
                     total.minWeaponHit += objectData.minHit ?? 0;
                     total.maxWeaponHit += objectData.maxHit ?? 0;
                 }
 
                 total.magicDamageBonus += objectData.magicDamageBonus ?? 0;
+                total.magicDamagePercent += objectData.magicDamagePercent ?? 0;
 
                 if (item.objType === OBJECT_TYPE.armas && !total.weaponName) {
                     total.weaponName = item.name;
@@ -251,6 +261,7 @@ export default function CharacterStatsModal({
                 minWeaponHit: 0,
                 maxWeaponHit: 0,
                 magicDamageBonus: 0,
+                magicDamagePercent: 0,
             },
         );
     }, [hud, objectsDB]);
@@ -408,13 +419,22 @@ export default function CharacterStatsModal({
                                             description="Define si atacas de cerca, a distancia o con un arma apta para apuñalar."
                                         />
                                         <DetailRow
-                                            label="Bonus daño mágico %"
+                                            label="Ataque mágico equipado"
                                             value={formatSignedNumber(
                                                 equipmentStats?.magicDamageBonus,
-                                                "%",
                                             )}
-                                            description="Porcentaje extra de daño mágico otorgado por tu equipo actual."
+                                            description="Daño mágico plano otorgado por arma, casco, armadura o anillo equipado."
                                         />
+                                        {equipmentStats?.magicDamagePercent ? (
+                                            <DetailRow
+                                                label="Bonus mágico %"
+                                                value={formatSignedNumber(
+                                                    equipmentStats.magicDamagePercent,
+                                                    "%",
+                                                )}
+                                                description="Porcentaje extra de daño mágico otorgado por equipo especial."
+                                            />
+                                        ) : null}
                                     </div>
                                 </section>
 
@@ -437,7 +457,7 @@ export default function CharacterStatsModal({
                                                 equipmentStats?.minDefMag,
                                                 equipmentStats?.maxDefMag,
                                             )}
-                                            description="Rango de defensa mágica aportado por cascos, armaduras y escudos equipados."
+                                            description="Rango de defensa mágica aportado por cascos, armaduras, escudos y anillos equipados."
                                         />
                                         <DetailRow
                                             label="Resistencia mágica"

@@ -195,7 +195,11 @@ export type DataObject = {
     maxModificador?: number;
     tipoPocion?: number;
     magicDamageBonus?: number;
+    magicDamagePercent?: number;
     magicPenetration?: number;
+    objetoEspecial?: number;
+    mataHobbits?: number;
+    subtipo?: number;
     spellIndex?: number;
     item?: number;
     amount?: number;
@@ -504,6 +508,10 @@ export type RuntimeNpc = {
 export type DropItem = {
     item: number;
     cant: number;
+    chancePercent?: number;
+    chance?: number;
+    probabilityPercent?: number;
+    probabilidad?: number;
 };
 
 export type RuntimeClient = {

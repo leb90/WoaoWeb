@@ -697,14 +697,15 @@ function Login(this: LoginApi) {
                     personaje.attrConstitucion,
                     personaje.level,
                 );
+                const normalizedMaxSta = personaje.maxSta ?? 0;
                 personaje.hambre =
                     personaje.hambre == null ? 100 : Math.max(0, Math.min(100, Number(personaje.hambre)));
                 personaje.sed =
                     personaje.sed == null ? 100 : Math.max(0, Math.min(100, Number(personaje.sed)));
                 personaje.sta =
                     personaje.sta == null
-                        ? personaje.maxSta
-                        : Math.max(0, Math.min(personaje.maxSta, Number(personaje.sta)));
+                        ? normalizedMaxSta
+                        : Math.max(0, Math.min(normalizedMaxSta, Number(personaje.sta)));
 
                 personaje.seguroActivado = true;
                 personaje.seguroClanActivado = Boolean(personaje.clanId);

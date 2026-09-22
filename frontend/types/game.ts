@@ -29,6 +29,11 @@ export interface ObjectData {
     apu?: number;
     proyectil?: number;
     magicDamageBonus?: number;
+    magicDamagePercent?: number;
+    objetoEspecial?: number;
+    mataHobbits?: number;
+    subtipo?: number;
+    clasesNoPermitidas?: number[];
 }
 
 // NPC data structure from npcs.json
@@ -50,6 +55,10 @@ export interface NPCData {
     drop?: Array<{
         item: number;
         cant: number;
+        chancePercent?: number;
+        chance?: number;
+        probabilityPercent?: number;
+        probabilidad?: number;
     }>;
 }
 

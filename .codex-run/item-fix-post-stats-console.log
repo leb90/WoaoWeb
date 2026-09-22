@@ -1,0 +1,4 @@
+Total messages: 75 (Errors: 0, Warnings: 1)
+Returning 1 messages for level "warning"
+
+[WARNING] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_0~v.d05._.js:2661

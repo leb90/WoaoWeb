@@ -32,13 +32,23 @@ export type GameObjectRecordData = {
     resistenciaMagica?: number;
     staffDamageBonus?: number;
     magicDamageBonus?: number;
+    magicDamagePercent?: number;
     magicPenetration?: number;
+    objetoEspecial?: number;
+    mataHobbits?: number;
+    subtipo?: number;
     minDefMag?: number;
     maxDefMag?: number;
     [key: string]: unknown;
 };
 
 export type GameNpcTradeEntry = { item: number; cant: number };
+export type GameNpcDropEntry = GameNpcTradeEntry & {
+    chancePercent?: number;
+    chance?: number;
+    probabilityPercent?: number;
+    probabilidad?: number;
+};
 
 export type GameNpcRecordData = {
     name: string;
@@ -63,7 +73,7 @@ export type GameNpcRecordData = {
     snd1?: number;
     snd2?: number;
     soundClose?: number;
-    drop?: GameNpcTradeEntry[];
+    drop?: GameNpcDropEntry[];
     objs?: GameNpcTradeEntry[];
     [key: string]: unknown;
 };
@@ -136,7 +146,11 @@ const OBJECT_DEFAULTS: Record<string, unknown> = {
     resistenciaMagica: 0,
     staffDamageBonus: 0,
     magicDamageBonus: 0,
+    magicDamagePercent: 0,
     magicPenetration: 0,
+    objetoEspecial: 0,
+    mataHobbits: 0,
+    subtipo: 0,
     minDefMag: 0,
     maxDefMag: 0,
 };
@@ -166,6 +180,29 @@ const NPC_DEFAULTS: Record<string, unknown> = {
     objs: [],
     drop: [],
 };
+
+const LEGACY_NPC_DROP_CHANCES = [90, 10, 1, 0.1, 0.01] as const;
+const DROP_CHANCE_KEYS = ["chancePercent", "chance", "probabilityPercent", "probabilidad"] as const;
+
+function getLegacyNpcDropChancePercent(index: number): number {
+    if (index < LEGACY_NPC_DROP_CHANCES.length) {
+        return LEGACY_NPC_DROP_CHANCES[index] ?? 100;
+    }
+
+    return LEGACY_NPC_DROP_CHANCES[LEGACY_NPC_DROP_CHANCES.length - 1];
+}
+
+function getNpcDropChancePercent(entry: GameNpcDropEntry, fallback: number): number {
+    for (const key of DROP_CHANCE_KEYS) {
+        const rawValue = entry[key];
+        const value = typeof rawValue === "number" ? rawValue : Number(rawValue);
+        if (Number.isFinite(value)) {
+            return Math.min(100, Math.max(0, value));
+        }
+    }
+
+    return Math.min(100, Math.max(0, fallback));
+}
 
 function sortValue(value: unknown): unknown {
     if (Array.isArray(value)) {
@@ -197,13 +234,19 @@ export function computeChecksum(value: unknown): string {
 export function normalizeObjectData(
     data: GameObjectRecordData,
 ): GameObjectRecordData {
-    return {
+    const normalized = {
         ...OBJECT_DEFAULTS,
         ...data,
         clasesNoPermitidas: Array.isArray(data.clasesNoPermitidas)
             ? data.clasesNoPermitidas
             : [],
     } as GameObjectRecordData;
+
+    if (Number(normalized.minDefMag ?? 0) > 0 && Number(normalized.maxDefMag ?? 0) <= 0) {
+        normalized.maxDefMag = normalized.minDefMag;
+    }
+
+    return normalized;
 }
 
 export function normalizeNpcData(data: GameNpcRecordData): GameNpcRecordData {
@@ -211,7 +254,12 @@ export function normalizeNpcData(data: GameNpcRecordData): GameNpcRecordData {
         ...NPC_DEFAULTS,
         ...data,
         objs: Array.isArray(data.objs) ? data.objs : [],
-        drop: Array.isArray(data.drop) ? data.drop : [],
+        drop: Array.isArray(data.drop)
+            ? data.drop.map((entry, index) => ({
+                  ...entry,
+                  chancePercent: getNpcDropChancePercent(entry, getLegacyNpcDropChancePercent(index)),
+              }))
+            : [],
     } as GameNpcRecordData;
 
     if (typeof data.magicDef === "number" && typeof data.defM !== "number") {

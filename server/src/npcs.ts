@@ -25,6 +25,7 @@ import {
     shouldAvoidParalysis,
     shouldIgnoreHarmfulSpell,
 } from "./racialPassives";
+import { getLegacyNpcDropChancePercent, shouldDropNpcItem } from "./npcDrops";
 
 export {};
 
@@ -120,6 +121,7 @@ type PlayerCharacter = RuntimeCharacter & {
     idItemShield: number | string;
     idItemHelmet: number | string;
     idItemBody: number | string;
+    idItemRing: number | string;
     navegando: NumericFlag;
     meditar: boolean;
     inmovilizado: NumericFlag;
@@ -343,10 +345,29 @@ function getEquippedInventoryItem(user: PlayerCharacter, slotId: number | string
     return user.inv[String(slotId)] ?? null;
 }
 
+function safeNumber(value: unknown): number {
+    const numericValue = Number(value ?? 0);
+    return Number.isFinite(numericValue) ? numericValue : 0;
+}
+
+function rollInclusiveRange(minValue: unknown, maxValue: unknown): number {
+    const min = Math.floor(safeNumber(minValue));
+    const rawMax = Math.floor(safeNumber(maxValue));
+    const max = rawMax > 0 ? rawMax : min;
+    const lower = Math.min(min, max);
+    const upper = Math.max(min, max);
+
+    if (upper <= 0) {
+        return 0;
+    }
+
+    return funct.randomIntFromInterval(lower, upper);
+}
+
 function getUserMagicDefense(user: PlayerCharacter): number {
     let total = 0;
 
-    for (const slotId of [user.idItemHelmet, user.idItemBody, user.idItemShield]) {
+    for (const slotId of [user.idItemHelmet, user.idItemBody, user.idItemShield, user.idItemRing]) {
         const inventoryItem = getEquippedInventoryItem(user, slotId);
 
         if (!inventoryItem) {
@@ -355,9 +376,7 @@ function getUserMagicDefense(user: PlayerCharacter): number {
 
         const itemData = vars.datObj[inventoryItem.idItem];
 
-        if (itemData?.minDefMag && itemData?.maxDefMag) {
-            total += funct.randomIntFromInterval(itemData.minDefMag, itemData.maxDefMag);
-        }
+        total += rollInclusiveRange(itemData?.minDefMag, itemData?.maxDefMag);
     }
 
     return total;
@@ -366,7 +385,7 @@ function getUserMagicDefense(user: PlayerCharacter): number {
 function getUserMagicResistanceBonus(user: PlayerCharacter): number {
     let total = 0;
 
-    for (const slotId of [user.idItemHelmet, user.idItemBody, user.idItemShield]) {
+    for (const slotId of [user.idItemHelmet, user.idItemBody, user.idItemShield, user.idItemRing]) {
         const inventoryItem = getEquippedInventoryItem(user, slotId);
 
         if (!inventoryItem) {
@@ -2533,7 +2552,7 @@ function Npcs(this: NpcsApi) {
                 let dmg: number | "¡Fallas!" = "¡Fallas!";
 
                 if (npcImpacto) {
-                    dmg = Number.parseInt(String(funct.randomIntFromInterval(npc.minHit, npc.maxHit)), 10);
+                    dmg = Number.parseInt(String(rollInclusiveRange(npc.minHit, npc.maxHit)), 10);
 
                     const lugarCuerpo = funct.randomIntFromInterval(vars.partesCuerpo.cabeza, vars.partesCuerpo.torso);
                     let absorbeDmg = 0;
@@ -2544,7 +2563,7 @@ function Npcs(this: NpcsApi) {
                                 const itemInventaryHelmet = user.inv[String(user.idItemHelmet)];
                                 if (itemInventaryHelmet) {
                                     const itemHelmet = vars.datObj[itemInventaryHelmet.idItem];
-                                    absorbeDmg = funct.randomIntFromInterval(itemHelmet.minDef, itemHelmet.maxDef);
+                                    absorbeDmg = rollInclusiveRange(itemHelmet.minDef, itemHelmet.maxDef);
                                 }
                             }
                             break;
@@ -2556,8 +2575,8 @@ function Npcs(this: NpcsApi) {
                                 const itemInventaryBody = user.inv[String(user.idItemBody)];
                                 if (itemInventaryBody) {
                                     const itemBody = vars.datObj[itemInventaryBody.idItem];
-                                    minDef = itemBody.minDef;
-                                    maxDef = itemBody.maxDef;
+                                    minDef = safeNumber(itemBody.minDef);
+                                    maxDef = safeNumber(itemBody.maxDef);
                                 }
                             }
 
@@ -2565,14 +2584,12 @@ function Npcs(this: NpcsApi) {
                                 const itemInventaryShield = user.inv[String(user.idItemShield)];
                                 if (itemInventaryShield) {
                                     const itemShield = vars.datObj[itemInventaryShield.idItem];
-                                    minDef += itemShield.minDef;
-                                    maxDef += itemShield.maxDef;
+                                    minDef += safeNumber(itemShield.minDef);
+                                    maxDef += safeNumber(itemShield.maxDef);
                                 }
                             }
 
-                            if (maxDef > 0) {
-                                absorbeDmg = funct.randomIntFromInterval(minDef, maxDef);
-                            }
+                            absorbeDmg = rollInclusiveRange(minDef, maxDef);
                             break;
                         }
                     }
@@ -3065,51 +3082,32 @@ function Npcs(this: NpcsApi) {
     this.tirarItems = function (idNpc: EntityId, ws: RuntimeClient) {
         try {
             const npc = getNpc(idNpc);
-            if (!getUser(ws.id!)) {
+            if (!npc || !getUser(ws.id!)) {
                 return;
             }
 
-            let cantDrop = 0;
-            let random = funct.randomIntFromInterval(1, 100);
-
-            if (!npc.drop) {
+            if (!Array.isArray(npc.drop) || npc.drop.length === 0) {
                 return;
             }
 
-            if (random <= 90) {
-                cantDrop++;
+            const reservedDropPositions = new Set<string>();
 
-                if (random <= 10) {
-                    cantDrop++;
-
-                    for (let i = 0; i < 3; i++) {
-                        random = funct.randomIntFromInterval(1, 100);
-                        if (random <= 10) {
-                            cantDrop++;
-                        } else {
-                            break;
-                        }
-                    }
+            for (let index = 0; index < npc.drop.length; index++) {
+                const item = npc.drop[index];
+                if (!item || !shouldDropNpcItem(item, undefined, getLegacyNpcDropChancePercent(index))) {
+                    continue;
                 }
-            }
 
-            if (cantDrop > 0) {
-                const reservedDropPositions = new Set<string>();
+                const datObj = vars.datObj[item.item];
+                if (!datObj) {
+                    continue;
+                }
 
-                for (let i = 0; i < cantDrop; i++) {
-                    const item = npc.drop[i];
-                    if (!item) {
-                        continue;
-                    }
-
-                    const datObj = vars.datObj[item.item];
-
-                    if (datObj.objType === vars.objType.dinero) {
-                        const goldGanado = item.cant * vars.multiplicadorGold;
-                        game.distribuirOroNpc(ws.id!, idNpc, goldGanado);
-                    } else {
-                        this.tirarItemAlSuelo(item.item, item.cant, npc.map, npc.pos, idNpc, reservedDropPositions);
-                    }
+                if (datObj.objType === vars.objType.dinero) {
+                    const goldGanado = item.cant * vars.multiplicadorGold;
+                    game.distribuirOroNpc(ws.id!, idNpc, goldGanado);
+                } else {
+                    this.tirarItemAlSuelo(item.item, item.cant, npc.map, npc.pos, idNpc, reservedDropPositions);
                 }
             }
         } catch (err) {

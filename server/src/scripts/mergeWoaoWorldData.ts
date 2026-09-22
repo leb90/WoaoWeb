@@ -23,6 +23,7 @@ const INF_HEADER_SIZE = 10;
 
 type IniSection = Record<string, string>;
 type IniFile = Record<string, IniSection>;
+type PairListEntry = { item: number; cant: number; chancePercent?: number };
 
 type TerrainTile = {
     blocked?: boolean;
@@ -139,8 +140,70 @@ function toNumber(value: string | undefined, fallback = 0): number {
     return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function toDecimalNumber(value: string | undefined): number | null {
+    const match = value?.trim().replace(",", ".").match(/^-?\d+(?:\.\d+)?/);
+    if (!match) {
+        return null;
+    }
+
+    const parsed = Number(match[0]);
+    return Number.isFinite(parsed) ? parsed : null;
+}
+
+function clampChancePercent(value: number): number {
+    return Math.min(100, Math.max(0, value));
+}
+
 function decodeLatin1(value: string): string {
     return value.replace(/\s+/g, " ").trim();
+}
+
+const OLD_CLASS_ID_BY_NAME: Record<string, number> = {
+    MAGO: 1,
+    CLERIGO: 2,
+    GUERRERO: 3,
+    ASESINO: 4,
+    LADRON: 5,
+    BARDO: 6,
+    DRUIDA: 7,
+    PALADIN: 8,
+    CAZADOR: 9,
+    BANDIDO: 12,
+    PESCADOR: 13,
+    HERRERO: 14,
+    LENADOR: 15,
+    MINERO: 16,
+    CARPINTERO: 17,
+    PIRATA: 18,
+    ERMITANO: 19,
+    ARQUERO: 20,
+    DOMADOR: 21,
+};
+
+function normalizeOldClassName(value: string | undefined): string {
+    return decodeLatin1(value ?? "")
+        .replace(/^"+|"+$/g, "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toUpperCase();
+}
+
+function convertClassRestrictions(section: IniSection): number[] {
+    const classes = new Set<number>();
+
+    for (let index = 1; index <= 21; index++) {
+        const className = normalizeOldClassName(getValue(section, `CP${index}`));
+        if (!className) {
+            continue;
+        }
+
+        const classId = OLD_CLASS_ID_BY_NAME[className];
+        if (classId) {
+            classes.add(classId);
+        }
+    }
+
+    return Array.from(classes).sort((left, right) => left - right);
 }
 
 function readJson<T>(filePath: string): T | null {
@@ -452,9 +515,73 @@ function buildCompactMap(mapId: number, terrain: TerrainMap, specials: SpecialsM
         : { id: mapId, w: width, h: height, d: data };
 }
 
-function convertPairList(section: IniSection, prefix: string, countKey: string): Array<{ item: number; cant: number }> {
+function parseObjectDropChances(): Record<number, number> {
+    const chances: Record<number, number> = {};
+    const ini = parseIni(readLatin1(path.join(OLD_DAT, "OBJ.dat")));
+
+    for (const [sectionName, section] of Object.entries(ini)) {
+        const match = sectionName.match(/^OBJ(\d+)$/i);
+        if (!match) {
+            continue;
+        }
+
+        const dropChance = toDecimalNumber(getValue(section, "DROP"));
+        if (dropChance !== null) {
+            chances[Number(match[1])] = clampChancePercent(dropChance);
+        }
+    }
+
+    return chances;
+}
+
+const OLD_OBJECT_DROP_CHANCES = parseObjectDropChances();
+
+function normalizeDropNpcName(value: string): string {
+    return value
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+}
+
+function resolveLegacyNpcDropChancePercent(section: IniSection, item: number, explicitChance: number | null): number {
+    const name = normalizeDropNpcName(decodeLatin1(getValue(section, "Name") ?? ""));
+    if (item === 26 && /\bgall(?:o|ina)\b/.test(name)) {
+        return 20;
+    }
+
+    if (explicitChance !== null) {
+        return clampChancePercent(explicitChance);
+    }
+
+    const objectChance = OLD_OBJECT_DROP_CHANCES[item];
+    if (typeof objectChance === "number" && objectChance > 0) {
+        return clampChancePercent(objectChance);
+    }
+
+    if (item === 882) {
+        return 100;
+    }
+
+    const exp = toInt(getValue(section, "GiveEXP") ?? getValue(section, "Exp"));
+    if (exp > 0 && exp < 1000) {
+        return 100;
+    }
+
+    if (item === 12) {
+        return 60;
+    }
+
+    return 30;
+}
+
+function convertPairList(
+    section: IniSection,
+    prefix: string,
+    countKey: string,
+    options: { includeChance?: boolean } = {},
+): PairListEntry[] {
     const count = toInt(getValue(section, countKey));
-    const entries: Array<{ item: number; cant: number }> = [];
+    const entries: PairListEntry[] = [];
 
     for (let index = 1; index <= Math.max(count, 20); index++) {
         const raw = getValue(section, `${prefix}${index}`);
@@ -462,15 +589,24 @@ function convertPairList(section: IniSection, prefix: string, countKey: string):
             continue;
         }
 
-        const [itemRaw, cantRaw] = raw.split("-");
+        const [itemRaw, cantRaw, chanceRaw] = raw.split("-");
         const item = toInt(itemRaw);
         const cant = toInt(cantRaw, 1);
         if (item > 0) {
-            entries.push({ item, cant });
+            const entry: PairListEntry = { item, cant };
+            if (options.includeChance) {
+                entry.chancePercent = resolveLegacyNpcDropChancePercent(section, item, toDecimalNumber(chanceRaw));
+            }
+
+            entries.push(entry);
         }
     }
 
     return entries;
+}
+
+function stripDropChance(entry: PairListEntry): { item: number; cant: number } {
+    return { item: entry.item, cant: entry.cant };
 }
 
 function convertObjects(): JsonRecord {
@@ -499,7 +635,7 @@ function convertObjects(): JsonRecord {
             minDef: toInt(getValue(section, "MinDef") ?? getValue(section, "MINDEF")),
             maxDef: toInt(getValue(section, "MaxDef") ?? getValue(section, "MAXDEF")),
             minDefMag: toInt(getValue(section, "MinDefMag") ?? getValue(section, "DefMagic")),
-            maxDefMag: toInt(getValue(section, "MaxDefMag") ?? getValue(section, "MaxDefMag")),
+            maxDefMag: toInt(getValue(section, "MaxDefMag") ?? getValue(section, "DefMagic")),
             resistenciaMagica: toInt(getValue(section, "ResistenciaMagica")),
             tipoPocion: toInt(getValue(section, "TipoPocion")),
             minModificador: toInt(getValue(section, "MinModificador")),
@@ -513,7 +649,10 @@ function convertObjects(): JsonRecord {
             agarrable: toInt(getValue(section, "Agarrable"), 1),
             noSeCae: toInt(getValue(section, "NoSeCae") ?? getValue(section, "nocaer")),
             staffDamageBonus: toInt(getValue(section, "StaffDamageBonus")),
-            magicDamageBonus: toInt(getValue(section, "MagicDamageBonus")),
+            magicDamageBonus: toInt(getValue(section, "MagicDamageBonus") ?? getValue(section, "Magia")),
+            magicDamagePercent: toInt(getValue(section, "MagicDamagePercent")),
+            objetoEspecial: toInt(getValue(section, "ObjetoEspecial") ?? getValue(section, "objetoespecial")),
+            mataHobbits: toInt(getValue(section, "MataHobbits")),
             porcentaje: toInt(getValue(section, "Porcentaje")),
             indexAbierta: toInt(getValue(section, "IndexAbierta")),
             indexCerrada: toInt(getValue(section, "IndexCerrada")),
@@ -521,6 +660,7 @@ function convertObjects(): JsonRecord {
             cerrada: toInt(getValue(section, "Cerrada")),
             minSkill: toInt(getValue(section, "MinSkill")),
             subtipo: toInt(getValue(section, "Subtipo")),
+            clasesNoPermitidas: convertClassRestrictions(section),
         };
     }
 
@@ -549,11 +689,20 @@ function toClientObjects(objects: JsonRecord): JsonRecord {
             "proyectil",
             "staffDamageBonus",
             "magicDamageBonus",
+            "magicDamagePercent",
+            "objetoEspecial",
+            "mataHobbits",
+            "subtipo",
         ]) {
             const value = Number(objectData[key] ?? 0);
             if (value) {
                 clientObject[key] = value;
             }
+        }
+
+        const blockedClasses = objectData.clasesNoPermitidas;
+        if (Array.isArray(blockedClasses) && blockedClasses.length > 0) {
+            clientObject.clasesNoPermitidas = blockedClasses;
         }
 
         client[id] = clientObject;
@@ -577,10 +726,13 @@ function convertNpcsFromFile(filePath: string, target: JsonRecord): number {
         }
 
         const id = match[1];
-        const drop = convertPairList(section, "Drop", "NRODROPS");
-        const objs = convertPairList(section, "Obj", "NROITEMS");
+        const oldDrop = convertPairList(section, "Drop", "NRODROPS", { includeChance: true });
+        const oldObjs = convertPairList(section, "Obj", "NROITEMS", { includeChance: true });
         const spells: Array<{ idSpell: number }> = [];
         const spellCount = toInt(getValue(section, "LanzaSpells") ?? getValue(section, "NumHechizos"));
+        const comercia = toInt(getValue(section, "Comercia"));
+        const drop = comercia === 1 ? oldDrop : [...oldDrop, ...oldObjs];
+        const objs = comercia === 1 ? oldObjs.map(stripDropChance) : [];
 
         for (let index = 1; index <= Math.max(spellCount, 8); index++) {
             const spellId = toInt(getValue(section, `Sp${index}`) ?? getValue(section, `Hechizo${index}`));
@@ -612,7 +764,7 @@ function convertNpcsFromFile(filePath: string, target: JsonRecord): number {
             snd2: toInt(getValue(section, "Snd2")),
             hostile: toInt(getValue(section, "Hostile")),
             attackable: toInt(getValue(section, "Attackable")),
-            comercia: toInt(getValue(section, "Comercia")),
+            comercia,
             drop,
             objs,
             questNumber: toInt(getValue(section, "QuestNumber")),

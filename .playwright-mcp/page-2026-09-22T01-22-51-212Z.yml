@@ -1,0 +1,58 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - link "AO AOWeb" [ref=e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e5]: AO
+        - generic [ref=e6]: AOWeb
+      - navigation [ref=e7]:
+        - link "Inicio" [ref=e8] [cursor=pointer]:
+          - /url: /
+        - link "Personajes" [ref=e12] [cursor=pointer]:
+          - /url: /characters
+        - link "Arenas" [ref=e16] [cursor=pointer]:
+          - /url: /arenas
+        - link "Ranking" [ref=e26] [cursor=pointer]:
+          - /url: /ranking
+        - link "Wiki" [ref=e33] [cursor=pointer]:
+          - /url: /wiki/equipment
+        - link "Discord" [ref=e37] [cursor=pointer]:
+          - /url: https://discord.gg/sf8rWAvgxs
+      - generic [ref=e40]:
+        - generic [ref=e73]: Wind
+        - button "Cerrar sesion" [ref=e74]
+  - button "Open Next.js Dev Tools" [ref=e52] [cursor=pointer]
+  - alert [ref=e56]
+  - main [ref=e78]:
+    - generic [ref=e79]:
+      - generic [ref=e80]:
+        - link "Mundo abierto Ir a personajes" [ref=e81] [cursor=pointer]:
+          - /url: /characters
+          - paragraph [ref=e82]: Mundo abierto
+          - generic [ref=e83]: Ir a personajes
+        - link "Arenas Ir a Arenas" [ref=e84] [cursor=pointer]:
+          - /url: /arenas
+          - paragraph [ref=e85]: Arenas
+          - generic [ref=e86]: Ir a Arenas
+      - generic [ref=e88]:
+        - generic [ref=e89]:
+          - paragraph [ref=e90]: De que se trata
+          - link "Ir a Discord" [ref=e91] [cursor=pointer]:
+            - /url: https://discord.gg/sf8rWAvgxs
+            - text: Discord
+        - heading "AOWeb Beta" [level=2] [ref=e94]
+        - generic [ref=e95]:
+          - paragraph [ref=e96]: AOWeb es un proyecto que aun está en Beta, es probable que tenga varios errores y salió de varios años como ex jugador de querer armar un AO pero que funcione 100% en web y fluido, este proyecto lo hice hace unos 12 años pero hoy las tecnologías son otras y se puede tener un AO que ande fluido en web y ese es mi objetivo.
+          - paragraph [ref=e97]: Actualmente faltan muchas funciones que las voy a ir agregando día a día hasta que podamos tener un juego solido, vamos a tener sonidos, carpinteria, poder ordenar hechizos/items, todo lo necesario para una mejor jugabilidad.
+          - paragraph [ref=e98]:
+            - text: "Cualquier tipo de feedback o reporte de bug es bienvenido, me lo pueden mandar a mi Twitter:"
+            - link "@DamianCatanzaro" [ref=e99] [cursor=pointer]:
+              - /url: https://x.com/DamianCatanzaro
+          - paragraph [ref=e100]:
+            - text: "Tambien pueden ingresar al Discord para recibir novedades:"
+            - link "unirse al Discord" [ref=e101] [cursor=pointer]:
+              - /url: https://discord.gg/sf8rWAvgxs
+          - paragraph [ref=e102]:
+            - text: "O pueden enviar con mas detalle a este Form de Google:"
+            - link "abrir formulario" [ref=e103] [cursor=pointer]:
+              - /url: https://forms.gle/Df2cmGExTBjjJhAR8

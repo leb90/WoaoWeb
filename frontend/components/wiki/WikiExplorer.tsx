@@ -39,21 +39,16 @@ function getTierSortValue(tier: number): number {
     return tier > 0 ? tier : Number.POSITIVE_INFINITY;
 }
 
-function getNpcDropChanceByIndex(index: number): string | null {
-    switch (index) {
-        case 0:
-            return "90%";
-        case 1:
-            return "10%";
-        case 2:
-            return "1%";
-        case 3:
-            return "0.1%";
-        case 4:
-            return "0.01%";
-        default:
-            return null;
+function formatNpcDropChance(chancePercent: number | undefined): string | null {
+    if (typeof chancePercent !== "number" || !Number.isFinite(chancePercent)) {
+        return null;
     }
+
+    if (Number.isInteger(chancePercent)) {
+        return `${chancePercent}%`;
+    }
+
+    return `${chancePercent.toFixed(2).replace(/\.00$/, "").replace(/0$/, "")}%`;
 }
 
 const TRAINING_MAP_GROUPS = [
@@ -148,8 +143,8 @@ function formatNpcDrops(
     return (
         drops
             .slice(0, 5)
-            .map((item, index) => {
-                const chance = getNpcDropChanceByIndex(index);
+            .map((item) => {
+                const chance = formatNpcDropChance(item.chancePercent);
                 const quantity = item.quantity > 1 ? ` x${item.quantity}` : "";
                 return chance
                     ? `${chance} ${item.itemName}${quantity}`

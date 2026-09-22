@@ -39,7 +39,11 @@ const OBJECT_DEFAULTS: Record<string, unknown> = {
     resistenciaMagica: 0,
     staffDamageBonus: 0,
     magicDamageBonus: 0,
+    magicDamagePercent: 0,
     magicPenetration: 0,
+    objetoEspecial: 0,
+    mataHobbits: 0,
+    subtipo: 0,
     minDefMag: 0,
     maxDefMag: 0,
 };
@@ -55,11 +59,17 @@ function isSameDefaultValue(value: unknown, defaultValue: unknown): boolean {
 }
 
 function normalizeObject(objectData: DataObject): DataObject {
-    return {
+    const normalized = {
         ...OBJECT_DEFAULTS,
         ...objectData,
         clasesNoPermitidas: Array.isArray(objectData.clasesNoPermitidas) ? objectData.clasesNoPermitidas : [],
     } as DataObject;
+
+    if (Number(normalized.minDefMag ?? 0) > 0 && Number(normalized.maxDefMag ?? 0) <= 0) {
+        normalized.maxDefMag = normalized.minDefMag;
+    }
+
+    return normalized;
 }
 
 export function normalizeObjectsData(objectsById: ObjectsById): ObjectsById {

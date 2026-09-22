@@ -5,7 +5,7 @@ import { getTexturePath } from "../../../utils/gameLoader";
 import type { PlayerHudState, SpellEntry } from "../../../lib/aowProtocol";
 import type { Engine, Character } from "../engine/Engine";
 
-const NPC_DROP_CHANCES = [90, 10, 1, 0.1, 0.01] as const;
+const LEGACY_NPC_DROP_CHANCES = [90, 10, 1, 0.1, 0.01] as const;
 const SERVER_EXP_MULTIPLIER = 5;
 const SERVER_GOLD_MULTIPLIER = 3;
 const MONEY_OBJECT_TYPE = 5;
@@ -54,6 +54,17 @@ export function formatNpcDropChance(chance: number): string {
     }
 
     return `${chance.toFixed(2).replace(/\.00$/, "").replace(/0$/, "")}%`;
+}
+
+function resolveNpcDropChance(drop: Record<string, unknown>, index: number): number {
+    for (const key of ["chancePercent", "chance", "probabilityPercent", "probabilidad"]) {
+        const value = Number(drop[key]);
+        if (Number.isFinite(value)) {
+            return Math.min(100, Math.max(0, value));
+        }
+    }
+
+    return LEGACY_NPC_DROP_CHANCES[index] ?? 0;
 }
 
 export function formatNpcNumber(value: number): string {
@@ -233,7 +244,7 @@ export function buildInspectableNpc(
         return {
             itemId: drop.item,
             quantity,
-            chance: NPC_DROP_CHANCES[index] ?? 0,
+            chance: resolveNpcDropChance(drop, index),
             name: objectData?.name ?? `Item ${drop.item}`,
             graphicData,
         };

@@ -2982,7 +2982,11 @@ function equiparItem(ws: RuntimeClient) {
                 return;
             }
 
-            if (item.clasesNoPermitidas.indexOf(user.idClase) >= 0 && !ignoresClassRestrictionForItem(idItem)) {
+            if (
+                Array.isArray(item.clasesNoPermitidas) &&
+                item.clasesNoPermitidas.includes(user.idClase) &&
+                !ignoresClassRestrictionForItem(idItem)
+            ) {
                 handleProtocol.console("Tu clase no puede equipar ese item.", "white", 0, 0, ws);
                 return;
             }

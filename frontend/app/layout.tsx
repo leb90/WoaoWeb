@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Cinzel, Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import AppChrome from "@/components/AppChrome";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import {
@@ -93,6 +94,22 @@ export default function RootLayout({
                 className={`${geistSans.variable} ${geistMono.variable} ${cinzel.variable} antialiased`}
                 suppressHydrationWarning
             >
+                {/*
+                  Capturamos beforeinstallprompt lo antes posible: si el SW ya
+                  estaba activo de una visita anterior, Chrome puede disparar
+                  el evento antes de que React termine de montar el botón, y
+                  se pierde para siempre si nadie lo está escuchando todavía.
+                */}
+                <Script id="capture-install-prompt" strategy="beforeInteractive">
+                    {`
+                        window.__woaoDeferredPrompt = null;
+                        window.addEventListener("beforeinstallprompt", function (event) {
+                            event.preventDefault();
+                            window.__woaoDeferredPrompt = event;
+                            window.dispatchEvent(new CustomEvent("woao:beforeinstallprompt"));
+                        });
+                    `}
+                </Script>
                 <ServiceWorkerRegistration />
                 <AppChrome>{children}</AppChrome>
             </body>

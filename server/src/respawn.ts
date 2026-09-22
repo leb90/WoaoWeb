@@ -75,6 +75,7 @@ function canCountFactionKill(attackerLevel: number, victimLevel: number, victimI
 }
 
 const respawn = new (Respawn as any)();
+const summonRoom = require("./summonRoom");
 
 function Respawn(this: any) {
     this.muere = function (this: any, ws: any, idPersonaje: any) {
@@ -249,6 +250,7 @@ function Respawn(this: any) {
                     require("./mounts").onNpcKilled(String(ws.id));
                     require("./factionWars").onNpcDied(Number(pjSelected.templateNpcIndex ?? 0));
                     require("./clanCastles").onCastleNpcKilled(user, pjSelected);
+                    summonRoom.onNpcDied(pjSelected);
                     if (
                         !require("./hungerChests").onChestNpcKilled(
                             String(ws.id),
@@ -304,6 +306,16 @@ function Respawn(this: any) {
                 require("./clanMeta").onPlayerKill(String(ws.id), String(idPersonaje));
                 require("./cityConquest").tryConquer(Number(user.map), user.faction);
                 challengeManager.onCharacterDeath(pjSelected);
+
+                if (Number(pjSelected.map) === Number(summonRoom.SUMMON_ROOM_MAP) && clientPersonaje) {
+                    game.telep(
+                        clientPersonaje,
+                        summonRoom.SUMMON_ROOM_EXIT.map,
+                        summonRoom.SUMMON_ROOM_EXIT.x,
+                        summonRoom.SUMMON_ROOM_EXIT.y,
+                        "summonRoom.characterDeath",
+                    );
+                }
 
                 if (pjSelected.disconnectOnDeath && !getClientById(idPersonaje)) {
                     game.closeForce(idPersonaje);

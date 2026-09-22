@@ -7354,6 +7354,7 @@ function Game(this: GameApi) {
             user.idShield = 0;
             resetFuerzaAgilidadBuffs(user, userClient ?? undefined);
             user.dead = 1;
+            require("./summonRoom").scheduleDeadUserExit(idUser);
             require("./bloodCastle").onUserDied(String(idUser));
             require("./hungerGames").onUserDied(String(idUser));
             require("./tournamentAuto").onUserDied(String(idUser));

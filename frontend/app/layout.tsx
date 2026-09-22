@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Cinzel, Geist, Geist_Mono } from "next/font/google";
 import AppChrome from "@/components/AppChrome";
 import {
     buildPageMetadata,
@@ -17,6 +17,12 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
     variable: "--font-geist-mono",
     subsets: ["latin"],
+});
+
+const cinzel = Cinzel({
+    variable: "--font-cinzel",
+    subsets: ["latin"],
+    weight: ["400", "600", "700", "900"],
 });
 
 export const metadata: Metadata = {
@@ -44,9 +50,13 @@ export const metadata: Metadata = {
         telephone: false,
     },
     icons: {
-        icon: "/favicon.ico",
+        icon: [
+            { url: "/favicon.ico" },
+            { url: "/static/imgs/woaoicon-192.png", sizes: "192x192", type: "image/png" },
+            { url: "/static/imgs/woaoicon-512.png", sizes: "512x512", type: "image/png" },
+        ],
         shortcut: "/favicon.ico",
-        apple: "/static/imgs/logo-aoweb.png",
+        apple: "/static/imgs/woaoicon-apple.png",
     },
     manifest: "/manifest.webmanifest",
     robots: {
@@ -70,7 +80,7 @@ export default function RootLayout({
     return (
         <html lang="es-AR" suppressHydrationWarning>
             <body
-                className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+                className={`${geistSans.variable} ${geistMono.variable} ${cinzel.variable} antialiased`}
                 suppressHydrationWarning
             >
                 <AppChrome>{children}</AppChrome>

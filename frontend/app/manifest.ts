@@ -8,8 +8,8 @@ export default function manifest(): MetadataRoute.Manifest {
         description: siteDescription,
         start_url: "/",
         display: "standalone",
-        background_color: "#08111f",
-        theme_color: "#08111f",
+        background_color: "#050302",
+        theme_color: "#050302",
         lang: "es-AR",
         categories: ["games", "entertainment"],
         icons: [
@@ -19,7 +19,12 @@ export default function manifest(): MetadataRoute.Manifest {
                 type: "image/x-icon",
             },
             {
-                src: "/static/imgs/logo-aoweb.png",
+                src: "/static/imgs/woaoicon-192.png",
+                sizes: "192x192",
+                type: "image/png",
+            },
+            {
+                src: "/static/imgs/woaoicon-512.png",
                 sizes: "512x512",
                 type: "image/png",
             },

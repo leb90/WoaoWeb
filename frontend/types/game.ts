@@ -55,6 +55,10 @@ export interface NPCData {
     drop?: Array<{
         item: number;
         cant: number;
+        chancePercent?: number;
+        chance?: number;
+        probabilityPercent?: number;
+        probabilidad?: number;
     }>;
 }
 

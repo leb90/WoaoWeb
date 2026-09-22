@@ -136,6 +136,6 @@ export const getWikiData = unstable_cache(
         console.error("No se pudo cargar la wiki desde ningun origen.");
         return createEmptyWikiResponse();
     },
-    ["public-wiki"],
+    ["public-wiki-drop-chances-v2"],
     { revalidate: WIKI_REVALIDATE_SECONDS },
 );

@@ -35,6 +35,7 @@ export type PublicWikiResponse = {
             itemId: number;
             itemName: string;
             quantity: number;
+            chancePercent?: number;
         }>;
         totalSpawns: number;
         searchIndex: string;
@@ -64,6 +65,7 @@ export type PublicWikiResponse = {
             npcId: number;
             npcName: string;
             quantity: number;
+            chancePercent?: number;
         }>;
         searchIndex: string;
     }>;
@@ -91,6 +93,7 @@ export type PublicWikiResponse = {
                 npcId: number;
                 npcName: string;
                 quantity: number;
+                chancePercent?: number;
             }>;
         }>;
         searchIndex: string;

@@ -508,6 +508,10 @@ export type RuntimeNpc = {
 export type DropItem = {
     item: number;
     cant: number;
+    chancePercent?: number;
+    chance?: number;
+    probabilityPercent?: number;
+    probabilidad?: number;
 };
 
 export type RuntimeClient = {

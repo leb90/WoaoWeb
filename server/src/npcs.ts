@@ -25,6 +25,7 @@ import {
     shouldAvoidParalysis,
     shouldIgnoreHarmfulSpell,
 } from "./racialPassives";
+import { getLegacyNpcDropChancePercent, shouldDropNpcItem } from "./npcDrops";
 
 export {};
 
@@ -3081,51 +3082,32 @@ function Npcs(this: NpcsApi) {
     this.tirarItems = function (idNpc: EntityId, ws: RuntimeClient) {
         try {
             const npc = getNpc(idNpc);
-            if (!getUser(ws.id!)) {
+            if (!npc || !getUser(ws.id!)) {
                 return;
             }
 
-            let cantDrop = 0;
-            let random = funct.randomIntFromInterval(1, 100);
-
-            if (!npc.drop) {
+            if (!Array.isArray(npc.drop) || npc.drop.length === 0) {
                 return;
             }
 
-            if (random <= 90) {
-                cantDrop++;
+            const reservedDropPositions = new Set<string>();
 
-                if (random <= 10) {
-                    cantDrop++;
-
-                    for (let i = 0; i < 3; i++) {
-                        random = funct.randomIntFromInterval(1, 100);
-                        if (random <= 10) {
-                            cantDrop++;
-                        } else {
-                            break;
-                        }
-                    }
+            for (let index = 0; index < npc.drop.length; index++) {
+                const item = npc.drop[index];
+                if (!item || !shouldDropNpcItem(item, undefined, getLegacyNpcDropChancePercent(index))) {
+                    continue;
                 }
-            }
 
-            if (cantDrop > 0) {
-                const reservedDropPositions = new Set<string>();
+                const datObj = vars.datObj[item.item];
+                if (!datObj) {
+                    continue;
+                }
 
-                for (let i = 0; i < cantDrop; i++) {
-                    const item = npc.drop[i];
-                    if (!item) {
-                        continue;
-                    }
-
-                    const datObj = vars.datObj[item.item];
-
-                    if (datObj.objType === vars.objType.dinero) {
-                        const goldGanado = item.cant * vars.multiplicadorGold;
-                        game.distribuirOroNpc(ws.id!, idNpc, goldGanado);
-                    } else {
-                        this.tirarItemAlSuelo(item.item, item.cant, npc.map, npc.pos, idNpc, reservedDropPositions);
-                    }
+                if (datObj.objType === vars.objType.dinero) {
+                    const goldGanado = item.cant * vars.multiplicadorGold;
+                    game.distribuirOroNpc(ws.id!, idNpc, goldGanado);
+                } else {
+                    this.tirarItemAlSuelo(item.item, item.cant, npc.map, npc.pos, idNpc, reservedDropPositions);
                 }
             }
         } catch (err) {

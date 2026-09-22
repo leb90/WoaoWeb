@@ -1,9 +1,18 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 
+import { getLegacyNpcDropChancePercent, getNpcDropChancePercent } from "./npcDrops";
+
 const config = require("./config");
 
-type NpcDropEntry = { item: number; cant: number };
+type NpcDropEntry = {
+    item: number;
+    cant: number;
+    chancePercent?: number;
+    chance?: number;
+    probabilityPercent?: number;
+    probabilidad?: number;
+};
 type NpcSpellEntry = { idSpell: number; cooldownSeconds?: number };
 
 export type DataNpc = {
@@ -88,7 +97,12 @@ function normalizeNpc(npcData: DataNpc): DataNpc {
         ...npcData,
         spells: Array.isArray(npcData.spells) ? npcData.spells : [],
         objs: Array.isArray(npcData.objs) ? npcData.objs : [],
-        drop: Array.isArray(npcData.drop) ? npcData.drop : [],
+        drop: Array.isArray(npcData.drop)
+            ? npcData.drop.map((entry, index) => ({
+                  ...entry,
+                  chancePercent: getNpcDropChancePercent(entry, getLegacyNpcDropChancePercent(index)),
+              }))
+            : [],
     } as DataNpc;
 
     if (typeof npcData.magicDef === "number" && typeof npcData.defM !== "number") {

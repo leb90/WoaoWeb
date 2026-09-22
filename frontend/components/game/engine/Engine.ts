@@ -41,6 +41,7 @@ import {
     CHARACTER_SWING_SHIELD,
     CHARACTER_SWING_WEAPON,
     type CharacterSnapshot,
+    type EnvironmentState,
 } from "../../../lib/aowProtocol";
 import {
     DEFAULT_RUNTIME_TIMING,
@@ -89,6 +90,7 @@ import {
     syncCharacterContainerToRenderRow,
     syncDisplayObjectToEntityFXRow,
 } from "../rendering/rowLayerContainers";
+import { destroyWeatherFx, updateWeatherFx } from "../rendering/weatherFx";
 
 const TREE_FADE_ALPHA = 0.25;
 const WATER_ANIMATION_SPEED_MULTIPLIER = 10;
@@ -578,6 +580,8 @@ export class Engine {
     entityFXRowContainers: Map<number, Container> = new Map();
     entityFXOverlayContainer: Container | null = null;
     dialogOverlayContainer: Container | null = null;
+    weatherOverlayContainer: Container | null = null;
+    environmentState: EnvironmentState | null = null;
     debugGrid: Container | null = null;
     isDebugMode = false;
     isDestroyed = false;
@@ -2228,6 +2232,7 @@ export class Engine {
         this.updatePlayerSprite();
         this.updateRoofVisibility();
         this.updateTreeTransparency();
+        updateWeatherFx(this, this.delta);
     };
 
     updateCulling(): void {
@@ -3110,6 +3115,7 @@ export class Engine {
             destroyDisplayObjectSafely(projectile.sprite);
         }
         this.projectileVisuals.clear();
+        destroyWeatherFx(this);
 
         const app = this.app;
         this.app = null;
@@ -3118,6 +3124,7 @@ export class Engine {
         this.roofContainer = null;
         this.entityFXOverlayContainer = null;
         this.dialogOverlayContainer = null;
+        this.weatherOverlayContainer = null;
         this.debugGrid = null;
 
         if (app) {

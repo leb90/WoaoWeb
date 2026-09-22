@@ -920,6 +920,9 @@ function Login(this: LoginApi) {
                     socket.send(ws);
                     sendWelcomeConsoleMessage(ws);
                     require("./skills").sendSkillsState(personajeWS);
+                    const initialEnvironment = require("./environment").getEnvironmentForMap(personajeWS.map);
+                    personajeWS.lastSentEnvironmentSignature = `${initialEnvironment.mapId}:${initialEnvironment.season}:${initialEnvironment.dayPhase}:${initialEnvironment.weather}:${initialEnvironment.temperatureC}`;
+                    handleProtocol.environmentUpdate(initialEnvironment, ws);
 
                     if (Number(personajeWS.skillPts) > 0) {
                         handleProtocol.console(

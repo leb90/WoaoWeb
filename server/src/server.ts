@@ -23,6 +23,7 @@ const RECENT_PACKET_INTERVAL_LIMIT = 300;
 const RECENT_PACKET_PPS_WINDOW_MS = 5000;
 const RECENT_PACKET_PPS_WINDOW_60S_MS = 60000;
 const JAIL_TICK_MS = 60000;
+const ENVIRONMENT_TICK_MS = 60000;
 const JAIL_MAP = 66;
 const JAIL_RELEASE_X = 75;
 const JAIL_RELEASE_Y = 67;
@@ -191,6 +192,7 @@ const pkg = require("./package") as PackageApi;
 const npcs = require("./npcs") as NpcsApi;
 const runtimeTiming = require("./runtimeTiming");
 const handleProtocol = require("./handleProtocol") as HandleProtocolApi;
+const environment = require("./environment");
 
 function handleHttpRequest(request: any, response: any) {
     void request;
@@ -948,6 +950,37 @@ async function processJailTick() {
     }
 }
 
+function processEnvironmentTick() {
+    environment.tickEnvironment();
+
+    for (const idUser in vars.personajes as RuntimeCharacters) {
+        const user = (vars.personajes as RuntimeCharacters)[idUser] as ServerCharacter | undefined;
+
+        if (!user || !user.map) {
+            continue;
+        }
+
+        const client = getClientById(idUser);
+
+        if (!client || socket.state(client) !== client.OPEN) {
+            continue;
+        }
+
+        const payload = environment.getEnvironmentForMap(user.map);
+        const signature = `${payload.mapId}:${payload.season}:${payload.dayPhase}:${payload.weather}:${payload.temperatureC}`;
+
+        // No mandamos el paquete si para este jugador no cambió nada desde la
+        // última vez (mismo mapa, mismo clima/hora/temperatura): la mayoría de
+        // los ticks de 60s no tienen novedad, así que esto evita tráfico de más.
+        if (user.lastSentEnvironmentSignature === signature) {
+            continue;
+        }
+
+        user.lastSentEnvironmentSignature = signature;
+        handleProtocol.environmentUpdate(payload, client);
+    }
+}
+
 //Limpio los personajes cerrados
 createDynamicScheduler(
     () => vars.timing.cleanupClosedCharactersMs,
@@ -1012,6 +1045,13 @@ createDynamicScheduler(
     () => JAIL_TICK_MS,
     function () {
         return processJailTick();
+    },
+);
+
+createDynamicScheduler(
+    () => ENVIRONMENT_TICK_MS,
+    function () {
+        processEnvironmentTick();
     },
 );
 

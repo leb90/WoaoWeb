@@ -198,6 +198,13 @@ export async function handleIncomingUiPacket({
             ctx.onSkillsState?.(packet.payload);
             return true;
 
+        case "environmentUpdate":
+            if (engine) {
+                engine.environmentState = packet.payload;
+            }
+            ctx.onEnvironmentUpdate?.(packet.payload);
+            return true;
+
         case "error":
             ctx.setIsSceneReady(false);
             ctx.emitStatus({

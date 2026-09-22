@@ -24,6 +24,7 @@ import {
     createRoofRowContainers,
 } from "../rendering/rowLayerContainers";
 import { destroySharedTextureCaches } from "../rendering/textureCaches";
+import { createWeatherOverlay, destroyWeatherFx } from "../rendering/weatherFx";
 import {
     getHudStatusTextStyle,
     setTextIfChanged,
@@ -702,6 +703,10 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                 dialogOverlayContainer.sortableChildren = true;
                 app.stage.addChild(dialogOverlayContainer);
                 engine.dialogOverlayContainer = dialogOverlayContainer;
+
+                const weatherOverlayContainer = createWeatherOverlay(engine);
+                app.stage.addChild(weatherOverlayContainer);
+                engine.weatherOverlayContainer = weatherOverlayContainer;
 
                 options.setWorldVisibility(engine, false);
                 options.updateLoadingProgress(

@@ -40,6 +40,7 @@ import type {
     CraftingState,
     CharacterStatsSnapshot,
     SkillsState,
+    EnvironmentState,
     ChatChannel,
     MarketPriceSort,
     PanelSnapshot,
@@ -713,6 +714,7 @@ function HomeContent() {
         token: number;
     } | null>(null);
     const [skillsState, setSkillsState] = useState<SkillsState | null>(null);
+    const [environmentState, setEnvironmentState] = useState<EnvironmentState | null>(null);
     const [dropRequest, setDropRequest] = useState<DropRequest | null>(null);
     const [buyRequest, setBuyRequest] = useState<BuyRequest | null>(null);
     const [sellRequest, setSellRequest] = useState<SellRequest | null>(null);
@@ -2963,6 +2965,7 @@ function HomeContent() {
                                         setCharacterStatsOpen(true);
                                     }}
                                     onSkillsState={setSkillsState}
+                                    onEnvironmentUpdate={setEnvironmentState}
                                 />
 
                                 {!arenaMode &&
@@ -3426,6 +3429,7 @@ function HomeContent() {
                                         characterStatsSnapshot
                                     }
                                     skillsState={skillsState}
+                                    environment={environmentState}
                                     onAssignSkill={(skillId) =>
                                         setAssignSkillRequest((current) => ({
                                             skillId,

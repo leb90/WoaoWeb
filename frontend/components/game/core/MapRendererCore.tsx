@@ -16,6 +16,7 @@ import {
     type ChatChannel,
     type CharacterStatsSnapshot,
     type SkillsState,
+    type EnvironmentState,
     type PanelSnapshot,
     type BailOffer,
     type CraftingState,
@@ -211,6 +212,7 @@ interface MapRendererProps {
     onAdminOverviewSnapshot?: (snapshot: PanelSnapshot) => void;
     onCharacterStatsSnapshot?: (snapshot: CharacterStatsSnapshot) => void;
     onSkillsState?: (state: SkillsState) => void;
+    onEnvironmentUpdate?: (state: EnvironmentState) => void;
     onPerformanceSample?: (sample: PerformanceSample) => void;
 }
 
@@ -667,6 +669,7 @@ export default function MapRenderer({
     onAdminOverviewSnapshot,
     onCharacterStatsSnapshot,
     onSkillsState,
+    onEnvironmentUpdate,
     onPerformanceSample,
 }: MapRendererProps) {
     const canvasRef = useRef<HTMLDivElement>(null);
@@ -1812,6 +1815,7 @@ export default function MapRenderer({
                 onAdminOverviewSnapshot,
                 onCharacterStatsSnapshot,
                 onSkillsState,
+                onEnvironmentUpdate,
                 upsertSpell,
                 clearTargetingMode,
                 showDialogBubble,
@@ -1851,6 +1855,7 @@ export default function MapRenderer({
         onAdminOverviewSnapshot,
         onCharacterStatsSnapshot,
         onSkillsState,
+        onEnvironmentUpdate,
         onConsoleMessage,
         onGlobalNotice,
         playStepSound,

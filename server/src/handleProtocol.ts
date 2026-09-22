@@ -417,6 +417,10 @@ export type HandleProtocolApi = {
     panelSnapshot: (snapshot: unknown, client: RuntimeClient) => void;
     characterStatsSnapshot: (snapshot: unknown, client: RuntimeClient) => void;
     skillsState: (payload: { skillPts: number; values: number[] }, client: RuntimeClient) => void;
+    environmentUpdate: (
+        payload: { mapId: number; season: number; dayPhase: number; weather: number; temperatureC: number },
+        client: RuntimeClient,
+    ) => void;
     partyState: (delta: PartyRuntimeStateDelta, client: RuntimeClient) => void;
     clanState: (delta: ClanRuntimeStateDelta, client: RuntimeClient) => void;
     startCastBar: (idUser: EntityId, durationMs: number, client: RuntimeClient) => void;
@@ -1674,6 +1678,16 @@ const handleServer: HandleProtocolApi = {
             pkg.writeByte(Math.max(0, Math.min(200, Math.floor(Number(values[index]) || 0))));
         }
 
+        socket.send(client);
+    },
+
+    environmentUpdate(payload, client) {
+        pkg.setPackageID(pkg.clientPacketID.environmentUpdate);
+        pkg.writeShort(payload.mapId);
+        pkg.writeByte(payload.season);
+        pkg.writeByte(payload.dayPhase);
+        pkg.writeByte(payload.weather);
+        pkg.writeShort(payload.temperatureC);
         socket.send(client);
     },
 

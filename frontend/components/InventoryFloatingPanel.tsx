@@ -55,6 +55,7 @@ import {
 import WoaoHubModal, { type WoaoHubTab } from "./WoaoHubModal";
 import SkillsModal from "./SkillsModal";
 import type { SkillsState } from "../lib/aowProtocol";
+import { DAY_PHASE, SEASON, WEATHER, type EnvironmentState } from "../lib/aowProtocol";
 
 type InventoryFloatingPanelProps = {
     hud: PlayerHudState | null;
@@ -62,6 +63,7 @@ type InventoryFloatingPanelProps = {
     connected?: boolean;
     characterStatsSnapshot?: CharacterStatsSnapshot | null;
     skillsState?: SkillsState | null;
+    environment?: EnvironmentState | null;
     onAssignSkill?: (skillId: number) => void;
     panelHeight?: number | string;
     portalTarget?: HTMLElement | null;
@@ -592,6 +594,10 @@ function VitalBars({
     sed: number;
     maxSed: number;
 }) {
+    // Hambre y sed en 0 a la vez: el personaje está perdiendo vida y estamina.
+    // La barra de vida se pinta bordó para que se note de un vistazo.
+    const isStarving = hambre <= 0 && sed <= 0;
+
     return (
         <div className="space-y-0.5">
             <VitalBar
@@ -605,8 +611,8 @@ function VitalBars({
                 label="Vida"
                 value={hp}
                 max={maxHp}
-                fromColor="#951212"
-                toColor="#f06b34"
+                fromColor={isStarving ? "#4a0a12" : "#951212"}
+                toColor={isStarving ? "#7a1224" : "#f06b34"}
             />
             <VitalBar
                 label="Mana"
@@ -619,16 +625,21 @@ function VitalBars({
                 label="Hambre"
                 value={hambre}
                 max={maxHambre}
-                fromColor="#6b3a12"
-                toColor="#d4893a"
+                fromColor={hambre <= 0 ? "#4a0a12" : "#6b3a12"}
+                toColor={hambre <= 0 ? "#7a1224" : "#d4893a"}
             />
             <VitalBar
                 label="Sed"
                 value={sed}
                 max={maxSed}
-                fromColor="#1a5f73"
-                toColor="#5ad0e6"
+                fromColor={sed <= 0 ? "#4a0a12" : "#1a5f73"}
+                toColor={sed <= 0 ? "#7a1224" : "#5ad0e6"}
             />
+            {isStarving ? (
+                <p className="pl-[52px] text-[8px] font-semibold uppercase tracking-[0.03em] text-[#e08a8a]">
+                    Hambre y sed te están quitando vida
+                </p>
+            ) : null}
         </div>
     );
 }
@@ -680,11 +691,46 @@ function formatBuffSecondsLabel(seconds: number) {
     return `(${seconds}s)`;
 }
 
+const SEASON_LABELS: Record<number, string> = {
+    [SEASON.verano]: "Verano",
+    [SEASON.otono]: "Otoño",
+    [SEASON.invierno]: "Invierno",
+    [SEASON.primavera]: "Primavera",
+};
+
+const DAY_PHASE_LABELS: Record<number, string> = {
+    [DAY_PHASE.manana]: "Mañana",
+    [DAY_PHASE.mediodia]: "Mediodía",
+    [DAY_PHASE.tarde]: "Tarde",
+    [DAY_PHASE.noche]: "Noche",
+};
+
+const WEATHER_LABELS: Record<number, string> = {
+    [WEATHER.despejado]: "Despejado",
+    [WEATHER.lluvia]: "Lluvia",
+    [WEATHER.tormenta]: "Tormenta",
+    [WEATHER.nieve]: "Nieve",
+    [WEATHER.niebla]: "Niebla",
+};
+
+function formatEnvironmentLabel(environment: EnvironmentState | null | undefined) {
+    if (!environment) {
+        return null;
+    }
+
+    const season = SEASON_LABELS[environment.season] ?? "";
+    const dayPhase = DAY_PHASE_LABELS[environment.dayPhase] ?? "";
+    const weather = WEATHER_LABELS[environment.weather] ?? "";
+
+    return `${season} · ${dayPhase} · ${weather} · ${environment.temperatureC}°C`;
+}
+
 export default function InventoryFloatingPanel({
     hud,
     mapName,
     characterStatsSnapshot,
     skillsState,
+    environment,
     onAssignSkill,
     panelHeight,
     portalTarget,
@@ -2876,6 +2922,11 @@ export default function InventoryFloatingPanel({
                                     >
                                         {mapName || "Sin mapa cargado"}
                                     </button>
+                                    {environment ? (
+                                        <p className="mb-1 truncate text-[8px] font-semibold uppercase tracking-[0.03em] text-[#a6926f]">
+                                            {formatEnvironmentLabel(environment)}
+                                        </p>
+                                    ) : null}
                                     <VitalBars
                                         hp={hud?.hp || 0}
                                         maxHp={hud?.maxHp || 0}

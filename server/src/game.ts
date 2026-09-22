@@ -84,6 +84,11 @@ const SURVIVAL_HAMBRE_MAX = Number(balance.MAX_HAMBRE ?? 100);
 const SURVIVAL_SED_MAX = Number(balance.MAX_SED ?? 100);
 const HUNGER_DRAIN_INTERVAL_MS = 8000;
 const STA_REGEN_INTERVAL_MS = 2000;
+// Inanición: con hambre Y sed en 0 a la vez, la estamina deja de regenerar y en
+// cambio se drena. Además se resta un % FIJO de la vida máxima una sola vez (no es
+// un daño por tiempo: 100/100 -> 90/100 y se queda ahí), y se devuelve ese mismo
+// % apenas comas o bebas algo. Nunca puede matar por sí sola.
+const STARVATION_HP_PENALTY_PERCENT = 0.1;
 
 function clampVital(value: number, max: number) {
     return Math.max(0, Math.min(max, Math.floor(Number(value) || 0)));
@@ -11134,13 +11139,68 @@ function Game(this: GameApi) {
                 }
             }
 
+            // Estamina: requiere hambre Y sed en 0 a la vez.
+            const isStaminaStarving = Number(user.hambre ?? 0) <= 0 && Number(user.sed ?? 0) <= 0;
+
             const lastSta = Number(user.lastStaRegenAt ?? 0);
             if (now - lastSta >= STA_REGEN_INTERVAL_MS) {
                 user.lastStaRegenAt = now;
                 const maxSta = Number(user.maxSta ?? 0);
-                const nextSta = Math.min(maxSta, Number(user.sta ?? 0) + 2);
+                const nextSta = isStaminaStarving
+                    ? Math.max(0, Number(user.sta ?? 0) - 2)
+                    : Math.min(maxSta, Number(user.sta ?? 0) + 2);
                 if (nextSta !== Number(user.sta ?? 0)) {
                     user.sta = nextSta;
+                    changed = true;
+                }
+            }
+
+            // Vida: alcanza con que hambre O sed (o ambas) estén en 0.
+            const hasHpPenaltyCondition = Number(user.hambre ?? 0) <= 0 || Number(user.sed ?? 0) <= 0;
+
+            if (hasHpPenaltyCondition && !user.starvationPenaltyApplied) {
+                user.starvationPenaltyApplied = true;
+                const maxHp = Number(user.maxHp ?? 0);
+                const penalty = Math.max(1, Math.floor(maxHp * STARVATION_HP_PENALTY_PERCENT));
+                user.starvationPenaltyAmount = penalty;
+                // Nunca mata por sí sola: se queda como mínimo en 1 de vida.
+                user.hp = Math.max(1, Number(user.hp ?? 0) - penalty);
+                changed = true;
+
+                if (client) {
+                    handleProtocol.console(
+                        "Tenés hambre o sed: perdés un 10% de tu vida máxima hasta que comas o bebas algo.",
+                        "red",
+                        1,
+                        0,
+                        client,
+                    );
+                }
+            } else if (!hasHpPenaltyCondition && user.starvationPenaltyApplied) {
+                user.starvationPenaltyApplied = false;
+                const maxHp = Number(user.maxHp ?? 0);
+                const penalty = Number(user.starvationPenaltyAmount ?? 0);
+                user.starvationPenaltyAmount = 0;
+                user.hp = Math.min(maxHp, Number(user.hp ?? 0) + penalty);
+                changed = true;
+
+                if (client) {
+                    handleProtocol.console(
+                        "Comer y beber te devolvió las fuerzas.",
+                        "white",
+                        1,
+                        0,
+                        client,
+                    );
+                }
+            } else if (user.starvationPenaltyApplied) {
+                // Mientras siga afectado, ninguna curación (poción, hechizo, regen) puede
+                // pasar el techo reducido: solo comer/beber levanta el 10% de tope.
+                const maxHp = Number(user.maxHp ?? 0);
+                const penalty = Number(user.starvationPenaltyAmount ?? 0);
+                const cap = Math.max(1, maxHp - penalty);
+                if (Number(user.hp ?? 0) > cap) {
+                    user.hp = cap;
                     changed = true;
                 }
             }

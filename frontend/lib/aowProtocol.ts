@@ -79,6 +79,7 @@ export const CLIENT_PACKET_ID = {
     entityVitalsDelta: 81,
     characterSwing: 82,
     skillsState: 83,
+    environmentUpdate: 84,
 } as const;
 
 export const CHARACTER_SWING_WEAPON = 1;
@@ -181,6 +182,36 @@ export const MAX_SKILL_POINTS = 200;
 export type SkillsState = {
     skillPts: number;
     values: number[];
+};
+
+export const SEASON = {
+    verano: 0,
+    otono: 1,
+    invierno: 2,
+    primavera: 3,
+} as const;
+
+export const DAY_PHASE = {
+    manana: 0,
+    mediodia: 1,
+    tarde: 2,
+    noche: 3,
+} as const;
+
+export const WEATHER = {
+    despejado: 0,
+    lluvia: 1,
+    tormenta: 2,
+    nieve: 3,
+    niebla: 4,
+} as const;
+
+export type EnvironmentState = {
+    mapId: number;
+    season: number;
+    dayPhase: number;
+    weather: number;
+    temperatureC: number;
 };
 
 export const SERVER_PACKET_ID = {
@@ -816,6 +847,7 @@ export type ParsedServerPacket =
           payload: CharacterStatsSnapshotChunk;
       }
     | { type: "skillsState"; payload: SkillsState }
+    | { type: "environmentUpdate"; payload: EnvironmentState }
     | { type: "partyState"; payload: PartyHudStateDelta }
     | { type: "clanState"; payload: ClanHudStateDelta }
     | { type: "startCastBar"; payload: { id: number; durationMs: number } }
@@ -1891,6 +1923,19 @@ function parseServerPacketById(
             return {
                 type: "skillsState",
                 payload: { skillPts, values },
+            };
+        }
+
+        case CLIENT_PACKET_ID.environmentUpdate: {
+            const mapId = reader.getShort();
+            const season = reader.getByte();
+            const dayPhase = reader.getByte();
+            const weather = reader.getByte();
+            const temperatureC = reader.getShort();
+
+            return {
+                type: "environmentUpdate",
+                payload: { mapId, season, dayPhase, weather, temperatureC },
             };
         }
 

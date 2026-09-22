@@ -20,10 +20,10 @@ export const metadata: Metadata = buildPageMetadata({
 
 export default function UpdatesPage() {
     return (
-        <main className="min-h-screen overflow-y-auto bg-[radial-gradient(circle_at_top,#0f766e33,transparent_35%),radial-gradient(circle_at_bottom,#f59e0b22,transparent_30%),linear-gradient(180deg,#0f172a,#0c0a09)] px-4 py-12 text-stone-100">
+        <main className="min-h-screen overflow-y-auto bg-[#050302] px-4 py-12 text-stone-100">
             <div className="mx-auto max-w-4xl">
                 <div className="mb-8">
-                    <p className="text-[11px] uppercase tracking-[0.34em] text-cyan-200/75">
+                    <p className="text-[11px] uppercase tracking-[0.34em] text-amber-200/75">
                         AOWeb
                     </p>
                     <h1 className="mt-3 text-3xl font-semibold text-white md:text-4xl">

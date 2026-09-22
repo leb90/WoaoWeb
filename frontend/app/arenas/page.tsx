@@ -370,7 +370,7 @@ function ArenasPageContent() {
     };
 
     return (
-        <main className="min-h-screen overflow-y-auto bg-[radial-gradient(circle_at_top,#7c2d1230,transparent_34%),radial-gradient(circle_at_bottom,#0f766e26,transparent_32%),linear-gradient(180deg,#111827,#0b1120)] px-4 py-10 text-stone-100">
+        <main className="min-h-screen overflow-y-auto bg-[#050302] px-4 py-10 text-stone-100">
             <div className="mx-auto max-w-6xl space-y-6">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <div>
@@ -434,7 +434,7 @@ function ArenasPageContent() {
                                     }
                                     className={`rounded-2xl border px-4 py-3 text-sm transition ${
                                         createForm.isPublic
-                                            ? "border-cyan-300/55 bg-cyan-300/12 text-cyan-100"
+                                            ? "border-amber-300/55 bg-amber-300/12 text-amber-100"
                                             : "border-white/10 bg-white/5 text-stone-300"
                                     }`}
                                 >
@@ -500,7 +500,7 @@ function ArenasPageContent() {
                                 type="button"
                                 onClick={() => void createRoom()}
                                 disabled={loading || actionRoomId === "create"}
-                                className="w-full rounded-2xl bg-amber-300 px-4 py-3 text-sm font-semibold text-stone-950 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-70"
+                                className="w-full rounded-[4px] border border-amber-300/60 bg-[linear-gradient(180deg,#f7d488,#c9922f)] px-4 py-3 text-sm font-bold uppercase tracking-[0.1em] text-[#2a1704] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
                             >
                                 {actionRoomId === "create"
                                     ? "Creando..."
@@ -549,7 +549,7 @@ function ArenasPageContent() {
                                     </p>
                                     <p className="mt-2 break-all">
                                         Link privado:{" "}
-                                        <span className="text-cyan-200">
+                                        <span className="text-amber-200">
                                             {shareLink || "Generando..."}
                                         </span>
                                     </p>
@@ -583,7 +583,7 @@ function ArenasPageContent() {
                                                         )}
                                                         className={`rounded-[24px] border p-4 text-left transition ${
                                                             isSelected
-                                                                ? "border-cyan-300/60 bg-cyan-300/10"
+                                                                ? "border-amber-300/60 bg-amber-300/10"
                                                                 : "border-white/10 bg-white/5 hover:border-white/25 hover:bg-white/8"
                                                         }`}
                                                     >
@@ -683,7 +683,7 @@ function ArenasPageContent() {
                                                                 actionRoomId ===
                                                                 room.id
                                                             }
-                                                            className="rounded-2xl bg-cyan-300 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-70"
+                                                            className="rounded-[4px] border border-amber-300/60 bg-[linear-gradient(180deg,#f7d488,#c9922f)] px-4 py-2.5 text-sm font-bold uppercase tracking-[0.08em] text-[#2a1704] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
                                                         >
                                                             {actionRoomId ===
                                                             room.id

@@ -165,7 +165,7 @@ function RankingHead({
 
     return (
         <div
-            className={`relative overflow-hidden rounded-[18px] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(251,191,36,0.18),rgba(12,10,9,0.95)_58%),linear-gradient(180deg,rgba(120,53,15,0.16),rgba(12,10,9,0))] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] ${className ?? ""}`}
+            className={`relative overflow-hidden rounded-[18px] border border-white/10 bg-[#050302] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] ${className ?? ""}`}
             style={{ width: size, height: size }}
         >
             <div
@@ -281,7 +281,7 @@ export default function RankingView({
         !isLoading
     ) {
         return (
-            <main className="min-h-screen overflow-y-auto bg-[radial-gradient(circle_at_top,#0f766e33,transparent_35%),radial-gradient(circle_at_bottom,#f59e0b22,transparent_30%),linear-gradient(180deg,#020617,#0c0a09)] px-4 py-12 text-stone-100">
+            <main className="min-h-screen overflow-y-auto bg-[#050302] px-4 py-12 text-stone-100">
                 <div className="mx-auto max-w-4xl rounded-[32px] border border-white/8 bg-stone-950/80 p-8 text-center shadow-2xl backdrop-blur-md">
                     <p className="text-[11px] uppercase tracking-[0.34em] text-amber-200/75">
                         AOWeb
@@ -298,7 +298,7 @@ export default function RankingView({
     }
 
     return (
-        <main className="min-h-screen overflow-y-auto bg-[radial-gradient(circle_at_top,#0f766e33,transparent_35%),radial-gradient(circle_at_bottom,#f59e0b22,transparent_30%),linear-gradient(180deg,#020617,#0c0a09)] px-4 py-12 text-stone-100">
+        <main className="min-h-screen overflow-y-auto bg-[#050302] px-4 py-12 text-stone-100">
             <div className="mx-auto max-w-6xl space-y-8">
                 <section>
                     <div className="mt-3 flex items-start gap-3">

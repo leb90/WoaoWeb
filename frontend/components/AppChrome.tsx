@@ -8,7 +8,6 @@ import {
     Swords,
     Trophy,
     UserRound,
-    ScrollText,
     LogIn,
     LogOut,
     MessageCircle,
@@ -25,7 +24,6 @@ const navItems = [
     { href: "/characters", label: "Personajes", icon: UserRound },
     { href: "/arenas", label: "Arenas", icon: Swords },
     { href: "/ranking", label: "Ranking", icon: Trophy },
-    { href: "/wiki/equipment", label: "Wiki", icon: ScrollText },
     {
         href: "https://discord.gg/YpJ9XrMdg",
         label: "Discord",
@@ -37,10 +35,6 @@ const navItems = [
 function isActivePath(pathname: string, href: string) {
     if (href === "/") {
         return pathname === "/";
-    }
-
-    if (href === "/wiki/equipment") {
-        return pathname === "/wiki" || pathname.startsWith("/wiki/");
     }
 
     return pathname === href || pathname.startsWith(`${href}/`);

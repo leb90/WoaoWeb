@@ -154,11 +154,11 @@ export default function CharactersPage() {
     const activeSession = localSession;
 
     return (
-        <main className="min-h-screen overflow-y-auto bg-[radial-gradient(circle_at_top,#0f766e33,transparent_35%),radial-gradient(circle_at_bottom,#f59e0b22,transparent_30%),linear-gradient(180deg,#0f172a,#0c0a09)] px-4 py-12 text-stone-100">
+        <main className="min-h-screen overflow-y-auto bg-[#050302] px-4 py-12 text-stone-100">
             <div className="mx-auto max-w-5xl">
                 <div className="mb-8 flex items-center justify-between gap-4">
                     <div>
-                        <p className="text-[11px] uppercase tracking-[0.34em] text-cyan-200/75">
+                        <p className="text-[11px] uppercase tracking-[0.34em] text-amber-200/75">
                             Seleccion de personaje
                         </p>
                     </div>
@@ -225,7 +225,7 @@ export default function CharactersPage() {
                                             aria-disabled={isBusy}
                                             className={`group flex h-full flex-col rounded-[26px] border px-3 py-3 text-left shadow-xl transition ${
                                                 isSelected
-                                                    ? "border-cyan-300/70 bg-cyan-300/10 shadow-cyan-950/40"
+                                                    ? "border-amber-300/70 bg-amber-300/10 shadow-amber-950/40"
                                                     : "border-white/8 bg-stone-950/80 hover:border-white/20 hover:bg-white/6"
                                             } ${
                                                 isBusy

@@ -59,8 +59,8 @@ export default function PasswordRecoveryRequestCard() {
 
     return (
         <div className="mx-auto w-full max-w-md overflow-hidden rounded-[32px] border border-stone-700/70 bg-stone-950/88 text-stone-100 shadow-2xl backdrop-blur-md">
-            <div className="border-b border-white/8 bg-[radial-gradient(circle_at_top,#22d3ee22,transparent_55%),linear-gradient(135deg,#111827,#0f172a)] px-6 py-6">
-                <p className="text-[11px] uppercase tracking-[0.34em] text-cyan-200/80">
+            <div className="border-b border-white/8 bg-[#050302] px-6 py-6">
+                <p className="text-[11px] uppercase tracking-[0.34em] text-amber-200/80">
                     AOWeb
                 </p>
                 <h1 className="mt-2 text-3xl font-semibold text-stone-50">
@@ -73,7 +73,7 @@ export default function PasswordRecoveryRequestCard() {
                     <input
                         value={email}
                         onChange={(event) => setEmail(event.target.value)}
-                        className="w-full rounded-2xl border border-stone-700 bg-stone-900/90 px-4 py-3 text-sm outline-none transition focus:border-cyan-400"
+                        className="w-full rounded-2xl border border-stone-700 bg-stone-900/90 px-4 py-3 text-sm outline-none transition focus:border-amber-400"
                         placeholder="Email"
                         type="email"
                         autoComplete="email"
@@ -83,7 +83,7 @@ export default function PasswordRecoveryRequestCard() {
                     <button
                         type="submit"
                         disabled={pending}
-                        className="w-full rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-stone-700 disabled:text-stone-400"
+                        className="w-full rounded-[4px] border border-amber-300/60 bg-[linear-gradient(180deg,#f7d488,#c9922f)] px-4 py-3 text-sm font-bold uppercase tracking-[0.1em] text-[#2a1704] transition hover:brightness-110 disabled:cursor-not-allowed disabled:border-stone-700 disabled:bg-stone-700 disabled:text-stone-400 disabled:brightness-100"
                     >
                         {pending
                             ? "Enviando..."
@@ -107,7 +107,7 @@ export default function PasswordRecoveryRequestCard() {
                     <Link
                         href="/login"
                         prefetch={false}
-                        className="font-medium text-cyan-300 transition hover:text-cyan-200"
+                        className="font-medium text-amber-300 transition hover:text-amber-200"
                     >
                         Volver a iniciar sesión
                     </Link>

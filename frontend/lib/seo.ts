@@ -14,7 +14,7 @@ export const siteUrl = normalizedSiteUrl.replace(/\/+$/, "");
 export const siteName = "AOWeb";
 export const siteTitle = "AOWeb Beta";
 export const siteDescription =
-    "";
+    "World of AO: un MMORPG 2D de fantasía clásico, jugable gratis desde el navegador, sin descargas.";
 export const siteKeywords = [
     "AOWeb",
     "AO Web",

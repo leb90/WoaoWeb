@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Cinzel, Geist, Geist_Mono } from "next/font/google";
 import AppChrome from "@/components/AppChrome";
+import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import {
     buildPageMetadata,
     siteDescription,
@@ -59,6 +60,11 @@ export const metadata: Metadata = {
         apple: "/static/imgs/woaoicon-apple.png",
     },
     manifest: "/manifest.webmanifest",
+    appleWebApp: {
+        capable: true,
+        title: "World of AO",
+        statusBarStyle: "black-translucent",
+    },
     robots: {
         index: true,
         follow: true,
@@ -72,6 +78,10 @@ export const metadata: Metadata = {
     },
 };
 
+export const viewport: Viewport = {
+    themeColor: "#050302",
+};
+
 export default function RootLayout({
     children,
 }: Readonly<{
@@ -83,6 +93,7 @@ export default function RootLayout({
                 className={`${geistSans.variable} ${geistMono.variable} ${cinzel.variable} antialiased`}
                 suppressHydrationWarning
             >
+                <ServiceWorkerRegistration />
                 <AppChrome>{children}</AppChrome>
             </body>
         </html>

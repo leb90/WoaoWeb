@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sin conexión · World of AO</title>
+    <style>
+        html, body {
+            margin: 0;
+            height: 100%;
+            background: #050302;
+            color: #f4ead6;
+            font-family: Arial, Helvetica, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .card {
+            max-width: 420px;
+            margin: 24px;
+            padding: 32px;
+            border-radius: 6px;
+            border: 1px solid rgba(252, 211, 128, 0.15);
+            background: linear-gradient(160deg, rgba(40, 28, 10, 0.55), rgba(5, 3, 2, 0.9));
+            text-align: center;
+        }
+        .eyebrow {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.34em;
+            text-transform: uppercase;
+            color: rgba(252, 211, 128, 0.7);
+            margin: 0 0 12px;
+        }
+        h1 {
+            font-size: 22px;
+            margin: 0 0 12px;
+            color: #f8f4e9;
+        }
+        p {
+            font-size: 14px;
+            line-height: 1.6;
+            color: rgba(214, 202, 173, 0.85);
+            margin: 0 0 20px;
+        }
+        button {
+            border: 1px solid rgba(252, 211, 128, 0.6);
+            background: linear-gradient(180deg, #f7d488, #c9922f);
+            color: #2a1704;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-size: 12px;
+            padding: 10px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            filter: brightness(1.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <p class="eyebrow">World of AO</p>
+        <h1>Sin conexión</h1>
+        <p>No pudimos conectar con el servidor. Revisá tu conexión a internet e intentá de nuevo.</p>
+        <button onclick="location.reload()">Reintentar</button>
+    </div>
+</body>
+</html>

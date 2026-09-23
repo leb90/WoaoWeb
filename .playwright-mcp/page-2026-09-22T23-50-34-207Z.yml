@@ -1,0 +1,21 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - link "World of AO" [ref=e4] [cursor=pointer]:
+        - /url: /
+      - navigation [ref=e6]:
+        - link "Inicio" [ref=e7] [cursor=pointer]:
+          - /url: /
+        - link "Personajes" [ref=e9] [cursor=pointer]:
+          - /url: /characters
+        - link "Arenas" [ref=e11] [cursor=pointer]:
+          - /url: /arenas
+        - link "Ranking" [ref=e13] [cursor=pointer]:
+          - /url: /ranking
+        - link "Discord" [ref=e15] [cursor=pointer]:
+          - /url: https://discord.gg/YpJ9XrMdg
+      - link "Ingresar" [ref=e18] [cursor=pointer]:
+        - /url: /login
+  - main [ref=e23]:
+    - generic [ref=e24]: Cargando inicio...
+  - alert [ref=e25]

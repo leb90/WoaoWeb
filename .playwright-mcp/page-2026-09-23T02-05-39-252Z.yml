@@ -1,0 +1,19 @@
+- generic [active] [ref=f2e1]:
+  - generic [ref=f2e4]:
+    - generic [ref=f2e5]:
+      - generic [ref=f2e6]:
+        - button "Entrar en pantalla completa" [ref=f2e9]
+        - generic:
+          - generic:
+            - button "Mostrar canales" [ref=f2e15]
+            - button "Mostrar chat" [ref=f2e20]
+      - generic [ref=f2e25]:
+        - generic [ref=f2e26]: Experiencia
+        - generic [ref=f2e27]: "-"
+    - generic [ref=f2e33]:
+      - link "Login" [ref=f2e34] [cursor=pointer]:
+        - /url: /login
+      - link "Registro" [ref=f2e35] [cursor=pointer]:
+        - /url: /register
+  - button "Open Next.js Dev Tools" [ref=f2e41] [cursor=pointer]
+  - alert [ref=f2e45]

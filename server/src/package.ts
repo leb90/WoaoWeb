@@ -117,6 +117,7 @@ const clientPacketID = {
     characterSwing: 82,
     skillsState: 83,
     environmentUpdate: 84,
+    questState: 85,
 } as const;
 
 const serverPacketID = {

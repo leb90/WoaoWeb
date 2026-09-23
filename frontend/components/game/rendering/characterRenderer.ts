@@ -233,6 +233,7 @@ type CharacterDisplayStorageKey =
     | "shieldSprite"
     | "nameLabel"
     | "clanLabel"
+    | "questMarker"
     | "debugPositionLabel"
     | "crowdControlBarBg"
     | "crowdControlBarFill"
@@ -253,6 +254,7 @@ type CharacterDisplayContainer = Container & {
     shieldSprite?: AnimatedSprite;
     nameLabel?: Text;
     clanLabel?: Text;
+    questMarker?: Text;
     debugPositionLabel?: Text;
     crowdControlBarBg?: Graphics;
     crowdControlBarFill?: Graphics;
@@ -274,6 +276,38 @@ const BOT_RESOURCE_LABEL_STYLE = new TextStyle({
     fontWeight: "700",
     fill: 0xffffff,
     stroke: { color: 0x000000, width: 2 },
+    align: "center",
+});
+
+const QUEST_MARKER_STYLE = new TextStyle({
+    fontFamily: "Verdana",
+    fontSize: 22,
+    lineHeight: 22,
+    fontWeight: "900",
+    fill: 0xfacc15,
+    stroke: { color: 0x1c1917, width: 4 },
+    dropShadow: {
+        color: 0x000000,
+        blur: 3,
+        alpha: 0.35,
+        distance: 1,
+    },
+    align: "center",
+});
+
+const QUEST_MARKER_IN_PROGRESS_STYLE = new TextStyle({
+    fontFamily: "Verdana",
+    fontSize: 22,
+    lineHeight: 22,
+    fontWeight: "900",
+    fill: 0xa8a29e,
+    stroke: { color: 0x1c1917, width: 4 },
+    dropShadow: {
+        color: 0x000000,
+        blur: 3,
+        alpha: 0.35,
+        distance: 1,
+    },
     align: "center",
 });
 
@@ -532,6 +566,52 @@ function ensureHealthBar(
         fillColor,
     });
     fill.zIndex = 0.54;
+}
+
+function ensureQuestMarker(
+    container: CharacterDisplayContainer,
+    bodyMetrics: BodyRenderMetrics,
+    entity: Character,
+    options: {
+        hideBody: boolean;
+    },
+    destroyDisplayObjectSafely: CharacterRendererDeps["destroyDisplayObjectSafely"],
+): void {
+    const status = Number(entity.questStatus ?? 0);
+    const shouldShow = Boolean(entity.isNpc && !options.hideBody && !entity.dead && status > 0);
+
+    if (!shouldShow) {
+        removeStoredCharacterChild(
+            container,
+            "questMarker",
+            "isQuestMarker",
+            destroyDisplayObjectSafely,
+        );
+        return;
+    }
+
+    const marker = ensureTextCharacterChild(
+        container,
+        "questMarker",
+        "isQuestMarker",
+        () => {
+            const label = new Text({
+                text: "",
+                style: QUEST_MARKER_STYLE,
+            });
+            label.anchor.set(0.5, 1);
+            return label;
+        },
+    );
+    setTextIfChanged(marker, status === 1 ? "!" : "?");
+    setStyleIfChanged(
+        marker,
+        status === 2 ? QUEST_MARKER_IN_PROGRESS_STYLE : QUEST_MARKER_STYLE,
+    );
+    marker.x = Math.round(TILE_SIZE / 2);
+    marker.y = Math.round(bodyMetrics.y - 8);
+    marker.zIndex = 0.82;
+    setVisibilityIfChanged(marker, true);
 }
 
 function ensureAdminSummonedBotVitals(
@@ -1306,6 +1386,15 @@ export async function renderRemoteCharacter(
         deps.destroyDisplayObjectSafely,
     );
     ensureAdminSummonedBotVitals(
+        container,
+        bodyMetrics,
+        entity,
+        {
+            hideBody,
+        },
+        deps.destroyDisplayObjectSafely,
+    );
+    ensureQuestMarker(
         container,
         bodyMetrics,
         entity,

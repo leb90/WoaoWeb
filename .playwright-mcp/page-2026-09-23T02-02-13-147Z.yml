@@ -1,0 +1,123 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - button "Entrar en pantalla completa" [ref=e46]
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e56]:
+          - generic [ref=e57]:
+            - generic [ref=e58]:
+              - button "Consola" [ref=e59]
+              - button "Global" [ref=e60]
+              - button "Party" [ref=e61]
+              - button "Clan" [ref=e62]
+              - button "Privados" [ref=e63]
+              - button "Ocultar minimapa" [pressed] [ref=e64]
+            - generic [ref=e67]:
+              - generic [ref=e68]: Conectado como CodexGM
+              - generic [ref=e69]:
+                - text: Bienvenido a AOWeb. Si quieres enterarte de las últimas actualizaciones del juego, puedes ingresar a nuestro
+                - link "Discord" [ref=e70] [cursor=pointer]:
+                  - /url: https://discord.gg/YpJ9XrMdg
+                - text: .
+              - generic [ref=e71]:
+                - text: "- Si quieres reportar erorres o sugerir cambios, puedes hacerlo en:"
+                - link "https://forms.gle/Df2cmGExTBjjJhAR8" [ref=e72] [cursor=pointer]:
+                  - /url: https://forms.gle/Df2cmGExTBjjJhAR8
+              - generic [ref=e73]: "- Está completamente prohibido el uso de personajes cámara, cheats o cualquier programa externo que modifique el juego, como auto tomar pociones o auto removerse. El uso de los mismos terminará en un ban permanente, sin previo aviso."
+              - generic [ref=e74]: Tienes 255 skillpoints para asignar.
+              - generic [ref=e75]: WOAO> Canje 0 | ELO 300 | Remort no | /woao
+              - generic [ref=e76]: "WOAO> Evento del dia: +40% de experiencia global. Bicho destacado: Duende Defensor."
+              - generic [ref=e77]: "[Online Record] Nuevo record: 1 jugadores en simultáneo (mundo abierto: 1, arena: 0)"
+          - button "Abrir mapa del mundo" [ref=e80]:
+            - img "Catacumbas Nix" [ref=e81]
+        - generic [ref=e25]:
+          - generic [ref=e26]: Experiencia
+          - generic [ref=e27]: 0% (0 / 64.850.956)
+      - generic [ref=e31]:
+        - generic [ref=e87]:
+          - generic [ref=e89]:
+            - generic [ref=e90]:
+              - generic [ref=e91]: "50"
+              - button "Habilidades" [ref=e92]
+            - generic [ref=e94]:
+              - paragraph [ref=e95]: Personaje
+              - heading "CodexGM" [level=3] [ref=e96]
+              - paragraph [ref=e97]: 1.093.944 oro
+            - button "Abrir ajustes" [ref=e98]
+          - generic [ref=e103]:
+            - generic [ref=e104]:
+              - button "Inventario" [ref=e105]
+              - button "Hechizos" [ref=e106]
+            - generic [ref=e109]:
+              - button "Anillo Mágico 2" [ref=e110]:
+                - generic "Anillo Mágico" [ref=e112]
+                - generic: "2"
+              - button [ref=e113]
+              - button [ref=e114]
+              - button [ref=e115]
+              - button [ref=e116]
+              - button [ref=e117]
+              - button [ref=e118]
+              - button [ref=e119]
+              - button [ref=e120]
+              - button [ref=e121]
+              - button [ref=e122]
+              - button [ref=e123]
+              - button [ref=e124]
+              - button [ref=e125]
+              - button [ref=e126]
+              - button [ref=e127]
+              - button [ref=e128]
+              - button [ref=e129]
+              - button [ref=e130]
+              - button [ref=e131]
+              - button [ref=e132]
+          - generic [ref=e133]:
+            - generic [ref=e134]:
+              - generic [ref=e135]:
+                - button "Abrir mapa del mundo" [ref=e136]: Catacumbas Nix
+                - paragraph [ref=e137]: Primavera · Noche · Despejado · 15°C
+                - generic [ref=e138]:
+                  - generic [ref=e139]:
+                    - generic [ref=e140]: Energia
+                    - generic [ref=e143]: 285/285
+                  - generic [ref=e144]:
+                    - generic [ref=e145]: Vida
+                    - generic [ref=e148]: 291/363
+                  - generic [ref=e149]:
+                    - generic [ref=e150]: Mana
+                    - generic [ref=e153]: 2487/2487
+                  - generic [ref=e154]:
+                    - generic [ref=e155]: Hambre
+                    - generic [ref=e158]: 99/100
+                  - generic [ref=e159]:
+                    - generic [ref=e160]: Sed
+                    - generic [ref=e163]: 99/100
+              - generic [ref=e164]:
+                - button "Party" [ref=e165]
+                - button "Clanes" [ref=e171]
+                - button "Misiones" [ref=e174]
+                - button "Montura" [ref=e175]
+                - button "Premios" [ref=e176]
+                - button "Ranked" [ref=e177]
+                - button "Viajes" [ref=e178]
+                - button "WOAO" [ref=e179]
+            - generic [ref=e180]:
+              - 'generic "Defensa: 0/0" [ref=e181]': 0/0
+              - 'generic "Daño: 0/0" [ref=e186]': 0/0
+              - 'generic "Fuerza: 19" [ref=e193]':
+                - img "Fuerza" [ref=e195]
+                - generic [ref=e196]: "19"
+              - 'generic "Agilidad: 19" [ref=e197]':
+                - img "Agilidad" [ref=e199]
+                - generic [ref=e200]: "19"
+            - generic: v0.0.75
+        - generic [ref=e32]:
+          - generic [ref=e33]:
+            - link "Arenas" [ref=e201] [cursor=pointer]:
+              - /url: /arenas
+            - link "Cambiar personaje" [ref=e202] [cursor=pointer]:
+              - /url: /characters
+          - generic [ref=e203]: En zona insegura cerrá el personaje con /salir.
+  - button "Open Next.js Dev Tools" [ref=e41] [cursor=pointer]
+  - alert [ref=e45]

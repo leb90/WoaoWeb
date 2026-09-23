@@ -1,0 +1,111 @@
+- generic [active] [ref=f2e1] [box=0,0,1366,768]:
+  - button "Open Next.js Dev Tools" [ref=f2e34] [cursor=pointer] [box=22,714,32,32]
+  - alert [ref=f2e38] [box=-1,-1,1,1]
+  - generic [ref=f2e93] [box=0,0,1366,768]:
+    - generic [ref=f2e94] [box=149,64,1068,691]:
+      - button "Entrar en pantalla completa" [ref=f2e95] [box=1173,12,44,44]
+      - generic [ref=f2e101] [box=149,64,1068,691]:
+        - generic [ref=f2e102] [box=149,64,763,691]:
+          - generic [ref=f2e107] [box=149,64,763,133]:
+            - generic [ref=f2e108] [box=149,64,668,132]:
+              - generic [ref=f2e109] [box=149,64,668,27]:
+                - button "Consola" [ref=f2e110] [box=149,64,126,26]
+                - button "Global" [ref=f2e111] [box=276,64,126,26]
+                - button "Party" [ref=f2e112] [box=402,64,126,26]
+                - button "Clan" [ref=f2e113] [box=529,64,126,26]
+                - button "Privados" [ref=f2e114] [box=656,64,126,26]
+                - button "Ocultar minimapa" [pressed] [ref=f2e115] [box=782,64,34,26]
+              - generic [ref=f2e118] [box=149,91,668,105]:
+                - generic [ref=f2e119] [box=160,-238,631,15]: Conectado como CodexGM
+                - generic [ref=f2e120] [box=160,-222,631,15]
+                - generic [ref=f2e122] [box=160,-207,631,15]
+                - generic [ref=f2e124] [box=160,-192,631,31]: "- Está completamente prohibido el uso de personajes cámara, cheats o cualquier programa externo que modifique el juego, como auto tomar pociones o auto removerse. El uso de los mismos terminará en un ban permanente, sin previo aviso."
+                - generic [ref=f2e125] [box=160,-161,631,15]: Tienes 255 skillpoints para asignar.
+                - generic [ref=f2e126] [box=160,-146,631,15]: WOAO> Canje 0 | ELO 300 | Remort no | /woao
+                - generic [ref=f2e127] [box=160,-131,631,15]: "WOAO> Evento del dia: +40% de experiencia global. Bicho destacado: Wyvern."
+                - generic [ref=f2e128] [box=160,-115,631,15]: "[Online Record] Nuevo record: 1 jugadores en simultáneo (mundo abierto: 1, arena: 0)"
+                - generic [ref=f2e276] [box=160,-100,631,15]: "[INFO] Boss events:"
+                - generic [ref=f2e277] [box=160,-85,631,15]: "[INFO] Momia Faraon (mummyPharaoh) npc=611 proximo=5h 52m 15s map=182@47,30"
+                - generic [ref=f2e278] [box=160,-70,631,15]: "[INFO] Gollum (gollum) npc=594 proximo=3h 59m 30s map=175@52,35"
+                - generic [ref=f2e279] [box=160,-54,631,15]: Gollum aparecio en el mundo. Tienes 30 minutos para derrotarlo.
+                - generic [ref=f2e280] [box=160,-39,631,15]: "[INFO] Gollum activo en 34@51,49. Entidad 1790121308605."
+                - generic [ref=f2e281] [box=160,-24,631,15]: "[INFO] Gollum activo en 34@51,49. Entidad 1790121308605."
+                - generic [ref=f2e282] [box=160,-9,631,15]: "[INFO] Boss events:"
+                - generic [ref=f2e283] [box=160,7,631,15]: "[INFO] Momia Faraon (mummyPharaoh) npc=611 proximo=5h 52m 13s map=182@47,30"
+                - generic [ref=f2e284] [box=160,22,631,15]: "[INFO] Gollum (gollum) npc=594 vivo entidad=1790121308605 despawn=0h 29m 59s map=34@51,49"
+                - generic [ref=f2e285] [box=160,37,631,15]: "[INFO] Boss removido y contador reiniciado."
+                - generic [ref=f2e286] [box=160,53,631,15]: "[INFO] Boss events:"
+                - generic [ref=f2e287] [box=160,68,631,15]: "[INFO] Momia Faraon (mummyPharaoh) npc=611 proximo=5h 51m 52s map=182@47,30"
+                - generic [ref=f2e288] [box=160,83,631,15]: "[INFO] Gollum (gollum) npc=594 proximo=4h 0m 0s map=175@52,35"
+                - generic [ref=f2e289] [box=160,98,631,15]: Se ha invocado el Faraon en las piramides. Deberas superar el laberinto para llegar a el.
+                - generic [ref=f2e290] [box=160,114,631,15]: "[INFO] Momia Faraón activo en 34@51,49. Entidad 1790121331655."
+                - generic [ref=f2e291] [box=160,129,631,15]: "[INFO] Momia Faraón activo en 34@51,49. Entidad 1790121331655."
+                - generic [ref=f2e292] [box=160,144,631,15]: "[INFO] Boss events:"
+                - generic [ref=f2e293] [box=160,159,631,15]: "[INFO] Momia Faraon (mummyPharaoh) npc=611 vivo entidad=1790121331655 map=34@51,49"
+                - generic [ref=f2e294] [box=160,175,631,15]: "[INFO] Gollum (gollum) npc=594 proximo=3h 59m 57s map=175@52,35"
+            - button "Abrir mapa del mundo" [ref=f2e131] [box=822,68,87,124]:
+              - img "Nix" [ref=f2e132] [box=822,68,87,124]
+          - generic [ref=f2e142] [box=160,726,740,13]:
+            - generic [ref=f2e143] [box=160,726,71,13]: Experiencia
+            - generic [ref=f2e144] [box=825,726,75,13]: 0% (0 / 64.850.956)
+        - generic [ref=f2e148] [box=912,64,305,684]:
+          - generic [ref=f2e151] [box=919,72,290,606]:
+            - generic [ref=f2e153] [box=927,79,275,53]:
+              - generic [ref=f2e154] [box=927,79,34,34]:
+                - generic [ref=f2e155] [box=927,79,34,34]: "50"
+                - button "Habilidades" [ref=f2e156] [box=950,102,15,15]
+              - generic [ref=f2e158] [box=971,79,187,53]:
+                - paragraph [ref=f2e159] [box=971,79,187,13]: Personaje
+                - heading "CodexGM" [level=3] [ref=f2e160] [box=971,92,187,19]
+                - paragraph [ref=f2e161] [box=971,117,187,16]: 999.999 oro
+              - button "Abrir ajustes" [ref=f2e162] [box=1168,79,34,34]
+            - generic [ref=f2e167] [box=919,144,290,377]:
+              - generic [ref=f2e168] [box=927,152,275,36]:
+                - button "Inventario" [ref=f2e169] [box=927,152,134,36]
+                - button "Hechizos" [ref=f2e170] [box=1068,152,134,36]
+              - generic [ref=f2e173] [box=931,200,267,178]:
+                - button [ref=f2e174] [box=931,200,44,44]
+                - button [ref=f2e175] [box=976,200,44,44]
+                - button [ref=f2e176] [box=1020,200,44,44]
+                - button [ref=f2e177] [box=1065,200,44,44]
+                - button [ref=f2e178] [box=1110,200,44,44]
+                - button [ref=f2e179] [box=1154,200,44,44]
+                - button [ref=f2e180] [box=931,244,44,44]
+                - button [ref=f2e181] [box=976,244,44,44]
+                - button [ref=f2e182] [box=1020,244,44,44]
+                - button [ref=f2e183] [box=1065,244,44,44]
+                - button [ref=f2e184] [box=1110,244,44,44]
+                - button [ref=f2e185] [box=1154,244,44,44]
+                - button [ref=f2e186] [box=931,289,44,44]
+                - button [ref=f2e187] [box=976,289,44,44]
+                - button [ref=f2e188] [box=1020,289,44,44]
+                - button [ref=f2e189] [box=1065,289,44,44]
+                - button [ref=f2e190] [box=1110,289,44,44]
+                - button [ref=f2e191] [box=1154,289,44,44]
+                - button [ref=f2e192] [box=931,334,44,44]
+                - button [ref=f2e193] [box=976,334,44,44]
+                - button [ref=f2e194] [box=1020,334,44,44]
+            - generic [ref=f2e195] [box=919,525,290,152]:
+              - generic [ref=f2e196] [box=925,531,279,103]:
+                - generic [ref=f2e197] [box=925,531,160,100]
+                - generic [ref=f2e226] [box=1091,531,113,103]
+              - generic [ref=f2e242] [box=925,640,279,15]:
+                - 'generic "Defensa: 0/0" [ref=f2e243] [box=925,640,67,15]': 0/0
+                - 'generic "Daño: 0/0" [ref=f2e248] [box=996,640,67,15]': 0/0
+                - 'generic "Fuerza: 19" [ref=f2e255] [box=1066,640,67,15]'
+                - 'generic "Agilidad: 19" [ref=f2e259] [box=1137,640,67,15]'
+              - generic [box=925,659,279,13]: v0.0.75
+          - generic [ref=f2e263] [box=912,691,305,57]:
+            - generic [ref=f2e264] [box=923,700,282,15]:
+              - link "Arenas" [ref=f2e265] [cursor=pointer] [box=949,700,59,15]:
+                - /url: /arenas
+              - link "Cambiar personaje" [ref=f2e266] [cursor=pointer] [box=1020,700,160,15]:
+                - /url: /characters
+            - generic [ref=f2e267] [box=923,723,282,15]: En zona insegura cerrá el personaje con /salir.
+    - generic [ref=f2e269] [box=459,246,448,277]:
+      - paragraph [ref=f2e270] [box=484,271,398,17]: Recomendacion
+      - heading "Esta pantalla se ve mejor en pantalla completa" [level=2] [ref=f2e271] [box=484,295,398,56]
+      - paragraph [ref=f2e272] [box=484,363,398,72]: Detectamos una ventana chica para el juego. Si queres, podemos abrirlo en pantalla completa para que entren mejor la consola, el HUD y las macros.
+      - generic [ref=f2e273] [box=484,459,398,38]:
+        - button "Seguir asi" [ref=f2e274] [box=566,459,96,38]
+        - button "Abrir en pantalla completa" [ref=f2e275] [box=674,459,208,38]

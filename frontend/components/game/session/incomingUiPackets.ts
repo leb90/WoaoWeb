@@ -205,6 +205,10 @@ export async function handleIncomingUiPacket({
             ctx.onEnvironmentUpdate?.(packet.payload);
             return true;
 
+        case "questState":
+            ctx.mergeHud({ questState: packet.payload });
+            return true;
+
         case "error":
             ctx.setIsSceneReady(false);
             ctx.emitStatus({

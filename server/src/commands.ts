@@ -43,6 +43,7 @@ const login = require("./login");
 const runtimeTiming = require("./runtimeTiming");
 const balance = require("./balance");
 const mapInstanceManager = require("./mapInstanceManager");
+const bossEvents = require("./bossEvents");
 const _ = require("lodash");
 const npcsInMap = loadAllMapNpcPlacements() as Array<{
     mapNum: number;
@@ -1843,6 +1844,22 @@ function sendTimingList(ws: RuntimeClient) {
 
     for (const entry of renderTimingEntries()) {
         handleProtocol.console(`[INFO] ${entry}`, "#FFFFFF", 0, 0, ws as CommandClient);
+    }
+}
+
+function sendBossEventStatus(ws: RuntimeClient) {
+    handleProtocol.console("[INFO] Boss events:", "#E69500", 0, 0, ws as CommandClient);
+
+    for (const entry of bossEvents.getSnapshot() as any[]) {
+        const active = entry.activeNpcId ? `vivo entidad=${entry.activeNpcId}` : `proximo=${entry.remaining}`;
+        const despawn = entry.despawnRemaining ? ` despawn=${entry.despawnRemaining}` : "";
+        handleProtocol.console(
+            `[INFO] ${entry.label} (${entry.key}) npc=${entry.npcIndex} ${active}${despawn} map=${entry.map}@${entry.pos.x},${entry.pos.y}`,
+            "#FFFFFF",
+            0,
+            0,
+            ws as CommandClient,
+        );
     }
 }
 
@@ -4089,6 +4106,78 @@ const command: CommandApi = {
                         removeNpcByAdmin(npcEntityId, ws, true);
                     }
                     break;
+
+                case "/boss":
+                case "/bossevento": {
+                    if (!hasAdminPrivileges(user)) {
+                        break;
+                    }
+
+                    const args = nextText.trim().split(/\s+/).filter(Boolean);
+                    const bossKey = bossEvents.normalizeBossKey(args[0]);
+                    const action = (args[1] ?? "status").toLocaleLowerCase("es-AR");
+                    const nearAdmin = args.some((arg) => ["aqui", "aca", "near", "here"].includes(arg));
+
+                    if (!bossKey && action !== "status" && args[0]?.toLocaleLowerCase("es-AR") !== "status") {
+                        handleProtocol.console(
+                            "[INFO] Uso: /boss status | /boss momia spawn | /boss gollum spawn aqui | /boss gollum despawn | /boss momia reset",
+                            "#E69500",
+                            0,
+                            0,
+                            ws as CommandClient,
+                        );
+                        break;
+                    }
+
+                    if (!bossKey || action === "status") {
+                        sendBossEventStatus(ws);
+                        break;
+                    }
+
+                    if (action === "spawn" || action === "invocar") {
+                        const npc = bossEvents.forceSpawn(bossKey, nearAdmin ? { nearUser: user } : undefined);
+
+                        handleProtocol.console(
+                            npc
+                                ? `[INFO] ${npc.nameCharacter} activo en ${npc.map}@${npc.pos.x},${npc.pos.y}. Entidad ${npc.id}.`
+                                : "[INFO] No se pudo invocar el boss.",
+                            "#E69500",
+                            0,
+                            0,
+                            ws as CommandClient,
+                        );
+                        break;
+                    }
+
+                    if (action === "despawn" || action === "quitar" || action === "desaparecer") {
+                        const removed = bossEvents.forceDespawn(bossKey);
+                        handleProtocol.console(
+                            removed
+                                ? "[INFO] Boss removido y contador reiniciado."
+                                : "[INFO] No habia boss activo; contador reiniciado.",
+                            "#E69500",
+                            0,
+                            0,
+                            ws as CommandClient,
+                        );
+                        break;
+                    }
+
+                    if (action === "reset" || action === "contador") {
+                        bossEvents.resetTimer(bossKey);
+                        handleProtocol.console("[INFO] Contador reiniciado.", "#E69500", 0, 0, ws as CommandClient);
+                        break;
+                    }
+
+                    handleProtocol.console(
+                        "[INFO] Accion invalida. Usa status, spawn, despawn o reset.",
+                        "#E69500",
+                        0,
+                        0,
+                        ws as CommandClient,
+                    );
+                    break;
+                }
 
                 case "/worldsave":
                     if (hasAdminPrivileges(user)) {

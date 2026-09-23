@@ -1,0 +1,1931 @@
+{
+  "buttons": [
+    {
+      "i": 0,
+      "text": "",
+      "aria": "Entrar en pantalla completa",
+      "title": "Entrar en pantalla completa",
+      "disabled": false,
+      "box": {
+        "x": 1173.171875,
+        "y": 9,
+        "width": 44,
+        "height": 44,
+        "top": 9,
+        "right": 1217.171875,
+        "bottom": 53,
+        "left": 1173.171875
+      }
+    },
+    {
+      "i": 1,
+      "text": "Consola",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 148.828125,
+        "y": 61,
+        "width": 125.76455688476562,
+        "height": 25.76422119140625,
+        "top": 61,
+        "right": 274.5926818847656,
+        "bottom": 86.76422119140625,
+        "left": 148.828125
+      }
+    },
+    {
+      "i": 2,
+      "text": "Global",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 275.54693603515625,
+        "y": 61,
+        "width": 125.77947998046875,
+        "height": 25.76422119140625,
+        "top": 61,
+        "right": 401.326416015625,
+        "bottom": 86.76422119140625,
+        "left": 275.54693603515625
+      }
+    },
+    {
+      "i": 3,
+      "text": "Party",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 402.2806396484375,
+        "y": 61,
+        "width": 125.7645263671875,
+        "height": 25.76422119140625,
+        "top": 61,
+        "right": 528.045166015625,
+        "bottom": 86.76422119140625,
+        "left": 402.2806396484375
+      }
+    },
+    {
+      "i": 4,
+      "text": "Clan",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 528.9993896484375,
+        "y": 61,
+        "width": 125.76458740234375,
+        "height": 25.76422119140625,
+        "top": 61,
+        "right": 654.7639770507812,
+        "bottom": 86.76422119140625,
+        "left": 528.9993896484375
+      }
+    },
+    {
+      "i": 5,
+      "text": "Privados",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 655.7182006835938,
+        "y": 61,
+        "width": 125.76458740234375,
+        "height": 25.76422119140625,
+        "top": 61,
+        "right": 781.4827880859375,
+        "bottom": 86.76422119140625,
+        "left": 655.7182006835938
+      }
+    },
+    {
+      "i": 6,
+      "text": "",
+      "aria": "Ocultar minimapa",
+      "title": "Ocultar minimapa",
+      "disabled": false,
+      "box": {
+        "x": 782.43701171875,
+        "y": 61,
+        "width": 34.352294921875,
+        "height": 25.76422119140625,
+        "top": 61,
+        "right": 816.789306640625,
+        "bottom": 86.76422119140625,
+        "left": 782.43701171875
+      }
+    },
+    {
+      "i": 7,
+      "text": "",
+      "aria": "Abrir mapa del mundo",
+      "title": "Mapa 34 (52, 50)",
+      "disabled": false,
+      "box": {
+        "x": 821.5604248046875,
+        "y": 64.8169174194336,
+        "width": 86.8349609375,
+        "height": 124.04993438720703,
+        "top": 64.8169174194336,
+        "right": 908.3953857421875,
+        "bottom": 188.86685180664062,
+        "left": 821.5604248046875
+      }
+    },
+    {
+      "i": 8,
+      "text": "",
+      "aria": "Habilidades",
+      "title": "Habilidades",
+      "disabled": false,
+      "box": {
+        "x": 949.997314453125,
+        "y": 99.16920471191406,
+        "width": 15.2677001953125,
+        "height": 15.267684936523438,
+        "top": 99.16920471191406,
+        "right": 965.2650146484375,
+        "bottom": 114.4368896484375,
+        "left": 949.997314453125
+      }
+    },
+    {
+      "i": 9,
+      "text": "",
+      "aria": "Abrir ajustes",
+      "title": "Abrir ajustes",
+      "disabled": false,
+      "box": {
+        "x": 1167.561767578125,
+        "y": 76.26768493652344,
+        "width": 34.352294921875,
+        "height": 34.35228729248047,
+        "top": 76.26768493652344,
+        "right": 1201.9140625,
+        "bottom": 110.6199722290039,
+        "left": 1167.561767578125
+      }
+    },
+    {
+      "i": 10,
+      "text": "Inventario",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 927.0958251953125,
+        "y": 148.7891845703125,
+        "width": 133.5921630859375,
+        "height": 36.2607421875,
+        "top": 148.7891845703125,
+        "right": 1060.68798828125,
+        "bottom": 185.0499267578125,
+        "left": 927.0958251953125
+      }
+    },
+    {
+      "i": 11,
+      "text": "Hechizos",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 1068.3218994140625,
+        "y": 148.7891845703125,
+        "width": 133.5921630859375,
+        "height": 36.2607421875,
+        "top": 148.7891845703125,
+        "right": 1201.9140625,
+        "bottom": 185.0499267578125,
+        "left": 1068.3218994140625
+      }
+    },
+    {
+      "i": 12,
+      "text": "Rayo GM",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 196.50070190429688,
+        "width": 231.8779296875,
+        "height": 22.901519775390625,
+        "top": 196.50070190429688,
+        "right": 1162.7906494140625,
+        "bottom": 219.4022216796875,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 13,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 219.4022216796875,
+        "width": 231.8779296875,
+        "height": 22.901519775390625,
+        "top": 219.4022216796875,
+        "right": 1162.7906494140625,
+        "bottom": 242.30374145507812,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 14,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 242.30374145507812,
+        "width": 231.8779296875,
+        "height": 22.901519775390625,
+        "top": 242.30374145507812,
+        "right": 1162.7906494140625,
+        "bottom": 265.20526123046875,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 15,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 265.20526123046875,
+        "width": 231.8779296875,
+        "height": 22.90155029296875,
+        "top": 265.20526123046875,
+        "right": 1162.7906494140625,
+        "bottom": 288.1068115234375,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 16,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 288.1068115234375,
+        "width": 231.8779296875,
+        "height": 22.901519775390625,
+        "top": 288.1068115234375,
+        "right": 1162.7906494140625,
+        "bottom": 311.0083312988281,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 17,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 311.0083312988281,
+        "width": 231.8779296875,
+        "height": 22.901519775390625,
+        "top": 311.0083312988281,
+        "right": 1162.7906494140625,
+        "bottom": 333.90985107421875,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 18,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 333.90985107421875,
+        "width": 231.8779296875,
+        "height": 22.901519775390625,
+        "top": 333.90985107421875,
+        "right": 1162.7906494140625,
+        "bottom": 356.8113708496094,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 19,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 356.8113708496094,
+        "width": 231.8779296875,
+        "height": 22.901519775390625,
+        "top": 356.8113708496094,
+        "right": 1162.7906494140625,
+        "bottom": 379.712890625,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 20,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 379.712890625,
+        "width": 231.8779296875,
+        "height": 22.90155029296875,
+        "top": 379.712890625,
+        "right": 1162.7906494140625,
+        "bottom": 402.61444091796875,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 21,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 402.61444091796875,
+        "width": 231.8779296875,
+        "height": 22.901519775390625,
+        "top": 402.61444091796875,
+        "right": 1162.7906494140625,
+        "bottom": 425.5159606933594,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 22,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 425.5159606933594,
+        "width": 231.8779296875,
+        "height": 22.901519775390625,
+        "top": 425.5159606933594,
+        "right": 1162.7906494140625,
+        "bottom": 448.41748046875,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 23,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 448.41748046875,
+        "width": 231.8779296875,
+        "height": 22.901519775390625,
+        "top": 448.41748046875,
+        "right": 1162.7906494140625,
+        "bottom": 471.3190002441406,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 24,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 471.3190002441406,
+        "width": 231.8779296875,
+        "height": 22.901519775390625,
+        "top": 471.3190002441406,
+        "right": 1162.7906494140625,
+        "bottom": 494.22052001953125,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 25,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 494.22052001953125,
+        "width": 231.8779296875,
+        "height": 22.90155029296875,
+        "top": 494.22052001953125,
+        "right": 1162.7906494140625,
+        "bottom": 517.1220703125,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 26,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 517.1220703125,
+        "width": 231.8779296875,
+        "height": 22.9014892578125,
+        "top": 517.1220703125,
+        "right": 1162.7906494140625,
+        "bottom": 540.0235595703125,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 27,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 540.0235595703125,
+        "width": 231.8779296875,
+        "height": 22.90155029296875,
+        "top": 540.0235595703125,
+        "right": 1162.7906494140625,
+        "bottom": 562.9251098632812,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 28,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 562.9251098632812,
+        "width": 231.8779296875,
+        "height": 22.90155029296875,
+        "top": 562.9251098632812,
+        "right": 1162.7906494140625,
+        "bottom": 585.82666015625,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 29,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 585.82666015625,
+        "width": 231.8779296875,
+        "height": 22.9014892578125,
+        "top": 585.82666015625,
+        "right": 1162.7906494140625,
+        "bottom": 608.7281494140625,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 30,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 608.7281494140625,
+        "width": 231.8779296875,
+        "height": 22.90155029296875,
+        "top": 608.7281494140625,
+        "right": 1162.7906494140625,
+        "bottom": 631.6296997070312,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 31,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 631.6296997070312,
+        "width": 231.8779296875,
+        "height": 22.9014892578125,
+        "top": 631.6296997070312,
+        "right": 1162.7906494140625,
+        "bottom": 654.5311889648438,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 32,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 654.5311889648438,
+        "width": 231.8779296875,
+        "height": 22.90155029296875,
+        "top": 654.5311889648438,
+        "right": 1162.7906494140625,
+        "bottom": 677.4327392578125,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 33,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 677.4327392578125,
+        "width": 231.8779296875,
+        "height": 22.90155029296875,
+        "top": 677.4327392578125,
+        "right": 1162.7906494140625,
+        "bottom": 700.3342895507812,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 34,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 700.3342895507812,
+        "width": 231.8779296875,
+        "height": 22.9014892578125,
+        "top": 700.3342895507812,
+        "right": 1162.7906494140625,
+        "bottom": 723.2357788085938,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 35,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 723.2357788085938,
+        "width": 231.8779296875,
+        "height": 22.90155029296875,
+        "top": 723.2357788085938,
+        "right": 1162.7906494140625,
+        "bottom": 746.1373291015625,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 36,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 746.1373291015625,
+        "width": 231.8779296875,
+        "height": 22.9014892578125,
+        "top": 746.1373291015625,
+        "right": 1162.7906494140625,
+        "bottom": 769.038818359375,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 37,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 769.038818359375,
+        "width": 231.8779296875,
+        "height": 22.90155029296875,
+        "top": 769.038818359375,
+        "right": 1162.7906494140625,
+        "bottom": 791.9403686523438,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 38,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 791.9403686523438,
+        "width": 231.8779296875,
+        "height": 22.90155029296875,
+        "top": 791.9403686523438,
+        "right": 1162.7906494140625,
+        "bottom": 814.8419189453125,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 39,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 814.8419189453125,
+        "width": 231.8779296875,
+        "height": 22.9014892578125,
+        "top": 814.8419189453125,
+        "right": 1162.7906494140625,
+        "bottom": 837.743408203125,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 40,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 837.743408203125,
+        "width": 231.8779296875,
+        "height": 22.90155029296875,
+        "top": 837.743408203125,
+        "right": 1162.7906494140625,
+        "bottom": 860.6449584960938,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 41,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 860.6449584960938,
+        "width": 231.8779296875,
+        "height": 22.9014892578125,
+        "top": 860.6449584960938,
+        "right": 1162.7906494140625,
+        "bottom": 883.5464477539062,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 42,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 883.5464477539062,
+        "width": 231.8779296875,
+        "height": 22.90155029296875,
+        "top": 883.5464477539062,
+        "right": 1162.7906494140625,
+        "bottom": 906.447998046875,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 43,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 906.447998046875,
+        "width": 231.8779296875,
+        "height": 22.90155029296875,
+        "top": 906.447998046875,
+        "right": 1162.7906494140625,
+        "bottom": 929.3495483398438,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 44,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 929.3495483398438,
+        "width": 231.8779296875,
+        "height": 22.9014892578125,
+        "top": 929.3495483398438,
+        "right": 1162.7906494140625,
+        "bottom": 952.2510375976562,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 45,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 952.2510375976562,
+        "width": 231.8779296875,
+        "height": 22.90155029296875,
+        "top": 952.2510375976562,
+        "right": 1162.7906494140625,
+        "bottom": 975.152587890625,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 46,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 975.152587890625,
+        "width": 231.8779296875,
+        "height": 22.9014892578125,
+        "top": 975.152587890625,
+        "right": 1162.7906494140625,
+        "bottom": 998.0540771484375,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 47,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 998.0540771484375,
+        "width": 231.8779296875,
+        "height": 22.90155029296875,
+        "top": 998.0540771484375,
+        "right": 1162.7906494140625,
+        "bottom": 1020.9556274414062,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 48,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 1020.9556274414062,
+        "width": 231.8779296875,
+        "height": 22.90155029296875,
+        "top": 1020.9556274414062,
+        "right": 1162.7906494140625,
+        "bottom": 1043.857177734375,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 49,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 1043.857177734375,
+        "width": 231.8779296875,
+        "height": 22.9014892578125,
+        "top": 1043.857177734375,
+        "right": 1162.7906494140625,
+        "bottom": 1066.7586669921875,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 50,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 1066.7586669921875,
+        "width": 231.8779296875,
+        "height": 22.9014892578125,
+        "top": 1066.7586669921875,
+        "right": 1162.7906494140625,
+        "bottom": 1089.66015625,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 51,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 1089.66015625,
+        "width": 231.8779296875,
+        "height": 22.901611328125,
+        "top": 1089.66015625,
+        "right": 1162.7906494140625,
+        "bottom": 1112.561767578125,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 52,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 1112.561767578125,
+        "width": 231.8779296875,
+        "height": 22.9014892578125,
+        "top": 1112.561767578125,
+        "right": 1162.7906494140625,
+        "bottom": 1135.4632568359375,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 53,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 1135.4632568359375,
+        "width": 231.8779296875,
+        "height": 22.9014892578125,
+        "top": 1135.4632568359375,
+        "right": 1162.7906494140625,
+        "bottom": 1158.36474609375,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 54,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 1158.36474609375,
+        "width": 231.8779296875,
+        "height": 22.901611328125,
+        "top": 1158.36474609375,
+        "right": 1162.7906494140625,
+        "bottom": 1181.266357421875,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 55,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 1181.266357421875,
+        "width": 231.8779296875,
+        "height": 22.9014892578125,
+        "top": 1181.266357421875,
+        "right": 1162.7906494140625,
+        "bottom": 1204.1678466796875,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 56,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 1204.1678466796875,
+        "width": 231.8779296875,
+        "height": 22.9014892578125,
+        "top": 1204.1678466796875,
+        "right": 1162.7906494140625,
+        "bottom": 1227.0693359375,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 57,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 1227.0693359375,
+        "width": 231.8779296875,
+        "height": 22.901611328125,
+        "top": 1227.0693359375,
+        "right": 1162.7906494140625,
+        "bottom": 1249.970947265625,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 58,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 1249.970947265625,
+        "width": 231.8779296875,
+        "height": 22.9014892578125,
+        "top": 1249.970947265625,
+        "right": 1162.7906494140625,
+        "bottom": 1272.8724365234375,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 59,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 1272.8724365234375,
+        "width": 231.8779296875,
+        "height": 22.9014892578125,
+        "top": 1272.8724365234375,
+        "right": 1162.7906494140625,
+        "bottom": 1295.77392578125,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 60,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 1295.77392578125,
+        "width": 231.8779296875,
+        "height": 22.9014892578125,
+        "top": 1295.77392578125,
+        "right": 1162.7906494140625,
+        "bottom": 1318.6754150390625,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 61,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 930.9127197265625,
+        "y": 1318.6754150390625,
+        "width": 231.8779296875,
+        "height": 22.901611328125,
+        "top": 1318.6754150390625,
+        "right": 1162.7906494140625,
+        "bottom": 1341.5770263671875,
+        "left": 930.9127197265625
+      }
+    },
+    {
+      "i": 62,
+      "text": "",
+      "aria": "Subir hechizo seleccionado",
+      "title": "Subir hechizo seleccionado",
+      "disabled": true,
+      "box": {
+        "x": 1186.646484375,
+        "y": 192.68377685546875,
+        "width": 15.267578125,
+        "height": 26.71844482421875,
+        "top": 192.68377685546875,
+        "right": 1201.9140625,
+        "bottom": 219.4022216796875,
+        "left": 1186.646484375
+      }
+    },
+    {
+      "i": 63,
+      "text": "",
+      "aria": "Bajar hechizo seleccionado",
+      "title": "Bajar hechizo seleccionado",
+      "disabled": true,
+      "box": {
+        "x": 1186.646484375,
+        "y": 223.21914672851562,
+        "width": 15.267578125,
+        "height": 26.71844482421875,
+        "top": 223.21914672851562,
+        "right": 1201.9140625,
+        "bottom": 249.93759155273438,
+        "left": 1186.646484375
+      }
+    },
+    {
+      "i": 64,
+      "text": "i",
+      "aria": "Informacion del hechizo seleccionado",
+      "title": "Informacion del hechizo",
+      "disabled": true,
+      "box": {
+        "x": 1186.646484375,
+        "y": 265.20526123046875,
+        "width": 15.267578125,
+        "height": 26.71844482421875,
+        "top": 265.20526123046875,
+        "right": 1201.9140625,
+        "bottom": 291.9237060546875,
+        "left": 1186.646484375
+      }
+    },
+    {
+      "i": 65,
+      "text": "Lanzar",
+      "aria": null,
+      "title": null,
+      "disabled": true,
+      "box": {
+        "x": 927.0958251953125,
+        "y": 474.6588134765625,
+        "width": 274.8182373046875,
+        "height": 36.2607421875,
+        "top": 474.6588134765625,
+        "right": 1201.9140625,
+        "bottom": 510.9195556640625,
+        "left": 927.0958251953125
+      }
+    },
+    {
+      "i": 66,
+      "text": "Nix",
+      "aria": "Abrir mapa del mundo",
+      "title": "Mapa 34 (52, 50)",
+      "disabled": false,
+      "box": {
+        "x": 925.1873779296875,
+        "y": 535.7295532226562,
+        "width": 160.3106689453125,
+        "height": 12.88214111328125,
+        "top": 535.7295532226562,
+        "right": 1085.498046875,
+        "bottom": 548.6116943359375,
+        "left": 925.1873779296875
+      }
+    },
+    {
+      "i": 67,
+      "text": "Party",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 1091.223388671875,
+        "y": 528.095703125,
+        "width": 54.39111328125,
+        "height": 22.9014892578125,
+        "top": 528.095703125,
+        "right": 1145.614501953125,
+        "bottom": 550.9971923828125,
+        "left": 1091.223388671875
+      }
+    },
+    {
+      "i": 68,
+      "text": "Clanes",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 1149.431396484375,
+        "y": 528.095703125,
+        "width": 54.39111328125,
+        "height": 22.9014892578125,
+        "top": 528.095703125,
+        "right": 1203.822509765625,
+        "bottom": 550.9971923828125,
+        "left": 1149.431396484375
+      }
+    },
+    {
+      "i": 69,
+      "text": "Misiones",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 1091.223388671875,
+        "y": 554.8141479492188,
+        "width": 54.39111328125,
+        "height": 22.90155029296875,
+        "top": 554.8141479492188,
+        "right": 1145.614501953125,
+        "bottom": 577.7156982421875,
+        "left": 1091.223388671875
+      }
+    },
+    {
+      "i": 70,
+      "text": "Montura",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 1149.431396484375,
+        "y": 554.8141479492188,
+        "width": 54.39111328125,
+        "height": 22.90155029296875,
+        "top": 554.8141479492188,
+        "right": 1203.822509765625,
+        "bottom": 577.7156982421875,
+        "left": 1149.431396484375
+      }
+    },
+    {
+      "i": 71,
+      "text": "Premios",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 1091.223388671875,
+        "y": 581.5325927734375,
+        "width": 54.39111328125,
+        "height": 22.90155029296875,
+        "top": 581.5325927734375,
+        "right": 1145.614501953125,
+        "bottom": 604.4341430664062,
+        "left": 1091.223388671875
+      }
+    },
+    {
+      "i": 72,
+      "text": "Ranked",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 1149.431396484375,
+        "y": 581.5325927734375,
+        "width": 54.39111328125,
+        "height": 22.90155029296875,
+        "top": 581.5325927734375,
+        "right": 1203.822509765625,
+        "bottom": 604.4341430664062,
+        "left": 1149.431396484375
+      }
+    },
+    {
+      "i": 73,
+      "text": "Viajes",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 1091.223388671875,
+        "y": 608.2510375976562,
+        "width": 54.39111328125,
+        "height": 22.90155029296875,
+        "top": 608.2510375976562,
+        "right": 1145.614501953125,
+        "bottom": 631.152587890625,
+        "left": 1091.223388671875
+      }
+    },
+    {
+      "i": 74,
+      "text": "WOAO",
+      "aria": null,
+      "title": null,
+      "disabled": false,
+      "box": {
+        "x": 1149.431396484375,
+        "y": 608.2510375976562,
+        "width": 54.39111328125,
+        "height": 22.90155029296875,
+        "top": 608.2510375976562,
+        "right": 1203.822509765625,
+        "bottom": 631.152587890625,
+        "left": 1149.431396484375
+      }
+    }
+  ],
+  "options": [
+    {
+      "i": 0,
+      "role": "option",
+      "text": "Rayo GM",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-100 hover:bg-white/8 "
+    },
+    {
+      "i": 1,
+      "role": null,
+      "text": "Rayo GM",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 2,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 3,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 4,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 5,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 6,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 7,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 8,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 9,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 10,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 11,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 12,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 13,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 14,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 15,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 16,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 17,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 18,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 19,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 20,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 21,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 22,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 23,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 24,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 25,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 26,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 27,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 28,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 29,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 30,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 31,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 32,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 33,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 34,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 35,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 36,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 37,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 38,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 39,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 40,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 41,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 42,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 43,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 44,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 45,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 46,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 47,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 48,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 49,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 50,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 51,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 52,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 53,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 54,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 55,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 56,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 57,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 58,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 59,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 60,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 61,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 62,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 63,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 64,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 65,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 66,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 67,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 68,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 69,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 70,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 71,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 72,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 73,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 74,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 75,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 76,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 77,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    },
+    {
+      "i": 78,
+      "role": "option",
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "flex w-full items-center px-2 text-left text-[13px] leading-6 select-none bg-transparent text-stone-500 hover:bg-white/5 "
+    },
+    {
+      "i": 79,
+      "role": null,
+      "text": "Ninguno",
+      "aria": null,
+      "title": null,
+      "cls": "block truncate"
+    }
+  ],
+  "localKeys": [
+    [
+      "ao-play-sound-volume",
+      "1"
+    ],
+    [
+      "ao-play-hotkeys-hint-dismissed",
+      "1"
+    ]
+  ]
+}

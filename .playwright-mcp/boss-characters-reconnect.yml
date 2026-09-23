@@ -1,0 +1,43 @@
+- generic [active] [ref=f1e1] [box=0,0,1366,768]:
+  - banner [ref=f1e2] [box=0,16,1366,58]:
+    - generic [ref=f1e3] [box=107,16,1152,58]:
+      - link "World of AO" [ref=f1e4] [cursor=pointer] [box=132,27,202,36]:
+        - /url: /
+      - navigation [ref=f1e6] [box=457,32,471,26]:
+        - link "Inicio" [ref=f1e7] [cursor=pointer] [box=457,32,50,26]:
+          - /url: /
+        - link "Personajes" [ref=f1e9] [cursor=pointer] [box=534,32,104,26]:
+          - /url: /characters
+        - link "Arenas" [ref=f1e11] [cursor=pointer] [box=666,32,64,26]:
+          - /url: /arenas
+        - link "Ranking" [ref=f1e13] [cursor=pointer] [box=758,32,71,26]:
+          - /url: /ranking
+        - link "Discord" [ref=f1e15] [cursor=pointer] [box=857,32,70,26]:
+          - /url: https://discord.gg/YpJ9XrMdg
+      - generic [ref=f1e17] [box=1050,29,184,32]:
+        - generic [ref=f1e39] [box=1050,37,140,16]:
+          - generic [ref=f1e40] [box=1050,37,62,16]: "Cuenta:"
+          - generic [ref=f1e41] [box=1118,37,72,16]: CodexGM
+        - button "Cerrar sesion" [ref=f1e42] [box=1202,29,32,32]
+  - main [ref=f1e23] [box=0,96,1351,768]:
+    - generic [ref=f1e24] [box=164,144,1024,595]:
+      - paragraph [ref=f1e27] [box=164,144,234,17]: Seleccion de personaje
+      - generic [ref=f1e28] [box=164,193,1024,546]:
+        - generic [ref=f1e46] [box=164,193,680,546]:
+          - link "Crear personaje" [ref=f1e48] [cursor=pointer] [box=709,193,134,38]:
+            - /url: /createcharacter
+          - button "CodexGM Mago Humano Nivel 70 Mapa 34 Borrar CodexGM" [ref=f1e50] [cursor=pointer] [box=164,247,161,296]:
+            - paragraph [ref=f1e56] [box=177,410,135,14]: CodexGM
+            - generic [ref=f1e57] [box=177,446,135,84]:
+              - generic [ref=f1e58] [box=177,462,91,68]
+              - button "Borrar CodexGM" [ref=f1e63] [box=280,498,32,32]
+        - complementary [ref=f1e67] [box=868,193,320,546]:
+          - generic [ref=f1e68] [box=868,193,320,546]:
+            - generic [ref=f1e69] [box=868,193,320,370]:
+              - generic [ref=f1e70] [box=889,214,278,17]
+              - article [ref=f1e74] [box=889,250,278,291]
+            - generic [ref=f1e86] [box=868,586,320,153]:
+              - generic [ref=f1e87] [box=889,607,278,17]
+              - article [ref=f1e91] [box=889,644,278,74]
+  - button "Open Next.js Dev Tools" [ref=f1e34] [cursor=pointer] [box=22,714,32,32]
+  - alert [ref=f1e38] [box=-1,863,1,1]

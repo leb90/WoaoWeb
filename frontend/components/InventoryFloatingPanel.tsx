@@ -799,6 +799,7 @@ export default function InventoryFloatingPanel({
     const [isPartyModalOpen, setIsPartyModalOpen] = React.useState(false);
     const [isClanModalOpen, setIsClanModalOpen] = React.useState(false);
     const [woaoHubTab, setWoaoHubTab] = React.useState<WoaoHubTab | null>(null);
+    const lastQuestOfferOpenKeyRef = React.useRef<string | null>(null);
     const [clanOverview, setClanOverview] = React.useState<ClanOverview | null>(
         null,
     );
@@ -1069,6 +1070,22 @@ export default function InventoryFloatingPanel({
     React.useEffect(() => {
         onRangeAttackRequestRef.current = onRangeAttackRequest;
     }, [onRangeAttackRequest]);
+
+    React.useEffect(() => {
+        const offer = hud?.questState?.offer;
+        if (!offer) {
+            lastQuestOfferOpenKeyRef.current = null;
+            return;
+        }
+
+        const openKey = `${offer.id}:${offer.status}:${offer.objectives.map((objective) => `${objective.current}/${objective.amount}`).join("|")}`;
+        if (lastQuestOfferOpenKeyRef.current === openKey) {
+            return;
+        }
+
+        lastQuestOfferOpenKeyRef.current = openKey;
+        setWoaoHubTab("misiones");
+    }, [hud?.questState?.offer]);
 
     React.useEffect(() => {
         onUseItemURequestRef.current = onUseItemURequest;
@@ -3663,15 +3680,19 @@ export default function InventoryFloatingPanel({
                 </div>
             ) : null}
 
-            {woaoHubTab ? (
-                <WoaoHubModal
-                    tab={woaoHubTab}
-                    mapId={hud?.map}
-                    onTabChange={setWoaoHubTab}
-                    onClose={() => setWoaoHubTab(null)}
-                    onSendCommand={onSendCommand}
-                />
-            ) : null}
+            {woaoHubTab && typeof document !== "undefined"
+                ? createPortal(
+                      <WoaoHubModal
+                          tab={woaoHubTab}
+                          mapId={hud?.map}
+                          questState={hud?.questState}
+                          onTabChange={setWoaoHubTab}
+                          onClose={() => setWoaoHubTab(null)}
+                          onSendCommand={onSendCommand}
+                      />,
+                      portalTarget ?? document.body,
+                  )
+                : null}
 
             {isPartyModalOpen ? (
                 <div

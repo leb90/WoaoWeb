@@ -236,6 +236,12 @@ type ProtocolNpc = RuntimeNpc & {
     objs?: Record<string, TradeItem>;
 };
 
+type QuestStatePayload = {
+    active: unknown[];
+    offer?: unknown | null;
+    completedQuestId?: number;
+};
+
 function arePartyMembersForViewer(viewerId: EntityId | undefined, character: RuntimeCharacter | undefined): boolean {
     if (typeof viewerId === "undefined" || !character) {
         return false;
@@ -370,6 +376,7 @@ export type HandleProtocolApi = {
     areaNpcsSnapshot: (npcs: ProtocolNpc[], client: RuntimeClient) => void;
     areaItemsSnapshot: (items: AreaItemSnapshot[], client: RuntimeClient) => void;
     areaMetaSnapshot: (snapshot: AreaMetaSnapshot, client: RuntimeClient) => void;
+    questState: (payload: QuestStatePayload, client: RuntimeClient) => void;
     selfFlagsDelta: (payload: SelfFlagsDeltaPayload, client: RuntimeClient) => void;
     selfVitalsDelta: (payload: SelfVitalsDeltaPayload, client: RuntimeClient) => void;
     selfMapMetaDelta: (payload: SelfMapMetaDeltaPayload, client: RuntimeClient) => void;
@@ -696,7 +703,20 @@ function writeCharacterPayload(character: ProtocolCharacter, viewerId?: EntityId
     }
 }
 
-function writeNpcPayload(npc: ProtocolNpc) {
+function getNpcQuestStatusForViewer(npc: ProtocolNpc, viewerId?: EntityId): number {
+    if (typeof viewerId === "undefined") {
+        return 0;
+    }
+
+    try {
+        const quests = require("./quests") as typeof import("./quests");
+        return quests.getNpcQuestStatusForUser(String(viewerId), npc);
+    } catch {
+        return 0;
+    }
+}
+
+function writeNpcPayload(npc: ProtocolNpc, viewerId?: EntityId) {
     pkg.writeDouble(npc.id);
     pkg.writeString(npc.nameCharacter);
     pkg.writeByte(npc.idClase);
@@ -715,6 +735,7 @@ function writeNpcPayload(npc: ProtocolNpc) {
     pkg.writeInt(getMovementRestrictionRemainingMs(npc, vars.timing.statusDurations.crowdControlNpcMs));
     pkg.writeShort(npc.hp);
     pkg.writeShort(npc.maxHp);
+    pkg.writeByte(getNpcQuestStatusForViewer(npc, viewerId));
 }
 
 function writeAreaItemSnapshot(item: AreaItemSnapshot) {
@@ -1237,7 +1258,7 @@ const handleServer: HandleProtocolApi = {
         pkg.writeShort(npcs.length);
 
         for (const npc of npcs) {
-            writeNpcPayload(npc);
+            writeNpcPayload(npc, client.id);
             pkg.writeByte(0);
         }
 
@@ -1258,6 +1279,12 @@ const handleServer: HandleProtocolApi = {
     areaMetaSnapshot(snapshot, client) {
         pkg.setPackageID(pkg.clientPacketID.areaMetaSnapshot);
         writeAreaMetaSnapshot(snapshot);
+        socket.send(client);
+    },
+
+    questState(payload, client) {
+        pkg.setPackageID(pkg.clientPacketID.questState);
+        pkg.writeString(JSON.stringify(payload));
         socket.send(client);
     },
 

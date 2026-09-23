@@ -2335,6 +2335,12 @@ function Npcs(this: NpcsApi) {
 
             vars.areaNpc[idNpc] = [];
 
+            if (require("./bossEvents").onNpcDied(npc)) {
+                delete vars.npcs[idNpc];
+                delete vars.areaNpc[idNpc];
+                return;
+            }
+
             const respawnCooldownMs = getNpcRespawnCooldownMs(npc);
             const respawnEntry = getNpcRespawnEntry(npc);
 

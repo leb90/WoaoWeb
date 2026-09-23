@@ -213,6 +213,7 @@ export interface Character {
     idShield?: number;
     idHelmet?: number;
     isNpc?: boolean;
+    questStatus?: number;
     privileges?: number;
     dead?: boolean;
     invisibleAdmin?: boolean;
@@ -712,6 +713,7 @@ export class Engine {
             idShield: snapshot.idShield ?? 0,
             idHelmet: snapshot.idHelmet ?? 0,
             isNpc: snapshot.isNpc,
+            questStatus: snapshot.questStatus,
             privileges: snapshot.privileges,
             dead: snapshot.dead,
             invisibleAdmin: snapshot.invisibleAdmin,
@@ -794,6 +796,7 @@ export class Engine {
             character.pixelY = snapshot.pos.y;
         }
         character.isNpc = snapshot.isNpc;
+        character.questStatus = snapshot.questStatus;
         character.privileges = snapshot.privileges;
         character.dead = snapshot.dead;
         character.invisibleAdmin = snapshot.invisibleAdmin;

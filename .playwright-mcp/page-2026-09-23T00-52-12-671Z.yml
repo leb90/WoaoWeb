@@ -1,0 +1,124 @@
+- generic [active] [ref=f4e1]:
+  - generic [ref=f4e3]:
+    - button "Entrar en pantalla completa" [ref=f4e46]
+    - generic [ref=f4e4]:
+      - generic [ref=f4e5]:
+        - generic [ref=f4e56]:
+          - generic [ref=f4e57]:
+            - generic [ref=f4e58]:
+              - button "Consola" [ref=f4e59]
+              - button "Global" [ref=f4e60]
+              - button "Party" [ref=f4e61]
+              - button "Clan" [ref=f4e62]
+              - button "Privados" [ref=f4e63]
+              - button "Ocultar minimapa" [pressed] [ref=f4e64]
+            - generic [ref=f4e67]:
+              - generic [ref=f4e68]: Conectado como CodexGM
+              - generic [ref=f4e69]:
+                - text: Bienvenido a AOWeb. Si quieres enterarte de las últimas actualizaciones del juego, puedes ingresar a nuestro
+                - link "Discord" [ref=f4e70] [cursor=pointer]:
+                  - /url: https://discord.gg/YpJ9XrMdg
+                - text: .
+              - generic [ref=f4e71]:
+                - text: "- Si quieres reportar erorres o sugerir cambios, puedes hacerlo en:"
+                - link "https://forms.gle/Df2cmGExTBjjJhAR8" [ref=f4e72] [cursor=pointer]:
+                  - /url: https://forms.gle/Df2cmGExTBjjJhAR8
+              - generic [ref=f4e73]: "- Está completamente prohibido el uso de personajes cámara, cheats o cualquier programa externo que modifique el juego, como auto tomar pociones o auto removerse. El uso de los mismos terminará en un ban permanente, sin previo aviso."
+              - generic [ref=f4e74]: Tienes 255 skillpoints para asignar.
+              - generic [ref=f4e75]: WOAO> Canje 0 | ELO 300 | Remort no | /woao
+              - generic [ref=f4e76]: "WOAO> Bicho del dia: MIRGAN \"LA MALDITA\". +50% de experiencia al cazarlo."
+              - generic [ref=f4e77]: "[Online Record] Nuevo record: 1 jugadores en simultáneo (mundo abierto: 1, arena: 0)"
+              - generic [ref=f4e218]: No hay ningun NPC de mision cerca.
+          - button "Abrir mapa del mundo" [ref=f4e80]:
+            - img "Newbie Dungeon" [ref=f4e214]
+        - generic [ref=f4e25]:
+          - generic [ref=f4e26]: Experiencia
+          - generic [ref=f4e27]: 0% (0 / 64.850.956)
+      - generic [ref=f4e31]:
+        - generic [ref=f4e87]:
+          - generic [ref=f4e89]:
+            - generic [ref=f4e90]:
+              - generic [ref=f4e91]: "50"
+              - button "Habilidades" [ref=f4e92]
+            - generic [ref=f4e94]:
+              - paragraph [ref=f4e95]: Personaje
+              - heading "CodexGM" [level=3] [ref=f4e96]
+              - paragraph [ref=f4e97]: 1.085.544 oro
+            - button "Abrir ajustes" [ref=f4e98]
+          - generic [ref=f4e103]:
+            - generic [ref=f4e104]:
+              - button "Inventario" [ref=f4e105]
+              - button "Hechizos" [ref=f4e106]
+            - generic [ref=f4e109]:
+              - button "Anillo Mágico 2" [ref=f4e110]:
+                - generic "Anillo Mágico" [ref=f4e112]
+                - generic: "2"
+              - button [ref=f4e113]
+              - button [ref=f4e114]
+              - button [ref=f4e115]
+              - button [ref=f4e116]
+              - button [ref=f4e117]
+              - button [ref=f4e118]
+              - button [ref=f4e119]
+              - button [ref=f4e120]
+              - button [ref=f4e121]
+              - button [ref=f4e122]
+              - button [ref=f4e123]
+              - button [ref=f4e124]
+              - button [ref=f4e125]
+              - button [ref=f4e126]
+              - button [ref=f4e127]
+              - button [ref=f4e128]
+              - button [ref=f4e129]
+              - button [ref=f4e130]
+              - button [ref=f4e131]
+              - button [ref=f4e132]
+          - generic [ref=f4e133]:
+            - generic [ref=f4e134]:
+              - generic [ref=f4e135]:
+                - button "Abrir mapa del mundo" [ref=f4e136]: Newbie Dungeon
+                - paragraph [ref=f4e137]: Primavera · Noche · Despejado · 15°C
+                - generic [ref=f4e138]:
+                  - generic [ref=f4e139]:
+                    - generic [ref=f4e140]: Energia
+                    - generic [ref=f4e143]: 285/285
+                  - generic [ref=f4e144]:
+                    - generic [ref=f4e145]: Vida
+                    - generic [ref=f4e148]: 327/363
+                  - generic [ref=f4e149]:
+                    - generic [ref=f4e150]: Mana
+                    - generic [ref=f4e153]: 2487/2487
+                  - generic [ref=f4e154]:
+                    - generic [ref=f4e155]: Hambre
+                    - generic [ref=f4e158]: 88/100
+                  - generic [ref=f4e159]:
+                    - generic [ref=f4e160]: Sed
+                    - generic [ref=f4e163]: 88/100
+              - generic [ref=f4e164]:
+                - button "Party" [ref=f4e165]
+                - button "Clanes" [ref=f4e171]
+                - button "Misiones" [ref=f4e174]
+                - button "Montura" [ref=f4e175]
+                - button "Premios" [ref=f4e176]
+                - button "Ranked" [ref=f4e177]
+                - button "Viajes" [ref=f4e178]
+                - button "WOAO" [ref=f4e179]
+            - generic [ref=f4e180]:
+              - 'generic "Defensa: 0/0" [ref=f4e181]': 0/0
+              - 'generic "Daño: 0/0" [ref=f4e186]': 0/0
+              - 'generic "Fuerza: 19" [ref=f4e193]':
+                - img "Fuerza" [ref=f4e195]
+                - generic [ref=f4e196]: "19"
+              - 'generic "Agilidad: 19" [ref=f4e197]':
+                - img "Agilidad" [ref=f4e199]
+                - generic [ref=f4e200]: "19"
+            - generic: v0.0.75
+        - generic [ref=f4e32]:
+          - generic [ref=f4e33]:
+            - link "Arenas" [ref=f4e201] [cursor=pointer]:
+              - /url: /arenas
+            - link "Cambiar personaje" [ref=f4e202] [cursor=pointer]:
+              - /url: /characters
+          - generic [ref=f4e203]: En zona insegura cerrá el personaje con /salir.
+  - button "Open Next.js Dev Tools" [ref=f4e41] [cursor=pointer]
+  - alert [ref=f4e45]

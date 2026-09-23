@@ -1,0 +1,109 @@
+- generic [active] [ref=f1e1] [box=0,0,1366,768]:
+  - button "Open Next.js Dev Tools" [ref=f1e34] [cursor=pointer] [box=22,714,32,32]
+  - alert [ref=f1e38] [box=-1,-1,1,1]
+  - generic [ref=f1e94] [box=149,64,1068,691]:
+    - button "Entrar en pantalla completa" [ref=f1e95] [box=1173,12,44,44]
+    - generic [ref=f1e101] [box=149,64,1068,691]:
+      - generic [ref=f1e102] [box=149,64,763,691]:
+        - generic [ref=f1e107] [box=149,64,763,133]:
+          - generic [ref=f1e108] [box=149,64,668,132]:
+            - generic [ref=f1e109] [box=149,64,668,27]:
+              - button "Consola" [ref=f1e110] [box=149,64,126,26]
+              - button "Global" [ref=f1e111] [box=276,64,126,26]
+              - button "Party" [ref=f1e112] [box=402,64,126,26]
+              - button "Clan" [ref=f1e113] [box=529,64,126,26]
+              - button "Privados" [ref=f1e114] [box=656,64,126,26]
+              - button "Ocultar minimapa" [pressed] [ref=f1e115] [box=782,64,34,26]
+            - generic [ref=f1e118] [box=149,91,668,105]:
+              - generic [ref=f1e119] [box=160,7,631,15]: Conectado como CodexGM
+              - generic [ref=f1e120] [box=160,22,631,15]:
+                - text: Bienvenido a AOWeb. Si quieres enterarte de las últimas actualizaciones del juego, puedes ingresar a nuestro
+                - link "Discord" [ref=f1e121] [cursor=pointer] [box=675,24,39,11]:
+                  - /url: https://discord.gg/YpJ9XrMdg
+                - text: .
+              - generic [ref=f1e122] [box=160,37,631,15]:
+                - text: "- Si quieres reportar erorres o sugerir cambios, puedes hacerlo en:"
+                - link "https://forms.gle/Df2cmGExTBjjJhAR8" [ref=f1e123] [cursor=pointer] [box=473,39,191,11]:
+                  - /url: https://forms.gle/Df2cmGExTBjjJhAR8
+              - generic [ref=f1e124] [box=160,53,631,31]: "- Está completamente prohibido el uso de personajes cámara, cheats o cualquier programa externo que modifique el juego, como auto tomar pociones o auto removerse. El uso de los mismos terminará en un ban permanente, sin previo aviso."
+              - generic [ref=f1e125] [box=160,83,631,15]: Tienes 255 skillpoints para asignar.
+              - generic [ref=f1e126] [box=160,98,631,15]: WOAO> Canje 0 | ELO 300 | Remort no | /woao
+              - generic [ref=f1e127] [box=160,114,631,15]: "WOAO> Evento del dia: +40% de experiencia global. Bicho destacado: Serpiente."
+              - generic [ref=f1e128] [box=160,129,631,15]: "[Online Record] Nuevo record: 1 jugadores en simultáneo (mundo abierto: 1, arena: 0)"
+              - generic [ref=f1e278] [box=160,144,631,15]: "[INFO] Boss events:"
+              - generic [ref=f1e279] [box=160,159,631,15]: "[INFO] Momia Faraon (mummyPharaoh) npc=611 proximo=5h 54m 21s map=182@47,30"
+              - generic [ref=f1e280] [box=160,175,631,15]: "[INFO] Gollum (gollum) npc=594 proximo=3h 54m 21s map=175@52,35"
+          - button "Abrir mapa del mundo" [ref=f1e131] [box=822,68,87,124]:
+            - img "Nix" [ref=f1e132] [box=822,68,87,124]
+        - generic [ref=f1e142] [box=160,726,740,13]:
+          - generic [ref=f1e143] [box=160,726,71,13]: Experiencia
+          - generic [ref=f1e144] [box=825,726,75,13]: 0% (0 / 64.850.956)
+      - generic [ref=f1e148] [box=912,64,305,684]:
+        - generic [ref=f1e151] [box=919,72,290,606]:
+          - generic [ref=f1e153] [box=927,79,275,53]:
+            - generic [ref=f1e154] [box=927,79,34,34]:
+              - generic [ref=f1e155] [box=927,79,34,34]: "50"
+              - button "Habilidades" [ref=f1e156] [box=950,102,15,15]
+            - generic [ref=f1e158] [box=971,79,187,53]:
+              - paragraph [ref=f1e159] [box=971,79,187,13]: Personaje
+              - heading "CodexGM" [level=3] [ref=f1e160] [box=971,92,187,19]
+              - paragraph [ref=f1e161] [box=971,117,187,16]: 999.999 oro
+            - button "Abrir ajustes" [ref=f1e162] [box=1168,79,34,34]
+          - generic [ref=f1e167] [box=919,144,290,377]:
+            - generic [ref=f1e168] [box=927,152,275,36]:
+              - button "Inventario" [ref=f1e169] [box=927,152,134,36]
+              - button "Hechizos" [ref=f1e170] [box=1068,152,134,36]
+            - generic [ref=f1e173] [box=931,200,267,178]:
+              - button [ref=f1e174] [box=931,200,44,44]
+              - button [ref=f1e175] [box=976,200,44,44]
+              - button [ref=f1e176] [box=1020,200,44,44]
+              - button [ref=f1e177] [box=1065,200,44,44]
+              - button [ref=f1e178] [box=1110,200,44,44]
+              - button [ref=f1e179] [box=1154,200,44,44]
+              - button [ref=f1e180] [box=931,244,44,44]
+              - button [ref=f1e181] [box=976,244,44,44]
+              - button [ref=f1e182] [box=1020,244,44,44]
+              - button [ref=f1e183] [box=1065,244,44,44]
+              - button [ref=f1e184] [box=1110,244,44,44]
+              - button [ref=f1e185] [box=1154,244,44,44]
+              - button [ref=f1e186] [box=931,289,44,44]
+              - button [ref=f1e187] [box=976,289,44,44]
+              - button [ref=f1e188] [box=1020,289,44,44]
+              - button [ref=f1e189] [box=1065,289,44,44]
+              - button [ref=f1e190] [box=1110,289,44,44]
+              - button [ref=f1e191] [box=1154,289,44,44]
+              - button [ref=f1e192] [box=931,334,44,44]
+              - button [ref=f1e193] [box=976,334,44,44]
+              - button [ref=f1e194] [box=1020,334,44,44]
+          - generic [ref=f1e195] [box=919,525,290,152]:
+            - generic [ref=f1e196] [box=925,531,279,103]:
+              - generic [ref=f1e197] [box=925,531,160,100]:
+                - button "Abrir mapa del mundo" [ref=f1e198] [box=925,539,160,13]: Nix
+                - paragraph [ref=f1e199] [box=925,555,160,11]: Primavera · Noche · Despejado · 15°C
+                - generic [ref=f1e200] [box=925,571,160,60]
+              - generic [ref=f1e226] [box=1091,531,113,103]:
+                - button "Party" [ref=f1e227] [box=1091,531,54,23]
+                - button "Clanes" [ref=f1e233] [box=1149,531,54,23]
+                - button "Misiones" [ref=f1e236] [box=1091,558,54,23]
+                - button "Montura" [ref=f1e237] [box=1149,558,54,23]
+                - button "Premios" [ref=f1e238] [box=1091,585,54,23]
+                - button "Ranked" [ref=f1e239] [box=1149,585,54,23]
+                - button "Viajes" [ref=f1e240] [box=1091,611,54,23]
+                - button "WOAO" [ref=f1e241] [box=1149,611,54,23]
+            - generic [ref=f1e242] [box=925,640,279,15]:
+              - 'generic "Defensa: 0/0" [ref=f1e243] [box=925,640,67,15]': 0/0
+              - 'generic "Daño: 0/0" [ref=f1e248] [box=996,640,67,15]': 0/0
+              - 'generic "Fuerza: 19" [ref=f1e255] [box=1066,640,67,15]':
+                - img "Fuerza" [ref=f1e257] [box=1085,641,13,13]
+                - generic [ref=f1e258] [box=1104,642,12,10]: "19"
+              - 'generic "Agilidad: 19" [ref=f1e259] [box=1137,640,67,15]':
+                - img "Agilidad" [ref=f1e261] [box=1156,641,13,13]
+                - generic [ref=f1e262] [box=1174,642,12,10]: "19"
+            - generic [box=925,659,279,13]: v0.0.75
+        - generic [ref=f1e263] [box=912,691,305,57]:
+          - generic [ref=f1e264] [box=923,700,282,15]:
+            - link "Arenas" [ref=f1e265] [cursor=pointer] [box=949,700,59,15]:
+              - /url: /arenas
+            - link "Cambiar personaje" [ref=f1e266] [cursor=pointer] [box=1020,700,160,15]:
+              - /url: /characters
+          - generic [ref=f1e267] [box=923,723,282,15]: En zona insegura cerrá el personaje con /salir.

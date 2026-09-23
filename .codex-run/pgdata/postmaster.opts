@@ -1,0 +1,1 @@
+C:/Program Files/PostgreSQL/16/bin/postgres.exe "-D" ".codex-run/pgdata" "-p" "5434" "-h" "127.0.0.1"

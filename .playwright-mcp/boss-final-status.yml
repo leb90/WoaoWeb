@@ -1,0 +1,148 @@
+- generic [active] [ref=f2e1] [box=0,0,1366,768]:
+  - button "Open Next.js Dev Tools" [ref=f2e34] [cursor=pointer] [box=22,714,32,32]
+  - alert [ref=f2e38] [box=-1,-1,1,1]
+  - generic [ref=f2e94] [box=149,61,1068,691]:
+    - button "Entrar en pantalla completa" [ref=f2e95] [box=1173,9,44,44]
+    - generic [ref=f2e101] [box=149,61,1068,691]:
+      - generic [ref=f2e102] [box=149,61,763,691]:
+        - generic [ref=f2e107] [box=149,61,763,133]:
+          - generic [ref=f2e108] [box=149,61,668,132]:
+            - generic [ref=f2e109] [box=149,61,668,27]:
+              - button "Consola" [ref=f2e110] [box=149,61,126,26]
+              - button "Global" [ref=f2e111] [box=276,61,126,26]
+              - button "Party" [ref=f2e112] [box=402,61,126,26]
+              - button "Clan" [ref=f2e113] [box=529,61,126,26]
+              - button "Privados" [ref=f2e114] [box=656,61,126,26]
+              - button "Ocultar minimapa" [pressed] [ref=f2e115] [box=782,61,34,26]
+            - generic [ref=f2e118] [box=149,88,668,105]:
+              - generic [ref=f2e119] [box=160,-851,631,15]: Conectado como CodexGM
+              - generic [ref=f2e120] [box=160,-836,631,15]:
+                - text: Bienvenido a AOWeb. Si quieres enterarte de las últimas actualizaciones del juego, puedes ingresar a nuestro
+                - link "Discord" [ref=f2e121] [cursor=pointer] [box=675,-834,39,11]:
+                  - /url: https://discord.gg/YpJ9XrMdg
+                - text: .
+              - generic [ref=f2e122] [box=160,-821,631,15]:
+                - text: "- Si quieres reportar erorres o sugerir cambios, puedes hacerlo en:"
+                - link "https://forms.gle/Df2cmGExTBjjJhAR8" [ref=f2e123] [cursor=pointer] [box=473,-819,191,11]:
+                  - /url: https://forms.gle/Df2cmGExTBjjJhAR8
+              - generic [ref=f2e124] [box=160,-805,631,31]: "- Está completamente prohibido el uso de personajes cámara, cheats o cualquier programa externo que modifique el juego, como auto tomar pociones o auto removerse. El uso de los mismos terminará en un ban permanente, sin previo aviso."
+              - generic [ref=f2e125] [box=160,-775,631,15]: Tienes 255 skillpoints para asignar.
+              - generic [ref=f2e126] [box=160,-760,631,15]: WOAO> Canje 0 | ELO 300 | Remort no | /woao
+              - generic [ref=f2e127] [box=160,-744,631,15]: "WOAO> Evento del dia: +40% de experiencia global. Bicho destacado: Wyvern."
+              - generic [ref=f2e128] [box=160,-729,631,15]: "[Online Record] Nuevo record: 1 jugadores en simultáneo (mundo abierto: 1, arena: 0)"
+              - generic [ref=f2e276] [box=160,-714,631,15]: "[INFO] Boss events:"
+              - generic [ref=f2e277] [box=160,-699,631,15]: "[INFO] Momia Faraon (mummyPharaoh) npc=611 proximo=5h 52m 15s map=182@47,30"
+              - generic [ref=f2e278] [box=160,-683,631,15]: "[INFO] Gollum (gollum) npc=594 proximo=3h 59m 30s map=175@52,35"
+              - generic [ref=f2e279] [box=160,-668,631,15]: Gollum aparecio en el mundo. Tienes 30 minutos para derrotarlo.
+              - generic [ref=f2e280] [box=160,-653,631,15]: "[INFO] Gollum activo en 34@51,49. Entidad 1790121308605."
+              - generic [ref=f2e281] [box=160,-637,631,15]: "[INFO] Gollum activo en 34@51,49. Entidad 1790121308605."
+              - generic [ref=f2e282] [box=160,-622,631,15]: "[INFO] Boss events:"
+              - generic [ref=f2e283] [box=160,-607,631,15]: "[INFO] Momia Faraon (mummyPharaoh) npc=611 proximo=5h 52m 13s map=182@47,30"
+              - generic [ref=f2e284] [box=160,-592,631,15]: "[INFO] Gollum (gollum) npc=594 vivo entidad=1790121308605 despawn=0h 29m 59s map=34@51,49"
+              - generic [ref=f2e285] [box=160,-576,631,15]: "[INFO] Boss removido y contador reiniciado."
+              - generic [ref=f2e286] [box=160,-561,631,15]: "[INFO] Boss events:"
+              - generic [ref=f2e287] [box=160,-546,631,15]: "[INFO] Momia Faraon (mummyPharaoh) npc=611 proximo=5h 51m 52s map=182@47,30"
+              - generic [ref=f2e288] [box=160,-531,631,15]: "[INFO] Gollum (gollum) npc=594 proximo=4h 0m 0s map=175@52,35"
+              - generic [ref=f2e289] [box=160,-515,631,15]: Se ha invocado el Faraon en las piramides. Deberas superar el laberinto para llegar a el.
+              - generic [ref=f2e290] [box=160,-500,631,15]: "[INFO] Momia Faraón activo en 34@51,49. Entidad 1790121331655."
+              - generic [ref=f2e291] [box=160,-485,631,15]: "[INFO] Momia Faraón activo en 34@51,49. Entidad 1790121331655."
+              - generic [ref=f2e292] [box=160,-470,631,15]: "[INFO] Boss events:"
+              - generic [ref=f2e293] [box=160,-454,631,15]: "[INFO] Momia Faraon (mummyPharaoh) npc=611 vivo entidad=1790121331655 map=34@51,49"
+              - generic [ref=f2e294] [box=160,-439,631,15]: "[INFO] Gollum (gollum) npc=594 proximo=3h 59m 57s map=175@52,35"
+              - generic [ref=f2e406] [box=160,-424,631,15]: ¡Has mejorado tu skill Aprendizaje de Magias en un punto!. Ahora tienes 1 pts.
+              - generic [ref=f2e407] [box=160,-408,631,15]: ¡Has ganado 1 puntos de experiencia!
+              - generic [ref=f2e408] [box=160,-393,631,15]: Has lanzado Rayo GM sobre Momia Faraón
+              - generic [ref=f2e409] [box=160,-378,631,15]: Le has quitado 22500 puntos de vida a Momia Faraón
+              - generic [ref=f2e410] [box=160,-363,631,15]: ¡Has mejorado tu skill Aprendizaje de Magias en un punto!. Ahora tienes 2 pts.
+              - generic [ref=f2e411] [box=160,-347,631,15]: ¡Has ganado 2 puntos de experiencia!
+              - generic [ref=f2e412] [box=160,-332,631,15]: Has lanzado Rayo GM sobre Momia Faraón
+              - generic [ref=f2e413] [box=160,-317,631,15]: Le has quitado 22500 puntos de vida a Momia Faraón
+              - generic [ref=f2e414] [box=160,-302,631,15]: Has lanzado Rayo GM sobre Momia Faraón
+              - generic [ref=f2e415] [box=160,-286,631,15]: Le has quitado 22500 puntos de vida a Momia Faraón
+              - generic [ref=f2e416] [box=160,-271,631,15]: ¡Has mejorado tu skill Aprendizaje de Magias en un punto!. Ahora tienes 3 pts.
+              - generic [ref=f2e417] [box=160,-256,631,15]: ¡Has ganado 3 puntos de experiencia!
+              - generic [ref=f2e418] [box=160,-241,631,15]: Has lanzado Rayo GM sobre Momia Faraón
+              - generic [ref=f2e419] [box=160,-225,631,15]: Le has quitado 22500 puntos de vida a Momia Faraón
+              - generic [ref=f2e420] [box=160,-210,631,15]: ¡Has mejorado tu skill Aprendizaje de Magias en un punto!. Ahora tienes 4 pts.
+              - generic [ref=f2e421] [box=160,-195,631,15]: ¡Has ganado 4 puntos de experiencia!
+              - generic [ref=f2e422] [box=160,-179,631,15]: Has lanzado Rayo GM sobre Momia Faraón
+              - generic [ref=f2e423] [box=160,-164,631,15]: Le has quitado 22500 puntos de vida a Momia Faraón
+              - generic [ref=f2e424] [box=160,-149,631,15]: Has lanzado Rayo GM sobre Momia Faraón
+              - generic [ref=f2e425] [box=160,-134,631,15]: Le has quitado 22500 puntos de vida a Momia Faraón
+              - generic [ref=f2e426] [box=160,-118,631,15]: Has lanzado Rayo GM sobre Momia Faraón
+              - generic [ref=f2e427] [box=160,-103,631,15]: Le has quitado 22500 puntos de vida a Momia Faraón
+              - generic [ref=f2e428] [box=160,-88,631,15]: Has lanzado Rayo GM sobre Momia Faraón
+              - generic [ref=f2e429] [box=160,-73,631,15]: Le has quitado 22500 puntos de vida a Momia Faraón
+              - generic [ref=f2e430] [box=160,-57,631,15]: Has lanzado Rayo GM sobre Momia Faraón
+              - generic [ref=f2e431] [box=160,-42,631,15]: Le has quitado 22500 puntos de vida a Momia Faraón
+              - generic [ref=f2e432] [box=160,-27,631,15]: Has lanzado Rayo GM sobre Momia Faraón
+              - generic [ref=f2e433] [box=160,-12,631,15]: Le has quitado 22500 puntos de vida a Momia Faraón
+              - generic [ref=f2e434] [box=160,4,631,15]: ¡Has mejorado tu skill Aprendizaje de Magias en un punto!. Ahora tienes 5 pts.
+              - generic [ref=f2e435] [box=160,19,631,15]: ¡Has ganado 5 puntos de experiencia!
+              - generic [ref=f2e436] [box=160,34,631,15]: Has lanzado Rayo GM sobre Momia Faraón
+              - generic [ref=f2e437] [box=160,50,631,15]: Le has quitado 22500 puntos de vida a Momia Faraón
+              - generic [ref=f2e438] [box=160,65,631,15]: Has lanzado Rayo GM sobre Momia Faraón
+              - generic [ref=f2e439] [box=160,80,631,15]: Le has quitado 22500 puntos de vida a Momia Faraón
+              - generic [ref=f2e440] [box=160,95,631,15]: ¡Has ganado 37500 monedas de oro!
+              - generic [ref=f2e441] [box=160,111,631,15]: ¡Has matado a Momia Faraón!
+              - generic [ref=f2e442] [box=160,126,631,15]: ¡Has ganado 30000 monedas de oro!
+              - generic [ref=f2e443] [box=160,141,631,15]: "[INFO] Boss events:"
+              - generic [ref=f2e444] [box=160,156,631,15]: "[INFO] Momia Faraon (mummyPharaoh) npc=611 proximo=5h 59m 32s map=182@47,30"
+              - generic [ref=f2e445] [box=160,172,631,15]: "[INFO] Gollum (gollum) npc=594 proximo=3h 57m 0s map=175@52,35"
+          - button "Abrir mapa del mundo" [ref=f2e131] [box=822,65,87,124]:
+            - img "Nix" [ref=f2e132] [box=822,65,87,124]
+        - generic [ref=f2e142] [box=160,723,740,13]:
+          - generic [ref=f2e143] [box=160,723,71,13]: Experiencia
+          - generic [ref=f2e144] [box=825,723,75,13]: 0% (0 / 64.850.956)
+      - generic [ref=f2e148] [box=912,61,305,684]:
+        - generic [ref=f2e151] [box=919,69,290,606]:
+          - generic [ref=f2e153] [box=927,76,275,53]:
+            - generic [ref=f2e154] [box=927,76,34,34]:
+              - generic [ref=f2e155] [box=927,76,34,34]: "50"
+              - button "Habilidades" [ref=f2e156] [box=950,99,15,15]
+            - generic [ref=f2e158] [box=971,76,187,53]:
+              - paragraph [ref=f2e159] [box=971,76,187,13]: Personaje
+              - heading "CodexGM" [level=3] [ref=f2e160] [box=971,89,187,19]
+              - paragraph [ref=f2e161] [box=971,114,187,16]: 1.067.499 oro
+            - button "Abrir ajustes" [ref=f2e162] [box=1168,76,34,34]
+          - generic [ref=f2e167] [box=919,141,290,377]:
+            - generic [ref=f2e168] [box=927,149,275,36]:
+              - button "Inventario" [ref=f2e169] [box=927,149,134,36]
+              - button "Hechizos" [ref=f2e170] [box=1068,149,134,36]
+            - generic [ref=f2e171] [box=927,193,275,318]:
+              - generic [ref=f2e295] [box=927,193,275,274]:
+                - listbox "Lista de hechizos" [ref=f2e296] [box=927,193,254,274]
+                - generic [ref=f2e397] [box=1187,193,15,99]
+              - button "Lanzar" [ref=f2e405] [box=927,475,275,36]
+          - generic [ref=f2e195] [box=919,522,290,152]:
+            - generic [ref=f2e196] [box=925,528,279,103]:
+              - generic [ref=f2e197] [box=925,528,160,100]:
+                - button "Abrir mapa del mundo" [ref=f2e198] [box=925,536,160,13]: Nix
+                - paragraph [ref=f2e199] [box=925,552,160,11]: Primavera · Noche · Niebla · 15°C
+                - generic [ref=f2e200] [box=925,568,160,60]
+              - generic [ref=f2e226] [box=1091,528,113,103]:
+                - button "Party" [ref=f2e227] [box=1091,528,54,23]
+                - button "Clanes" [ref=f2e233] [box=1149,528,54,23]
+                - button "Misiones" [ref=f2e236] [box=1091,555,54,23]
+                - button "Montura" [ref=f2e237] [box=1149,555,54,23]
+                - button "Premios" [ref=f2e238] [box=1091,582,54,23]
+                - button "Ranked" [ref=f2e239] [box=1149,582,54,23]
+                - button "Viajes" [ref=f2e240] [box=1091,608,54,23]
+                - button "WOAO" [ref=f2e241] [box=1149,608,54,23]
+            - generic [ref=f2e242] [box=925,637,279,15]:
+              - 'generic "Defensa: 0/0" [ref=f2e243] [box=925,637,67,15]': 0/0
+              - 'generic "Daño: 0/0" [ref=f2e248] [box=996,637,67,15]': 0/0
+              - 'generic "Fuerza: 19" [ref=f2e255] [box=1066,637,67,15]':
+                - img "Fuerza" [ref=f2e257] [box=1085,638,13,13]
+                - generic [ref=f2e258] [box=1104,639,12,10]: "19"
+              - 'generic "Agilidad: 19" [ref=f2e259] [box=1137,637,67,15]':
+                - img "Agilidad" [ref=f2e261] [box=1156,638,13,13]
+                - generic [ref=f2e262] [box=1174,639,12,10]: "19"
+            - generic [box=925,656,279,13]: v0.0.75
+        - generic [ref=f2e263] [box=912,688,305,57]:
+          - generic [ref=f2e264] [box=923,697,282,15]:
+            - link "Arenas" [ref=f2e265] [cursor=pointer] [box=949,697,59,15]:
+              - /url: /arenas
+            - link "Cambiar personaje" [ref=f2e266] [cursor=pointer] [box=1020,697,160,15]:
+              - /url: /characters
+          - generic [ref=f2e267] [box=923,720,282,15]: En zona insegura cerrá el personaje con /salir.

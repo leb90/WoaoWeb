@@ -919,6 +919,7 @@ function Login(this: LoginApi) {
                 socket.withFlushGroup(ws, () => {
                     handleProtocol.sendMyCharacter(personajeWS);
                     socket.send(ws);
+                    require("./quests").sendQuestState(String(ws.id), null);
                     sendWelcomeConsoleMessage(ws);
                     require("./skills").sendSkillsState(personajeWS);
                     const initialEnvironment = require("./environment").getEnvironmentForMap(personajeWS.map);
@@ -1269,6 +1270,7 @@ function Login(this: LoginApi) {
         socket.withFlushGroup(ws, () => {
             handleProtocol.sendMyCharacter(newCharacter);
             socket.send(ws);
+            require("./quests").sendQuestState(String(ws.id), null);
             sendWelcomeConsoleMessage(ws);
             handleProtocol.console(
                 `WOAO> Canje ${newCharacter.puntosCanje ?? 0} | ELO ${newCharacter.elo ?? 300} | Remort ${newCharacter.remorted || "no"} | /woao`,

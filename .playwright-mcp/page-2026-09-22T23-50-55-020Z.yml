@@ -1,0 +1,85 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - link "World of AO" [ref=e4] [cursor=pointer]:
+        - /url: /
+      - navigation [ref=e6]:
+        - link "Inicio" [ref=e7] [cursor=pointer]:
+          - /url: /
+        - link "Personajes" [ref=e9] [cursor=pointer]:
+          - /url: /characters
+        - link "Arenas" [ref=e11] [cursor=pointer]:
+          - /url: /arenas
+        - link "Ranking" [ref=e13] [cursor=pointer]:
+          - /url: /ranking
+        - link "Discord" [ref=e15] [cursor=pointer]:
+          - /url: https://discord.gg/YpJ9XrMdg
+      - generic [ref=e17]:
+        - generic [ref=e51]:
+          - generic [ref=e52]: "Cuenta:"
+          - generic [ref=e53]: CodexGM
+        - button "Cerrar sesion" [ref=e54]
+  - main [ref=e58]:
+    - generic [ref=e59]:
+      - generic [ref=e63]:
+        - paragraph [ref=e64]: MMORPG 2D · Gratis · En tu navegador
+        - img "World of Argentum Online" [ref=e66]
+        - paragraph [ref=e67]: Un mundo de fantasía clásico, reconstruido desde cero para correr fluido en tu navegador. Sin descargas, sin excusas.
+        - generic [ref=e68]:
+          - link "Jugar gratis" [ref=e69] [cursor=pointer]:
+            - /url: /characters
+          - link "Ver arenas" [ref=e70] [cursor=pointer]:
+            - /url: /arenas
+      - generic [ref=e80]: Descubrí más
+    - generic [ref=e83]:
+      - generic [ref=e84]:
+        - paragraph [ref=e85]: Elegí tu camino
+        - heading "Dos formas de empezar" [level=2] [ref=e86]
+      - generic [ref=e87]:
+        - link [ref=e88] [cursor=pointer]:
+          - /url: /characters
+          - paragraph [ref=e94]: Mundo abierto
+          - heading "Creá tu personaje" [level=3] [ref=e95]
+          - paragraph [ref=e96]: Explorá, subí de nivel y hacete un lugar en el mundo de Argentum.
+          - generic [ref=e97]:
+            - text: Ir a personajes
+            - generic [aria-hidden] [ref=e98]: →
+        - link [ref=e99] [cursor=pointer]:
+          - /url: /arenas
+          - paragraph [ref=e109]: Combate
+          - heading "Entrá a las arenas" [level=3] [ref=e110]
+          - paragraph [ref=e111]: Medí tu fuerza contra otros jugadores en combates 1v1 y por equipos.
+          - generic [ref=e112]:
+            - text: Ir a Arenas
+            - generic [aria-hidden] [ref=e113]: →
+    - generic [ref=e114]:
+      - generic [ref=e115]:
+        - paragraph [ref=e116]: De qué se trata
+        - heading "AOWeb Beta" [level=2] [ref=e117]
+      - generic [ref=e118]:
+        - paragraph [ref=e119]: AOWeb es un proyecto que aun está en Beta, es probable que tenga varios errores y salió de varios años como ex jugador de querer armar un AO pero que funcione 100% en web y fluido, este proyecto lo hice hace unos 12 años pero hoy las tecnologías son otras y se puede tener un AO que ande fluido en web y ese es mi objetivo.
+        - paragraph [ref=e120]: Actualmente faltan muchas funciones que las voy a ir agregando día a día hasta que podamos tener un juego solido, vamos a tener sonidos, carpinteria, poder ordenar hechizos/items, todo lo necesario para una mejor jugabilidad.
+        - paragraph [ref=e121]:
+          - text: "Cualquier tipo de feedback o reporte de bug es bienvenido, me lo pueden mandar a mi Twitter:"
+          - link "@DamianCatanzaro" [ref=e122] [cursor=pointer]:
+            - /url: https://x.com/DamianCatanzaro
+        - paragraph [ref=e123]:
+          - text: "Tambien pueden ingresar al Discord para recibir novedades:"
+          - link "unirse al Discord" [ref=e124] [cursor=pointer]:
+            - /url: https://discord.gg/YpJ9XrMdg
+        - paragraph [ref=e125]:
+          - text: "O pueden enviar con mas detalle a este Form de Google:"
+          - link "abrir formulario" [ref=e126] [cursor=pointer]:
+            - /url: https://forms.gle/Df2cmGExTBjjJhAR8
+    - generic [ref=e128]:
+      - paragraph [ref=e132]: Seguir al proyecto
+      - generic [ref=e133]:
+        - link "Discord" [ref=e134] [cursor=pointer]:
+          - /url: https://discord.gg/YpJ9XrMdg
+        - link "X / Twitter" [ref=e137] [cursor=pointer]:
+          - /url: https://x.com/DamianCatanzaro
+        - link "Formulario de feedback" [ref=e141] [cursor=pointer]:
+          - /url: https://forms.gle/Df2cmGExTBjjJhAR8
+      - paragraph [ref=e145]: World of Argentum Online · Proyecto de fans, sin fines de lucro
+  - button "Open Next.js Dev Tools" [ref=e47] [cursor=pointer]
+  - alert [ref=e25]

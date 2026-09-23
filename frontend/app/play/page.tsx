@@ -3083,6 +3083,19 @@ function HomeContent() {
                                     </div>
                                 ) : null}
 
+                                <div
+                                    className="pointer-events-none absolute right-3 z-30 rounded-md border border-stone-200/12 bg-stone-950/72 px-2.5 py-1.5 font-mono text-[11px] leading-none text-amber-100/90 shadow-xl backdrop-blur-sm"
+                                    style={{
+                                        bottom: isFullscreen ? "44px" : "34px",
+                                    }}
+                                >
+                                    <span className="tabular-nums">
+                                        Map: {hud?.map ?? selectedMap} X:{" "}
+                                        {hud?.pos?.x ?? "-"} Y:{" "}
+                                        {hud?.pos?.y ?? "-"}
+                                    </span>
+                                </div>
+
                                 {globalCanvasNotice ? (
                                     <div
                                         className="absolute right-4 z-30 max-w-[min(360px,calc(100%-2rem))]"

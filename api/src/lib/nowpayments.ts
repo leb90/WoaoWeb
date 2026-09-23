@@ -6,6 +6,7 @@ const NOWPAYMENTS_API_BASE = "https://api.nowpayments.io/v1";
 export type CreateInvoiceParams = {
     priceAmount: number;
     priceCurrency: string;
+    payCurrency?: string;
     orderId: string;
     orderDescription: string;
     ipnCallbackUrl: string;
@@ -34,6 +35,7 @@ export async function createInvoice(
         body: JSON.stringify({
             price_amount: params.priceAmount,
             price_currency: params.priceCurrency,
+            pay_currency: params.payCurrency,
             order_id: params.orderId,
             order_description: params.orderDescription,
             ipn_callback_url: params.ipnCallbackUrl,

@@ -28,6 +28,7 @@ function DonacionesPageContent() {
         null,
     );
     const [error, setError] = useState<string | null>(null);
+    const [coin, setCoin] = useState<"usdt" | "usdc">("usdt");
 
     useEffect(() => {
         let cancelled = false;
@@ -63,7 +64,7 @@ function DonacionesPageContent() {
             const response = await fetch("/api/donations/create-invoice", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ packageId }),
+                body: JSON.stringify({ packageId, coin }),
             });
             const result = (await response.json()) as {
                 invoiceUrl?: string;
@@ -118,6 +119,25 @@ function DonacionesPageContent() {
                 {error && (
                     <div className="rounded-2xl bg-rose-500/12 px-4 py-3 text-center text-sm text-rose-200">
                         {error}
+                    </div>
+                )}
+
+                {!loading && (
+                    <div className="flex items-center justify-center gap-2">
+                        {(["usdt", "usdc"] as const).map((option) => (
+                            <button
+                                key={option}
+                                type="button"
+                                onClick={() => setCoin(option)}
+                                className={`rounded-[4px] border px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition ${
+                                    coin === option
+                                        ? "border-amber-300/60 bg-amber-200/10 text-amber-200"
+                                        : "border-white/10 text-stone-400 hover:text-stone-200"
+                                }`}
+                            >
+                                Pagar con {option.toUpperCase()}
+                            </button>
+                        ))}
                     </div>
                 )}
 

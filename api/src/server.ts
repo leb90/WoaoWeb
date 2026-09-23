@@ -3,7 +3,12 @@ import express from "express";
 import config from "./config";
 import pool from "./db";
 import { requireAuth } from "./middleware/auth";
-import { DONATION_PACKAGES, getDonationPackage } from "./lib/donationPackages";
+import {
+    DONATION_COINS,
+    DONATION_PACKAGES,
+    getDonationPackage,
+    isDonationCoin,
+} from "./lib/donationPackages";
 import { createInvoice, verifyIpnSignature } from "./lib/nowpayments";
 import { creditDonationPoints } from "./lib/gameServerClient";
 import {
@@ -2625,6 +2630,9 @@ app.post("/donations/create-invoice", async (request, response) => {
             return;
         }
 
+        const coinInput = String(request.body?.coin ?? "usdt");
+        const coin = isDonationCoin(coinInput) ? coinInput : "usdt";
+
         const orderId = crypto.randomUUID();
 
         await createPendingDonationPayment({
@@ -2640,6 +2648,7 @@ app.post("/donations/create-invoice", async (request, response) => {
         const invoice = await createInvoice({
             priceAmount: donationPackage.usd,
             priceCurrency: "usd",
+            payCurrency: DONATION_COINS[coin],
             orderId,
             orderDescription: `World of AO - ${donationPackage.points} puntos de donación`,
             ipnCallbackUrl: `${config.apiPublicUrl}/donations/webhook`,

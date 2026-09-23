@@ -1,0 +1,19 @@
+name: One-off - Crear GM Korra
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run script over SSH
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd /opt/woaoweb/deploy
+            docker compose -f docker-compose.hostinger.yml --env-file .env exec -T api pnpm create-gm-mage-korra:prod

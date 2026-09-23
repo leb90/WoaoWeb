@@ -1,6 +1,0 @@
-27. [GET] http://127.0.0.1:3000/init/graficos_optimized.json?v=3.2 => [200] OK
-28. [GET] http://127.0.0.1:3000/api/auth/me => [200] OK
-136. [GET] http://127.0.0.1:3000/wiki/npcs?_rsc=OeqXMe0OQu00oHtV => [200] OK
-137. [GET] http://127.0.0.1:3000/api/auth/me => [200] OK
-
-Note: 134 static requests not shown, run with "static" option to see them.

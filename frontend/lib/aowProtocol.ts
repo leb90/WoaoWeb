@@ -80,6 +80,7 @@ export const CLIENT_PACKET_ID = {
     characterSwing: 82,
     skillsState: 83,
     environmentUpdate: 84,
+    questState: 85,
 } as const;
 
 export const CHARACTER_SWING_WEAPON = 1;
@@ -306,8 +307,41 @@ export interface CharacterSnapshot {
     inventory?: InventoryItem[];
     spells?: SpellEntry[];
     isNpc?: boolean;
+    questStatus?: number;
     tt?: number;
 }
+
+export type QuestObjectiveProgress = {
+    index: number;
+    name: string;
+    current: number;
+    amount: number;
+    type: "npc" | "item";
+};
+
+export type QuestRewardEntry = {
+    type: "gold" | "exp" | "points" | "item";
+    label: string;
+    amount: number;
+    index?: number;
+};
+
+export type QuestEntryState = {
+    id: number;
+    name: string;
+    desc: string;
+    status: "available" | "active" | "ready" | "done";
+    npcId?: number;
+    requiredLevel: number;
+    objectives: QuestObjectiveProgress[];
+    rewards: QuestRewardEntry[];
+};
+
+export type QuestStatePayload = {
+    active: QuestEntryState[];
+    offer?: QuestEntryState | null;
+    completedQuestId?: number;
+};
 
 export interface InventoryItem {
     slot: number;
@@ -531,6 +565,7 @@ export interface PlayerHudState {
     gold?: number;
     inventory: InventoryItem[];
     spells: SpellEntry[];
+    questState?: QuestStatePayload;
     partyMembers: PartyHudMember[];
     clanMembers: ClanHudMember[];
 }
@@ -848,6 +883,7 @@ export type ParsedServerPacket =
       }
     | { type: "skillsState"; payload: SkillsState }
     | { type: "environmentUpdate"; payload: EnvironmentState }
+    | { type: "questState"; payload: QuestStatePayload }
     | { type: "partyState"; payload: PartyHudStateDelta }
     | { type: "clanState"; payload: ClanHudStateDelta }
     | { type: "startCastBar"; payload: { id: number; durationMs: number } }
@@ -1235,6 +1271,9 @@ function parseNpc(reader: PacketReader): CharacterSnapshot {
         isNpc: true,
     };
 
+    if (reader.canReadBytes(1)) {
+        snapshot.questStatus = reader.getByte();
+    }
     snapshot.tt = reader.canReadBytes(1) ? reader.getByte() : 0;
     return snapshot;
 }
@@ -1937,6 +1976,22 @@ function parseServerPacketById(
                 type: "environmentUpdate",
                 payload: { mapId, season, dayPhase, weather, temperatureC },
             };
+        }
+
+        case CLIENT_PACKET_ID.questState: {
+            const rawPayload = reader.getString();
+
+            try {
+                return {
+                    type: "questState",
+                    payload: JSON.parse(rawPayload) as QuestStatePayload,
+                };
+            } catch {
+                return {
+                    type: "questState",
+                    payload: { active: [], offer: null },
+                };
+            }
         }
 
         case CLIENT_PACKET_ID.characterStatsSnapshot: {

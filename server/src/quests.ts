@@ -24,6 +24,32 @@ type QuestDefinition = {
     rewardObjs: QuestRequirement[];
 };
 
+type QuestObjectiveState = {
+    index: number;
+    name: string;
+    current: number;
+    amount: number;
+    type: "npc" | "item";
+};
+
+type QuestRewardState = {
+    type: "gold" | "exp" | "points" | "item";
+    label: string;
+    amount: number;
+    index?: number;
+};
+
+type QuestEntryState = {
+    id: number;
+    name: string;
+    desc: string;
+    status: "available" | "active" | "ready" | "done";
+    npcId?: number;
+    requiredLevel: number;
+    objectives: QuestObjectiveState[];
+    rewards: QuestRewardState[];
+};
+
 const quests = new Map<number, QuestDefinition>();
 const questGivers = new Map<number, number>();
 
@@ -82,6 +108,139 @@ function findQuestSlot(progressQuests: QuestProgress[], questIndex: number) {
     return progressQuests.findIndex((entry) => entry.questIndex === questIndex);
 }
 
+function getNpcName(npcIndex: number): string {
+    return vars.datNpc?.[npcIndex]?.name ?? `NPC ${npcIndex}`;
+}
+
+function getObjName(objIndex: number): string {
+    return vars.datObj?.[objIndex]?.name ?? `Item ${objIndex}`;
+}
+
+function buildRewards(quest: QuestDefinition): QuestRewardState[] {
+    const rewards: QuestRewardState[] = [];
+
+    if (quest.rewardGold) {
+        rewards.push({ type: "gold", label: "Oro", amount: quest.rewardGold });
+    }
+    if (quest.rewardExp) {
+        rewards.push({ type: "exp", label: "Experiencia", amount: quest.rewardExp });
+    }
+    if (quest.rewardPoints) {
+        rewards.push({ type: "points", label: "Puntos de canje", amount: quest.rewardPoints });
+    }
+    for (const reward of quest.rewardObjs) {
+        rewards.push({
+            type: "item",
+            index: reward.index,
+            label: getObjName(reward.index),
+            amount: reward.amount,
+        });
+    }
+
+    return rewards;
+}
+
+function buildObjectives(user: any, quest: QuestDefinition, entry?: QuestProgress): QuestObjectiveState[] {
+    const objectives: QuestObjectiveState[] = [];
+
+    for (const [index, req] of quest.requiredNpcs.entries()) {
+        objectives.push({
+            type: "npc",
+            index: req.index,
+            name: getNpcName(req.index),
+            current: Math.min(req.amount, Number(entry?.npcsKilled?.[index] ?? 0)),
+            amount: req.amount,
+        });
+    }
+
+    for (const req of quest.requiredObjs) {
+        objectives.push({
+            type: "item",
+            index: req.index,
+            name: getObjName(req.index),
+            current: Math.min(req.amount, countItem(user, req.index)),
+            amount: req.amount,
+        });
+    }
+
+    return objectives;
+}
+
+function isQuestReady(user: any, quest: QuestDefinition, entry: QuestProgress): boolean {
+    return buildObjectives(user, quest, entry).every((objective) => objective.current >= objective.amount);
+}
+
+function buildQuestEntryState(
+    user: any,
+    quest: QuestDefinition,
+    status: QuestEntryState["status"],
+    options?: { npcId?: unknown; progress?: QuestProgress },
+): QuestEntryState {
+    return {
+        id: quest.id,
+        name: quest.name,
+        desc: quest.desc,
+        status,
+        npcId: typeof options?.npcId === "number" ? options.npcId : Number(options?.npcId ?? 0) || undefined,
+        requiredLevel: quest.requiredLevel,
+        objectives: buildObjectives(user, quest, options?.progress),
+        rewards: buildRewards(quest),
+    };
+}
+
+function getActiveQuestStates(user: any): QuestEntryState[] {
+    const progress = getProgress(user);
+    const entries: QuestEntryState[] = [];
+
+    for (const entry of progress.quests) {
+        const quest = quests.get(entry.questIndex);
+        if (!quest) {
+            continue;
+        }
+
+        entries.push(buildQuestEntryState(user, quest, isQuestReady(user, quest, entry) ? "ready" : "active", { progress: entry }));
+    }
+
+    return entries;
+}
+
+function sendAreaNpcQuestSnapshot(idUser: string) {
+    const user = vars.personajes[idUser];
+    const client = vars.clients[idUser];
+    if (!user || !client) {
+        return;
+    }
+
+    const rangeX = Number(vars.areaVisionRangeX ?? 15);
+    const rangeY = Number(vars.areaVisionRangeY ?? 15);
+    const visibleNpcs = (Object.values(vars.npcs ?? {}) as any[]).filter((npc) => {
+        if (!npc?.pos || Number(npc.map) !== Number(user.map)) {
+            return false;
+        }
+
+        return Math.abs(Number(npc.pos.x) - Number(user.pos.x)) <= rangeX && Math.abs(Number(npc.pos.y) - Number(user.pos.y)) <= rangeY;
+    });
+
+    handleProtocol.areaNpcsSnapshot(visibleNpcs, client);
+}
+
+export function sendQuestState(idUser: string, offer?: QuestEntryState | null, completedQuestId?: number) {
+    const user = vars.personajes[idUser];
+    const client = vars.clients[idUser];
+    if (!user || !client) {
+        return;
+    }
+
+    handleProtocol.questState(
+        {
+            active: getActiveQuestStates(user),
+            offer: offer ?? null,
+            completedQuestId,
+        },
+        client,
+    );
+}
+
 function getNearbyQuestNpc(idUser: string) {
     const user = vars.personajes[idUser];
     if (!user) {
@@ -127,6 +286,36 @@ export function getNpcQuestNumber(npc: { templateNpcIndex?: number; questNumber?
     }
 
     return questGivers.get(Number(npc?.templateNpcIndex ?? 0)) ?? 0;
+}
+
+export function getNpcQuestStatusForUser(idUser: string, npc: { templateNpcIndex?: number; questNumber?: number }): number {
+    const user = vars.personajes[idUser];
+    if (!user) {
+        return 0;
+    }
+
+    const questNumber = getNpcQuestNumber(npc);
+    const quest = quests.get(questNumber);
+    if (!quest) {
+        return 0;
+    }
+
+    const progress = getProgress(user);
+    if (progress.done.includes(questNumber)) {
+        return 0;
+    }
+
+    const slot = findQuestSlot(progress.quests, questNumber);
+    if (slot >= 0) {
+        const entry = progress.quests[slot];
+        return isQuestReady(user, quest, entry) ? 3 : 2;
+    }
+
+    if (Number(user.level ?? 1) < quest.requiredLevel) {
+        return 0;
+    }
+
+    return 1;
 }
 
 export function describeQuest(quest: QuestDefinition): string[] {
@@ -196,9 +385,22 @@ export function handleQuest(idUser: string) {
     }
 
     const progress = getProgress(user);
+    if (progress.done.includes(questNumber)) {
+        sendQuestState(idUser, null);
+        npcTalk(idUser, npc.id, "Ya has completado esta mision.");
+        return;
+    }
+
     const slot = findQuestSlot(progress.quests, questNumber);
     if (slot >= 0) {
-        finishQuest(idUser, questNumber, npc.id);
+        const entry = progress.quests[slot];
+        const status = isQuestReady(user, quest, entry) ? "ready" : "active";
+        sendQuestState(idUser, buildQuestEntryState(user, quest, status, { npcId: npc.id, progress: entry }));
+        if (status === "ready") {
+            finishQuest(idUser, questNumber, npc.id);
+        } else {
+            npcTalk(idUser, npc.id, "Todavia no has completado todos los objetivos de esta mision.");
+        }
         return;
     }
 
@@ -209,6 +411,7 @@ export function handleQuest(idUser: string) {
 
     progress.lastQuestOffer = questNumber;
     saveProgress(user);
+    sendQuestState(idUser, buildQuestEntryState(user, quest, "available", { npcId: npc.id }));
     for (const line of describeQuest(quest)) {
         tell(idUser, line);
     }
@@ -245,6 +448,8 @@ export function acceptQuest(idUser: string) {
     });
     progress.lastQuestOffer = 0;
     saveProgress(user);
+    sendQuestState(idUser, null);
+    sendAreaNpcQuestSnapshot(idUser);
     tell(idUser, `Has aceptado la mision "${quest.name}".`);
 }
 
@@ -264,6 +469,8 @@ export function abandonQuest(idUser: string, questNumber: number) {
     const quest = quests.get(questNumber);
     progress.quests.splice(slot, 1);
     saveProgress(user);
+    sendQuestState(idUser, null);
+    sendAreaNpcQuestSnapshot(idUser);
     tell(idUser, `Abandonaste la mision "${quest?.name ?? questNumber}".`);
 }
 
@@ -272,6 +479,8 @@ export function listQuests(idUser: string) {
     if (!user) {
         return;
     }
+
+    sendQuestState(idUser, null);
 
     const progress = getProgress(user);
     if (!progress.quests.length) {
@@ -312,6 +521,7 @@ export function finishQuest(idUser: string, questNumber: number, npcId?: unknown
 
     for (const req of quest.requiredObjs) {
         if (countItem(user, req.index) < req.amount) {
+            sendQuestState(idUser, buildQuestEntryState(user, quest, "active", { npcId, progress: current }));
             npcTalk(idUser, npcId ?? idUser, "No has conseguido todos los objetos que te he pedido.");
             return;
         }
@@ -319,12 +529,14 @@ export function finishQuest(idUser: string, questNumber: number, npcId?: unknown
 
     for (const [index, req] of quest.requiredNpcs.entries()) {
         if ((current.npcsKilled[index] ?? 0) < req.amount) {
+            sendQuestState(idUser, buildQuestEntryState(user, quest, "active", { npcId, progress: current }));
             npcTalk(idUser, npcId ?? idUser, "No has matado todas las criaturas que te he pedido.");
             return;
         }
     }
 
     if (quest.rewardObjs.length > countFreeSlots(user)) {
+        sendQuestState(idUser, buildQuestEntryState(user, quest, "ready", { npcId, progress: current }));
         npcTalk(
             idUser,
             npcId ?? idUser,
@@ -369,6 +581,8 @@ export function finishQuest(idUser: string, questNumber: number, npcId?: unknown
         progress.done.push(questNumber);
     }
     saveProgress(user);
+    sendQuestState(idUser, null, questNumber);
+    sendAreaNpcQuestSnapshot(idUser);
     tell(idUser, `Has completado la mision "${quest.name}"!`);
 }
 
@@ -406,6 +620,8 @@ export function onNpcKilled(idUser: string, npcTemplateIndex: number) {
 
     if (changed) {
         saveProgress(user);
+        sendQuestState(idUser, null);
+        sendAreaNpcQuestSnapshot(idUser);
     }
 }
 

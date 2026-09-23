@@ -521,6 +521,10 @@ export async function handleIncomingCharacterPacket({
                     packet.payload,
                 );
             }
+            ctx.mergeHud({
+                map: packet.payload.map,
+                pos: { x: packet.payload.x, y: packet.payload.y },
+            });
             return true;
 
         case "changeHeading":

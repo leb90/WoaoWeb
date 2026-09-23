@@ -3686,6 +3686,8 @@ export default function InventoryFloatingPanel({
                           tab={woaoHubTab}
                           mapId={hud?.map}
                           questState={hud?.questState}
+                          questPoints={hud?.puntosCanje ?? 0}
+                          donationPoints={hud?.puntosDonacion ?? 0}
                           onTabChange={setWoaoHubTab}
                           onClose={() => setWoaoHubTab(null)}
                           onSendCommand={onSendCommand}

@@ -3,6 +3,7 @@ import { getProgress, MAX_QUESTS, saveProgress, type QuestProgress } from "./woa
 const game = require("./game");
 const vars = require("./vars");
 const handleProtocol = require("./handleProtocol");
+const socket = require("./socket");
 const jsonQuests = require("../jsons/quests.json") as Record<string, QuestDefinition>;
 const jsonQuestGivers = require("../jsons/questGivers.json") as Record<string, number>;
 
@@ -65,6 +66,31 @@ function npcTalk(idUser: string, npcId: unknown, message: string) {
     if (client) {
         handleProtocol.dialog(npcId, message, "", "white", 0, client);
     }
+}
+
+function notifyQuestProgress(
+    idUser: string,
+    quest: QuestDefinition,
+    objectiveName: string,
+    current: number,
+    amount: number,
+) {
+    const client = vars.clients[idUser];
+    if (!client) {
+        return;
+    }
+
+    handleProtocol.questProgressNotice(
+        {
+            questName: quest.name,
+            objectiveName,
+            current,
+            amount,
+            completed: current >= amount,
+            message: `${objectiveName} matados ${current}/${amount}`,
+        },
+        client,
+    );
 }
 
 function countItem(user: { inv?: Record<string, { idItem?: number; cant?: number; amount?: number }> }, itemId: number) {
@@ -581,6 +607,11 @@ export function finishQuest(idUser: string, questNumber: number, npcId?: unknown
         progress.done.push(questNumber);
     }
     saveProgress(user);
+    const client = vars.clients[idUser];
+    if (client) {
+        handleProtocol.sendMyCharacter(user);
+        socket.send(client);
+    }
     sendQuestState(idUser, null, questNumber);
     sendAreaNpcQuestSnapshot(idUser);
     tell(idUser, `Has completado la mision "${quest.name}"!`);
@@ -614,7 +645,7 @@ export function onNpcKilled(idUser: string, npcTemplateIndex: number) {
             entry.npcsKilled[index] = current + 1;
             changed = true;
             const npcName = vars.datNpc?.[req.index]?.name ?? `NPC ${req.index}`;
-            tell(idUser, `${quest.name}: ${npcName} ${entry.npcsKilled[index]}/${req.amount}`);
+            notifyQuestProgress(idUser, quest, npcName, entry.npcsKilled[index], req.amount);
         });
     }
 

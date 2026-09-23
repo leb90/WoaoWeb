@@ -2347,10 +2347,17 @@ function Npcs(this: NpcsApi) {
             if (respawnCooldownMs > 0 && respawnEntry) {
                 setNpcRespawnCooldown(respawnEntry, respawnCooldownMs, (entry) => {
                     const LoadNpcs = require("./loadNpcs") as {
-                        new (): { createNpcInMap: (npc: NpcRespawnEntry, skipRespawnCooldownCheck?: boolean) => void };
+                        new (): {
+                            createNpcInMap: (
+                                npc: NpcRespawnEntry,
+                                skipRespawnCooldownCheck?: boolean,
+                                forceRandomSpawn?: boolean,
+                                preserveInitialPosition?: boolean,
+                            ) => void;
+                        };
                     };
 
-                    new LoadNpcs().createNpcInMap(entry, true);
+                    new LoadNpcs().createNpcInMap(entry, true, false, true);
                 });
 
                 delete vars.npcs[idNpc];

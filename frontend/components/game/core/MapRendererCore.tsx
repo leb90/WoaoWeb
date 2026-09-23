@@ -25,6 +25,7 @@ import {
     type MarketState,
     type PartyHudMember,
     type PlayerHudState,
+    type QuestProgressNoticePayload,
     type RetosState,
     type TradeState,
 } from "../../../lib/aowProtocol";
@@ -203,6 +204,7 @@ interface MapRendererProps {
     onHudChange?: (hud: PlayerHudState | null) => void;
     onConsoleMessage?: (message: ConsoleMessage) => void;
     onGlobalNotice?: (notice: { text: string; durationMs: number }) => void;
+    onQuestProgressNotice?: (notice: QuestProgressNoticePayload) => void;
     onTradeStateChange?: (tradeState: TradeState | null) => void;
     onMarketStateChange?: (marketState: MarketState | null) => void;
     onRetosStateChange?: (retosState: RetosState | null) => void;
@@ -660,6 +662,7 @@ export default function MapRenderer({
     onHudChange,
     onConsoleMessage,
     onGlobalNotice,
+    onQuestProgressNotice,
     onTradeStateChange,
     onMarketStateChange,
     onRetosStateChange,
@@ -1820,6 +1823,7 @@ export default function MapRenderer({
                 clearTargetingMode,
                 showDialogBubble,
                 onGlobalNotice,
+                onQuestProgressNotice,
                 renderEntityFX,
                 renderSpellProjectileVisual,
                 renderProjectileVisual,
@@ -1858,6 +1862,7 @@ export default function MapRenderer({
         onEnvironmentUpdate,
         onConsoleMessage,
         onGlobalNotice,
+        onQuestProgressNotice,
         playStepSound,
         queueTileObjectVisualSync,
         reconcileOwnPositionWithServer,

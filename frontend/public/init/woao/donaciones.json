@@ -1,0 +1,378 @@
+{
+  "1": {
+    "id": 1,
+    "name": "Huevo Kong",
+    "objIndex": 1526,
+    "cost": 1500,
+    "desc": "Montura Kong nivel 1 aumenta golpe físico y defensa física.",
+    "photo": 1
+  },
+  "2": {
+    "id": 2,
+    "name": "Huevo Hipogrifo",
+    "objIndex": 1523,
+    "cost": 1500,
+    "desc": "Montura Hipogrifo nivel 1 aumenta golpe mágico",
+    "photo": 2
+  },
+  "3": {
+    "id": 3,
+    "name": "Huevo Dragon Dorado",
+    "objIndex": 1524,
+    "cost": 1000,
+    "desc": "Montura Dragón Dorado.",
+    "photo": 3
+  },
+  "4": {
+    "id": 4,
+    "name": "Capa Hobbit Legendaria",
+    "objIndex": 1219,
+    "cost": 1500,
+    "desc": "Otorga invisibilidad al usarla.",
+    "photo": 4
+  },
+  "5": {
+    "id": 5,
+    "name": "Anillo de paralisis Legendario",
+    "objIndex": 1169,
+    "cost": 1500,
+    "desc": "Proporciona una probabilidad de evitar paralisis al tenerlo equipado.",
+    "photo": 5
+  },
+  "6": {
+    "id": 6,
+    "name": "Amuleto de Salvación",
+    "objIndex": 1385,
+    "cost": 100,
+    "desc": "Al morir evita que tus items caigan al piso.",
+    "photo": 6
+  },
+  "7": {
+    "id": 7,
+    "name": "Diamante de Sangre",
+    "objIndex": 1096,
+    "cost": 1000,
+    "desc": "Objeto utilizado para subir de nivel el clan.",
+    "photo": 7
+  },
+  "8": {
+    "id": 8,
+    "name": "Pack de Fragmentos Perdidos",
+    "objIndex": 1558,
+    "cost": 400,
+    "desc": "Pack de 1000 fragmentos perdidos para subir de nivel los items.",
+    "photo": 8
+  },
+  "9": {
+    "id": 9,
+    "name": "Guardian de Tierra",
+    "objIndex": 1375,
+    "cost": 1000,
+    "desc": "Guardian de tierra: Aumenta la experiencia un 5% la defensa fisica/mag. y el ataque mag.",
+    "photo": 9
+  },
+  "10": {
+    "id": 10,
+    "name": "Guardian de Naturaleza",
+    "objIndex": 1376,
+    "cost": 2000,
+    "desc": "Guardian de Naturaleza: Aumenta la experiencia un 10% la defensa fisica/mag. y el ataque mag.",
+    "photo": 10
+  },
+  "11": {
+    "id": 11,
+    "name": "Guardian de Hielo",
+    "objIndex": 1377,
+    "cost": 3000,
+    "desc": "Guardian de Hielo: Aumenta la experiencia un 15% la defensa fisica/mag. y el ataque mag.",
+    "photo": 11
+  },
+  "12": {
+    "id": 12,
+    "name": "Guardian de Fuego",
+    "objIndex": 1378,
+    "cost": 4000,
+    "desc": "Guardian de Fuego: Aumenta la experiencia un 20% la defensa fisica/mag. y el ataque mag.",
+    "photo": 12
+  },
+  "13": {
+    "id": 13,
+    "name": "Amuleto Ankh",
+    "objIndex": 882,
+    "cost": 1000,
+    "desc": "Amuleto Ankh: Requerido para volver a la vida (Remort)",
+    "photo": 13
+  },
+  "14": {
+    "id": 14,
+    "name": "Corazon Oscuro",
+    "objIndex": 1241,
+    "cost": 1500,
+    "desc": "Corazon Oscuro: Requerido para subir de nivel el clan y cajear túnica/armadura del caballero de la muerte.",
+    "photo": 14
+  },
+  "15": {
+    "id": 15,
+    "name": "Grial",
+    "objIndex": 157,
+    "cost": 2000,
+    "desc": "Grial: Necesario para fabrica la Túnica/Armadura Legendaria.",
+    "photo": 16
+  },
+  "16": {
+    "id": 16,
+    "name": "Tunica Perseus (Altos)",
+    "objIndex": 1238,
+    "cost": 600,
+    "desc": "Tunica Perseus para Altos. No se cae.",
+    "photo": 17
+  },
+  "17": {
+    "id": 17,
+    "name": "Tunica Perseus (Bajos)",
+    "objIndex": 1236,
+    "cost": 600,
+    "desc": "Tunica Perseus para Bajos. No se cae.",
+    "photo": 18
+  },
+  "18": {
+    "id": 18,
+    "name": "Huevo de Dragon",
+    "objIndex": 1095,
+    "cost": 600,
+    "desc": "Huevo de dragon: Item necesario para subir de nivel el clan.",
+    "photo": 35
+  },
+  "19": {
+    "id": 19,
+    "name": "Color Dragon Negro",
+    "objIndex": 1537,
+    "cost": 600,
+    "desc": "Con este item cambiarás el color de dragón a Negro.",
+    "photo": 36
+  },
+  "20": {
+    "id": 20,
+    "name": "Color Dragon Rojo",
+    "objIndex": 1538,
+    "cost": 600,
+    "desc": "Con este item cambiarás el color de dragón a Rojo.",
+    "photo": 37
+  },
+  "21": {
+    "id": 21,
+    "name": "Color Dragon Azul",
+    "objIndex": 1539,
+    "cost": 600,
+    "desc": "Con este item cambiarás el color de dragón a Azul.",
+    "photo": 38
+  },
+  "22": {
+    "id": 22,
+    "name": "Color Dragon Violeta",
+    "objIndex": 1540,
+    "cost": 600,
+    "desc": "Con este item cambiarás el color de dragón a Violeta.",
+    "photo": 39
+  },
+  "23": {
+    "id": 23,
+    "name": "Color Dragon Blanco",
+    "objIndex": 1541,
+    "cost": 600,
+    "desc": "Con este item cambiarás el color de dragón a Blanco.",
+    "photo": 40
+  },
+  "24": {
+    "id": 24,
+    "name": "Color Unicornio Naranja",
+    "objIndex": 1542,
+    "cost": 600,
+    "desc": "Con este item cambiarás el color de tu unicornio a Naranja.",
+    "photo": 41
+  },
+  "25": {
+    "id": 25,
+    "name": "Color Unicornio Rojo",
+    "objIndex": 1543,
+    "cost": 600,
+    "desc": "Con este item cambiarás el color de tu unicornio a Rojo.",
+    "photo": 42
+  },
+  "26": {
+    "id": 26,
+    "name": "Color Nick Alianza",
+    "objIndex": 1544,
+    "cost": 600,
+    "desc": "Cambias el color de tu nick a Verde Fluor. (Alianzas)",
+    "photo": 43
+  },
+  "27": {
+    "id": 27,
+    "name": "Color Nick Horda",
+    "objIndex": 1545,
+    "cost": 600,
+    "desc": "Cambias el color de tu nick a Verde Oscuro. (Hordas)",
+    "photo": 44
+  },
+  "28": {
+    "id": 28,
+    "name": "Meditación Especial",
+    "objIndex": 1546,
+    "cost": 500,
+    "desc": "Cambias tu meditación por una increíble.",
+    "photo": 48
+  },
+  "29": {
+    "id": 29,
+    "name": "Skin Pantera",
+    "objIndex": 1547,
+    "cost": 500,
+    "desc": "Disfrazas tu mascota de Pantera.",
+    "photo": 45
+  },
+  "30": {
+    "id": 30,
+    "name": "Skin Ciervo",
+    "objIndex": 1548,
+    "cost": 500,
+    "desc": "Disfrazas tu mascota de Ciervo.",
+    "photo": 46
+  },
+  "31": {
+    "id": 31,
+    "name": "Skin Hipopotamo",
+    "objIndex": 1549,
+    "cost": 650,
+    "desc": "Disfrazas tu mascota de Hipopotamo.",
+    "photo": 47
+  },
+  "32": {
+    "id": 32,
+    "name": "Huevo Avestruz",
+    "objIndex": 1519,
+    "cost": 600,
+    "desc": "Mascota Avestruz: Podrás obtener esta mascota.",
+    "photo": 19
+  },
+  "33": {
+    "id": 33,
+    "name": "Huevo Caballo Negro",
+    "objIndex": 1520,
+    "cost": 600,
+    "desc": "Mascota Caballo Negro: Podrás obtener esta mascota.",
+    "photo": 20
+  },
+  "34": {
+    "id": 34,
+    "name": "Huevo Cerbero",
+    "objIndex": 1521,
+    "cost": 600,
+    "desc": "Mascota Cerbero: Podrás obtener esta mascota.",
+    "photo": 21
+  },
+  "35": {
+    "id": 35,
+    "name": "Huevo Rinosaurio",
+    "objIndex": 1527,
+    "cost": 600,
+    "desc": "Mascota Rinosaurio: Podrás obtener esta mascota.",
+    "photo": 22
+  },
+  "36": {
+    "id": 36,
+    "name": "Huevo Tigre",
+    "objIndex": 1528,
+    "cost": 600,
+    "desc": "Mascota Tigre: Podrás obtener esta mascota.",
+    "photo": 23
+  },
+  "37": {
+    "id": 37,
+    "name": "Huevo Unicornio",
+    "objIndex": 1529,
+    "cost": 600,
+    "desc": "Mascota Unicornio: Podrás obtener esta mascota.",
+    "photo": 24
+  },
+  "38": {
+    "id": 38,
+    "name": "Huevo Wyvern",
+    "objIndex": 1530,
+    "cost": 600,
+    "desc": "Mascota Wyvern: Podrás obtener esta mascota.",
+    "photo": 25
+  },
+  "39": {
+    "id": 39,
+    "name": "Gema Azul",
+    "objIndex": 407,
+    "cost": 200,
+    "desc": "Requerida para confeccionar la Túnica/Armadura de Dragón.",
+    "photo": 26
+  },
+  "40": {
+    "id": 40,
+    "name": "Gema Celeste",
+    "objIndex": 409,
+    "cost": 200,
+    "desc": "Requerida para confeccionar la Túnica/Armadura de Dragón.",
+    "photo": 27
+  },
+  "41": {
+    "id": 41,
+    "name": "Gema Lunar",
+    "objIndex": 406,
+    "cost": 200,
+    "desc": "Requerida para confeccionar la Túnica/Armadura de Dragón.",
+    "photo": 28
+  },
+  "42": {
+    "id": 42,
+    "name": "Gema Naranja",
+    "objIndex": 408,
+    "cost": 200,
+    "desc": "Requerida para confeccionar la Túnica/Armadura de Dragón.",
+    "photo": 29
+  },
+  "43": {
+    "id": 43,
+    "name": "Gema Roja",
+    "objIndex": 411,
+    "cost": 200,
+    "desc": "Requerida para confeccionar la Túnica/Armadura de Dragón.",
+    "photo": 30
+  },
+  "44": {
+    "id": 44,
+    "name": "Gema Rosa",
+    "objIndex": 410,
+    "cost": 200,
+    "desc": "Requerida para confeccionar la Túnica/Armadura de Dragón.",
+    "photo": 31
+  },
+  "45": {
+    "id": 45,
+    "name": "Gema Verde",
+    "objIndex": 412,
+    "cost": 200,
+    "desc": "Requerida para confeccionar la Túnica/Armadura de Dragón.",
+    "photo": 32
+  },
+  "46": {
+    "id": 46,
+    "name": "Gema Violeta",
+    "objIndex": 413,
+    "cost": 200,
+    "desc": "Requerida para confeccionar la Túnica/Armadura de Dragón.",
+    "photo": 33
+  },
+  "47": {
+    "id": 47,
+    "name": "Gema Recuperada por Shadow VX",
+    "objIndex": 598,
+    "cost": 15,
+    "desc": "Requerida para confeccionar la Túnica/Armadura de Dragón y Construir items mágicos con el ermitaño.",
+    "photo": 34
+  }
+}

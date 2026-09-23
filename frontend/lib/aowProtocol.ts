@@ -81,6 +81,7 @@ export const CLIENT_PACKET_ID = {
     skillsState: 83,
     environmentUpdate: 84,
     questState: 85,
+    questProgressNotice: 86,
 } as const;
 
 export const CHARACTER_SWING_WEAPON = 1;
@@ -294,6 +295,8 @@ export interface CharacterSnapshot {
     expNextLevel?: number;
     level?: number;
     gold?: number;
+    puntosCanje?: number;
+    puntosDonacion?: number;
     navegando?: number;
     attrAgilidad?: number;
     attrFuerza?: number;
@@ -341,6 +344,15 @@ export type QuestStatePayload = {
     active: QuestEntryState[];
     offer?: QuestEntryState | null;
     completedQuestId?: number;
+};
+
+export type QuestProgressNoticePayload = {
+    questName: string;
+    objectiveName: string;
+    current: number;
+    amount: number;
+    completed: boolean;
+    message: string;
 };
 
 export interface InventoryItem {
@@ -563,6 +575,8 @@ export interface PlayerHudState {
     buffAgilidadUpdatedAt?: number;
     buffFuerzaUpdatedAt?: number;
     gold?: number;
+    puntosCanje?: number;
+    puntosDonacion?: number;
     inventory: InventoryItem[];
     spells: SpellEntry[];
     questState?: QuestStatePayload;
@@ -884,6 +898,7 @@ export type ParsedServerPacket =
     | { type: "skillsState"; payload: SkillsState }
     | { type: "environmentUpdate"; payload: EnvironmentState }
     | { type: "questState"; payload: QuestStatePayload }
+    | { type: "questProgressNotice"; payload: QuestProgressNoticePayload }
     | { type: "partyState"; payload: PartyHudStateDelta }
     | { type: "clanState"; payload: ClanHudStateDelta }
     | { type: "startCastBar"; payload: { id: number; durationMs: number } }
@@ -1223,6 +1238,12 @@ function parseCharacter(
             snapshot.sed = reader.getShort();
             snapshot.maxSed = reader.getShort();
         }
+        snapshot.puntosCanje = reader.canReadBytes(4)
+            ? reader.getInt()
+            : undefined;
+        snapshot.puntosDonacion = reader.canReadBytes(4)
+            ? reader.getInt()
+            : undefined;
     } else {
         snapshot.privileges = reader.getByte();
         snapshot.heading = reader.getByte();
@@ -1994,6 +2015,29 @@ function parseServerPacketById(
             }
         }
 
+        case CLIENT_PACKET_ID.questProgressNotice: {
+            const rawPayload = reader.getString();
+
+            try {
+                return {
+                    type: "questProgressNotice",
+                    payload: JSON.parse(rawPayload) as QuestProgressNoticePayload,
+                };
+            } catch {
+                return {
+                    type: "questProgressNotice",
+                    payload: {
+                        questName: "",
+                        objectiveName: "",
+                        current: 0,
+                        amount: 0,
+                        completed: false,
+                        message: "",
+                    },
+                };
+            }
+        }
+
         case CLIENT_PACKET_ID.characterStatsSnapshot: {
             const rawSnapshot = reader.getString();
             return {
@@ -2451,6 +2495,8 @@ export function toPlayerHudState(snapshot: CharacterSnapshot): PlayerHudState {
         buffAgilidadUpdatedAt: snapshot.buffAgilidadSeconds ? now : 0,
         buffFuerzaUpdatedAt: snapshot.buffFuerzaSeconds ? now : 0,
         gold: snapshot.gold,
+        puntosCanje: snapshot.puntosCanje,
+        puntosDonacion: snapshot.puntosDonacion,
         inventory: snapshot.inventory ?? [],
         spells: snapshot.spells ?? [],
         partyMembers: [],

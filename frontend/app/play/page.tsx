@@ -612,7 +612,9 @@ function ScaledHudFrame({
         height: 0,
     });
 
-    onMeasureRef.current = onMeasure;
+    useEffect(() => {
+        onMeasureRef.current = onMeasure;
+    }, [onMeasure]);
 
     useEffect(() => {
         const element = innerRef.current;

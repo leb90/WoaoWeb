@@ -17,6 +17,7 @@ export type MountProgress = {
 
 export type WoaoProgress = {
     puntosCanje: number;
+    puntosDonacion: number;
     quests: QuestProgress[];
     done: number[];
     lastQuestOffer: number;
@@ -37,6 +38,7 @@ let loaded = false;
 function emptyProgress(): WoaoProgress {
     return {
         puntosCanje: 0,
+        puntosDonacion: 0,
         quests: [],
         done: [],
         lastQuestOffer: 0,
@@ -120,6 +122,7 @@ export function hydrateUser(user: {
     _id?: unknown;
     id?: unknown;
     puntosCanje?: number;
+    puntosDonacion?: number;
     questStats?: WoaoProgress;
     remort?: number;
     remorted?: string;
@@ -128,6 +131,7 @@ export function hydrateUser(user: {
 }): void {
     const progress = getProgress(user);
     user.puntosCanje = progress.puntosCanje;
+    user.puntosDonacion = progress.puntosDonacion;
     user.questStats = progress;
     user.remort = progress.remort;
     user.remorted = progress.remorted;

@@ -1158,6 +1158,7 @@ function Login(this: LoginApi) {
             criminalesMatados: 0,
             fianza: 0,
             puntosCanje: 0,
+            puntosDonacion: 0,
             elo: 300,
             remort: 0,
             remorted: "",

@@ -1209,6 +1209,8 @@ const handleServer: HandleProtocolApi = {
         pkg.writeShort(maxHambre);
         pkg.writeShort(Number(character.sed ?? maxSed));
         pkg.writeShort(maxSed);
+        pkg.writeInt(Math.max(0, Math.floor(Number(character.puntosCanje ?? 0))));
+        pkg.writeInt(Math.max(0, Math.floor(Number(character.puntosDonacion ?? 0))));
     },
 
     sendNpc(npc) {

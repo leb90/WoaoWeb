@@ -3024,7 +3024,7 @@ const command: CommandApi = {
 
                 case "/woao": {
                     handleProtocol.console(
-                        "WOAO: /quest /quests /questaceptar /questabandonar /montura /premios /canjear /viaje /comerciar /ranked /hunger /torneo /participar /atorneo /remort /ciudades /castillos /castillo /clanpuntos /bloodcastle /guerra /templo /domar /robar /critico /pagarmulta /casa /dia /party /aceptar /partyinfo /salirparty",
+                        "WOAO: /quest /quests /questaceptar /questabandonar /montura /premios /canjear /donaciones /canjeardonacion /viaje /comerciar /ranked /hunger /torneo /participar /atorneo /remort /ciudades /castillos /castillo /clanpuntos /bloodcastle /guerra /templo /domar /robar /critico /pagarmulta /casa /dia /party /aceptar /partyinfo /salirparty",
                         "#E69500",
                         1,
                         0,
@@ -3131,7 +3131,28 @@ const command: CommandApi = {
                 }
 
                 case "/canjear": {
-                    const result = require("./premiosShop").redeemPremio(String(clientId), Number(nextText.trim()));
+                    const [premioIdText, quantityText] = nextText.trim().split(/\s+/);
+                    const result = require("./premiosShop").redeemPremio(
+                        String(clientId),
+                        Number(premioIdText),
+                        Number(quantityText || 1),
+                    );
+                    handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/donaciones": {
+                    require("./premiosShop").listDonaciones(String(clientId));
+                    break;
+                }
+
+                case "/canjeardonacion": {
+                    const [premioIdText, quantityText] = nextText.trim().split(/\s+/);
+                    const result = require("./premiosShop").redeemDonacion(
+                        String(clientId),
+                        Number(premioIdText),
+                        Number(quantityText || 1),
+                    );
                     handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
                     break;
                 }

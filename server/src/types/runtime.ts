@@ -359,6 +359,7 @@ export type RuntimeCharacter = {
     mountTypeId?: number;
     targetNpcId?: EntityId;
     puntosCanje?: number;
+    puntosDonacion?: number;
     elo?: number;
     remort?: number;
     remorted?: string;

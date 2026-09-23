@@ -3,6 +3,7 @@ import { getProgress, MAX_QUESTS, saveProgress, type QuestProgress } from "./woa
 const game = require("./game");
 const vars = require("./vars");
 const handleProtocol = require("./handleProtocol");
+const socket = require("./socket");
 const jsonQuests = require("../jsons/quests.json") as Record<string, QuestDefinition>;
 const jsonQuestGivers = require("../jsons/questGivers.json") as Record<string, number>;
 
@@ -606,6 +607,11 @@ export function finishQuest(idUser: string, questNumber: number, npcId?: unknown
         progress.done.push(questNumber);
     }
     saveProgress(user);
+    const client = vars.clients[idUser];
+    if (client) {
+        handleProtocol.sendMyCharacter(user);
+        socket.send(client);
+    }
     sendQuestState(idUser, null, questNumber);
     sendAreaNpcQuestSnapshot(idUser);
     tell(idUser, `Has completado la mision "${quest.name}"!`);

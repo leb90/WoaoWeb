@@ -295,6 +295,8 @@ export interface CharacterSnapshot {
     expNextLevel?: number;
     level?: number;
     gold?: number;
+    puntosCanje?: number;
+    puntosDonacion?: number;
     navegando?: number;
     attrAgilidad?: number;
     attrFuerza?: number;
@@ -573,6 +575,8 @@ export interface PlayerHudState {
     buffAgilidadUpdatedAt?: number;
     buffFuerzaUpdatedAt?: number;
     gold?: number;
+    puntosCanje?: number;
+    puntosDonacion?: number;
     inventory: InventoryItem[];
     spells: SpellEntry[];
     questState?: QuestStatePayload;
@@ -1234,6 +1238,12 @@ function parseCharacter(
             snapshot.sed = reader.getShort();
             snapshot.maxSed = reader.getShort();
         }
+        snapshot.puntosCanje = reader.canReadBytes(4)
+            ? reader.getInt()
+            : undefined;
+        snapshot.puntosDonacion = reader.canReadBytes(4)
+            ? reader.getInt()
+            : undefined;
     } else {
         snapshot.privileges = reader.getByte();
         snapshot.heading = reader.getByte();
@@ -2485,6 +2495,8 @@ export function toPlayerHudState(snapshot: CharacterSnapshot): PlayerHudState {
         buffAgilidadUpdatedAt: snapshot.buffAgilidadSeconds ? now : 0,
         buffFuerzaUpdatedAt: snapshot.buffFuerzaSeconds ? now : 0,
         gold: snapshot.gold,
+        puntosCanje: snapshot.puntosCanje,
+        puntosDonacion: snapshot.puntosDonacion,
         inventory: snapshot.inventory ?? [],
         spells: snapshot.spells ?? [],
         partyMembers: [],

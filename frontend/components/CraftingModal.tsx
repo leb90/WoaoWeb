@@ -327,7 +327,7 @@ export default function CraftingModal({
 
     return (
         <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/65 px-3 py-3 backdrop-blur-sm sm:px-5 sm:py-6">
-            <div className="flex max-h-[94vh] w-full max-w-[1080px] flex-col overflow-hidden rounded-lg border border-[#7a5726] bg-[#100b08] text-stone-100 shadow-[0_24px_90px_rgba(0,0,0,0.65)]">
+            <div className="flex h-[min(94vh,820px)] w-full max-w-[1080px] flex-col overflow-hidden rounded-lg border border-[#7a5726] bg-[#100b08] text-stone-100 shadow-[0_24px_90px_rgba(0,0,0,0.65)]">
                 <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[#5d421f] bg-[#1a1009] px-4 py-3 sm:px-5">
                     <div className="flex min-w-0 items-center gap-3">
                         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-amber-300/30 bg-amber-300/10">
@@ -400,8 +400,8 @@ export default function CraftingModal({
                         </label>
                     </div>
 
-                    <div className="grid gap-3 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1fr)_360px]">
-                        <div className="max-h-[300px] min-h-[220px] overflow-y-auto rounded-lg border border-[#4c3519] bg-black/18 p-2 lg:max-h-none">
+                    <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_360px]">
+                        <div className="min-h-0 overflow-y-auto rounded-lg border border-[#4c3519] bg-black/18 p-2">
                             {visibleRecipes.length > 0 ? (
                                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
                                     {visibleRecipes.map((recipe) => {
@@ -447,13 +447,13 @@ export default function CraftingModal({
                                     })}
                                 </div>
                             ) : (
-                                <div className="flex h-full min-h-[220px] items-center justify-center text-sm text-stone-400">
+                                <div className="flex h-full min-h-[280px] items-center justify-center text-sm text-stone-400">
                                     No hay recetas para mostrar.
                                 </div>
                             )}
                         </div>
 
-                        <div className="flex flex-col rounded-lg border border-[#5d421f] bg-[#170f09] lg:min-h-0">
+                        <div className="flex min-h-0 flex-col rounded-lg border border-[#5d421f] bg-[#170f09]">
                             {selectedRecipe ? (
                                 <>
                                     <div className="grid grid-cols-[76px_minmax(0,1fr)] gap-3 border-b border-[#4c3519] p-3">

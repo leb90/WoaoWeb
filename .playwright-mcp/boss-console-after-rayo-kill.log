@@ -1,0 +1,5 @@
+Total messages: 182 (Errors: 0, Warnings: 2)
+Returning 2 messages for level "warning"
+
+[WARNING] Error while trying to use the following icon from the Manifest: http://127.0.0.1:3000/favicon.ico (Resource size is not correct - typo in the Manifest?) @ http://127.0.0.1:3000/characters:0
+[WARNING] Error while trying to use the following icon from the Manifest: http://127.0.0.1:3000/favicon.ico (Resource size is not correct - typo in the Manifest?) @ http://127.0.0.1:3000/play:0

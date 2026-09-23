@@ -1,0 +1,85 @@
+- generic [active] [ref=e1] [box=0,0,1366,768]:
+  - banner [ref=e2] [box=0,16,1366,58]:
+    - generic [ref=e3] [box=107,16,1152,58]:
+      - link "World of AO" [ref=e4] [cursor=pointer] [box=132,27,202,36]:
+        - /url: /
+      - navigation [ref=e6] [box=457,32,471,26]:
+        - link "Inicio" [ref=e7] [cursor=pointer] [box=457,32,50,26]:
+          - /url: /
+        - link "Personajes" [ref=e9] [cursor=pointer] [box=534,32,104,26]:
+          - /url: /characters
+        - link "Arenas" [ref=e11] [cursor=pointer] [box=666,32,64,26]:
+          - /url: /arenas
+        - link "Ranking" [ref=e13] [cursor=pointer] [box=758,32,71,26]:
+          - /url: /ranking
+        - link "Discord" [ref=e15] [cursor=pointer] [box=857,32,70,26]:
+          - /url: https://discord.gg/YpJ9XrMdg
+      - generic [ref=e17] [box=1050,29,184,32]:
+        - generic [ref=e51] [box=1050,37,140,16]:
+          - generic [ref=e52] [box=1050,37,62,16]: "Cuenta:"
+          - generic [ref=e53] [box=1118,37,72,16]: CodexGM
+        - button "Cerrar sesion" [ref=e54] [box=1202,29,32,32]
+  - main [ref=e58] [box=0,0,1351,2543]:
+    - generic [ref=e59] [box=0,0,1351,899]:
+      - generic [ref=e63] [box=228,96,896,707]:
+        - paragraph [ref=e64] [box=447,96,458,17]: MMORPG 2D · Gratis · En tu navegador
+        - img "World of Argentum Online" [ref=e66] [box=340,145,672,448]
+        - paragraph [ref=e67] [box=388,617,576,96]: Un mundo de fantasía clásico, reconstruido desde cero para correr fluido en tu navegador. Sin descargas, sin excusas.
+        - generic [ref=e68] [box=453,753,446,50]:
+          - link "Jugar gratis" [ref=e69] [cursor=pointer] [box=453,753,212,50]:
+            - /url: /characters
+          - link "Ver arenas" [ref=e70] [cursor=pointer] [box=681,753,217,50]:
+            - /url: /arenas
+      - generic [ref=e80] [box=613,812,124,55]: Descubrí más
+    - generic [ref=e83] [box=100,899,1152,581]:
+      - generic [ref=e84] [box=116,979,1120,113]:
+        - paragraph [ref=e85] [box=593,979,164,17]: Elegí tu camino
+        - heading "Dos formas de empezar" [level=2] [ref=e86] [box=453,1007,446,40]
+      - generic [ref=e87] [box=116,1139,1120,261]:
+        - link [ref=e88] [cursor=pointer] [box=116,1139,548,261]:
+          - /url: /characters
+          - paragraph [ref=e94] [box=149,1228,482,17]: Mundo abierto
+          - heading "Creá tu personaje" [level=3] [ref=e95] [box=149,1253,482,32]
+          - paragraph [ref=e96] [box=149,1297,482,24]: Explorá, subí de nivel y hacete un lugar en el mundo de Argentum.
+          - generic [ref=e97] [box=149,1345,193,20]:
+            - text: Ir a personajes
+            - generic [aria-hidden] [ref=e98] [box=325,1345,17,20]: →
+        - link [ref=e99] [cursor=pointer] [box=688,1139,548,261]:
+          - /url: /arenas
+          - paragraph [ref=e109] [box=721,1228,482,17]: Combate
+          - heading "Entrá a las arenas" [level=3] [ref=e110] [box=721,1253,482,32]
+          - paragraph [ref=e111] [box=721,1297,482,24]: Medí tu fuerza contra otros jugadores en combates 1v1 y por equipos.
+          - generic [ref=e112] [box=721,1345,145,20]:
+            - text: Ir a Arenas
+            - generic [aria-hidden] [ref=e113] [box=849,1345,17,20]: →
+    - generic [ref=e114] [box=228,1480,896,755]:
+      - generic [ref=e115] [box=244,1560,864,113]:
+        - paragraph [ref=e116] [box=593,1560,165,17]: De qué se trata
+        - heading "AOWeb Beta" [level=2] [ref=e117] [box=566,1588,219,40]
+      - generic [ref=e118] [box=244,1720,864,434]:
+        - paragraph [ref=e119] [box=285,1761,782,96]: AOWeb es un proyecto que aun está en Beta, es probable que tenga varios errores y salió de varios años como ex jugador de querer armar un AO pero que funcione 100% en web y fluido, este proyecto lo hice hace unos 12 años pero hoy las tecnologías son otras y se puede tener un AO que ande fluido en web y ese es mi objetivo.
+        - paragraph [ref=e120] [box=285,1881,782,64]: Actualmente faltan muchas funciones que las voy a ir agregando día a día hasta que podamos tener un juego solido, vamos a tener sonidos, carpinteria, poder ordenar hechizos/items, todo lo necesario para una mejor jugabilidad.
+        - paragraph [ref=e121] [box=285,1969,782,32]:
+          - text: "Cualquier tipo de feedback o reporte de bug es bienvenido, me lo pueden mandar a mi Twitter:"
+          - link "@DamianCatanzaro" [ref=e122] [cursor=pointer] [box=917,1976,136,17]:
+            - /url: https://x.com/DamianCatanzaro
+        - paragraph [ref=e123] [box=285,2025,782,32]:
+          - text: "Tambien pueden ingresar al Discord para recibir novedades:"
+          - link "unirse al Discord" [ref=e124] [cursor=pointer] [box=690,2032,112,17]:
+            - /url: https://discord.gg/YpJ9XrMdg
+        - paragraph [ref=e125] [box=285,2081,782,32]:
+          - text: "O pueden enviar con mas detalle a este Form de Google:"
+          - link "abrir formulario" [ref=e126] [cursor=pointer] [box=671,2088,101,17]:
+            - /url: https://forms.gle/Df2cmGExTBjjJhAR8
+    - generic [ref=e128] [box=228,2299,896,180]:
+      - paragraph [ref=e132] [box=546,2335,260,20]: Seguir al proyecto
+      - generic [ref=e133] [box=594,2379,164,44]:
+        - link "Discord" [ref=e134] [cursor=pointer] [box=594,2379,44,44]:
+          - /url: https://discord.gg/YpJ9XrMdg
+        - link "X / Twitter" [ref=e137] [cursor=pointer] [box=654,2379,44,44]:
+          - /url: https://x.com/DamianCatanzaro
+        - link "Formulario de feedback" [ref=e141] [cursor=pointer] [box=714,2379,44,44]:
+          - /url: https://forms.gle/Df2cmGExTBjjJhAR8
+      - paragraph [ref=e145] [box=499,2463,354,16]: World of Argentum Online · Proyecto de fans, sin fines de lucro
+  - button "Open Next.js Dev Tools" [ref=e47] [cursor=pointer] [box=22,714,32,32]
+  - alert [ref=e25] [box=-1,2542,1,1]

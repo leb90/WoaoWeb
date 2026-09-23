@@ -1,0 +1,34 @@
+2026-09-22 20:46:43.272 -03 [14596] LOG:  iniciando PostgreSQL 16.11, compiled by Visual C++ build 1944, 64-bit
+2026-09-22 20:46:43.273 -03 [14596] LOG:  escuchando en la dirección IPv4 «127.0.0.1», port 5434
+2026-09-22 20:46:43.540 -03 [27640] LOG:  el sistema de bases de datos fue apagado en 2026-09-22 20:46:25 -03
+2026-09-22 20:46:43.618 -03 [14596] LOG:  el sistema de bases de datos está listo para aceptar conexiones
+2026-09-22 20:46:52.404 -03 [36952] ERROR:  parámetro de configuración «transaction_timeout» no reconocido
+2026-09-22 20:46:52.404 -03 [36952] SENTENCIA:  SET transaction_timeout = 0;
+2026-09-22 20:47:13.559 -03 [3080] ERROR:  pg_stat_statements must be loaded via shared_preload_libraries
+2026-09-22 20:47:13.559 -03 [3080] SENTENCIA:  SELECT 1 FROM pg_stat_statements LIMIT 1
+2026-09-22 20:51:23.040 -03 [772] ERROR:  no existe la columna «skills» en la relación «characters» en carácter 49
+2026-09-22 20:51:23.040 -03 [772] SENTENCIA:  
+	        UPDATE characters
+	        SET ip = $2, skills = $3, skill_pts = $4, connected = $5, updated_at = NOW()
+	        WHERE id = $1
+	          AND deleted_at IS NULL
+	        RETURNING updated_at
+	      
+2026-09-22 20:51:23.062 -03 [772] ERROR:  no existe la columna «faction_treachery» en la relación «characters» en carácter 1148
+2026-09-22 20:51:23.062 -03 [772] SENTENCIA:  
+	        UPDATE characters
+	        SET name = $2, id_clase = $3, map_id = $4, pos_x = $5, pos_y = $6, gold = $7, id_head = $8, id_last_head = $9, id_last_body = $10, id_last_helmet = $11, id_last_weapon = $12, id_last_shield = $13, id_helmet = $14, id_weapon = $15, id_shield = $16, id_body = $17, id_item_weapon = $18, id_item_body = $19, id_item_shield = $20, id_item_helmet = $21, id_item_arrow = $22, spells_acertados = $23, spells_errados = $24, hp = $25, max_hp = $26, mana = $27, max_mana = $28, id_raza = $29, id_genero = $30, muerto = $31, min_hit = $32, max_hit = $33, attr_fuerza = $34, attr_agilidad = $35, attr_inteligencia = $36, attr_constitucion = $37, privileges = $38, count_killed = $39, count_die = $40, exp = $41, exp_next_level = $42, level = $43, ip = $44, banned = $45, dead = $46, criminal = $47, faction = $48, navegando = $49, npc_matados = $50, ciudadanos_matados = $51, criminales_matados = $52, fianza = $53, home_map = $54, home_x = $55, home_y = $56, faction_score_armada = $57, faction_score_caos = $58, faction_rank_armada = $59, faction_rank_caos = $60, faction_rewards_armada = $61, faction_rewards_caos = $62, faction_treachery = $63, skills = $64, skill_pts = $65, jail_minutes = $66, jail_reason = $67, connected = $68, updated_at = NOW()
+	        WHERE id = $1
+	          AND deleted_at IS NULL
+	        RETURNING updated_at
+	      
+2026-09-22 20:51:43.537 -03 [35672] LOG:  empezando checkpoint: time
+2026-09-22 20:55:00.995 -03 [35672] LOG:  checkpoint completo: escritos 1785 búfers (10.9%); 0 archivos WAL añadidos, 0 eliminados, 1 reciclados; write=194.184 s, sync=3.146 s, total=197.460 s; archivos sincronizados=472, más largo=0.137 s, promedio=0.007 s; distancia=11160 kB, estimación=11160 kB; lsn=0/20784B0, lsn de redo=0/205E450
+2026-09-22 20:56:27.901 -03 [25560] ERROR:  no existe la relación «game_spells» en carácter 73
+2026-09-22 20:56:27.901 -03 [25560] SENTENCIA:  select cs.slot, cs.spell_id, gs.name from character_spells cs left join game_spells gs on gs.id=cs.spell_id where cs.character_id=(select id from characters where name='CodexGM') order by cs.slot;
+2026-09-22 20:56:35.098 -03 [13120] ERROR:  no existe la columna «slot» en carácter 8
+2026-09-22 20:56:35.098 -03 [13120] SENTENCIA:  select slot, spell_id from character_spells where character_id=(select id from characters where name='CodexGM') order by slot;
+2026-09-22 20:56:44.004 -03 [35672] LOG:  empezando checkpoint: time
+2026-09-22 20:56:46.633 -03 [35672] LOG:  checkpoint completo: escritos 20 búfers (0.1%); 0 archivos WAL añadidos, 0 eliminados, 0 reciclados; write=2.084 s, sync=0.393 s, total=2.630 s; archivos sincronizados=18, más largo=0.055 s, promedio=0.022 s; distancia=104 kB, estimación=10055 kB; lsn=0/2078878, lsn de redo=0/2078840
+2026-09-22 21:01:44.648 -03 [35672] LOG:  empezando checkpoint: time
+2026-09-22 21:01:45.690 -03 [35672] LOG:  checkpoint completo: escritos 8 búfers (0.0%); 0 archivos WAL añadidos, 0 eliminados, 0 reciclados; write=0.767 s, sync=0.128 s, total=1.043 s; archivos sincronizados=7, más largo=0.046 s, promedio=0.019 s; distancia=11 kB, estimación=9050 kB; lsn=0/207B7D0, lsn de redo=0/207B798

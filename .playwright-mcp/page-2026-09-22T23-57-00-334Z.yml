@@ -1,0 +1,176 @@
+- generic [ref=f2e1]:
+  - button "Open Next.js Dev Tools" [ref=f2e34] [cursor=pointer]
+  - alert [ref=f2e38]
+  - generic [ref=f2e94]:
+    - button "Entrar en pantalla completa" [ref=f2e95]
+    - generic [ref=f2e101]:
+      - generic [ref=f2e102]:
+        - generic [ref=f2e107]:
+          - generic [ref=f2e108]:
+            - generic [ref=f2e109]:
+              - button "Consola" [ref=f2e110]
+              - button "Global" [ref=f2e111]
+              - button "Party" [ref=f2e112]
+              - button "Clan" [ref=f2e113]
+              - button "Privados" [ref=f2e114]
+              - button "Ocultar minimapa" [pressed] [ref=f2e115]
+            - generic [ref=f2e118]:
+              - generic [ref=f2e119]: Conectado como CodexGM
+              - generic [ref=f2e120]:
+                - text: Bienvenido a AOWeb. Si quieres enterarte de las últimas actualizaciones del juego, puedes ingresar a nuestro
+                - link "Discord" [ref=f2e121] [cursor=pointer]:
+                  - /url: https://discord.gg/YpJ9XrMdg
+                - text: .
+              - generic [ref=f2e122]:
+                - text: "- Si quieres reportar erorres o sugerir cambios, puedes hacerlo en:"
+                - link "https://forms.gle/Df2cmGExTBjjJhAR8" [ref=f2e123] [cursor=pointer]:
+                  - /url: https://forms.gle/Df2cmGExTBjjJhAR8
+              - generic [ref=f2e124]: "- Está completamente prohibido el uso de personajes cámara, cheats o cualquier programa externo que modifique el juego, como auto tomar pociones o auto removerse. El uso de los mismos terminará en un ban permanente, sin previo aviso."
+              - generic [ref=f2e125]: Tienes 255 skillpoints para asignar.
+              - generic [ref=f2e126]: WOAO> Canje 0 | ELO 300 | Remort no | /woao
+              - generic [ref=f2e127]: "WOAO> Evento del dia: +40% de experiencia global. Bicho destacado: Wyvern."
+              - generic [ref=f2e128]: "[Online Record] Nuevo record: 1 jugadores en simultáneo (mundo abierto: 1, arena: 0)"
+              - generic [ref=f2e276]: "[INFO] Boss events:"
+              - generic [ref=f2e277]: "[INFO] Momia Faraon (mummyPharaoh) npc=611 proximo=5h 52m 15s map=182@47,30"
+              - generic [ref=f2e278]: "[INFO] Gollum (gollum) npc=594 proximo=3h 59m 30s map=175@52,35"
+              - generic [ref=f2e279]: Gollum aparecio en el mundo. Tienes 30 minutos para derrotarlo.
+              - generic [ref=f2e280]: "[INFO] Gollum activo en 34@51,49. Entidad 1790121308605."
+              - generic [ref=f2e281]: "[INFO] Gollum activo en 34@51,49. Entidad 1790121308605."
+              - generic [ref=f2e282]: "[INFO] Boss events:"
+              - generic [ref=f2e283]: "[INFO] Momia Faraon (mummyPharaoh) npc=611 proximo=5h 52m 13s map=182@47,30"
+              - generic [ref=f2e284]: "[INFO] Gollum (gollum) npc=594 vivo entidad=1790121308605 despawn=0h 29m 59s map=34@51,49"
+              - generic [ref=f2e285]: "[INFO] Boss removido y contador reiniciado."
+              - generic [ref=f2e286]: "[INFO] Boss events:"
+              - generic [ref=f2e287]: "[INFO] Momia Faraon (mummyPharaoh) npc=611 proximo=5h 51m 52s map=182@47,30"
+              - generic [ref=f2e288]: "[INFO] Gollum (gollum) npc=594 proximo=4h 0m 0s map=175@52,35"
+              - generic [ref=f2e289]: Se ha invocado el Faraon en las piramides. Deberas superar el laberinto para llegar a el.
+              - generic [ref=f2e290]: "[INFO] Momia Faraón activo en 34@51,49. Entidad 1790121331655."
+              - generic [ref=f2e291]: "[INFO] Momia Faraón activo en 34@51,49. Entidad 1790121331655."
+              - generic [ref=f2e292]: "[INFO] Boss events:"
+              - generic [ref=f2e293]: "[INFO] Momia Faraon (mummyPharaoh) npc=611 vivo entidad=1790121331655 map=34@51,49"
+              - generic [ref=f2e294]: "[INFO] Gollum (gollum) npc=594 proximo=3h 59m 57s map=175@52,35"
+          - button "Abrir mapa del mundo" [ref=f2e131]:
+            - img "Nix" [ref=f2e132]
+        - generic [ref=f2e142]:
+          - generic [ref=f2e143]: Experiencia
+          - generic [ref=f2e144]: 0% (0 / 64.850.956)
+      - generic [ref=f2e148]:
+        - generic [ref=f2e151]:
+          - generic [ref=f2e153]:
+            - generic [ref=f2e154]:
+              - generic [ref=f2e155]: "50"
+              - button "Habilidades" [ref=f2e156]
+            - generic [ref=f2e158]:
+              - paragraph [ref=f2e159]: Personaje
+              - heading "CodexGM" [level=3] [ref=f2e160]
+              - paragraph [ref=f2e161]: 999.999 oro
+            - button "Abrir ajustes" [ref=f2e162]
+          - generic [ref=f2e167]:
+            - generic [ref=f2e168]:
+              - button "Inventario" [ref=f2e169]
+              - button "Hechizos" [active] [ref=f2e170]
+            - generic [ref=f2e171]:
+              - generic [ref=f2e295]:
+                - listbox "Lista de hechizos" [ref=f2e296]:
+                  - option "Rayo GM" [selected] [ref=f2e297]
+                  - option "Ninguno" [ref=f2e299]
+                  - option "Ninguno" [ref=f2e301]
+                  - option "Ninguno" [ref=f2e303]
+                  - option "Ninguno" [ref=f2e305]
+                  - option "Ninguno" [ref=f2e307]
+                  - option "Ninguno" [ref=f2e309]
+                  - option "Ninguno" [ref=f2e311]
+                  - option "Ninguno" [ref=f2e313]
+                  - option "Ninguno" [ref=f2e315]
+                  - option "Ninguno" [ref=f2e317]
+                  - option "Ninguno" [ref=f2e319]
+                  - option "Ninguno" [ref=f2e321]
+                  - option "Ninguno" [ref=f2e323]
+                  - option "Ninguno" [ref=f2e325]
+                  - option "Ninguno" [ref=f2e327]
+                  - option "Ninguno" [ref=f2e329]
+                  - option "Ninguno" [ref=f2e331]
+                  - option "Ninguno" [ref=f2e333]
+                  - option "Ninguno" [ref=f2e335]
+                  - option "Ninguno" [ref=f2e337]
+                  - option "Ninguno" [ref=f2e339]
+                  - option "Ninguno" [ref=f2e341]
+                  - option "Ninguno" [ref=f2e343]
+                  - option "Ninguno" [ref=f2e345]
+                  - option "Ninguno" [ref=f2e347]
+                  - option "Ninguno" [ref=f2e349]
+                  - option "Ninguno" [ref=f2e351]
+                  - option "Ninguno" [ref=f2e353]
+                  - option "Ninguno" [ref=f2e355]
+                  - option "Ninguno" [ref=f2e357]
+                  - option "Ninguno" [ref=f2e359]
+                  - option "Ninguno" [ref=f2e361]
+                  - option "Ninguno" [ref=f2e363]
+                  - option "Ninguno" [ref=f2e365]
+                  - option "Ninguno" [ref=f2e367]
+                  - option "Ninguno" [ref=f2e369]
+                  - option "Ninguno" [ref=f2e371]
+                  - option "Ninguno" [ref=f2e373]
+                  - option "Ninguno" [ref=f2e375]
+                  - option "Ninguno" [ref=f2e377]
+                  - option "Ninguno" [ref=f2e379]
+                  - option "Ninguno" [ref=f2e381]
+                  - option "Ninguno" [ref=f2e383]
+                  - option "Ninguno" [ref=f2e385]
+                  - option "Ninguno" [ref=f2e387]
+                  - option "Ninguno" [ref=f2e389]
+                  - option "Ninguno" [ref=f2e391]
+                  - option "Ninguno" [ref=f2e393]
+                  - option "Ninguno" [ref=f2e395]
+                - generic [ref=f2e397]:
+                  - button "Subir hechizo seleccionado" [disabled] [ref=f2e398]
+                  - button "Bajar hechizo seleccionado" [ref=f2e401]
+                  - button "Informacion del hechizo seleccionado" [ref=f2e404]: i
+              - button "Lanzar" [ref=f2e405]
+          - generic [ref=f2e195]:
+            - generic [ref=f2e196]:
+              - generic [ref=f2e197]:
+                - button "Abrir mapa del mundo" [ref=f2e198]: Nix
+                - paragraph [ref=f2e199]: Primavera · Noche · Niebla · 15°C
+                - generic [ref=f2e200]:
+                  - generic [ref=f2e201]:
+                    - generic [ref=f2e202]: Energia
+                    - generic [ref=f2e205]: 285/285
+                  - generic [ref=f2e206]:
+                    - generic [ref=f2e207]: Vida
+                    - generic [ref=f2e210]: 363/363
+                  - generic [ref=f2e211]:
+                    - generic [ref=f2e212]: Mana
+                    - generic [ref=f2e215]: 2487/2487
+                  - generic [ref=f2e216]:
+                    - generic [ref=f2e217]: Hambre
+                    - generic [ref=f2e220]: 84/100
+                  - generic [ref=f2e221]:
+                    - generic [ref=f2e222]: Sed
+                    - generic [ref=f2e225]: 84/100
+              - generic [ref=f2e226]:
+                - button "Party" [ref=f2e227]
+                - button "Clanes" [ref=f2e233]
+                - button "Misiones" [ref=f2e236]
+                - button "Montura" [ref=f2e237]
+                - button "Premios" [ref=f2e238]
+                - button "Ranked" [ref=f2e239]
+                - button "Viajes" [ref=f2e240]
+                - button "WOAO" [ref=f2e241]
+            - generic [ref=f2e242]:
+              - 'generic "Defensa: 0/0" [ref=f2e243]': 0/0
+              - 'generic "Daño: 0/0" [ref=f2e248]': 0/0
+              - 'generic "Fuerza: 19" [ref=f2e255]':
+                - img "Fuerza" [ref=f2e257]
+                - generic [ref=f2e258]: "19"
+              - 'generic "Agilidad: 19" [ref=f2e259]':
+                - img "Agilidad" [ref=f2e261]
+                - generic [ref=f2e262]: "19"
+            - generic: v0.0.75
+        - generic [ref=f2e263]:
+          - generic [ref=f2e264]:
+            - link "Arenas" [ref=f2e265] [cursor=pointer]:
+              - /url: /arenas
+            - link "Cambiar personaje" [ref=f2e266] [cursor=pointer]:
+              - /url: /characters
+          - generic [ref=f2e267]: En zona insegura cerrá el personaje con /salir.

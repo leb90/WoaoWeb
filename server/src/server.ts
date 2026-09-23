@@ -194,6 +194,7 @@ const runtimeTiming = require("./runtimeTiming");
 const handleProtocol = require("./handleProtocol") as HandleProtocolApi;
 const environment = require("./environment");
 const summonRoom = require("./summonRoom");
+const bossEvents = require("./bossEvents");
 
 function handleHttpRequest(request: any, response: any) {
     const isSummonRoomDebugEndpoint =
@@ -496,6 +497,7 @@ function trackClientActivity(ws: RuntimeClient, packageID: number) {
     require("./clanCastles").initialize();
     require("./factionWars").initialize();
     require("./diaEspecial").initialize();
+    require("./bossEvents").initialize();
 
     vars.serverReady = true;
     const endInitialize = Date.now() - startInitialize;
@@ -1045,6 +1047,13 @@ createDynamicScheduler(
         npcs.processPendingMovements();
         protocol.processPendingMovements();
         processPendingLogoutTick(now);
+    },
+);
+
+createDynamicScheduler(
+    () => 1000,
+    function () {
+        bossEvents.tick();
     },
 );
 

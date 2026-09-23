@@ -1,0 +1,37 @@
+- generic [active] [ref=e1] [box=0,0,1366,768]:
+  - banner [ref=e2] [box=0,16,1366,58]:
+    - generic [ref=e3] [box=107,16,1152,58]:
+      - link "World of AO" [ref=e4] [cursor=pointer] [box=132,27,202,36]:
+        - /url: /
+      - navigation [ref=e6] [box=481,32,471,26]:
+        - link "Inicio" [ref=e7] [cursor=pointer] [box=481,32,50,26]:
+          - /url: /
+        - link "Personajes" [ref=e9] [cursor=pointer] [box=559,32,104,26]:
+          - /url: /characters
+        - link "Arenas" [ref=e11] [cursor=pointer] [box=690,32,64,26]:
+          - /url: /arenas
+        - link "Ranking" [ref=e13] [cursor=pointer] [box=782,32,71,26]:
+          - /url: /ranking
+        - link "Discord" [ref=e15] [cursor=pointer] [box=881,32,70,26]:
+          - /url: https://discord.gg/YpJ9XrMdg
+      - link "Ingresar" [ref=e18] [cursor=pointer] [box=1099,27,135,36]:
+        - /url: /login
+  - main [ref=e26] [box=0,96,1351,768]:
+    - generic [ref=e28] [box=452,291,448,379]:
+      - generic [ref=e29] [box=453,292,446,110]:
+        - paragraph [ref=e30] [box=477,316,398,17]: AOWeb
+        - heading "Iniciar sesion" [level=1] [ref=e31] [box=477,340,398,36]
+      - generic [ref=e32] [box=453,401,446,267]:
+        - generic [ref=e33] [box=477,425,398,162]:
+          - textbox "Email o nombre de usuario" [ref=e34] [box=477,425,398,46]
+          - textbox "Contraseña" [ref=e35] [box=477,483,398,46]
+          - button "Entrar" [ref=e36] [box=477,541,398,46]
+        - generic [ref=e37] [box=477,607,398,37]:
+          - generic [ref=e38] [box=477,624,110,20]: No tenes cuenta?
+          - generic [ref=e39] [box=663,624,211,20]:
+            - link "Olvide mi contraseña" [ref=e40] [cursor=pointer] [box=663,624,132,20]:
+              - /url: /forgot-password
+            - link "Registrate" [ref=e41] [cursor=pointer] [box=811,624,64,20]:
+              - /url: /register?redirect=%2F
+  - button "Open Next.js Dev Tools" [ref=e47] [cursor=pointer] [box=22,714,32,32]
+  - alert [ref=e25] [box=-1,863,1,1]

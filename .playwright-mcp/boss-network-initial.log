@@ -1,0 +1,8 @@
+28. [GET] http://127.0.0.1:3000/api/auth/me => [401] Unauthorized
+29. [GET] http://127.0.0.1:3000/api/auth/me => [401] Unauthorized
+30. [GET] http://127.0.0.1:3000/login?redirect=%2F&_rsc=2Md0sTUZcnjCijMr => [200] OK
+35. [GET] http://127.0.0.1:3000/api/auth/me => [401] Unauthorized
+36. [GET] http://127.0.0.1:3000/api/auth/me => [401] Unauthorized
+37. [GET] http://127.0.0.1:3000/api/auth/me => [401] Unauthorized
+
+Note: 32 static requests not shown, run with "static" option to see them.

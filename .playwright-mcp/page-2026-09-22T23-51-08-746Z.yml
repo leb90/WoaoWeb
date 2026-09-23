@@ -1,0 +1,60 @@
+- generic [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - link "World of AO" [ref=e4] [cursor=pointer]:
+        - /url: /
+      - navigation [ref=e6]:
+        - link "Inicio" [ref=e7] [cursor=pointer]:
+          - /url: /
+        - link "Personajes" [active] [ref=e9] [cursor=pointer]:
+          - /url: /characters
+        - link "Arenas" [ref=e11] [cursor=pointer]:
+          - /url: /arenas
+        - link "Ranking" [ref=e13] [cursor=pointer]:
+          - /url: /ranking
+        - link "Discord" [ref=e15] [cursor=pointer]:
+          - /url: https://discord.gg/YpJ9XrMdg
+      - generic [ref=e17]:
+        - generic [ref=e51]:
+          - generic [ref=e52]: "Cuenta:"
+          - generic [ref=e53]: CodexGM
+        - button "Cerrar sesion" [ref=e54]
+  - main [ref=e146]:
+    - generic [ref=e147]:
+      - paragraph [ref=e150]: Seleccion de personaje
+      - generic [ref=e151]:
+        - generic [ref=e152]:
+          - link "Crear personaje" [ref=e154] [cursor=pointer]:
+            - /url: /createcharacter
+          - button [ref=e156] [cursor=pointer]:
+            - paragraph [ref=e162]: CodexGM
+            - generic [ref=e163]:
+              - generic [ref=e164]:
+                - paragraph [ref=e165]: Mago Humano
+                - paragraph [ref=e166]: Nivel 70
+                - paragraph [ref=e167]: Mapa 34
+              - button "Borrar CodexGM" [ref=e169]
+        - complementary [ref=e173]:
+          - generic [ref=e174]:
+            - generic [ref=e175]:
+              - generic [ref=e176]:
+                - paragraph [ref=e177]: Changelog
+                - button "Mostrar mas" [ref=e178]
+              - article [ref=e180]:
+                - generic [ref=e181]: Update 28
+                - list [ref=e182]:
+                  - listitem [ref=e183]:
+                    - generic [ref=e185]: Ahora la invisibilidad se va al hacer daño a un usuario.
+                  - listitem [ref=e186]:
+                    - generic [ref=e188]: Los ítems ahora se agrupan al levantarlos del suelo en un máximo de 10.000 por stack.
+                  - listitem [ref=e189]:
+                    - generic [ref=e191]: Se le asignó la tecla N al /meditar, si ya la tenían usada pueden configurar una nueva.
+            - generic [ref=e192]:
+              - generic [ref=e193]:
+                - paragraph [ref=e194]: Roadmap
+                - button "Mostrar mas" [ref=e195]
+              - article [ref=e197]:
+                - paragraph [ref=e198]: Hechizos
+                - list
+  - button "Open Next.js Dev Tools" [ref=e47] [cursor=pointer]
+  - alert [ref=e25]

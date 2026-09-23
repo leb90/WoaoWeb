@@ -1,7 +1,17 @@
+import crypto from "crypto";
 import express from "express";
 import config from "./config";
 import pool from "./db";
 import { requireAuth } from "./middleware/auth";
+import { DONATION_PACKAGES, getDonationPackage } from "./lib/donationPackages";
+import { createInvoice, verifyIpnSignature } from "./lib/nowpayments";
+import { creditDonationPoints } from "./lib/gameServerClient";
+import {
+    createPendingDonationPayment,
+    findDonationPaymentByOrderId,
+    markDonationPaymentCredited,
+    updateDonationPaymentStatus,
+} from "./repositories/donations";
 import {
     confirmPasswordReset,
     consumeGameTicket,
@@ -2571,6 +2581,139 @@ app.get("/user-online-stats", async (request, response) => {
                 : 24;
         const result = await listUserOnlineStats(hoursParam);
         response.json(result);
+    } catch (error) {
+        response.status(500).json({
+            error: error instanceof Error ? error.message : "Unexpected error",
+        });
+    }
+});
+
+app.get("/donations/packages", (_request, response) => {
+    response.json({ packages: DONATION_PACKAGES });
+});
+
+app.post("/donations/create-invoice", async (request, response) => {
+    try {
+        const authorized = await getAuthorizedSession(request);
+
+        if (!authorized) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        const { session } = authorized;
+
+        if (!session.selectedCharacterId) {
+            response
+                .status(400)
+                .json({ error: "Seleccioná un personaje antes de donar." });
+            return;
+        }
+
+        const packageId = String(request.body?.packageId ?? "");
+        const donationPackage = getDonationPackage(packageId);
+
+        if (!donationPackage) {
+            response.status(400).json({ error: "Paquete de donación inválido." });
+            return;
+        }
+
+        if (!config.nowpaymentsApiKey) {
+            response
+                .status(503)
+                .json({ error: "Las donaciones no están disponibles en este momento." });
+            return;
+        }
+
+        const orderId = crypto.randomUUID();
+
+        await createPendingDonationPayment({
+            characterId: session.selectedCharacterId,
+            accountId: session.account._id,
+            orderId,
+            packageId: donationPackage.id,
+            priceAmount: donationPackage.usd,
+            priceCurrency: "usd",
+            points: donationPackage.points,
+        });
+
+        const invoice = await createInvoice({
+            priceAmount: donationPackage.usd,
+            priceCurrency: "usd",
+            orderId,
+            orderDescription: `World of AO - ${donationPackage.points} puntos de donación`,
+            ipnCallbackUrl: `${config.apiPublicUrl}/donations/webhook`,
+            successUrl: `${config.siteUrl}/donaciones?status=success`,
+            cancelUrl: `${config.siteUrl}/donaciones?status=cancel`,
+        });
+
+        response.json({ invoiceUrl: invoice.invoice_url });
+    } catch (error) {
+        response.status(500).json({
+            error: error instanceof Error ? error.message : "Unexpected error",
+        });
+    }
+});
+
+app.post("/donations/webhook", async (request, response) => {
+    try {
+        const signature = request.header("x-nowpayments-sig");
+
+        if (!verifyIpnSignature(request.body, signature)) {
+            response.status(401).json({ error: "Firma inválida" });
+            return;
+        }
+
+        const payload = request.body as {
+            order_id?: string;
+            payment_id?: number | string;
+            payment_status?: string;
+            pay_amount?: number;
+            pay_currency?: string;
+        };
+
+        const orderId = String(payload.order_id ?? "");
+        const paymentRecord = orderId
+            ? await findDonationPaymentByOrderId(orderId)
+            : null;
+
+        if (!paymentRecord) {
+            response.status(404).json({ error: "Orden no encontrada" });
+            return;
+        }
+
+        if (paymentRecord.credited) {
+            response.status(200).json({ ok: true });
+            return;
+        }
+
+        if (payload.payment_status !== "finished") {
+            await updateDonationPaymentStatus({
+                orderId,
+                providerPaymentId: payload.payment_id ? String(payload.payment_id) : null,
+                status: payload.payment_status ?? "unknown",
+                rawPayload: payload,
+            });
+            response.status(200).json({ ok: true });
+            return;
+        }
+
+        await creditDonationPoints({
+            characterId: paymentRecord.character_id,
+            points: paymentRecord.points,
+            orderId,
+        });
+
+        await markDonationPaymentCredited({
+            orderId,
+            providerPaymentId: payload.payment_id ? String(payload.payment_id) : null,
+            status: "finished",
+            payAmount: payload.pay_amount ?? null,
+            payCurrency: payload.pay_currency ?? null,
+            rawPayload: payload,
+        });
+
+        response.status(200).json({ ok: true });
     } catch (error) {
         response.status(500).json({
             error: error instanceof Error ? error.message : "Unexpected error",

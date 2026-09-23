@@ -195,8 +195,75 @@ const handleProtocol = require("./handleProtocol") as HandleProtocolApi;
 const environment = require("./environment");
 const summonRoom = require("./summonRoom");
 const bossEvents = require("./bossEvents");
+const woaoProgress = require("./woaoProgress");
+
+function handleCreditDonationPoints(request: any, response: any) {
+    if (request.headers.authorization !== vars.tokenAuth) {
+        response.statusCode = 401;
+        response.setHeader("Content-Type", "application/json; charset=utf-8");
+        response.end(JSON.stringify({ error: "Unauthorized" }));
+        return;
+    }
+
+    let rawBody = "";
+    request.on("data", (chunk: Buffer) => {
+        rawBody += chunk.toString("utf8");
+    });
+
+    request.on("end", () => {
+        try {
+            const body = JSON.parse(rawBody || "{}") as {
+                characterId?: string;
+                points?: number;
+            };
+            const characterId = String(body.characterId ?? "");
+            const points = Math.floor(Number(body.points ?? 0));
+
+            if (!characterId || !Number.isFinite(points) || points <= 0) {
+                response.statusCode = 400;
+                response.setHeader("Content-Type", "application/json; charset=utf-8");
+                response.end(JSON.stringify({ error: "characterId y points son requeridos" }));
+                return;
+            }
+
+            const progress = woaoProgress.getProgress({ _id: characterId });
+            progress.puntosDonacion = Number(progress.puntosDonacion ?? 0) + points;
+            woaoProgress.saveProgress({ _id: characterId });
+
+            const onlineUser = vars.personajes[characterId];
+            const client = vars.clients[characterId];
+            if (onlineUser) {
+                onlineUser.puntosDonacion = progress.puntosDonacion;
+                if (client) {
+                    handleProtocol.console(
+                        `¡Gracias por tu donación! Recibiste ${points} puntos de donación.`,
+                        "#E69500",
+                        1,
+                        0,
+                        client,
+                    );
+                    handleProtocol.sendMyCharacter(onlineUser);
+                    socket.send(client);
+                }
+            }
+
+            response.statusCode = 200;
+            response.setHeader("Content-Type", "application/json; charset=utf-8");
+            response.end(JSON.stringify({ ok: true, puntosDonacion: progress.puntosDonacion }));
+        } catch (error) {
+            response.statusCode = 500;
+            response.setHeader("Content-Type", "application/json; charset=utf-8");
+            response.end(JSON.stringify({ error: error instanceof Error ? error.message : "Unexpected error" }));
+        }
+    });
+}
 
 function handleHttpRequest(request: any, response: any) {
+    if (request.method === "POST" && request.url === "/internal/credit-donation-points") {
+        handleCreditDonationPoints(request, response);
+        return;
+    }
+
     const isSummonRoomDebugEndpoint =
         request.url === "/debug/summon-room" || request.url === "/debug/summon-room/freeze-active-demon";
 

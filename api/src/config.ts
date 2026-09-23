@@ -13,6 +13,7 @@ type Config = {
   nodeEnv: string;
   corsOrigin: string;
   siteUrl: string;
+  apiPublicUrl: string;
   sesRegion: string | null;
   sesAccessKeyId: string | null;
   sesSecretAccessKey: string | null;
@@ -21,6 +22,9 @@ type Config = {
   gameDataAdminEmail: string;
   gameDataAdminAccountId: string | null;
   gameDataAdminProxyToken: string | null;
+  nowpaymentsApiKey: string | null;
+  nowpaymentsIpnSecret: string | null;
+  gameServerUrl: string;
 };
 
 const projectRoot = path.resolve(__dirname, "..");
@@ -89,6 +93,7 @@ const config: Config = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   corsOrigin: process.env.CORS_ORIGIN?.trim() || "*",
   siteUrl: (process.env.SITE_URL?.trim() || "https://aoweb.app").replace(/\/+$/, ""),
+  apiPublicUrl: (process.env.API_PUBLIC_URL?.trim() || "https://aoweb.app").replace(/\/+$/, ""),
   sesRegion: process.env.SES_REGION?.trim() || null,
   sesAccessKeyId: process.env.SES_ACCESS_KEY_ID?.trim() || null,
   sesSecretAccessKey: process.env.SES_SECRET_ACCESS_KEY?.trim() || null,
@@ -97,6 +102,9 @@ const config: Config = {
   gameDataAdminEmail: (process.env.GAME_DATA_ADMIN_EMAIL?.trim() || "").toLowerCase(),
   gameDataAdminAccountId: process.env.GAME_DATA_ADMIN_ACCOUNT_ID?.trim() || null,
   gameDataAdminProxyToken: process.env.GAME_DATA_ADMIN_PROXY_TOKEN?.trim() || null,
+  nowpaymentsApiKey: process.env.NOWPAYMENTS_API_KEY?.trim() || null,
+  nowpaymentsIpnSecret: process.env.NOWPAYMENTS_IPN_SECRET?.trim() || null,
+  gameServerUrl: (process.env.GAME_SERVER_URL?.trim() || "http://game-server:7666").replace(/\/+$/, ""),
 };
 
 export default config;

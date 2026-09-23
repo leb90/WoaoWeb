@@ -567,3 +567,27 @@ CREATE INDEX IF NOT EXISTS idx_game_smelting_recipes_mineral_item_id ON game_sme
 CREATE INDEX IF NOT EXISTS idx_game_balance_updated_at ON game_balance(updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_game_data_revisions_kind_id ON game_data_revisions(kind, id DESC);
 CREATE INDEX IF NOT EXISTS idx_challenge_history_finished_at ON challenge_history(finished_at DESC);
+
+CREATE TABLE IF NOT EXISTS donation_payments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    character_id UUID NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+    account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    provider TEXT NOT NULL DEFAULT 'nowpayments',
+    provider_payment_id TEXT,
+    order_id TEXT NOT NULL UNIQUE,
+    package_id TEXT NOT NULL,
+    price_amount NUMERIC NOT NULL,
+    price_currency TEXT NOT NULL DEFAULT 'usd',
+    pay_amount NUMERIC,
+    pay_currency TEXT,
+    points INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    credited BOOLEAN NOT NULL DEFAULT FALSE,
+    raw_payload JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_donation_payments_character_id ON donation_payments(character_id);
+CREATE INDEX IF NOT EXISTS idx_donation_payments_order_id ON donation_payments(order_id);
+CREATE INDEX IF NOT EXISTS idx_donation_payments_provider_payment_id ON donation_payments(provider_payment_id);

@@ -30,9 +30,14 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-aoweb}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-aoweb}
       TOKEN_AUTH: ${TOKEN_AUTH:?TOKEN_AUTH is required}
       CORS_ORIGIN: ${CORS_ORIGIN:-https://${APP_DOMAIN}}
+      SITE_URL: https://${APP_DOMAIN}
+      API_PUBLIC_URL: https://${API_DOMAIN}
+      GAME_SERVER_URL: http://game-server:7666
       GAME_DATA_ADMIN_EMAIL: ${GAME_DATA_ADMIN_EMAIL:-}
       GAME_DATA_ADMIN_ACCOUNT_ID: ${GAME_DATA_ADMIN_ACCOUNT_ID:-}
       GAME_DATA_ADMIN_PROXY_TOKEN: ${GAME_DATA_ADMIN_PROXY_TOKEN:-}
+      NOWPAYMENTS_API_KEY: ${NOWPAYMENTS_API_KEY:-}
+      NOWPAYMENTS_IPN_SECRET: ${NOWPAYMENTS_IPN_SECRET:-}
     depends_on:
       postgres:
         condition: service_healthy

@@ -11,6 +11,7 @@ import {
     LogIn,
     LogOut,
     MessageCircle,
+    Gem,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { AuthErrorResponse, AuthSession } from "@/lib/auth";
@@ -25,6 +26,7 @@ const navItems = [
     { href: "/characters", label: "Personajes", icon: UserRound },
     { href: "/arenas", label: "Arenas", icon: Swords },
     { href: "/ranking", label: "Ranking", icon: Trophy },
+    { href: "/donaciones", label: "Donaciones", icon: Gem },
     {
         href: "https://discord.gg/YpJ9XrMdg",
         label: "Discord",

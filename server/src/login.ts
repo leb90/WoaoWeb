@@ -910,7 +910,7 @@ function Login(this: LoginApi) {
 
                 if (personajeWS.privileges == 1 || personajeWS.privileges == 2) {
                     personajeWS.color = "#419900";
-                    personajeWS.clan = "<AOWeb Staff>";
+                    personajeWS.clan = "<Woao Staff>";
                 } else {
                     personajeWS.color =
                         getFactionColor(personajeWS.faction) ?? (personajeWS.criminal ? "red" : "#3333ff");

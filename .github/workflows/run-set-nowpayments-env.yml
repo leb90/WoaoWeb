@@ -1,0 +1,37 @@
+name: One-off - Cargar credenciales NOWPayments
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set env and redeploy over SSH
+        uses: appleboy/ssh-action@v1.2.2
+        env:
+          NOWPAYMENTS_API_KEY: ${{ secrets.NOWPAYMENTS_API_KEY }}
+          NOWPAYMENTS_IPN_SECRET: ${{ secrets.NOWPAYMENTS_IPN_SECRET }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          envs: NOWPAYMENTS_API_KEY,NOWPAYMENTS_IPN_SECRET
+          script: |
+            set -euo pipefail
+            cd /opt/woaoweb/deploy
+
+            if grep -q '^NOWPAYMENTS_API_KEY=' .env; then
+              sed -i "s|^NOWPAYMENTS_API_KEY=.*|NOWPAYMENTS_API_KEY=${NOWPAYMENTS_API_KEY}|" .env
+            else
+              echo "NOWPAYMENTS_API_KEY=${NOWPAYMENTS_API_KEY}" >> .env
+            fi
+
+            if grep -q '^NOWPAYMENTS_IPN_SECRET=' .env; then
+              sed -i "s|^NOWPAYMENTS_IPN_SECRET=.*|NOWPAYMENTS_IPN_SECRET=${NOWPAYMENTS_IPN_SECRET}|" .env
+            else
+              echo "NOWPAYMENTS_IPN_SECRET=${NOWPAYMENTS_IPN_SECRET}" >> .env
+            fi
+
+            docker compose -f docker-compose.hostinger.yml --env-file .env up -d --build
+            docker compose -f docker-compose.hostinger.yml --env-file .env ps

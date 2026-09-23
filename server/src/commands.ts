@@ -3163,6 +3163,12 @@ const command: CommandApi = {
                     break;
                 }
 
+                case "/craftear":
+                case "/crafteo": {
+                    require("./crafting").openNearestCraftingNpc(ws as RuntimeClient);
+                    break;
+                }
+
                 case "/ciudades": {
                     for (const line of require("./cityConquest").listCities()) {
                         handleProtocol.console(line, "#E69500", 1, 0, ws as CommandClient);

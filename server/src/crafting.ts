@@ -23,6 +23,7 @@ type CraftingUser = RuntimeCharacter & {
     map: number;
     pos: Position;
     idItemWeapon?: number | string;
+    targetNpcId?: EntityId;
     craftingTarget?: {
         pendingTarget?: boolean;
         source?: "tool" | "npc";
@@ -42,6 +43,7 @@ type CraftingApi = {
     handleMapClick: (ws: RuntimeClient, x: number, y: number) => boolean;
     isCraftingNpc: (npc: RuntimeNpc | undefined) => boolean;
     handleNpcInteraction: (ws: RuntimeClient, npcId: EntityId) => boolean;
+    openNearestCraftingNpc: (ws: RuntimeClient) => boolean;
     handleCraftRequest: (
         ws: RuntimeClient,
         profession: CraftingProfession,
@@ -413,6 +415,51 @@ const crafting: CraftingApi = {
         );
 
         return true;
+    },
+
+    openNearestCraftingNpc(ws) {
+        const user = getUser(ws.id!);
+
+        if (!user) {
+            return false;
+        }
+
+        if (user.dead) {
+            handleProtocol.console("Los muertos no pueden fabricar.", "white", 0, 0, ws);
+            return true;
+        }
+
+        const targetedId = user.targetNpcId;
+        if (targetedId && this.handleNpcInteraction(ws, targetedId)) {
+            return true;
+        }
+
+        let nearestId: EntityId | null = null;
+        let nearestDistance = Number.POSITIVE_INFINITY;
+
+        for (const npc of Object.values(vars.npcs) as RuntimeNpc[]) {
+            if (!npc || !this.isCraftingNpc(npc) || Number(npc.map) !== Number(user.map)) {
+                continue;
+            }
+
+            if (!isWithinRange(user.pos, npc.pos, CRAFTING_NPC_RANGE)) {
+                continue;
+            }
+
+            const distance = Math.max(Math.abs(user.pos.x - npc.pos.x), Math.abs(user.pos.y - npc.pos.y));
+
+            if (distance < nearestDistance) {
+                nearestDistance = distance;
+                nearestId = npc.id;
+            }
+        }
+
+        if (!nearestId) {
+            handleProtocol.console("No hay una mesa de crafteo cerca. Acercate y usa /craftear.", "white", 1, 0, ws);
+            return true;
+        }
+
+        return this.handleNpcInteraction(ws, nearestId);
     },
 
     handleToolUse(ws, idPos) {

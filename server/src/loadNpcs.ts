@@ -37,7 +37,7 @@ class LoadNpcs {
             }
 
             const cooldownKeys = initializeNpcRespawnCooldowns((npc: any) => {
-                this.createNpcInMap(npc, true, true);
+                this.createNpcInMap(npc, true, false, true);
             });
 
             const npcsInMap = loadAllMapNpcPlacements();
@@ -47,14 +47,19 @@ class LoadNpcs {
                     return;
                 }
 
-                this.createNpcInMap(npc, true);
+                this.createNpcInMap(npc, true, false, true);
             });
 
             resolve(true);
         });
     }
 
-    createNpcInMap(npc: any, skipRespawnCooldownCheck = false, forceRandomSpawn = false) {
+    createNpcInMap(
+        npc: any,
+        skipRespawnCooldownCheck = false,
+        forceRandomSpawn = false,
+        preserveInitialPosition = false,
+    ) {
         const { x, y, mapNum, npcIndex } = npc;
 
         if (!vars.mapData[mapNum]) return;
@@ -128,6 +133,7 @@ class LoadNpcs {
             tmpNPC.pos.x = respawnPos.posNewX;
             tmpNPC.pos.y = respawnPos.posNewY;
         } else if (
+            !preserveInitialPosition &&
             !game.validInitialNpcSpawn(
                 tmpNPC.pos,
                 mapNum,
@@ -151,7 +157,17 @@ class LoadNpcs {
         vars.npcs[tmpNPC.id].cooldownAtaque = +Date.now() + 4000;
         vars.areaNpc[tmpNPC.id] = [];
 
-        vars.mapData[mapNum][tmpNPC.pos.y][tmpNPC.pos.x].id = tmpNPC.id;
+        const tile = vars.mapData[mapNum]?.[tmpNPC.pos.y]?.[tmpNPC.pos.x];
+        if (!tile) {
+            console.warn(
+                `[NPCS] Se omitio el NPC ${npcIndex} en ${mapNum}@${tmpNPC.pos.x},${tmpNPC.pos.y}: tile inexistente.`,
+            );
+            delete vars.npcs[tmpNPC.id];
+            delete vars.areaNpc[tmpNPC.id];
+            return;
+        }
+
+        tile.id = tmpNPC.id;
     }
 
     createJsonNpcsInMap() {

@@ -242,6 +242,15 @@ type QuestStatePayload = {
     completedQuestId?: number;
 };
 
+type QuestProgressNoticePayload = {
+    questName: string;
+    objectiveName: string;
+    current: number;
+    amount: number;
+    completed: boolean;
+    message: string;
+};
+
 function arePartyMembersForViewer(viewerId: EntityId | undefined, character: RuntimeCharacter | undefined): boolean {
     if (typeof viewerId === "undefined" || !character) {
         return false;
@@ -377,6 +386,7 @@ export type HandleProtocolApi = {
     areaItemsSnapshot: (items: AreaItemSnapshot[], client: RuntimeClient) => void;
     areaMetaSnapshot: (snapshot: AreaMetaSnapshot, client: RuntimeClient) => void;
     questState: (payload: QuestStatePayload, client: RuntimeClient) => void;
+    questProgressNotice: (payload: QuestProgressNoticePayload, client: RuntimeClient) => void;
     selfFlagsDelta: (payload: SelfFlagsDeltaPayload, client: RuntimeClient) => void;
     selfVitalsDelta: (payload: SelfVitalsDeltaPayload, client: RuntimeClient) => void;
     selfMapMetaDelta: (payload: SelfMapMetaDeltaPayload, client: RuntimeClient) => void;
@@ -1284,6 +1294,12 @@ const handleServer: HandleProtocolApi = {
 
     questState(payload, client) {
         pkg.setPackageID(pkg.clientPacketID.questState);
+        pkg.writeString(JSON.stringify(payload));
+        socket.send(client);
+    },
+
+    questProgressNotice(payload, client) {
+        pkg.setPackageID(pkg.clientPacketID.questProgressNotice);
         pkg.writeString(JSON.stringify(payload));
         socket.send(client);
     },

@@ -5,6 +5,7 @@ import type {
     PanelSnapshot,
     PanelSnapshotChunk,
     PartyHudStateDelta,
+    QuestProgressNoticePayload,
 } from "../../../lib/aowProtocol";
 
 type MutableRef<T> = { current: T };
@@ -102,6 +103,7 @@ export type IncomingPacketHandlerContext = {
     onGlobalNotice?:
         | ((notice: { text: string; durationMs: number }) => void)
         | undefined;
+    onQuestProgressNotice?: ((notice: QuestProgressNoticePayload) => void) | undefined;
     renderEntityFX: (engine: any, id: number, fxGrh: number) => Promise<void>;
     renderSpellProjectileVisual: (
         engine: any,

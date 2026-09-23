@@ -209,6 +209,10 @@ export async function handleIncomingUiPacket({
             ctx.mergeHud({ questState: packet.payload });
             return true;
 
+        case "questProgressNotice":
+            ctx.onQuestProgressNotice?.(packet.payload);
+            return true;
+
         case "error":
             ctx.setIsSceneReady(false);
             ctx.emitStatus({

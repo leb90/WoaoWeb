@@ -46,6 +46,7 @@ import type {
     PanelSnapshot,
     MarketState,
     PlayerHudState,
+    QuestProgressNoticePayload,
     RetosState,
     TradeItem,
     TradeState,
@@ -338,6 +339,11 @@ type GlobalCanvasNotice = {
     id: number;
     text: string;
     durationMs: number;
+};
+
+type QuestProgressCanvasNotice = QuestProgressNoticePayload & {
+    id: number;
+    visible: boolean;
 };
 
 type ChatTab = ChatChannel;
@@ -774,6 +780,8 @@ function HomeContent() {
     >(null);
     const [globalCanvasNotice, setGlobalCanvasNotice] =
         useState<GlobalCanvasNotice | null>(null);
+    const [questProgressNotice, setQuestProgressNotice] =
+        useState<QuestProgressCanvasNotice | null>(null);
     const [bailState, setBailState] = useState<BailOffer | null>(null);
     const [craftingState, setCraftingState] = useState<CraftingState | null>(
         null,
@@ -795,6 +803,8 @@ function HomeContent() {
         useState(true);
     const tradeStateRef = useRef<TradeState | null>(null);
     const globalCanvasNoticeTimeoutRef = useRef<number | null>(null);
+    const questProgressFadeTimeoutRef = useRef<number | null>(null);
+    const questProgressClearTimeoutRef = useRef<number | null>(null);
 
     useEffect(() => {
         tradeStateRef.current = tradeState;
@@ -804,6 +814,12 @@ function HomeContent() {
         return () => {
             if (globalCanvasNoticeTimeoutRef.current !== null) {
                 window.clearTimeout(globalCanvasNoticeTimeoutRef.current);
+            }
+            if (questProgressFadeTimeoutRef.current !== null) {
+                window.clearTimeout(questProgressFadeTimeoutRef.current);
+            }
+            if (questProgressClearTimeoutRef.current !== null) {
+                window.clearTimeout(questProgressClearTimeoutRef.current);
             }
         };
     }, []);
@@ -1977,6 +1993,47 @@ function HomeContent() {
         [],
     );
 
+    const handleQuestProgressNotice = useCallback(
+        (notice: QuestProgressNoticePayload) => {
+            const message = notice.message?.trim();
+            if (!message) {
+                return;
+            }
+
+            if (questProgressFadeTimeoutRef.current !== null) {
+                window.clearTimeout(questProgressFadeTimeoutRef.current);
+                questProgressFadeTimeoutRef.current = null;
+            }
+            if (questProgressClearTimeoutRef.current !== null) {
+                window.clearTimeout(questProgressClearTimeoutRef.current);
+                questProgressClearTimeoutRef.current = null;
+            }
+
+            const id = Date.now();
+            setQuestProgressNotice({
+                ...notice,
+                id,
+                message,
+                visible: true,
+            });
+
+            questProgressFadeTimeoutRef.current = window.setTimeout(() => {
+                setQuestProgressNotice((current) =>
+                    current?.id === id ? { ...current, visible: false } : current,
+                );
+                questProgressFadeTimeoutRef.current = null;
+            }, 2400);
+
+            questProgressClearTimeoutRef.current = window.setTimeout(() => {
+                setQuestProgressNotice((current) =>
+                    current?.id === id ? null : current,
+                );
+                questProgressClearTimeoutRef.current = null;
+            }, 3000);
+        },
+        [],
+    );
+
     useEffect(() => {
         if (!marketState) {
             return;
@@ -2946,6 +3003,9 @@ function HomeContent() {
                                     onHudChange={setHud}
                                     onConsoleMessage={appendConsoleEntry}
                                     onGlobalNotice={handleGlobalNotice}
+                                    onQuestProgressNotice={
+                                        handleQuestProgressNotice
+                                    }
                                     onTradeStateChange={setTradeState}
                                     onMarketStateChange={setMarketState}
                                     onRetosStateChange={setRetosState}
@@ -2994,6 +3054,30 @@ function HomeContent() {
                                             </div>
                                             <div className="mt-0.5 text-2xl font-semibold leading-none text-cyan-100">
                                                 {challengeOverlayText}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : null}
+
+                                {questProgressNotice ? (
+                                    <div
+                                        className={`pointer-events-none absolute left-1/2 z-30 w-[min(420px,calc(100%-2rem))] -translate-x-1/2 transition-all duration-700 ease-out ${
+                                            questProgressNotice.visible
+                                                ? "translate-y-0 opacity-100"
+                                                : "-translate-y-2 opacity-0"
+                                        }`}
+                                        style={{
+                                            top: challengeOverlayText
+                                                ? "88px"
+                                                : "16px",
+                                        }}
+                                    >
+                                        <div className="rounded-md border border-amber-200/35 bg-stone-950/82 px-4 py-3 text-center shadow-2xl backdrop-blur-md">
+                                            <div className="truncate text-xs font-medium text-amber-200/90">
+                                                {questProgressNotice.questName}
+                                            </div>
+                                            <div className="mt-1 text-sm font-semibold leading-5 text-stone-50">
+                                                {questProgressNotice.message}
                                             </div>
                                         </div>
                                     </div>

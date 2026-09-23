@@ -67,6 +67,31 @@ function npcTalk(idUser: string, npcId: unknown, message: string) {
     }
 }
 
+function notifyQuestProgress(
+    idUser: string,
+    quest: QuestDefinition,
+    objectiveName: string,
+    current: number,
+    amount: number,
+) {
+    const client = vars.clients[idUser];
+    if (!client) {
+        return;
+    }
+
+    handleProtocol.questProgressNotice(
+        {
+            questName: quest.name,
+            objectiveName,
+            current,
+            amount,
+            completed: current >= amount,
+            message: `${objectiveName} matados ${current}/${amount}`,
+        },
+        client,
+    );
+}
+
 function countItem(user: { inv?: Record<string, { idItem?: number; cant?: number; amount?: number }> }, itemId: number) {
     let total = 0;
     for (const item of Object.values(user.inv ?? {})) {
@@ -614,7 +639,7 @@ export function onNpcKilled(idUser: string, npcTemplateIndex: number) {
             entry.npcsKilled[index] = current + 1;
             changed = true;
             const npcName = vars.datNpc?.[req.index]?.name ?? `NPC ${req.index}`;
-            tell(idUser, `${quest.name}: ${npcName} ${entry.npcsKilled[index]}/${req.amount}`);
+            notifyQuestProgress(idUser, quest, npcName, entry.npcsKilled[index], req.amount);
         });
     }
 

@@ -25,12 +25,18 @@ type ConsoleChannel = "console" | "global" | "party" | "clan" | "whisper";
 const DRAGON_SLAYER_SWORD_ITEM_ID = 402;
 
 type CraftingOpenPayload = {
-    profession: "carpentry" | "blacksmith" | "tailoring";
+    profession: "carpentry" | "blacksmith" | "tailoring" | "global";
+    mode?: "tool" | "npc";
     title: string;
+    goldAvailable?: number;
     recipes: Array<{
+        profession: "carpentry" | "blacksmith" | "tailoring";
         itemId: number;
         name: string;
         grhIndex: number;
+        objType: number;
+        subtype: number;
+        goldCost: number;
         details: string;
         stats: string;
         skill: number;
@@ -38,6 +44,7 @@ type CraftingOpenPayload = {
         materials: Array<{
             itemId: number;
             name: string;
+            grhIndex: number;
             amount: number;
             owned: number;
         }>;

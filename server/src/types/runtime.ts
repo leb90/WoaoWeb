@@ -42,9 +42,11 @@ export type SmeltingState = {
 
 export type CraftingTargetState = {
     pendingTarget?: boolean;
+    source?: "tool" | "npc";
     profession?: "blacksmith";
     slot?: number;
     itemId?: number;
+    npcId?: EntityId;
 };
 
 export type TimedTracker = {

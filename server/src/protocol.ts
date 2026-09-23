@@ -994,7 +994,8 @@ function isNonHostileCityNpcSpellTarget(target: AreaTarget | undefined) {
         target.npcType === vars.npcType.timbero ||
         target.npcType === vars.npcType.sacerdoteNewbie ||
         target.npcType === vars.npcType.comerciante ||
-        target.npcType === vars.npcType.subastador
+        target.npcType === vars.npcType.subastador ||
+        target.npcType === vars.npcType.crafter
     );
 }
 
@@ -2577,6 +2578,10 @@ function eventClick(ws: RuntimeClient) {
                 if (!isOriginalNpcInteractionOutOfRange(user, npcTmp, 5)) {
                     require("./fastTravel").listRoutes(String(ws.id));
                 }
+            }
+
+            if (selectedNpc && crafting.handleNpcInteraction(ws, selectedId)) {
+                return;
             }
 
             if (

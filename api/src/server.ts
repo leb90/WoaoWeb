@@ -2617,7 +2617,7 @@ app.get("/donations/packages", async (_request, response) => {
         packages: DONATION_PACKAGES,
         methods: {
             card: cardEnabled,
-            crypto: Boolean(config.nowpaymentsApiKey),
+            crypto: config.donationsCryptoEnabled && Boolean(config.nowpaymentsApiKey),
         },
         cardMinUsd: cardEnabled ? await getCardMinimumUsd() : null,
     });
@@ -2649,7 +2649,7 @@ app.post("/donations/create-invoice", async (request, response) => {
             return;
         }
 
-        if (!config.nowpaymentsApiKey) {
+        if (!config.donationsCryptoEnabled || !config.nowpaymentsApiKey) {
             response
                 .status(503)
                 .json({ error: "Las donaciones no están disponibles en este momento." });

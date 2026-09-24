@@ -24,6 +24,7 @@ type Config = {
   gameDataAdminProxyToken: string | null;
   nowpaymentsApiKey: string | null;
   nowpaymentsIpnSecret: string | null;
+  donationsCryptoEnabled: boolean;
   moonpayPublishableKey: string | null;
   moonpaySecretKey: string | null;
   moonpayWebhookKey: string | null;
@@ -109,6 +110,7 @@ const config: Config = {
   gameDataAdminProxyToken: process.env.GAME_DATA_ADMIN_PROXY_TOKEN?.trim() || null,
   nowpaymentsApiKey: process.env.NOWPAYMENTS_API_KEY?.trim() || null,
   nowpaymentsIpnSecret: process.env.NOWPAYMENTS_IPN_SECRET?.trim() || null,
+  donationsCryptoEnabled: process.env.DONATIONS_CRYPTO_ENABLED?.trim() === "true",
   moonpayPublishableKey: process.env.MOONPAY_PUBLISHABLE_KEY?.trim() || null,
   moonpaySecretKey: process.env.MOONPAY_SECRET_KEY?.trim() || null,
   moonpayWebhookKey: process.env.MOONPAY_WEBHOOK_KEY?.trim() || null,

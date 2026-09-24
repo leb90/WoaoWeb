@@ -14,15 +14,17 @@ const CRAFTING_SERVER_PATH = path.join(PROJECT_ROOT, "server/jsons/craftingRecip
 const GRAPHICS_PATH = path.join(PROJECT_ROOT, "frontend/public/init/graficos.json");
 const GRAPHICS_OPTIMIZED_PATH = path.join(PROJECT_ROOT, "frontend/public/init/graficos_optimized.json");
 const GRAPHICS_DIR = path.join(PROJECT_ROOT, "frontend/public/graphics");
+const RESOURCES_DIR = path.join(PROJECT_ROOT, "Recursos");
+const RESOURCE_CATALOG_PATH = path.join(PROJECT_ROOT, "crafting-resource-catalog.csv");
 
 const RECIPE_OBJECT_TYPE = 46;
 const FIRST_RECIPE_ITEM_ID = 1600;
 const LEVEL_GRAPHICS = {
-    10: { grhIndex: 36771, file: 24010, accent: [234, 217, 178] },
-    20: { grhIndex: 36772, file: 24011, accent: [125, 211, 252] },
-    30: { grhIndex: 36773, file: 24012, accent: [250, 204, 21] },
-    40: { grhIndex: 36774, file: 24013, accent: [244, 114, 182] },
-    50: { grhIndex: 36775, file: 24014, accent: [55, 65, 81] },
+    10: { grhIndex: 36771, file: 24010, source: "receta nivel 10.png", accent: [234, 217, 178] },
+    20: { grhIndex: 36772, file: 24011, source: "receta nivel 20.png", accent: [125, 211, 252] },
+    30: { grhIndex: 36773, file: 24012, source: "receta nivel 30.png", accent: [250, 204, 21] },
+    40: { grhIndex: 36774, file: 24013, source: "receta nivel 40.png", accent: [244, 114, 182] },
+    50: { grhIndex: 36775, file: 24014, source: "receta nivel 50.png", accent: [55, 65, 81] },
 };
 
 function parseCsv(text) {
@@ -91,6 +93,15 @@ function toInt(value, fallback = 0) {
     return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function normalizeLookupKey(value) {
+    return String(value ?? "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, " ");
+}
+
 function normalizeProfession(value) {
     const profession = String(value ?? "").trim();
     if (profession === "carpentry" || profession === "tailoring" || profession === "blacksmith") {
@@ -99,17 +110,52 @@ function normalizeProfession(value) {
     return "blacksmith";
 }
 
+function loadMaterialLookup() {
+    if (!fs.existsSync(RESOURCE_CATALOG_PATH)) {
+        return new Map();
+    }
+
+    const lookup = new Map();
+    for (const row of parseCsv(fs.readFileSync(RESOURCE_CATALOG_PATH, "utf8"))) {
+        const itemId = toInt(row.itemId);
+        if (!itemId) {
+            continue;
+        }
+        lookup.set(normalizeLookupKey(row.name), itemId);
+        lookup.set(normalizeLookupKey(row.resourceKey), itemId);
+    }
+    return lookup;
+}
+
 function parseMaterials(value) {
     const materials = [];
-    const pattern = /\((\d+)\)x(\d+)/g;
-    let match = pattern.exec(String(value ?? ""));
+    const chunks = String(value ?? "")
+        .split(/[+,]/)
+        .map((chunk) => chunk.trim())
+        .filter(Boolean);
 
-    while (match) {
-        materials.push({
-            itemId: Number(match[1]),
-            amount: Number(match[2]),
-        });
-        match = pattern.exec(String(value ?? ""));
+    for (const chunk of chunks) {
+        const idMatch = chunk.match(/\((\d+)\)\s*x\s*(\d+)/i) ?? chunk.match(/^(\d+)\s*x\s*(\d+)$/i);
+        if (idMatch) {
+            materials.push({
+                itemId: Number(idMatch[1]),
+                amount: Number(idMatch[2]),
+            });
+            continue;
+        }
+
+        const nameMatch = chunk.match(/^(.+?)\s*x\s*(\d+)$/i);
+        if (!nameMatch) {
+            continue;
+        }
+
+        const itemId = materialLookup.get(normalizeLookupKey(nameMatch[1]));
+        if (itemId) {
+            materials.push({
+                itemId,
+                amount: Number(nameMatch[2]),
+            });
+        }
     }
 
     return materials;
@@ -241,6 +287,7 @@ function writeRecipePng(filePath, accent) {
     fs.writeFileSync(filePath, png);
 }
 
+const materialLookup = loadMaterialLookup();
 const rows = parseCsv(fs.readFileSync(CSV_PATH, "utf8"))
     .map((row, index) => {
         const itemId = toInt(row.itemId);
@@ -349,7 +396,13 @@ for (const [level, data] of Object.entries(LEVEL_GRAPHICS)) {
     graphics[String(data.grhIndex)] = grhRecord;
     optimizedGraphics[String(data.grhIndex)] = optimizedRecord;
 
-    writeRecipePng(path.join(GRAPHICS_DIR, `${data.file}.png`), data.accent);
+    const sourcePath = path.join(RESOURCES_DIR, data.source);
+    const targetPath = path.join(GRAPHICS_DIR, `${data.file}.png`);
+    if (fs.existsSync(sourcePath)) {
+        fs.copyFileSync(sourcePath, targetPath);
+    } else {
+        writeRecipePng(targetPath, data.accent);
+    }
     void level;
 }
 

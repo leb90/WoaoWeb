@@ -524,9 +524,11 @@ const crafting: CraftingApi = {
             return false;
         }
 
-        user.craftingTarget = undefined;
-        handleProtocol.console("La fabricacion ahora se realiza con el Artesano y recetas aprendidas.", "#fcd34d", 0, 0, ws);
-        return true;
+        if (vars.disableLegacyCraftingTools !== false) {
+            user.craftingTarget = undefined;
+            handleProtocol.console("La fabricacion ahora se realiza con el Artesano y recetas aprendidas.", "#fcd34d", 0, 0, ws);
+            return true;
+        }
 
         if (user.dead) {
             handleProtocol.console("Los muertos no pueden trabajar.", "white", 0, 0, ws);
@@ -580,9 +582,11 @@ const crafting: CraftingApi = {
             return false;
         }
 
-        user.craftingTarget = undefined;
-        handleProtocol.console("La herreria por yunque fue reemplazada por el Artesano.", "#fcd34d", 0, 0, ws);
-        return true;
+        if (vars.disableLegacyCraftingTools !== false) {
+            user.craftingTarget = undefined;
+            handleProtocol.console("La herreria por yunque fue reemplazada por el Artesano.", "#fcd34d", 0, 0, ws);
+            return true;
+        }
 
         const weaponSlot = Number(user.idItemWeapon ?? 0);
 

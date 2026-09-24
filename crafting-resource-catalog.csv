@@ -1,0 +1,24 @@
+itemId;name;resourceKey;objType;grhIndex;graphicFile;sourceFile;created
+1701;Cuero;cuero;29;36776;24015.png;cuero.png;yes
+1702;Diamantes;diamantes;29;36777;24016.png;diamantes.png;yes
+1703;Esencia magica epica;esencia_magica_epica;29;36778;24017.png;Esencia mágica epica.png;yes
+1704;Esencia magica;esencia_magica;29;36779;24018.png;Esencia mágica.png;yes
+1705;Hilo;hilo;29;36780;24019.png;hilo.png;yes
+1706;Leña elfica;lena_elfica;14;36781;24020.png;leña elfica.png;yes
+58;Leña;lena;14;36782;24021.png;leña.png;no
+386;Lingote de hierro;lingote_hierro;29;36783;24022.png;lingote de hierro.png;no
+1707;Lingote de mitrilo;lingote_mitrilo;29;36784;24023.png;lingote de mitrilo.png;yes
+1708;Lingote de obsidiana;lingote_obsidiana;29;36785;24024.png;lingote de obsidiana.png;yes
+388;Lingote de oro;lingote_oro;29;36786;24025.png;lingote de oro.png;no
+387;Lingote de plata;lingote_plata;29;36787;24026.png;lingote de plata.png;no
+1709;Madera;madera;14;36788;24027.png;madera.png;yes
+1710;Mena de hierro;mena_hierro;23;36789;24028.png;mena de hierro.png;yes
+1711;Mena de mitrilo;mena_mitrilo;23;36790;24029.png;mena de mitrilo.png;yes
+1712;Mena de obsidiana;mena_obsidiana;23;36791;24030.png;mena de obsidiana.png;yes
+1713;Mena de oro;mena_oro;23;36792;24031.png;mena de oro.png;yes
+1714;Mena de plata;mena_plata;23;36793;24032.png;mena de plata.png;yes
+1715;Paños de tela;panos_tela;29;36794;24033.png;paños de tela.png;yes
+1716;Polvo de oro;polvo_oro;29;36795;24034.png;polvo de oro.png;yes
+1717;Runa celeste;runa_celeste;29;36796;24035.png;runa celeste.png;yes
+1718;Runa roja;runa_roja;29;36797;24036.png;runa roja.png;yes
+1719;Runa violeta;runa_violeta;29;36798;24037.png;runa violeta.png;yes

@@ -251,6 +251,11 @@ const fishing: FishingApi = {
             return false;
         }
 
+        if (vars.disableLegacyWorkerGathering !== false) {
+            handleProtocol.console("La pesca de oficio fue deshabilitada. Los materiales se obtendran matando NPCs.", "#fcd34d", 0, 0, ws);
+            return true;
+        }
+
         if (!item.equipped || Number(user.idItemWeapon ?? 0) !== Number(idPos)) {
             handleProtocol.console("Debes equiparte la caña de pescar para usarla.", "white", 0, 0, ws);
             return true;

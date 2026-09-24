@@ -114,6 +114,11 @@ const smelting: SmeltingApi = {
             return false;
         }
 
+        if (vars.disableLegacyWorkerGathering !== false) {
+            handleProtocol.console("La fundicion de oficio fue deshabilitada. Los materiales se obtendran matando NPCs.", "#fcd34d", 0, 0, ws);
+            return true;
+        }
+
         if (user.dead) {
             handleProtocol.console("Los muertos no pueden trabajar minerales.", "white", 0, 0, ws);
             return true;

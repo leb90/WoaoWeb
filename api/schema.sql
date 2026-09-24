@@ -294,6 +294,13 @@ CREATE TABLE IF NOT EXISTS character_spells (
     PRIMARY KEY (character_id, id_pos)
 );
 
+CREATE TABLE IF NOT EXISTS character_crafting_recipes (
+    character_id UUID NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+    recipe_id INTEGER NOT NULL,
+    learned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (character_id, recipe_id)
+);
+
 CREATE TABLE IF NOT EXISTS character_settings (
     character_id UUID PRIMARY KEY REFERENCES characters(id) ON DELETE CASCADE,
     hotkeys JSONB NOT NULL DEFAULT '{}'::jsonb,

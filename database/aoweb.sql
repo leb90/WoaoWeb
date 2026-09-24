@@ -172,6 +172,17 @@ CREATE TABLE public.character_bank_items (
 
 
 --
+-- Name: character_crafting_recipes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.character_crafting_recipes (
+    character_id uuid NOT NULL,
+    recipe_id integer NOT NULL,
+    learned_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: character_items; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -702,6 +713,14 @@ ALTER TABLE ONLY public.character_bank_items
 
 ALTER TABLE ONLY public.character_items
     ADD CONSTRAINT character_items_pkey PRIMARY KEY (character_id, id_pos);
+
+
+--
+-- Name: character_crafting_recipes character_crafting_recipes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.character_crafting_recipes
+    ADD CONSTRAINT character_crafting_recipes_pkey PRIMARY KEY (character_id, recipe_id);
 
 
 --
@@ -1275,6 +1294,14 @@ ALTER TABLE ONLY public.character_bank_items
 
 ALTER TABLE ONLY public.character_items
     ADD CONSTRAINT character_items_character_id_fkey FOREIGN KEY (character_id) REFERENCES public.characters(id) ON DELETE CASCADE;
+
+
+--
+-- Name: character_crafting_recipes character_crafting_recipes_character_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.character_crafting_recipes
+    ADD CONSTRAINT character_crafting_recipes_character_id_fkey FOREIGN KEY (character_id) REFERENCES public.characters(id) ON DELETE CASCADE;
 
 
 --

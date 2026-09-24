@@ -149,7 +149,7 @@ export const RACE_ID_MAP: Record<RaceKey, number> = {
     nomuerto: 12,
 };
 
-export const characterClassOptions: CharacterClassOption[] = [
+const characterClassOptionsWithLegacyWorkers: CharacterClassOption[] = [
     { key: "mago", label: "Mago", icon: "✦", summary: "Con poderosas capacidades mágicas, pero físicamente inferior." },
     { key: "clerigo", label: "Clerigo", icon: "✚", summary: "Balance entre magia y combate. Curación Divina y Purificar." },
     { key: "guerrero", label: "Guerrero", icon: "⚔", summary: "Centrado en combate, sin magia. Un golpe puede decidir la pelea." },
@@ -170,6 +170,12 @@ export const characterClassOptions: CharacterClassOption[] = [
     { key: "arquero", label: "Arquero", icon: "🏹", summary: "Gran daño con arco y flechas, pero poca vida." },
     { key: "domador", label: "Domador", icon: "🐾", summary: "Controla criaturas. Débil en combate directo." },
 ];
+
+const LEGACY_WORKER_CLASS_KEYS = new Set<CharacterClassKey>(["pescador", "herrero", "lenador", "minero", "carpintero"]);
+
+export const characterClassOptions: CharacterClassOption[] = characterClassOptionsWithLegacyWorkers.filter(
+    (option) => !LEGACY_WORKER_CLASS_KEYS.has(option.key),
+);
 
 const classProgressByKey: Record<CharacterClassKey, ClassProgress> = {
     mago: { vida: 7.5, manaInicial: 8.33, multMana: 2.65, hitPre36: 1, hitPost36: 1 },

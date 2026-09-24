@@ -8,6 +8,7 @@ export {};
 
 const vars = require("./vars");
 const handleProtocol = require("./handleProtocol") as HandleProtocolApi;
+const funct = require("./functions");
 const workProfessions = require("./workProfessions");
 
 function getGameApi() {
@@ -24,6 +25,7 @@ type CraftingUser = RuntimeCharacter & {
     pos: Position;
     idItemWeapon?: number | string;
     targetNpcId?: EntityId;
+    learnedCraftingRecipes?: number[];
     craftingTarget?: {
         pendingTarget?: boolean;
         source?: "tool" | "npc";
@@ -44,6 +46,7 @@ type CraftingApi = {
     isCraftingNpc: (npc: RuntimeNpc | undefined) => boolean;
     handleNpcInteraction: (ws: RuntimeClient, npcId: EntityId) => boolean;
     openNearestCraftingNpc: (ws: RuntimeClient) => boolean;
+    handleRecipeItemUse: (ws: RuntimeClient, idPos: number | string, idItem: number) => Promise<boolean>;
     handleCraftRequest: (
         ws: RuntimeClient,
         profession: CraftingProfession,
@@ -55,23 +58,18 @@ type CraftingApi = {
 
 const CRAFTING_NPC_RANGE = 5;
 const LEGACY_CRAFTER_NPC_TYPE = 45;
+const CRAFTING_RECIPE_OBJECT_TYPE = 46;
 
 function getUser(idUser: EntityId) {
     return getCharacterById<CraftingUser>(idUser);
 }
 
-function getProfessionSkillId(profession: CraftingProfession) {
-    const skills = require("./skills");
-
-    if (profession === "blacksmith") {
-        return skills.SKILLS.herreria;
-    }
-
-    return skills.SKILLS.carpinteria;
+function getProfessionSkillId(_profession: CraftingProfession) {
+    return 0;
 }
 
-function getCraftingSkill(user: CraftingUser, profession: CraftingProfession) {
-    return require("./skills").getSkill(user, getProfessionSkillId(profession));
+function getCraftingSkill(_user: CraftingUser, _profession: CraftingProfession) {
+    return 0;
 }
 
 function getProfessionForTool(idItem: number): CraftingProfession | null {
@@ -128,8 +126,8 @@ function getNpcCraftingRecipes() {
         .filter((recipe) => !recipe.deleted)
         .sort(
             (left, right) =>
+                getRecipeLevel(left) - getRecipeLevel(right) ||
                 Number(left.sortOrder ?? left.id) - Number(right.sortOrder ?? right.id) ||
-                left.profession.localeCompare(right.profession) ||
                 left.id - right.id,
         );
 }
@@ -143,6 +141,52 @@ function getRecipeGoldCost(recipe: CraftingRecipe) {
     const rawValue = Math.floor(Number(obj?.valor ?? 0));
 
     return Math.max(1, Number.isFinite(rawValue) ? rawValue : 0);
+}
+
+function getRecipeLevel(recipe: CraftingRecipe) {
+    const level = Math.floor(Number(recipe.level ?? recipe.skill ?? 0));
+    return Math.max(1, Number.isFinite(level) ? level : 1);
+}
+
+function normalizeLearnedRecipeIds(user: CraftingUser) {
+    user.learnedCraftingRecipes = Array.from(
+        new Set(
+            (Array.isArray(user.learnedCraftingRecipes) ? user.learnedCraftingRecipes : [])
+                .map((recipeId) => Math.floor(Number(recipeId) || 0))
+                .filter((recipeId) => recipeId > 0),
+        ),
+    ).sort((left, right) => left - right);
+
+    return user.learnedCraftingRecipes;
+}
+
+function hasLearnedRecipe(user: CraftingUser, recipe: CraftingRecipe) {
+    return normalizeLearnedRecipeIds(user).includes(Number(recipe.id));
+}
+
+function getRecipeByItemId(idItem: number) {
+    return getCraftingRecipes().find((recipe) => !recipe.deleted && recipe.itemId === idItem) ?? null;
+}
+
+function getRecipeByRecipeItemId(idItem: number) {
+    return getCraftingRecipes().find((recipe) => !recipe.deleted && Number(recipe.recipeItemId ?? 0) === idItem) ?? null;
+}
+
+async function persistLearnedCraftingRecipes(user: CraftingUser) {
+    if (!user._id || user.pvpChar) {
+        return;
+    }
+
+    await funct.fetchUrl(`/character_save/${user._id}/crafting-recipes`, {
+        method: "PUT",
+        body: JSON.stringify({
+            learnedCraftingRecipes: normalizeLearnedRecipeIds(user),
+        }),
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: vars.tokenAuth,
+        },
+    });
 }
 
 function getNpcCraftingFailure(user: CraftingUser) {
@@ -304,6 +348,7 @@ function serializeRecipe(user: CraftingUser, recipe: CraftingRecipe, options?: {
     }
 
     return {
+        id: recipe.id,
         profession: recipe.profession,
         itemId: recipe.itemId,
         name: obj.name,
@@ -313,7 +358,10 @@ function serializeRecipe(user: CraftingUser, recipe: CraftingRecipe, options?: {
         goldCost: options?.includeGoldCost ? getRecipeGoldCost(recipe) : 0,
         details: recipe.category,
         stats: getCraftedItemStats(obj),
-        skill: recipe.skill,
+        skill: getRecipeLevel(recipe),
+        level: getRecipeLevel(recipe),
+        recipeItemId: Number(recipe.recipeItemId ?? 0),
+        learned: hasLearnedRecipe(user, recipe),
         category: recipe.category,
         materials: recipe.materials
             .map((material) => {
@@ -476,6 +524,10 @@ const crafting: CraftingApi = {
             return false;
         }
 
+        user.craftingTarget = undefined;
+        handleProtocol.console("La fabricacion ahora se realiza con el Artesano y recetas aprendidas.", "#fcd34d", 0, 0, ws);
+        return true;
+
         if (user.dead) {
             handleProtocol.console("Los muertos no pueden trabajar.", "white", 0, 0, ws);
             return true;
@@ -528,6 +580,10 @@ const crafting: CraftingApi = {
             return false;
         }
 
+        user.craftingTarget = undefined;
+        handleProtocol.console("La herreria por yunque fue reemplazada por el Artesano.", "#fcd34d", 0, 0, ws);
+        return true;
+
         const weaponSlot = Number(user.idItemWeapon ?? 0);
 
         if (!weaponSlot || weaponSlot !== Number(targetState.slot ?? 0)) {
@@ -567,6 +623,50 @@ const crafting: CraftingApi = {
         return true;
     },
 
+    async handleRecipeItemUse(ws, idPos, idItem) {
+        const user = getUser(ws.id!);
+        const obj = vars.datObj[idItem] as DataObject | undefined;
+
+        if (!user || Number(obj?.objType ?? 0) !== CRAFTING_RECIPE_OBJECT_TYPE) {
+            return false;
+        }
+
+        if (user.dead) {
+            handleProtocol.console("Los muertos no pueden aprender recetas.", "white", 0, 0, ws);
+            return true;
+        }
+
+        const recipe = getRecipeByRecipeItemId(idItem);
+
+        if (!recipe) {
+            handleProtocol.console("Esta receta no tiene un item asociado para fabricar.", "white", 0, 0, ws);
+            return true;
+        }
+
+        if (hasLearnedRecipe(user, recipe)) {
+            handleProtocol.console("Ya conoces esa receta.", "white", 0, 0, ws);
+            return true;
+        }
+
+        const recipeLevel = getRecipeLevel(recipe);
+        if (Math.floor(Number(user.level ?? 0)) < recipeLevel) {
+            handleProtocol.console(`Necesitas nivel ${recipeLevel} para aprender esta receta.`, "white", 0, 0, ws);
+            return true;
+        }
+
+        const learnedRecipes = normalizeLearnedRecipeIds(user);
+        learnedRecipes.push(recipe.id);
+        normalizeLearnedRecipeIds(user);
+
+        getGameApi().quitarUserInvItem(user.id, idPos, 1);
+        await persistLearnedCraftingRecipes(user);
+        await getGameApi().persistCharacterItemsById(user.id);
+
+        const craftedObj = vars.datObj[recipe.itemId] as DataObject | undefined;
+        handleProtocol.console(`Has aprendido la receta de ${craftedObj?.name ?? "ese objeto"}.`, "#86efac", 0, 0, ws);
+        return true;
+    },
+
     async handleCraftRequest(ws, profession, itemId, amount) {
         const user = getUser(ws.id!);
 
@@ -580,7 +680,13 @@ const crafting: CraftingApi = {
         }
 
         const npcCrafting = user.craftingTarget?.source === "npc";
-        const npcCraftingFailure = npcCrafting ? getNpcCraftingFailure(user) : null;
+
+        if (!npcCrafting) {
+            handleProtocol.console("Ahora solo puedes fabricar hablando con el Artesano.", "white", 0, 0, ws);
+            return;
+        }
+
+        const npcCraftingFailure = getNpcCraftingFailure(user);
 
         if (npcCraftingFailure) {
             handleProtocol.console(npcCraftingFailure, "white", 0, 0, ws);
@@ -588,7 +694,7 @@ const crafting: CraftingApi = {
             return;
         }
 
-        const classRestriction = npcCrafting ? null : getProfessionClassRestriction(user, profession);
+        const classRestriction = null;
 
         if (classRestriction) {
             handleProtocol.console(classRestriction, "white", 0, 0, ws);
@@ -596,14 +702,20 @@ const crafting: CraftingApi = {
         }
 
         const safeAmount = Math.max(1, Math.min(9999, Math.floor(Number(amount) || 0)));
-        const recipe = getRecipe(itemId, profession);
+        const recipe = getRecipeByItemId(itemId);
 
         if (!recipe) {
             return;
         }
 
-        if (!npcCrafting && getCraftingSkill(user, profession) < recipe.skill) {
-            handleProtocol.console("No tienes skill suficiente para fabricar ese objeto.", "white", 0, 0, ws);
+        if (!hasLearnedRecipe(user, recipe)) {
+            handleProtocol.console("No has aprendido la receta de ese objeto.", "white", 0, 0, ws);
+            return;
+        }
+
+        const recipeLevel = getRecipeLevel(recipe);
+        if (Math.floor(Number(user.level ?? 0)) < recipeLevel) {
+            handleProtocol.console(`Necesitas nivel ${recipeLevel} para fabricar ese objeto.`, "white", 0, 0, ws);
             return;
         }
 

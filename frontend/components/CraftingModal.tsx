@@ -2,8 +2,10 @@
 
 import React from "react";
 import {
+    Check,
     Coins,
     Hammer,
+    Lock,
     Minus,
     Package,
     Plus,
@@ -65,6 +67,14 @@ function normalizeText(value: string) {
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
         .toLowerCase();
+}
+
+function isRecipeLearned(recipe: CraftingRecipe) {
+    return recipe.learned !== false;
+}
+
+function getRecipeLevel(recipe: CraftingRecipe) {
+    return Math.max(1, Number(recipe.level ?? recipe.skill ?? 1) || 1);
 }
 
 function getRecipeTab(recipe: CraftingRecipe): CraftingTab {
@@ -168,6 +178,7 @@ export default function CraftingModal({
     > | null>(null);
     const [activeTab, setActiveTab] = React.useState<CraftingTab>("weapons");
     const [searchText, setSearchText] = React.useState("");
+    const [showLearnedOnly, setShowLearnedOnly] = React.useState(false);
     const [selectedKey, setSelectedKey] = React.useState<string | null>(
         recipes[0] ? getRecipeKey(recipes[0]) : null,
     );
@@ -212,11 +223,15 @@ export default function CraftingModal({
         }
 
         for (const recipe of recipes) {
+            if (showLearnedOnly && !isRecipeLearned(recipe)) {
+                continue;
+            }
+
             next.get(getRecipeTab(recipe))?.push(recipe);
         }
 
         return next;
-    }, [recipes]);
+    }, [recipes, showLearnedOnly]);
 
     React.useEffect(() => {
         const currentRecipes = recipesByTab.get(activeTab) ?? [];
@@ -261,10 +276,10 @@ export default function CraftingModal({
 
     const selectedRecipe = React.useMemo(
         () =>
-            recipes.find((recipe) => getRecipeKey(recipe) === selectedKey) ??
+            visibleRecipes.find((recipe) => getRecipeKey(recipe) === selectedKey) ??
             visibleRecipes[0] ??
             null,
-        [recipes, selectedKey, visibleRecipes],
+        [selectedKey, visibleRecipes],
     );
 
     const parsedAmount = Number.parseInt(amountText, 10);
@@ -319,7 +334,8 @@ export default function CraftingModal({
             return owned >= material.amount * craftAmount;
         });
     const hasGold = totalGoldCost <= goldAvailable;
-    const canCraft = selectedRecipe !== null && hasMaterials && hasGold;
+    const recipeLearned = selectedRecipe ? isRecipeLearned(selectedRecipe) : false;
+    const canCraft = selectedRecipe !== null && recipeLearned && hasMaterials && hasGold;
 
     const setAmount = React.useCallback((value: number) => {
         setAmountText(String(Math.max(1, Math.min(9999, Math.floor(value)))));
@@ -389,15 +405,32 @@ export default function CraftingModal({
                             })}
                         </div>
 
-                        <label className="relative h-12 shrink-0 lg:w-[310px]">
-                            <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-stone-500" />
-                            <input
-                                value={searchText}
-                                onChange={(event) => setSearchText(event.target.value)}
-                                placeholder="Buscar item..."
-                                className="h-full w-full rounded-md border border-[#4c3519] bg-black/25 pl-10 pr-3 text-sm text-stone-100 outline-none transition placeholder:text-stone-500 focus:border-amber-300/70"
-                            />
-                        </label>
+                        <div className="flex shrink-0 flex-col gap-2 sm:flex-row lg:w-[440px]">
+                            <label className="flex h-12 items-center gap-2 rounded-md border border-[#4c3519] bg-black/25 px-3 text-sm text-stone-200">
+                                <input
+                                    type="checkbox"
+                                    checked={showLearnedOnly}
+                                    onChange={(event) =>
+                                        setShowLearnedOnly(event.target.checked)
+                                    }
+                                    className="h-4 w-4 accent-amber-300"
+                                />
+                                <span className="whitespace-nowrap">
+                                    Recetas aprendidas
+                                </span>
+                            </label>
+                            <label className="relative h-12 min-w-0 flex-1">
+                                <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-stone-500" />
+                                <input
+                                    value={searchText}
+                                    onChange={(event) =>
+                                        setSearchText(event.target.value)
+                                    }
+                                    placeholder="Buscar item..."
+                                    className="h-full w-full rounded-md border border-[#4c3519] bg-black/25 pl-10 pr-3 text-sm text-stone-100 outline-none transition placeholder:text-stone-500 focus:border-amber-300/70"
+                                />
+                            </label>
+                        </div>
                     </div>
 
                     <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -435,11 +468,29 @@ export default function CraftingModal({
                                                         {recipe.name}
                                                     </div>
                                                     <div className="mt-1 truncate text-xs text-stone-400">
-                                                        {recipe.category} | Skill {recipe.skill}
+                                                        {recipe.category} | Nivel {getRecipeLevel(recipe)}
                                                     </div>
-                                                    <div className="mt-2 flex items-center gap-1 text-sm font-semibold text-amber-200">
-                                                        <Coins className="h-4 w-4 shrink-0" />
-                                                        <span>{formatAmount(recipe.goldCost)} oro</span>
+                                                    <div className="mt-2 flex items-center justify-between gap-2">
+                                                        <div className="flex min-w-0 items-center gap-1 text-sm font-semibold text-amber-200">
+                                                            <Coins className="h-4 w-4 shrink-0" />
+                                                            <span>{formatAmount(recipe.goldCost)} oro</span>
+                                                        </div>
+                                                        <span
+                                                            className={`flex shrink-0 items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] ${
+                                                                isRecipeLearned(recipe)
+                                                                    ? "border-emerald-400/30 text-emerald-300"
+                                                                    : "border-stone-500/30 text-stone-400"
+                                                            }`}
+                                                        >
+                                                            {isRecipeLearned(recipe) ? (
+                                                                <Check className="h-3 w-3" />
+                                                            ) : (
+                                                                <Lock className="h-3 w-3" />
+                                                            )}
+                                                            {isRecipeLearned(recipe)
+                                                                ? "Aprendida"
+                                                                : "Bloqueada"}
+                                                        </span>
                                                     </div>
                                                 </div>
                                             </button>
@@ -475,8 +526,24 @@ export default function CraftingModal({
                                                 {selectedRecipe.name}
                                             </div>
                                             <div className="mt-1 text-sm text-stone-400">
-                                                {selectedRecipe.category} | Skill{" "}
-                                                {selectedRecipe.skill}
+                                                {selectedRecipe.category} | Nivel{" "}
+                                                {getRecipeLevel(selectedRecipe)}
+                                            </div>
+                                            <div
+                                                className={`mt-2 inline-flex items-center gap-1 rounded border px-2 py-1 text-xs ${
+                                                    recipeLearned
+                                                        ? "border-emerald-400/30 text-emerald-300"
+                                                        : "border-rose-400/35 text-rose-300"
+                                                }`}
+                                            >
+                                                {recipeLearned ? (
+                                                    <Check className="h-3.5 w-3.5" />
+                                                ) : (
+                                                    <Lock className="h-3.5 w-3.5" />
+                                                )}
+                                                {recipeLearned
+                                                    ? "Receta aprendida"
+                                                    : "Receta no aprendida"}
                                             </div>
                                             {selectedRecipe.stats ? (
                                                 <div className="mt-2 text-sm text-stone-300">
@@ -641,7 +708,7 @@ export default function CraftingModal({
                                             className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-md border border-amber-300/70 bg-[linear-gradient(180deg,#f7d488,#c9922f)] px-4 text-lg font-bold text-[#2a1704] transition hover:brightness-110 disabled:cursor-not-allowed disabled:border-stone-700 disabled:bg-none disabled:bg-stone-800 disabled:text-stone-500"
                                         >
                                             <Hammer className="h-5 w-5" />
-                                            Fabricar
+                                            {recipeLearned ? "Fabricar" : "Receta no aprendida"}
                                         </button>
                                     </div>
                                 </>

@@ -29,6 +29,8 @@ const gameCraftingRecipeSchema = z.object({
   sortOrder: z.coerce.number().int().positive().optional(),
   itemId: z.coerce.number().int().positive(),
   skill: z.coerce.number().int().min(0).max(100),
+  level: z.coerce.number().int().min(1).max(100).optional(),
+  recipeItemId: z.coerce.number().int().positive().optional(),
   materials: z.array(materialSchema),
 });
 
@@ -111,6 +113,8 @@ function toSummary(row: GameCraftingRecipeRow) {
     sortOrder: Number(row.data?.sortOrder ?? row.id),
     itemId: row.item_id,
     skill: row.skill,
+    level: normalizeCraftingRecipeData(row.data).level,
+    recipeItemId: normalizeCraftingRecipeData(row.data).recipeItemId,
     materials: normalizeCraftingRecipeData(row.data).materials,
     version: Number(row.version),
     updatedAt: row.updated_at.toISOString(),

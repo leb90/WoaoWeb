@@ -16,6 +16,8 @@ export type CraftingRecipe = {
     deleted?: boolean;
     itemId: number;
     skill: number;
+    level?: number;
+    recipeItemId?: number;
     materials: CraftingMaterial[];
 };
 

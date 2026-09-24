@@ -441,6 +441,7 @@ export interface CraftingMaterial {
 }
 
 export interface CraftingRecipe {
+    id?: number;
     profession: "carpentry" | "blacksmith" | "tailoring";
     itemId: number;
     name: string;
@@ -451,6 +452,9 @@ export interface CraftingRecipe {
     details: string;
     stats: string;
     skill: number;
+    level?: number;
+    recipeItemId?: number;
+    learned?: boolean;
     category: string;
     materials: CraftingMaterial[];
 }
@@ -613,6 +617,7 @@ export const OBJECT_TYPE = {
     lingotes: 36,
     instrumentosMusicales: 26,
     flechas: 32,
+    recetas: 46,
 } as const;
 
 export interface ConsolePacket {

@@ -392,6 +392,7 @@ export type RuntimeCharacter = {
     inv?: InventoryRecord | Array<SerializedInventoryItem>;
     bank?: InventoryRecord | Array<SerializedBankItem>;
     spells?: SpellRecord | Array<SerializedSpellSlot>;
+    learnedCraftingRecipes?: number[];
     items?: Array<SerializedInventoryItem>;
     bankItems?: Array<SerializedBankItem>;
     tradeMode?: "merchant" | "bank" | "market";

@@ -14,6 +14,8 @@ function normalizeCraftingRecipe(recipe: CraftingRecipe): CraftingRecipe {
         deleted: Boolean(recipe.deleted ?? false),
         itemId: Number(recipe.itemId ?? 0),
         skill: Number(recipe.skill ?? 0),
+        level: Number(recipe.level ?? recipe.skill ?? 0),
+        recipeItemId: Number(recipe.recipeItemId ?? 0),
         materials: Array.isArray(recipe.materials)
             ? recipe.materials.map((material) => ({
                   itemId: Number(material.itemId ?? 0),

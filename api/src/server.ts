@@ -73,6 +73,7 @@ import {
     listCharacterRanking,
     patchCharacter,
     patchCharacterBankItems,
+    patchCharacterCraftingRecipes,
     patchCharacterItems,
     patchCharacterSpells,
     patchCharacterStorage,
@@ -156,7 +157,7 @@ function isAuthorizedGameDataAdmin(session: {
 function isCharacterSaveRoute(method: string, path: string): boolean {
     return (
         method === "PUT" &&
-        /^\/character_save\/[^/]+(?:\/(?:items|bank|storage|spells))?$/.test(
+        /^\/character_save\/[^/]+(?:\/(?:items|bank|storage|spells|crafting-recipes))?$/.test(
             path,
         )
     );
@@ -2103,6 +2104,34 @@ app.put(
             const result = await patchCharacterSpells(
                 characterId ?? "",
                 request.body?.spells ?? [],
+            );
+
+            if (!result) {
+                response.status(404).json({ error: "Character not found" });
+                return;
+            }
+
+            response.json(result);
+        } catch (error) {
+            response.status(400).json({
+                error:
+                    error instanceof Error ? error.message : "Unexpected error",
+            });
+        }
+    },
+);
+
+app.put(
+    "/character_save/:id/crafting-recipes",
+    requireAuth,
+    async (request, response) => {
+        try {
+            const characterId = Array.isArray(request.params.id)
+                ? request.params.id[0]
+                : request.params.id;
+            const result = await patchCharacterCraftingRecipes(
+                characterId ?? "",
+                request.body?.learnedCraftingRecipes ?? [],
             );
 
             if (!result) {

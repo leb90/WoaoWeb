@@ -1,0 +1,102 @@
+itemId;name;category;profession;objType;subtype;grhIndex;oldSkillHerreria;oldSkillCarpinteria;suggestedRecipeLevel;materials;goldCost;currentlySold;currentVendors;hasCurrentRecipe;decision;notes
+551;Flecha + 1 (1-4);Armas;carpentry;32;1;752;0;40;10;Leña(58)x3;1;NO;;SI;REVISAR;Candidato crafting si no se vende | Ya tiene receta actual
+552;Flecha + 2 (1-5);Armas;carpentry;32;1;752;0;80;20;Leña(58)x5;1;NO;;SI;REVISAR;Candidato crafting si no se vende | Ya tiene receta actual
+757;Daga Torcida (+100 Mana);Armas;blacksmith;2;0;15166;80;0;20;Lingote de hierro(386)x50;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+543;Red de pesca;Otros;carpentry;18;0;844;0;64;10;Leña(58)x270;50;SI;58:Pescador | 80:Mercader vende-todo | 118:Mercader vende-todo de ciudad descanso | 188:Vende-todo gnomos y enanos | 201:Vende-todo Orcos | 215:Vende-todo Vampiros | 228:Vende-todo Elfos | 241:Vende-todo Humanos | 243:Vende-todo Humanos;NO;REVISAR_TIENDA;Revisar si se quita de tienda
+366;Daga + 3 (5-7);Armas;blacksmith;2;0;711;84;0;20;Lingote de hierro(386)x28;1;NO;;SI;REVISAR;Candidato crafting si no se vende | Ya tiene receta actual
+553;Flecha + 3 (1-6);Armas;carpentry;32;1;752;0;100;30;Leña(58)x7;1;NO;;SI;REVISAR;Candidato crafting si no se vende | Ya tiene receta actual
+1036;Báculo Mágico (+20 DM);Armas;carpentry;2;0;29020;0;100;20;Leña(58)x5000;1;SI;178:Varitas de Magos;SI;REVISAR_TIENDA;Revisar si se quita de tienda | Ya tiene receta actual
+1222;Sombrero Chamán (+15 DM);Cascos;mixed;3;1;16425;100;100;30;Lingote de hierro(386)x50 + Lingote de plata(387)x75;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+474;Barca;Otros;carpentry;31;0;749;0;110;10;Leña(58)x10000;28;NO;;SI;REVISAR;Candidato crafting si no se vende | Ya tiene receta actual
+362;Tambor;Armas;carpentry;26;0;684;0;160;10;Leña(58)x7500;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+367;Daga + 4 (6-8);Armas;blacksmith;2;0;711;144;0;40;Lingote de hierro(386)x81;1;NO;;SI;REVISAR;Candidato crafting si no se vende | Ya tiene receta actual
+469;Laud;Armas;carpentry;26;0;685;0;160;10;Leña(58)x7500;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+540;Flauta;Armas;carpentry;26;0;686;0;160;10;Leña(58)x7500;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+597;Daga de Plata;Armas;blacksmith;2;0;711;138;0;10;Lingote de hierro(386)x100 + Lingote de plata(387)x100;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+605;Hacha De Oro;Armas;blacksmith;2;0;603;150;0;10;Lingote de hierro(386)x100 + Lingote de oro(388)x60;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+763;Hacha Roñosa (+100 Maná);Armas;mixed;2;0;15172;140;50;30;Lingote de hierro(386)x70 + Lingote de oro(388)x50;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+622;Escudo Dragón (10-20);Escudos;blacksmith;3;2;877;160;0;10;Lingote de hierro(386)x100 + Lingote de plata(387)x30 + Lingote de oro(388)x50;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+132;Casco De Oro (8-14);Cascos;blacksmith;3;1;559;130;0;10;Lingote de hierro(386)x40 + Lingote de oro(388)x30;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+833;Sombrero Mago (+2 Agilidad);Cascos;blacksmith;3;1;28548;140;0;20;Lingote de hierro(386)x50;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+834;Sombrero Mago (+3 Agilidad);Cascos;blacksmith;3;1;28523;160;0;30;Lingote de hierro(386)x70 + Lingote de plata(387)x20;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+238;A. Deslustrada (Bajo/as);Armaduras/Tunicas;blacksmith;3;0;683;160;0;20;Lingote de hierro(386)x200 + Lingote de plata(387)x125 + Lingote de oro(388)x50;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+484;A. Deslustrada (Alto/as);Armaduras/Tunicas;blacksmith;3;0;760;160;0;20;Lingote de hierro(386)x200 + Lingote de plata(387)x125 + Lingote de oro(388)x50;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+475;Galera;Otros;carpentry;31;0;749;0;130;20;Leña(58)x20000;30;NO;;SI;REVISAR;Candidato crafting si no se vende | Ya tiene receta actual
+476;Galeon;Otros;carpentry;31;0;749;0;160;30;Leña(58)x30000;35;NO;;SI;REVISAR;Candidato crafting si no se vende | Ya tiene receta actual
+1221;Anillo de Energía (+20 DM);Otros;mixed;41;0;15749;150;150;30;Lingote de hierro(386)x100 + Lingote de plata(387)x100;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+402;Espada MataDragones;Armas;blacksmith;2;1;716;200;0;30;Lingote de hierro(386)x500 + Lingote de plata(387)x400 + Lingote de oro(388)x300;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+403;Espada de Plata (13-19);Armas;blacksmith;2;0;713;170;0;10;Lingote de hierro(386)x100 + Lingote de plata(387)x330;1;NO;;SI;REVISAR;Candidato crafting si no se vende | Ya tiene receta actual
+479;Arco Compuesto (6-12);Armas;carpentry;2;0;751;0;190;10;Leña(58)x450;2;NO;;SI;REVISAR;Candidato crafting si no se vende | Ya tiene receta actual
+546;Arco Mágico (33% ahorro flechas);Armas;carpentry;2;0;847;0;200;40;Leña(58)x7000;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+559;Espada del Diablo (27-35);Armas;blacksmith;2;0;716;200;0;30;Lingote de hierro(386)x235 + Lingote de plata(387)x50 + Lingote de oro(388)x75;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+606;Flecha Del Diablo;Armas;mixed;32;1;753;200;200;30;Lingote de oro(388)x1 + Leña(58)x10;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+607;Flecha De Los Dioses;Armas;carpentry;32;1;754;0;200;50;Lingote de oro(388)x1 + Leña(58)x10;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+608;Flecha Envenenada;Armas;carpentry;32;1;755;0;200;20;Leña(58)x15;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+611;Excalibur (13-20);Armas;blacksmith;2;0;867;170;0;20;Lingote de hierro(386)x100 + Lingote de plata(387)x150;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+625;Espada de Oro (15-24);Armas;blacksmith;2;0;880;170;0;10;Lingote de hierro(386)x200 + Lingote de oro(388)x150;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+753;Báculo Mago (+300 Mana +28DM);Armas;mixed;2;0;15002;200;150;40;Lingote de hierro(386)x300 + Lingote de oro(388)x100;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+758;Espada Ensangrentada (+200 Mana);Armas;mixed;2;0;15167;200;200;40;Lingote de hierro(386)x190 + Lingote de plata(387)x50 + Lingote de oro(388)x50;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+759;Hacha de las Tinieblas (+200 Mana);Armas;mixed;2;0;15168;180;100;30;Lingote de hierro(386)x190 + Lingote de plata(387)x50;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+760;Espada Dorada (+5 fuerza);Armas;blacksmith;2;0;880;200;0;40;Lingote de hierro(386)x200 + Lingote de oro(388)x100;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+761;Espada azul (+3 Fuerza);Armas;mixed;2;0;15170;200;120;40;Lingote de hierro(386)x200 + Lingote de plata(387)x200;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+762;Espada dos puntas (+2 Fuerza);Armas;mixed;2;0;15171;200;150;30;Lingote de hierro(386)x215 + Lingote de plata(387)x200;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+836;Espada de Cristal (32-42);Armas;mixed;2;0;16382;200;200;50;Lingote de hierro(386)x500 + Lingote de plata(387)x200 + Lingote de oro(388)x300 + Gema Sagrada Recuperada por Shadow VX(598)x2 + Diamante(695)x5;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+840;Báculo de Regeneración (24-30);Armas;mixed;2;0;15640;200;200;40;Lingote de hierro(386)x300 + Lingote de oro(388)x100 + Leña(58)x3000;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+841;Báculo de Sagrado (24-30);Armas;mixed;2;0;16433;200;200;40;Lingote de hierro(386)x250 + Leña(58)x1500;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+842;Báculo de la Magia (+22 DM);Armas;mixed;2;0;16437;200;170;40;Lingote de hierro(386)x300 + Lingote de plata(387)x100 + Lingote de oro(388)x100;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+843;Arco Mágico (50% ahorro flechas);Armas;mixed;2;0;16435;200;200;40;Leña(58)x2850 + Gema Sagrada Recuperada por Shadow VX(598)x5 + Diamante(695)x5;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+844;Arco Mágico (75% ahorro flechas);Armas;mixed;2;0;16434;200;200;50;Lingote de hierro(386)x100 + Leña(58)x3850 + Gema Sagrada Recuperada por Shadow VX(598)x10 + Diamante(695)x2;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+845;Puñal Asesino;Armas;blacksmith;2;0;16436;200;0;20;Lingote de hierro(386)x120;8000;SI;71:Herrero | 177:Puñal Asesino;NO;REVISAR_TIENDA;Revisar si se quita de tienda
+846;Puñal Asesino (+3 Fuerza);Armas;mixed;2;0;28320;180;150;40;Lingote de hierro(386)x150;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+969;Munición Maciza de Pinchos para Honda (2-4);Armas;blacksmith;32;2;18538;200;0;10;Lingote de hierro(386)x7 + Lingote de oro(388)x1;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+971;Arco Galadhriel(9-13);Armas;carpentry;2;0;18547;0;195;30;Leña(58)x600;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+972;Ballesta(8-12);Armas;carpentry;2;0;18548;0;200;30;Leña(58)x1000;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+1037;Báculo del Dragón (+28 DM);Armas;carpentry;2;0;5420;0;180;40;Leña(58)x10000;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+1056;Espada De Fuego(30-37);Armas;blacksmith;2;0;28220;200;0;50;Lingote de hierro(386)x255 + Lingote de plata(387)x70 + Lingote de oro(388)x125;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+1225;Báculo de la Naturaleza (+28 DM);Armas;carpentry;2;0;29120;0;180;40;Leña(58)x10000;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+624;Escudo De Heroe (15-20);Escudos;blacksmith;3;2;879;200;0;20;Lingote de hierro(386)x100 + Lingote de plata(387)x50 + Lingote de oro(388)x10;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+746;Escudo Cruz (+5 Fuerza);Escudos;blacksmith;3;2;14813;200;0;40;Lingote de hierro(386)x100 + Lingote de plata(387)x200;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+748;Escudo Celeste (+2 Fuerza);Escudos;blacksmith;3;2;14867;200;0;40;Lingote de hierro(386)x200 + Lingote de plata(387)x100;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+749;Escudo Bordes Dorados (+3 Agilidad);Escudos;blacksmith;3;2;14894;200;0;40;Lingote de hierro(386)x125 + Lingote de plata(387)x150;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+750;Escudo Negro (+3 Fuerza);Escudos;blacksmith;3;2;14921;170;0;40;Lingote de hierro(386)x250 + Lingote de plata(387)x125;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+751;Escudo del Dragón Negro (+2 Agilidad);Escudos;blacksmith;3;2;14948;200;0;30;Lingote de hierro(386)x100 + Lingote de plata(387)x200;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+752;Escudo Baldurs (+5 Agilidad);Escudos;blacksmith;3;2;14975;200;0;40;Lingote de hierro(386)x200 + Lingote de plata(387)x100;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+824;Escudo Sajón (+5 Fuerza);Escudos;blacksmith;3;2;16008;200;0;40;Lingote de hierro(386)x120 + Lingote de plata(387)x50 + Lingote de oro(388)x68;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+825;Escudo Veneciano (18-20);Escudos;blacksmith;3;2;16116;200;0;20;Lingote de hierro(386)x140 + Lingote de plata(387)x15 + Lingote de oro(388)x10;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+826;Escudo Bizantino (12-20);Escudos;blacksmith;3;2;16035;200;0;20;Lingote de hierro(386)x90 + Lingote de plata(387)x45 + Lingote de oro(388)x5;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+1079;Escudo de Diamantes (20-25);Escudos;artisan;3;2;28661;0;0;30;Diamante(695)x25;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+1231;Escudo Sol +5Fu/+2Ag;Escudos;blacksmith;3;2;23270;200;0;50;Lingote de hierro(386)x150 + Lingote de plata(387)x80 + Lingote de oro(388)x70 + Gema Sagrada Recuperada por Shadow VX(598)x2;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+1232;Escudo Templario (20-22);Escudos;blacksmith;3;2;23330;200;0;20;Lingote de hierro(386)x100 + Lingote de plata(387)x60 + Lingote de oro(388)x10;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+764;Casco Cubierto (+5 Agilidad);Cascos;blacksmith;3;1;15173;200;0;40;Lingote de hierro(386)x200 + Lingote de plata(387)x50;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+765;Casco Medieval (+2 Agilidad);Cascos;blacksmith;3;1;15178;200;0;30;Lingote de hierro(386)x100 + Lingote de plata(387)x100;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+766;Casco Completo (+100 Mana);Cascos;blacksmith;3;1;15183;200;0;30;Lingote de hierro(386)x90 + Lingote de plata(387)x50;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+767;Corona (+2 Agilidad);Cascos;blacksmith;3;1;15340;200;0;30;Lingote de hierro(386)x100 + Lingote de plata(387)x100;3500;NO;;NO;REVISAR;Candidato crafting si no se vende
+831;Casco Normando(12-16);Cascos;blacksmith;3;1;16175;200;0;10;Lingote de hierro(386)x60 + Lingote de plata(387)x5 + Lingote de oro(388)x10;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+832;Casco Centurión(10-14);Cascos;blacksmith;3;1;16180;170;0;10;Lingote de hierro(386)x35 + Lingote de oro(388)x45;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+1073;Corona Calavera (+3 Agilidad) (1-3);Cascos;mixed;3;1;28503;200;200;40;Lingote de hierro(386)x100 + Lingote de plata(387)x100;4500;NO;;NO;REVISAR;Candidato crafting si no se vende
+1074;Sombrero de Mago (+300 Mana +15 DM);Cascos;blacksmith;3;1;28513;180;0;40;Lingote de hierro(386)x100 + Lingote de plata(387)x150 + Lingote de oro(388)x100;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+1088;Casco Completo (+200 Mana);Cascos;blacksmith;3;1;15183;200;0;40;Lingote de hierro(386)x180 + Lingote de plata(387)x100;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+1223;Sombrero Hechizado (+20 DM);Cascos;mixed;3;1;16420;200;200;30;Lingote de hierro(386)x100 + Lingote de plata(387)x150;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+383;Placas Albinas +3A (Bajo/as);Armaduras/Tunicas;blacksmith;3;0;695;200;0;30;Lingote de hierro(386)x180 + Lingote de plata(387)x230 + Lingote de oro(388)x100;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+487;Dama de las Tinieblas (Altas);Armaduras/Tunicas;blacksmith;3;0;763;200;0;30;Lingote de hierro(386)x150 + Lingote de plata(387)x100 + Lingote de oro(388)x75;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+495;A. Escarlata (Alto/as);Armaduras/Tunicas;blacksmith;3;0;771;200;0;30;Lingote de hierro(386)x150 + Lingote de plata(387)x60 + Lingote de oro(388)x40;1;NO;;SI;REVISAR;Candidato crafting si no se vende | Ya tiene receta actual
+496;Placas de la Ciénaga +2F (Alto/as);Armaduras/Tunicas;blacksmith;3;0;772;180;0;30;Lingote de hierro(386)x200 + Lingote de plata(387)x150 + Lingote de oro(388)x100;1;NO;;SI;REVISAR;Candidato crafting si no se vende | Ya tiene receta actual
+500;Placas Bruñidas +5F (Bajo/as);Armaduras/Tunicas;blacksmith;3;0;776;170;0;40;Lingote de hierro(386)x281 + Lingote de plata(387)x100 + Lingote de oro(388)x68;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+705;Placas Azules +3F (Alto/as);Armaduras/Tunicas;blacksmith;3;0;12766;200;0;40;Lingote de hierro(386)x250 + Lingote de plata(387)x150 + Lingote de oro(388)x100;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+709;A. Escarlata con Capa (Alto/as);Armaduras/Tunicas;blacksmith;3;0;12874;200;0;20;Lingote de hierro(386)x175 + Lingote de plata(387)x70 + Lingote de oro(388)x100;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+725;Placas de Oro +5A (Alto/as);Armaduras/Tunicas;blacksmith;3;0;14042;200;0;50;Lingote de hierro(386)x260 + Lingote de oro(388)x100;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+726;Placas Plateadas +3A (Alto/as);Armaduras/Tunicas;blacksmith;3;0;14069;200;0;40;Lingote de hierro(386)x175 + Lingote de plata(387)x225 + Lingote de oro(388)x100;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+727;Placas Rojas +2A (Alto/as);Armaduras/Tunicas;blacksmith;3;0;14096;170;0;30;Lingote de hierro(386)x150 + Lingote de plata(387)x200 + Lingote de oro(388)x100;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+729;Placas Doradas +5F (Alto/as);Armaduras/Tunicas;blacksmith;3;0;14150;200;0;50;Lingote de hierro(386)x100 + Lingote de plata(387)x100 + Lingote de oro(388)x175;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+730;Túnica Lujosa Marrón +100Maná (Alto/as);Armaduras/Tunicas;blacksmith;3;0;14177;170;0;30;Lingote de hierro(386)x195 + Lingote de plata(387)x20 + Lingote de oro(388)x20;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+731;Túnica Lujosa Plateada +200Maná (Alto/as);Armaduras/Tunicas;blacksmith;3;0;14231;184;0;40;Lingote de hierro(386)x210 + Lingote de plata(387)x40 + Lingote de oro(388)x35;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+732;Túnica Lujosa Azul +300Maná (Alto/as);Armaduras/Tunicas;blacksmith;3;0;14258;200;0;40;Lingote de hierro(386)x260 + Lingote de plata(387)x70 + Lingote de oro(388)x60;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+741;Placas de Oro +5A (Bajo/as);Armaduras/Tunicas;blacksmith;3;0;14678;200;0;50;Lingote de hierro(386)x160 + Lingote de oro(388)x100;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+744;Placas con Capa Amarilla +3F (Bajo/as);Armaduras/Tunicas;blacksmith;3;0;14759;200;0;40;Lingote de hierro(386)x200 + Lingote de plata(387)x175 + Lingote de oro(388)x100;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+745;Placas con Capa Calavérica +2F (Bajo/as);Armaduras/Tunicas;blacksmith;3;0;14786;180;0;30;Lingote de hierro(386)x200 + Lingote de plata(387)x150 + Lingote de oro(388)x100;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+809;A. con Capa Roja (Bajo/as);Armaduras/Tunicas;blacksmith;3;0;16866;200;0;30;Lingote de hierro(386)x150 + Lingote de plata(387)x60 + Lingote de oro(388)x10;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+869;A. Capa Verde (Bajo/as);Armaduras/Tunicas;blacksmith;3;0;16864;200;0;20;Lingote de hierro(386)x150 + Lingote de plata(387)x70 + Lingote de oro(388)x100;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+870;Placas Verdes +2A (Bajo/as);Armaduras/Tunicas;blacksmith;3;0;16865;170;0;30;Lingote de hierro(386)x150 + Lingote de plata(387)x200 + Lingote de oro(388)x100;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+950;Túnica Lujosa Marrón +100Maná (Bajo/as);Armaduras/Tunicas;blacksmith;3;0;17906;170;0;30;Lingote de hierro(386)x195 + Lingote de plata(387)x20 + Lingote de oro(388)x20;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+951;Túnica Lujosa Plateada +200Maná (Bajo/as);Armaduras/Tunicas;blacksmith;3;0;17933;184;0;40;Lingote de hierro(386)x210 + Lingote de plata(387)x40 + Lingote de oro(388)x15;1;NO;;NO;REVISAR;Candidato crafting si no se vende
+952;Túnica Lujosa Azul +300Maná (Bajo/as);Armaduras/Tunicas;blacksmith;3;0;17960;200;0;40;Lingote de hierro(386)x260 + Lingote de plata(387)x70 + Lingote de oro(388)x60;1;NO;;NO;REVISAR;Candidato crafting si no se vende

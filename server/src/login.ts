@@ -833,6 +833,13 @@ function Login(this: LoginApi) {
                 }
 
                 personaje.spells = spells;
+                personaje.learnedCraftingRecipes = Array.from(
+                    new Set(
+                        (Array.isArray(personaje.learnedCraftingRecipes) ? personaje.learnedCraftingRecipes : [])
+                            .map((recipeId) => Math.floor(Number(recipeId) || 0))
+                            .filter((recipeId) => recipeId > 0),
+                    ),
+                );
 
                 const classCannotUseMagic =
                     personaje.idClase === vars.clases.guerrero || personaje.idClase === vars.clases.cazador;

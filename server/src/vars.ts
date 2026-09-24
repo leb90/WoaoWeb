@@ -269,6 +269,7 @@ function Vars(this: any) {
         botellasLlenas: 34,
         manchas: 35,
         lingotes: 36,
+        recetas: 46,
     };
 
     this.partesCuerpo = {

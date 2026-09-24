@@ -15,6 +15,7 @@ const OLD_DAT = path.join(ROOT, "old/Nuevo Motor Graf/Servidor 7.0/Dat");
 const FRONT_INIT = path.join(ROOT, "frontend/public/init");
 const FRONT_GRAPHICS = path.join(ROOT, "frontend/public/graphics");
 const API_JSONS = path.join(ROOT, "api/src/jsons");
+const SERVER_JSONS = path.join(ROOT, "server/jsons");
 
 type IniSection = Record<string, string>;
 type IniFile = Record<string, IniSection>;
@@ -313,6 +314,9 @@ function updateObjectGraphics(): { objects: number; changed: number } {
     const clientIni = parseIni(readLatin1(path.join(OLD_INIT, "OBJ.dat")));
     const serverIni = parseIni(readLatin1(path.join(OLD_DAT, "OBJ.dat")));
     const apiObjs = readJson<Record<string, Record<string, unknown>>>(path.join(API_JSONS, "objs.json"));
+    const serverObjs = fs.existsSync(path.join(SERVER_JSONS, "objs.json"))
+        ? readJson<Record<string, Record<string, unknown>>>(path.join(SERVER_JSONS, "objs.json"))
+        : { ...apiObjs };
     const frontObjs = readJson<Record<string, Record<string, unknown>>>(path.join(FRONT_INIT, "objs.json"));
     let changed = 0;
 
@@ -327,15 +331,19 @@ function updateObjectGraphics(): { objects: number; changed: number } {
             const grhIndex = toInt(getValue(section, "GrhIndex"));
             const anim = toInt(getValue(section, "NumRopaje") ?? getValue(section, "Anim"));
             const apiObject = apiObjs[id] ?? {};
+            const serverObject = serverObjs[id] ?? {};
             const frontObject = frontObjs[id] ?? {};
             const previousGrh = Number(apiObject.grhIndex ?? frontObject.grhIndex ?? 0);
             const previousAnim = Number(apiObject.anim ?? 0);
 
             apiObject.grhIndex = grhIndex;
+            serverObject.grhIndex = grhIndex;
             if (anim) {
                 apiObject.anim = anim;
+                serverObject.anim = anim;
             }
             apiObjs[id] = apiObject;
+            serverObjs[id] = serverObject;
 
             frontObject.grhIndex = String(grhIndex);
             frontObjs[id] = frontObject;
@@ -349,6 +357,7 @@ function updateObjectGraphics(): { objects: number; changed: number } {
     apply(serverIni);
     apply(clientIni);
     writeJson(path.join(API_JSONS, "objs.json"), apiObjs);
+    writeJson(path.join(SERVER_JSONS, "objs.json"), serverObjs);
     writeJson(path.join(FRONT_INIT, "objs.json"), frontObjs);
 
     return { objects: Object.keys(apiObjs).length, changed };
@@ -356,6 +365,9 @@ function updateObjectGraphics(): { objects: number; changed: number } {
 
 function updateNpcGraphics(): { npcs: number; changed: number } {
     const apiNpcs = readJson<Record<string, Record<string, unknown>>>(path.join(API_JSONS, "npcs.json"));
+    const serverNpcs = fs.existsSync(path.join(SERVER_JSONS, "npcs.json"))
+        ? readJson<Record<string, Record<string, unknown>>>(path.join(SERVER_JSONS, "npcs.json"))
+        : { ...apiNpcs };
     const frontNpcs = readJson<Record<string, Record<string, unknown>>>(path.join(FRONT_INIT, "npcs.json"));
     let changed = 0;
 
@@ -375,6 +387,7 @@ function updateNpcGraphics(): { npcs: number; changed: number } {
             const idHead = toInt(getValue(section, "Head"));
             const idBody = toInt(getValue(section, "Body"));
             const apiNpc = apiNpcs[id] ?? {};
+            const serverNpc = serverNpcs[id] ?? {};
             const frontNpc = frontNpcs[id] ?? {};
             const previousHead = Number(apiNpc.idHead ?? frontNpc.idHead ?? 0);
             const previousBody = Number(apiNpc.idBody ?? frontNpc.idBody ?? 0);
@@ -382,6 +395,10 @@ function updateNpcGraphics(): { npcs: number; changed: number } {
             apiNpc.idHead = idHead;
             apiNpc.idBody = idBody;
             apiNpcs[id] = apiNpc;
+
+            serverNpc.idHead = idHead;
+            serverNpc.idBody = idBody;
+            serverNpcs[id] = serverNpc;
 
             frontNpc.idHead = idHead;
             frontNpc.idBody = idBody;
@@ -396,6 +413,7 @@ function updateNpcGraphics(): { npcs: number; changed: number } {
     apply(path.join(OLD_DAT, "NPCs.dat"));
     apply(path.join(OLD_DAT, "NPCs-HOSTILES.dat"));
     writeJson(path.join(API_JSONS, "npcs.json"), apiNpcs);
+    writeJson(path.join(SERVER_JSONS, "npcs.json"), serverNpcs);
     writeJson(path.join(FRONT_INIT, "npcs.json"), frontNpcs);
     writeJson(path.join(FRONT_INIT, "npcs_optimized.json"), frontNpcs);
 

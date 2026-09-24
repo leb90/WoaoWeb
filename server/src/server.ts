@@ -553,6 +553,14 @@ function trackClientActivity(ws: RuntimeClient, packageID: number) {
         LoadSmeltingRecipes.initialize(),
     ]);
 
+    const craftingValidation = require("./craftingRecipes").validateCraftingRecipesAgainstObjects(vars.datObj);
+    if (craftingValidation.length > 0) {
+        console.warn(`[Crafting] ${craftingValidation.length} referencias invalidas detectadas.`);
+        for (const problem of craftingValidation.slice(0, 20)) {
+            console.warn(`[Crafting] ${problem}`);
+        }
+    }
+
     require("./quests").initialize();
     require("./mounts").initialize();
     require("./bloodCastle").initialize();

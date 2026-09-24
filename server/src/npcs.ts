@@ -26,6 +26,7 @@ import {
     shouldIgnoreHarmfulSpell,
 } from "./racialPassives";
 import { getLegacyNpcDropChancePercent, shouldDropNpcItem } from "./npcDrops";
+import { rollCraftingRecipeDrops } from "./craftingRecipeDrops";
 
 export {};
 
@@ -3100,13 +3101,9 @@ function Npcs(this: NpcsApi) {
                 return;
             }
 
-            if (!Array.isArray(npc.drop) || npc.drop.length === 0) {
-                return;
-            }
-
             const reservedDropPositions = new Set<string>();
 
-            for (let index = 0; index < npc.drop.length; index++) {
+            for (let index = 0; index < (npc.drop ?? []).length; index++) {
                 const item = npc.drop[index];
                 if (!item || !shouldDropNpcItem(item, undefined, getLegacyNpcDropChancePercent(index))) {
                     continue;
@@ -3123,6 +3120,14 @@ function Npcs(this: NpcsApi) {
                 } else {
                     this.tirarItemAlSuelo(item.item, item.cant, npc.map, npc.pos, idNpc, reservedDropPositions);
                 }
+            }
+
+            for (const item of rollCraftingRecipeDrops(npc)) {
+                if (!vars.datObj[item.item]) {
+                    continue;
+                }
+
+                this.tirarItemAlSuelo(item.item, item.cant, npc.map, npc.pos, idNpc, reservedDropPositions);
             }
         } catch (err) {
             funct.dumpError(err);

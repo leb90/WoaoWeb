@@ -162,6 +162,7 @@ const TELEPORT_CLIENT_MOVEMENT_LOCK_MS = 75;
 const PVP_MAP_CHANGE_BLOCK_MS = 5000;
 const DRAGON_SLAYER_SWORD_ITEM_ID = 402;
 const HOBBIT_CLOAK_OBJECT_TYPE = 50;
+const CRAFTING_RECIPE_OBJECT_TYPE = 46;
 const CLAN_RING_MAP_ID = 273;
 const MERCHANT_NPC_TYPE = 10;
 
@@ -408,6 +409,7 @@ type GameCharacter = RuntimeCharacter & {
     inv: InventoryRecord;
     bank: InventoryRecord;
     spells: SpellRecord;
+    learnedCraftingRecipes?: number[];
     items?: SerializedInventoryItem[];
     bankItems?: SerializedBankItem[];
     npcTrade?: EntityId;
@@ -5198,6 +5200,11 @@ function Game(this: GameApi) {
                     );
                     break;
                 }
+                case CRAFTING_RECIPE_OBJECT_TYPE:
+                    if (await crafting.handleRecipeItemUse(ws, idPos, idItem)) {
+                        break;
+                    }
+                    return;
                 case vars.objType.pergaminos:
                     user.spells = normalizeSpellRecord(user.spells);
 
@@ -5450,7 +5457,9 @@ function Game(this: GameApi) {
                     return;
                 }
 
-                if (datObj.agarrable) {
+                // agarrable=1 marca objetos fijos / no recolectables para jugadores.
+                // Los GM pueden agarrarlos igual (limpieza de mapas, set legendario, etc.).
+                if (datObj.agarrable && Number(user.privileges ?? 0) < 1) {
                     return;
                 }
 

@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
+import path from "node:path";
 
 import { getLegacyNpcDropChancePercent, getNpcDropChancePercent } from "./npcDrops";
 
@@ -50,6 +51,7 @@ export type DataNpc = {
 type NpcsById = Record<string, DataNpc>;
 
 const DEFAULT_NPCS_API_PATH = "/internal/game-data/npcs/changes?sinceVersion=0";
+const DEFAULT_NPCS_JSON_PATH = path.resolve(__dirname, "../jsons/npcs.json");
 
 const NPC_DEFAULTS: Record<string, unknown> = {
     name: "",
@@ -171,7 +173,11 @@ function getNpcsDbUrl(): string | null {
 }
 
 function shouldPreferDbSource(): boolean {
-    return (process.env.GAME_DATA_SOURCE ?? "").toLowerCase() === "db";
+    return config.gameDataSource === "db";
+}
+
+function shouldPreferApiSource(): boolean {
+    return config.gameDataSource === "api";
 }
 
 function fetchNpcChangesFromApi(): NpcChangesResponse {
@@ -233,15 +239,11 @@ export function loadDefaultNpcsData(): NpcsById {
         return loadNpcsDataFromDb(dbUrl);
     }
 
-    try {
+    if (shouldPreferApiSource()) {
         return loadNpcsDataFromApi();
-    } catch (apiError) {
-        if (dbUrl) {
-            return loadNpcsDataFromDb(dbUrl);
-        }
-
-        throw apiError;
     }
+
+    return loadNpcsDataFromJsonFile(DEFAULT_NPCS_JSON_PATH);
 }
 
-export { DEFAULT_NPCS_API_PATH };
+export { DEFAULT_NPCS_API_PATH, DEFAULT_NPCS_JSON_PATH };

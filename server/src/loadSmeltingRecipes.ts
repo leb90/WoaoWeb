@@ -1,26 +1,29 @@
 export {};
 
 const vars = require("./vars");
+const config = require("./config");
 const { loadDefaultSmeltingRecipesData } = require("./smeltingRecipeData");
 const { initializeSmeltingRecipesFromApi } = require("./gameDataSync");
 
 class LoadSmeltingRecipes {
     async initialize() {
         await this.load();
-        console.log("Recetas de fundición cargadas.");
+        console.log("Recetas de fundicion cargadas.");
     }
 
     async load() {
         vars.smeltingRecipes = loadDefaultSmeltingRecipesData();
+        vars.gameDataVersions.smeltingRecipes = 0;
 
-        try {
-            const result = await initializeSmeltingRecipesFromApi();
-            console.log(
-                `[GAME DATA] Fundición hidratada desde DB: ${result.loadedRecipes}. Version aplicada: ${result.currentVersion}.`,
-            );
-        } catch {
-            console.warn("[GAME DATA] No se pudo hidratar fundición desde API al iniciar. Se usan datos locales.");
+        if (config.gameDataSource !== "api" && config.gameDataSource !== "db") {
+            console.log(`[GAME DATA] Fundicion cargada desde archivos locales: ${vars.smeltingRecipes.length}.`);
+            return;
         }
+
+        const result = await initializeSmeltingRecipesFromApi();
+        console.log(
+            `[GAME DATA] Fundicion hidratada desde DB: ${result.loadedRecipes}. Version aplicada: ${result.currentVersion}.`,
+        );
     }
 }
 

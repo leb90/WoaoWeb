@@ -30,6 +30,7 @@ type CraftingOpenPayload = {
     title: string;
     goldAvailable?: number;
     recipes: Array<{
+        id?: number;
         profession: "carpentry" | "blacksmith" | "tailoring";
         itemId: number;
         name: string;
@@ -40,6 +41,9 @@ type CraftingOpenPayload = {
         details: string;
         stats: string;
         skill: number;
+        level?: number;
+        recipeItemId?: number;
+        learned?: boolean;
         category: string;
         materials: Array<{
             itemId: number;

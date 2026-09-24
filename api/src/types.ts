@@ -220,6 +220,11 @@ export type CharacterSpellRecord = {
     id_spell: number;
 };
 
+export type CharacterCraftingRecipeRecord = {
+    recipe_id: number;
+    learned_at: Date;
+};
+
 export type CharacterApiResponse = {
     _id: string;
     idAccount: string;
@@ -310,6 +315,7 @@ export type CharacterApiResponse = {
         idPos: number;
         idSpell: number;
     }>;
+    learnedCraftingRecipes: number[];
     createdAt: Date;
     updatedAt: Date;
 };

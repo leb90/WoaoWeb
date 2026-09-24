@@ -10,6 +10,7 @@ import type {
     RankingCharacterRecord,
     RankingCharacterResponse,
     RankingListResponse,
+    CharacterCraftingRecipeRecord,
     CharacterRecord,
     CharacterSpellRecord,
 } from "../types";
@@ -64,6 +65,7 @@ const bankItemSchema = z.object({
 type ParsedItem = z.infer<typeof itemSchema>;
 type ParsedBankItem = z.infer<typeof bankItemSchema>;
 type ParsedSpell = z.infer<typeof spellSchema>;
+type ParsedCraftingRecipeId = number;
 
 const storagePatchSchema = z.object({
     items: z.array(itemSchema),
@@ -155,6 +157,7 @@ const characterPatchSchema = z
         items: z.array(itemSchema).optional(),
         bankItems: z.array(bankItemSchema).optional(),
         spells: z.array(spellSchema).optional(),
+        learnedCraftingRecipes: z.array(z.coerce.number().int().positive()).optional(),
         skills: z.array(z.coerce.number().int()).optional(),
         skillPts: z.coerce.number().int().optional(),
     })
@@ -235,6 +238,7 @@ function toCharacterResponse(
     items: CharacterItemRecord[],
     bankItems: CharacterBankItemRecord[],
     spells: CharacterSpellRecord[],
+    craftingRecipes: CharacterCraftingRecipeRecord[],
 ): CharacterApiResponse {
     return {
         _id: character.id,
@@ -326,6 +330,7 @@ function toCharacterResponse(
             idPos: spell.id_pos,
             idSpell: spell.id_spell,
         })),
+        learnedCraftingRecipes: craftingRecipes.map((recipe) => recipe.recipe_id),
         createdAt: character.created_at,
         updatedAt: character.updated_at,
     };
@@ -403,6 +408,23 @@ async function getCharacterSpells(
     return result.rows;
 }
 
+async function getCharacterCraftingRecipes(
+    client: PoolClient,
+    characterId: string,
+): Promise<CharacterCraftingRecipeRecord[]> {
+    const result = await client.query<CharacterCraftingRecipeRecord>(
+        `
+      SELECT recipe_id, learned_at
+      FROM character_crafting_recipes
+      WHERE character_id = $1
+      ORDER BY recipe_id ASC
+    `,
+        [characterId],
+    );
+
+    return result.rows;
+}
+
 async function getCharacterRecord(
     client: PoolClient,
     characterId: string,
@@ -457,8 +479,9 @@ async function getFullCharacter(
     const items = await getCharacterItems(client, characterId);
     const bankItems = await getCharacterBankItems(client, characterId);
     const spells = await getCharacterSpells(client, characterId);
+    const craftingRecipes = await getCharacterCraftingRecipes(client, characterId);
 
-    return toCharacterResponse(character, items, bankItems, spells);
+    return toCharacterResponse(character, items, bankItems, spells, craftingRecipes);
 }
 
 export async function listCharacterRanking(options?: {
@@ -689,6 +712,53 @@ async function replaceSpells(
     );
 }
 
+async function replaceCraftingRecipes(
+    client: PoolClient,
+    characterId: string,
+    recipeIds: ParsedCraftingRecipeId[],
+): Promise<void> {
+    const uniqueRecipeIds = Array.from(new Set(recipeIds));
+    const currentRecipes = await getCharacterCraftingRecipes(client, characterId);
+    const currentIds = new Set(currentRecipes.map((recipe) => recipe.recipe_id));
+    const nextIds = new Set(uniqueRecipeIds);
+    const idsToDelete = currentRecipes
+        .filter((recipe) => !nextIds.has(recipe.recipe_id))
+        .map((recipe) => recipe.recipe_id);
+
+    if (idsToDelete.length > 0) {
+        await client.query(
+            `
+        DELETE FROM character_crafting_recipes
+        WHERE character_id = $1
+          AND recipe_id = ANY($2::int[])
+      `,
+            [characterId, idsToDelete],
+        );
+    }
+
+    const idsToInsert = uniqueRecipeIds.filter((recipeId) => !currentIds.has(recipeId));
+
+    if (idsToInsert.length === 0) {
+        return;
+    }
+
+    const values: Array<number | string> = [];
+    const placeholders = idsToInsert.map((recipeId, index) => {
+        const base = index * 2;
+        values.push(characterId, recipeId);
+        return `($${base + 1}, $${base + 2})`;
+    });
+
+    await client.query(
+        `
+      INSERT INTO character_crafting_recipes (character_id, recipe_id)
+      VALUES ${placeholders.join(", ")}
+      ON CONFLICT (character_id, recipe_id) DO NOTHING
+    `,
+        values,
+    );
+}
+
 async function touchCharacterUpdatedAt(
     client: PoolClient,
     characterId: string,
@@ -792,13 +862,14 @@ export async function getCharacterByAccountAndEmail(
         const items = await getCharacterItems(client, idCharacter);
         const bankItems = await getCharacterBankItems(client, idCharacter);
         const spells = await getCharacterSpells(client, idCharacter);
+        const craftingRecipes = await getCharacterCraftingRecipes(client, idCharacter);
 
         return {
             account: {
                 _id: account.id,
                 name: account.name,
             },
-            character: toCharacterResponse(character, items, bankItems, spells),
+            character: toCharacterResponse(character, items, bankItems, spells, craftingRecipes),
         };
     } finally {
         client.release();
@@ -1055,8 +1126,9 @@ export async function getCharactersByAccountId(
             const items = await getCharacterItems(client, character.id);
             const bankItems = await getCharacterBankItems(client, character.id);
             const spells = await getCharacterSpells(client, character.id);
+            const craftingRecipes = await getCharacterCraftingRecipes(client, character.id);
             characters.push(
-                toCharacterResponse(character, items, bankItems, spells),
+                toCharacterResponse(character, items, bankItems, spells, craftingRecipes),
             );
         }
 
@@ -1145,6 +1217,10 @@ export async function patchCharacter(
             await replaceSpells(client, characterId, parsed.spells);
         }
 
+        if (parsed.learnedCraftingRecipes) {
+            await replaceCraftingRecipes(client, characterId, parsed.learnedCraftingRecipes);
+        }
+
         await client.query("COMMIT");
 
         return {
@@ -1213,6 +1289,20 @@ export async function patchCharacterSpells(
 
     return patchCharacterCollection(characterId, async (client) => {
         await replaceSpells(client, characterId, parsedSpells);
+    });
+}
+
+export async function patchCharacterCraftingRecipes(
+    characterId: string,
+    learnedCraftingRecipes: unknown,
+): Promise<{
+    ok: true;
+    updatedAt: string;
+} | null> {
+    const parsedRecipeIds = z.array(z.coerce.number().int().positive()).parse(learnedCraftingRecipes);
+
+    return patchCharacterCollection(characterId, async (client) => {
+        await replaceCraftingRecipes(client, characterId, parsedRecipeIds);
     });
 }
 

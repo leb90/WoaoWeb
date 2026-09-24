@@ -86,6 +86,8 @@ export type GameCraftingRecipeRecordData = {
     deleted?: boolean;
     itemId: number;
     skill: number;
+    level?: number;
+    recipeItemId?: number;
     materials: Array<{ itemId: number; amount: number }>;
 };
 
@@ -321,6 +323,8 @@ export function normalizeCraftingRecipeData(
         deleted: Boolean(data.deleted ?? false),
         itemId: Number(data.itemId ?? 0),
         skill: Number(data.skill ?? 0),
+        level: Number(data.level ?? data.skill ?? 0),
+        recipeItemId: Number(data.recipeItemId ?? 0),
         materials: Array.isArray(data.materials)
             ? data.materials.map((material) => ({
                   itemId: Number(material.itemId ?? 0),

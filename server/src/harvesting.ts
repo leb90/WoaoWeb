@@ -339,6 +339,11 @@ const harvesting: HarvestingApi = {
             return false;
         }
 
+        if (vars.disableLegacyWorkerGathering !== false) {
+            handleProtocol.console("La recoleccion de oficio fue deshabilitada. Los materiales se obtendran matando NPCs.", "#fcd34d", 0, 0, ws);
+            return true;
+        }
+
         if (!item.equipped || Number(user.idItemWeapon ?? 0) !== Number(idPos)) {
             handleProtocol.console(
                 skill === "woodcutting"

@@ -3,19 +3,13 @@ import express from "express";
 import config from "./config";
 import pool from "./db";
 import { requireAuth } from "./middleware/auth";
+import { DONATION_PACKAGES, getDonationPackage } from "./lib/donationPackages";
 import {
-    DONATION_COINS,
-    DONATION_PACKAGES,
-    getDonationPackage,
-    isDonationCoin,
-} from "./lib/donationPackages";
-import { createInvoice, verifyIpnSignature } from "./lib/nowpayments";
-import {
-    buildSignedWidgetUrl,
-    getCardMinimumUsd,
-    isMoonpayConfigured,
-    verifyWebhookSignature as verifyMoonpayWebhookSignature,
-} from "./lib/moonpay";
+    createCheckoutPreference,
+    getPayment,
+    isMercadoPagoConfigured,
+    usdToArs,
+} from "./lib/mercadopago";
 import { creditDonationPoints } from "./lib/gameServerClient";
 import {
     claimDonationPaymentForCredit,
@@ -270,16 +264,7 @@ async function start(): Promise<void> {
     }
 }
 
-app.use(
-    express.json({
-        limit: "2mb",
-        // MoonPay firma el cuerpo crudo del webhook, hay que conservarlo tal cual llegó.
-        verify: (request, _response, buffer) => {
-            (request as express.Request & { rawBody?: string }).rawBody =
-                buffer.toString("utf8");
-        },
-    }),
-);
+app.use(express.json({ limit: "2mb" }));
 app.use((request, response, next) => {
     const startedAt = Date.now();
 
@@ -2610,166 +2595,19 @@ app.get("/user-online-stats", async (request, response) => {
     }
 });
 
-app.get("/donations/packages", async (_request, response) => {
-    const cardEnabled = isMoonpayConfigured();
+app.get("/donations/packages", (_request, response) => {
+    const available = isMercadoPagoConfigured();
 
     response.json({
-        packages: DONATION_PACKAGES,
-        methods: {
-            card: cardEnabled,
-            crypto: config.donationsCryptoEnabled && Boolean(config.nowpaymentsApiKey),
-        },
-        cardMinUsd: cardEnabled ? await getCardMinimumUsd() : null,
+        available,
+        packages: DONATION_PACKAGES.map((pkg) => ({
+            ...pkg,
+            ars: available ? usdToArs(pkg.usd) : null,
+        })),
     });
 });
 
-app.post("/donations/create-invoice", async (request, response) => {
-    try {
-        const authorized = await getAuthorizedSession(request);
-
-        if (!authorized) {
-            response.status(401).json({ error: "Unauthorized" });
-            return;
-        }
-
-        const { session } = authorized;
-
-        if (!session.selectedCharacterId) {
-            response
-                .status(400)
-                .json({ error: "Seleccioná un personaje antes de donar." });
-            return;
-        }
-
-        const packageId = String(request.body?.packageId ?? "");
-        const donationPackage = getDonationPackage(packageId);
-
-        if (!donationPackage) {
-            response.status(400).json({ error: "Paquete de donación inválido." });
-            return;
-        }
-
-        if (!config.donationsCryptoEnabled || !config.nowpaymentsApiKey) {
-            response
-                .status(503)
-                .json({ error: "Las donaciones no están disponibles en este momento." });
-            return;
-        }
-
-        const coinInput = String(request.body?.coin ?? "usdt");
-        const coin = isDonationCoin(coinInput) ? coinInput : "usdt";
-
-        const orderId = crypto.randomUUID();
-
-        await createPendingDonationPayment({
-            characterId: session.selectedCharacterId,
-            accountId: session.account._id,
-            provider: "nowpayments",
-            orderId,
-            packageId: donationPackage.id,
-            priceAmount: donationPackage.usd,
-            priceCurrency: "usd",
-            points: donationPackage.points,
-        });
-
-        const invoice = await createInvoice({
-            priceAmount: donationPackage.usd,
-            priceCurrency: "usd",
-            payCurrency: DONATION_COINS[coin],
-            orderId,
-            orderDescription: `World of AO - ${donationPackage.points} puntos de donación`,
-            ipnCallbackUrl: `${config.apiPublicUrl}/donations/webhook`,
-            successUrl: `${config.siteUrl}/donaciones?status=success`,
-            cancelUrl: `${config.siteUrl}/donaciones?status=cancel`,
-        });
-
-        response.json({ invoiceUrl: invoice.invoice_url });
-    } catch (error) {
-        response.status(500).json({
-            error: error instanceof Error ? error.message : "Unexpected error",
-        });
-    }
-});
-
-app.post("/donations/webhook", async (request, response) => {
-    try {
-        const signature = request.header("x-nowpayments-sig");
-
-        if (!verifyIpnSignature(request.body, signature)) {
-            response.status(401).json({ error: "Firma inválida" });
-            return;
-        }
-
-        const payload = request.body as {
-            order_id?: string;
-            payment_id?: number | string;
-            payment_status?: string;
-            pay_amount?: number;
-            pay_currency?: string;
-        };
-
-        const orderId = String(payload.order_id ?? "");
-        const paymentRecord = orderId
-            ? await findDonationPaymentByOrderId(orderId)
-            : null;
-
-        if (!paymentRecord) {
-            response.status(404).json({ error: "Orden no encontrada" });
-            return;
-        }
-
-        if (paymentRecord.credited) {
-            response.status(200).json({ ok: true });
-            return;
-        }
-
-        if (payload.payment_status !== "finished") {
-            await updateDonationPaymentStatus({
-                orderId,
-                providerPaymentId: payload.payment_id ? String(payload.payment_id) : null,
-                status: payload.payment_status ?? "unknown",
-                rawPayload: payload,
-            });
-            response.status(200).json({ ok: true });
-            return;
-        }
-
-        const claimed = await claimDonationPaymentForCredit(orderId);
-
-        if (!claimed) {
-            response.status(200).json({ ok: true });
-            return;
-        }
-
-        try {
-            await creditDonationPoints({
-                characterId: claimed.character_id,
-                points: claimed.points,
-                orderId,
-            });
-        } catch (error) {
-            await releaseDonationPaymentClaim(orderId);
-            throw error;
-        }
-
-        await markDonationPaymentCredited({
-            orderId,
-            providerPaymentId: payload.payment_id ? String(payload.payment_id) : null,
-            status: "finished",
-            payAmount: payload.pay_amount ?? null,
-            payCurrency: payload.pay_currency ?? null,
-            rawPayload: payload,
-        });
-
-        response.status(200).json({ ok: true });
-    } catch (error) {
-        response.status(500).json({
-            error: error instanceof Error ? error.message : "Unexpected error",
-        });
-    }
-});
-
-app.post("/donations/create-card-checkout", async (request, response) => {
+app.post("/donations/create-checkout", async (request, response) => {
     try {
         const authorized = await getAuthorizedSession(request);
 
@@ -2796,42 +2634,38 @@ app.post("/donations/create-card-checkout", async (request, response) => {
             return;
         }
 
-        if (!isMoonpayConfigured()) {
+        if (!isMercadoPagoConfigured()) {
             response
                 .status(503)
-                .json({ error: "El pago con tarjeta no está disponible en este momento." });
-            return;
-        }
-
-        const cardMinUsd = await getCardMinimumUsd();
-
-        if (cardMinUsd !== null && donationPackage.usd < cardMinUsd) {
-            response.status(400).json({
-                error: `Con tarjeta el monto mínimo es ${Math.ceil(cardMinUsd)} USD. Elegí un paquete mayor.`,
-            });
+                .json({ error: "Las donaciones no están disponibles en este momento." });
             return;
         }
 
         const orderId = crypto.randomUUID();
+        const priceArs = usdToArs(donationPackage.usd);
 
         await createPendingDonationPayment({
             characterId: session.selectedCharacterId,
             accountId: session.account._id,
-            provider: "moonpay",
+            provider: "mercadopago",
             orderId,
             packageId: donationPackage.id,
-            priceAmount: donationPackage.usd,
-            priceCurrency: "usd",
+            priceAmount: priceArs,
+            priceCurrency: "ars",
             points: donationPackage.points,
         });
 
-        const checkoutUrl = buildSignedWidgetUrl({
+        const preference = await createCheckoutPreference({
             orderId,
-            usdAmount: donationPackage.usd,
-            redirectUrl: `${config.siteUrl}/donaciones?status=success`,
+            title: `World of AO - ${donationPackage.points} puntos de donación`,
+            unitPriceArs: priceArs,
+            notificationUrl: `${config.apiPublicUrl}/donations/mercadopago-webhook`,
+            successUrl: `${config.siteUrl}/donaciones?status=success`,
+            pendingUrl: `${config.siteUrl}/donaciones?status=pending`,
+            failureUrl: `${config.siteUrl}/donaciones?status=cancel`,
         });
 
-        response.json({ checkoutUrl });
+        response.json({ checkoutUrl: preference.initPoint });
     } catch (error) {
         response.status(500).json({
             error: error instanceof Error ? error.message : "Unexpected error",
@@ -2839,42 +2673,30 @@ app.post("/donations/create-card-checkout", async (request, response) => {
     }
 });
 
-app.post("/donations/moonpay-webhook", async (request, response) => {
+app.post("/donations/mercadopago-webhook", async (request, response) => {
     try {
-        const rawBody = (request as express.Request & { rawBody?: string }).rawBody ?? "";
+        const type = String(
+            request.body?.type ?? request.query.type ?? request.query.topic ?? "",
+        );
+        const paymentId = String(
+            request.body?.data?.id ??
+                request.query["data.id"] ??
+                request.query.id ??
+                "",
+        );
 
-        if (
-            !verifyMoonpayWebhookSignature(
-                rawBody,
-                request.header("Moonpay-Signature-V2"),
-            )
-        ) {
-            response.status(401).json({ error: "Firma inválida" });
-            return;
-        }
-
-        const event = request.body as {
-            type?: string;
-            data?: {
-                id?: string;
-                status?: string;
-                externalTransactionId?: string;
-                baseCurrencyAmount?: number;
-                baseCurrencyCode?: string;
-            };
-        };
-
-        if (event.type !== "transaction_updated" || !event.data) {
+        if (type !== "payment" || !paymentId) {
             response.status(200).json({ ok: true });
             return;
         }
 
-        const orderId = String(event.data.externalTransactionId ?? "");
+        const payment = await getPayment(paymentId);
+        const orderId = String(payment?.external_reference ?? "");
         const paymentRecord = orderId
             ? await findDonationPaymentByOrderId(orderId)
             : null;
 
-        if (!paymentRecord || paymentRecord.provider !== "moonpay") {
+        if (!payment || !paymentRecord || paymentRecord.provider !== "mercadopago") {
             response.status(200).json({ ok: true });
             return;
         }
@@ -2884,33 +2706,26 @@ app.post("/donations/moonpay-webhook", async (request, response) => {
             return;
         }
 
-        const providerPaymentId = event.data.id ? String(event.data.id) : null;
-        const status = event.data.status ?? "unknown";
-
-        if (status !== "completed") {
+        if (payment.status !== "approved") {
             await updateDonationPaymentStatus({
                 orderId,
-                providerPaymentId,
-                status,
-                rawPayload: event,
+                providerPaymentId: String(payment.id),
+                status: payment.status,
+                rawPayload: payment,
             });
             response.status(200).json({ ok: true });
             return;
         }
 
-        const paidAmount = Number(event.data.baseCurrencyAmount);
-        const paidCurrency = String(event.data.baseCurrencyCode ?? "").toLowerCase();
-
         if (
-            Number.isFinite(paidAmount) &&
-            paidCurrency === "usd" &&
-            paidAmount < Number(paymentRecord.price_amount) * 0.99
+            payment.currency_id !== "ARS" ||
+            Number(payment.transaction_amount) < Number(paymentRecord.price_amount) * 0.99
         ) {
             await updateDonationPaymentStatus({
                 orderId,
-                providerPaymentId,
+                providerPaymentId: String(payment.id),
                 status: "amount_mismatch",
-                rawPayload: event,
+                rawPayload: payment,
             });
             response.status(200).json({ ok: true });
             return;
@@ -2936,11 +2751,11 @@ app.post("/donations/moonpay-webhook", async (request, response) => {
 
         await markDonationPaymentCredited({
             orderId,
-            providerPaymentId,
-            status: "completed",
-            payAmount: Number.isFinite(paidAmount) ? paidAmount : null,
-            payCurrency: paidCurrency || null,
-            rawPayload: event,
+            providerPaymentId: String(payment.id),
+            status: "approved",
+            payAmount: Number(payment.transaction_amount),
+            payCurrency: payment.currency_id,
+            rawPayload: payment,
         });
 
         response.status(200).json({ ok: true });

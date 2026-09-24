@@ -17,7 +17,7 @@ export async function POST(request: Request) {
 
     const body = await request.json();
 
-    const response = await fetchApi("/donations/create-invoice", {
+    const response = await fetchApi("/donations/create-checkout", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",

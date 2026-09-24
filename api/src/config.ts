@@ -22,14 +22,8 @@ type Config = {
   gameDataAdminEmail: string;
   gameDataAdminAccountId: string | null;
   gameDataAdminProxyToken: string | null;
-  nowpaymentsApiKey: string | null;
-  nowpaymentsIpnSecret: string | null;
-  donationsCryptoEnabled: boolean;
-  moonpayPublishableKey: string | null;
-  moonpaySecretKey: string | null;
-  moonpayWebhookKey: string | null;
-  moonpayWalletAddress: string | null;
-  moonpayCurrencyCode: string;
+  mercadopagoAccessToken: string | null;
+  donationsArsPerUsd: number | null;
   gameServerUrl: string;
 };
 
@@ -108,14 +102,8 @@ const config: Config = {
   gameDataAdminEmail: (process.env.GAME_DATA_ADMIN_EMAIL?.trim() || "").toLowerCase(),
   gameDataAdminAccountId: process.env.GAME_DATA_ADMIN_ACCOUNT_ID?.trim() || null,
   gameDataAdminProxyToken: process.env.GAME_DATA_ADMIN_PROXY_TOKEN?.trim() || null,
-  nowpaymentsApiKey: process.env.NOWPAYMENTS_API_KEY?.trim() || null,
-  nowpaymentsIpnSecret: process.env.NOWPAYMENTS_IPN_SECRET?.trim() || null,
-  donationsCryptoEnabled: process.env.DONATIONS_CRYPTO_ENABLED?.trim() === "true",
-  moonpayPublishableKey: process.env.MOONPAY_PUBLISHABLE_KEY?.trim() || null,
-  moonpaySecretKey: process.env.MOONPAY_SECRET_KEY?.trim() || null,
-  moonpayWebhookKey: process.env.MOONPAY_WEBHOOK_KEY?.trim() || null,
-  moonpayWalletAddress: process.env.MOONPAY_WALLET_ADDRESS?.trim() || null,
-  moonpayCurrencyCode: process.env.MOONPAY_CURRENCY_CODE?.trim() || "usdc_polygon",
+  mercadopagoAccessToken: process.env.MERCADOPAGO_ACCESS_TOKEN?.trim() || null,
+  donationsArsPerUsd: getOptionalNumberEnv("DONATIONS_ARS_PER_USD", 0) || null,
   gameServerUrl: (process.env.GAME_SERVER_URL?.trim() || "http://game-server:7666").replace(/\/+$/, ""),
 };
 

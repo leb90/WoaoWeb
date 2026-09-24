@@ -23,7 +23,7 @@ export type DonationPaymentRecord = {
 export async function createPendingDonationPayment(params: {
     characterId: string;
     accountId: string;
-    provider: "nowpayments" | "moonpay";
+    provider: "mercadopago";
     orderId: string;
     packageId: string;
     priceAmount: number;

@@ -17,15 +17,13 @@ jobs:
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.2
         env:
-          MOONPAY_PUBLISHABLE_KEY: ${{ secrets.MOONPAY_PUBLISHABLE_KEY }}
-          MOONPAY_SECRET_KEY: ${{ secrets.MOONPAY_SECRET_KEY }}
-          MOONPAY_WEBHOOK_KEY: ${{ secrets.MOONPAY_WEBHOOK_KEY }}
-          MOONPAY_WALLET_ADDRESS: ${{ secrets.MOONPAY_WALLET_ADDRESS }}
+          MERCADOPAGO_ACCESS_TOKEN: ${{ secrets.MERCADOPAGO_ACCESS_TOKEN }}
+          DONATIONS_ARS_PER_USD: ${{ secrets.DONATIONS_ARS_PER_USD }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          envs: MOONPAY_PUBLISHABLE_KEY,MOONPAY_SECRET_KEY,MOONPAY_WEBHOOK_KEY,MOONPAY_WALLET_ADDRESS
+          envs: MERCADOPAGO_ACCESS_TOKEN,DONATIONS_ARS_PER_USD
           script: |
             set -euo pipefail
             cd /opt/woaoweb
@@ -44,10 +42,8 @@ jobs:
                 echo "${key}=${value}" >> .env
               fi
             }
-            upsert_env MOONPAY_PUBLISHABLE_KEY "${MOONPAY_PUBLISHABLE_KEY:-}"
-            upsert_env MOONPAY_SECRET_KEY "${MOONPAY_SECRET_KEY:-}"
-            upsert_env MOONPAY_WEBHOOK_KEY "${MOONPAY_WEBHOOK_KEY:-}"
-            upsert_env MOONPAY_WALLET_ADDRESS "${MOONPAY_WALLET_ADDRESS:-}"
+            upsert_env MERCADOPAGO_ACCESS_TOKEN "${MERCADOPAGO_ACCESS_TOKEN:-}"
+            upsert_env DONATIONS_ARS_PER_USD "${DONATIONS_ARS_PER_USD:-}"
 
             docker compose -f docker-compose.hostinger.yml --env-file .env up -d --build
             docker compose -f docker-compose.hostinger.yml --env-file .env ps

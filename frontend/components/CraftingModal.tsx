@@ -1,36 +1,143 @@
 "use client";
 
 import React from "react";
-import type { CraftingRecipe, InventoryItem } from "../lib/aowProtocol";
+import {
+    Coins,
+    Hammer,
+    Minus,
+    Package,
+    Plus,
+    Search,
+    Shield,
+    Shirt,
+    Swords,
+    X,
+} from "lucide-react";
+import {
+    OBJECT_TYPE,
+    type CraftingRecipe,
+    type InventoryItem,
+} from "../lib/aowProtocol";
 import type { GraphicData } from "../types/game";
 import { getTexturePath, loadGraphicsDB } from "../utils/gameLoader";
+
+type CraftingProfession = CraftingRecipe["profession"];
 
 type CraftingModalProps = {
     title: string;
     recipes: CraftingRecipe[];
     inventory: InventoryItem[];
+    goldAvailable: number;
     onClose: () => void;
-    onCraftRequest: (itemId: number, amount: number) => void;
+    onCraftRequest: (
+        profession: CraftingProfession,
+        itemId: number,
+        amount: number,
+    ) => void;
 };
+
+type CraftingTab = "weapons" | "shields" | "helmets" | "armor" | "other";
+
+const CATEGORY_TABS: Array<{
+    id: CraftingTab;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+}> = [
+    { id: "weapons", label: "Armas", icon: Swords },
+    { id: "shields", label: "Escudos", icon: Shield },
+    { id: "helmets", label: "Cascos", icon: Package },
+    { id: "armor", label: "Armaduras / Tunicas", icon: Shirt },
+    { id: "other", label: "Otros", icon: Package },
+];
+
+const numberFormatter = new Intl.NumberFormat("es-AR");
+
+function formatAmount(value: number) {
+    return numberFormatter.format(Math.max(0, Math.floor(value)));
+}
+
+function getRecipeKey(recipe: Pick<CraftingRecipe, "profession" | "itemId">) {
+    return `${recipe.profession}:${recipe.itemId}`;
+}
+
+function normalizeText(value: string) {
+    return value
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+}
+
+function getRecipeTab(recipe: CraftingRecipe): CraftingTab {
+    const category = normalizeText(`${recipe.category} ${recipe.name}`);
+
+    if (
+        recipe.objType === OBJECT_TYPE.armas ||
+        recipe.objType === OBJECT_TYPE.flechas ||
+        /\b(arma|armas|arco|arcos|baculo|baculos|flecha|flechas)\b/.test(
+            category,
+        )
+    ) {
+        return "weapons";
+    }
+
+    if (
+        recipe.objType === OBJECT_TYPE.escudos ||
+        recipe.subtype === 2 ||
+        /\bescudo|escudos\b/.test(category)
+    ) {
+        return "shields";
+    }
+
+    if (
+        recipe.objType === OBJECT_TYPE.cascos ||
+        recipe.subtype === 1 ||
+        /\b(casco|cascos|yelmo|yelmos|gorro|gorros|sombrero|sombreros)\b/.test(
+            category,
+        )
+    ) {
+        return "helmets";
+    }
+
+    if (
+        recipe.objType === OBJECT_TYPE.armaduras ||
+        /\b(armadura|armaduras|tunica|tunicas|ropa|ropas|vestimenta|vestimentas)\b/.test(
+            category,
+        )
+    ) {
+        return "armor";
+    }
+
+    return "other";
+}
 
 function ItemGraphic({
     graphicData,
     name,
+    size = 42,
 }: {
     graphicData?: GraphicData;
     name: string;
+    size?: number;
 }) {
     if (!graphicData?.numFile) {
-        return <div className="h-12 w-12 rounded-md bg-black/20" />;
+        return (
+            <div
+                className="rounded-md border border-white/10 bg-black/25"
+                style={{ height: size, width: size }}
+            />
+        );
     }
 
     const scale = Math.min(
         1,
-        40 / Math.max(graphicData.width, graphicData.height, 1),
+        (size - 8) / Math.max(graphicData.width, graphicData.height, 1),
     );
 
     return (
-        <div className="relative h-12 w-12 overflow-hidden rounded-sm">
+        <div
+            className="relative overflow-hidden rounded-md"
+            style={{ height: size, width: size }}
+        >
             <div
                 aria-label={name}
                 className="absolute left-1/2 top-1/2 bg-no-repeat"
@@ -51,6 +158,7 @@ export default function CraftingModal({
     title,
     recipes,
     inventory,
+    goldAvailable,
     onClose,
     onCraftRequest,
 }: CraftingModalProps) {
@@ -58,8 +166,10 @@ export default function CraftingModal({
         string,
         GraphicData
     > | null>(null);
-    const [selectedItemId, setSelectedItemId] = React.useState<number | null>(
-        recipes[0]?.itemId ?? null,
+    const [activeTab, setActiveTab] = React.useState<CraftingTab>("weapons");
+    const [searchText, setSearchText] = React.useState("");
+    const [selectedKey, setSelectedKey] = React.useState<string | null>(
+        recipes[0] ? getRecipeKey(recipes[0]) : null,
     );
     const [amountText, setAmountText] = React.useState("1");
 
@@ -94,27 +204,74 @@ export default function CraftingModal({
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [onClose]);
 
+    const recipesByTab = React.useMemo(() => {
+        const next = new Map<CraftingTab, CraftingRecipe[]>();
+
+        for (const tab of CATEGORY_TABS) {
+            next.set(tab.id, []);
+        }
+
+        for (const recipe of recipes) {
+            next.get(getRecipeTab(recipe))?.push(recipe);
+        }
+
+        return next;
+    }, [recipes]);
+
+    React.useEffect(() => {
+        const currentRecipes = recipesByTab.get(activeTab) ?? [];
+        if (currentRecipes.length > 0) {
+            return;
+        }
+
+        const nextTab = CATEGORY_TABS.find(
+            (tab) => (recipesByTab.get(tab.id)?.length ?? 0) > 0,
+        );
+
+        if (nextTab && nextTab.id !== activeTab) {
+            setActiveTab(nextTab.id);
+        }
+    }, [activeTab, recipesByTab]);
+
+    const normalizedSearch = normalizeText(searchText.trim());
+    const visibleRecipes = React.useMemo(() => {
+        const tabRecipes = recipesByTab.get(activeTab) ?? [];
+
+        if (!normalizedSearch) {
+            return tabRecipes;
+        }
+
+        return tabRecipes.filter((recipe) =>
+            normalizeText(`${recipe.name} ${recipe.category} ${recipe.stats}`).includes(
+                normalizedSearch,
+            ),
+        );
+    }, [activeTab, normalizedSearch, recipesByTab]);
+
     React.useEffect(() => {
         if (
-            selectedItemId !== null &&
-            recipes.some((recipe) => recipe.itemId === selectedItemId)
+            selectedKey !== null &&
+            visibleRecipes.some((recipe) => getRecipeKey(recipe) === selectedKey)
         ) {
             return;
         }
 
-        setSelectedItemId(recipes[0]?.itemId ?? null);
-    }, [recipes, selectedItemId]);
+        setSelectedKey(visibleRecipes[0] ? getRecipeKey(visibleRecipes[0]) : null);
+    }, [selectedKey, visibleRecipes]);
 
     const selectedRecipe = React.useMemo(
         () =>
-            recipes.find((recipe) => recipe.itemId === selectedItemId) ?? null,
-        [recipes, selectedItemId],
+            recipes.find((recipe) => getRecipeKey(recipe) === selectedKey) ??
+            visibleRecipes[0] ??
+            null,
+        [recipes, selectedKey, visibleRecipes],
     );
 
     const parsedAmount = Number.parseInt(amountText, 10);
     const craftAmount = Number.isFinite(parsedAmount)
         ? Math.max(1, Math.min(parsedAmount, 9999))
         : 1;
+
     const inventoryCounts = React.useMemo(() => {
         const counts = new Map<number, number>();
 
@@ -128,221 +285,372 @@ export default function CraftingModal({
         return counts;
     }, [inventory]);
 
-    const canCraft =
+    const maxCraftable = React.useMemo(() => {
+        if (!selectedRecipe) {
+            return 0;
+        }
+
+        const materialLimit =
+            selectedRecipe.materials.length > 0
+                ? Math.min(
+                      ...selectedRecipe.materials.map((material) =>
+                          Math.floor(
+                              (inventoryCounts.get(material.itemId) ?? 0) /
+                                  Math.max(1, material.amount),
+                          ),
+                      ),
+                  )
+                : 9999;
+        const goldLimit =
+            selectedRecipe.goldCost > 0
+                ? Math.floor(goldAvailable / selectedRecipe.goldCost)
+                : 9999;
+
+        return Math.max(0, Math.min(9999, materialLimit, goldLimit));
+    }, [goldAvailable, inventoryCounts, selectedRecipe]);
+
+    const totalGoldCost = selectedRecipe
+        ? selectedRecipe.goldCost * craftAmount
+        : 0;
+    const hasMaterials =
         selectedRecipe !== null &&
         selectedRecipe.materials.every((material) => {
             const owned = inventoryCounts.get(material.itemId) ?? 0;
             return owned >= material.amount * craftAmount;
         });
+    const hasGold = totalGoldCost <= goldAvailable;
+    const canCraft = selectedRecipe !== null && hasMaterials && hasGold;
+
+    const setAmount = React.useCallback((value: number) => {
+        setAmountText(String(Math.max(1, Math.min(9999, Math.floor(value)))));
+    }, []);
 
     return (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/55 px-4 py-6 backdrop-blur-sm">
-            <div className="w-full max-w-5xl overflow-hidden rounded-[28px] border border-[#5f4630] bg-[linear-gradient(180deg,#2b1d13_0%,#18110c_100%)] text-stone-100 shadow-[0_32px_120px_rgba(0,0,0,0.55)]">
-                <div className="border-b border-[#6a4f39] bg-[#120d09]/85 px-5 py-4">
-                    <div className="flex items-center justify-between gap-4">
-                        <div>
-                            <p className="text-[11px] uppercase tracking-[0.28em] text-amber-200/75">
-                                Profesión
-                            </p>
-                            <h2 className="mt-1 text-xl font-semibold text-[#f3e7c8]">
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/65 px-3 py-3 backdrop-blur-sm sm:px-5 sm:py-6">
+            <div className="flex h-[min(94vh,820px)] w-full max-w-[1080px] flex-col overflow-hidden rounded-lg border border-[#7a5726] bg-[#100b08] text-stone-100 shadow-[0_24px_90px_rgba(0,0,0,0.65)]">
+                <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[#5d421f] bg-[#1a1009] px-4 py-3 sm:px-5">
+                    <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-amber-300/30 bg-amber-300/10">
+                            <Hammer className="h-7 w-7 text-amber-200" />
+                        </div>
+                        <div className="min-w-0">
+                            <div className="text-xs text-amber-200/80">
+                                World of AO
+                            </div>
+                            <h2 className="truncate text-2xl font-semibold text-[#f3e7c8]">
                                 {title}
                             </h2>
                         </div>
+                    </div>
 
+                    <div className="flex items-center gap-3">
+                        <div className="hidden items-center gap-2 rounded-md border border-[#5d421f] bg-black/25 px-3 py-2 text-sm text-stone-200 sm:flex">
+                            <Coins className="h-4 w-4 text-amber-300" />
+                            <span>{formatAmount(goldAvailable)} oro</span>
+                        </div>
                         <button
                             type="button"
                             onClick={onClose}
-                            className="rounded-full border border-stone-500/40 px-3 py-1 text-xs uppercase tracking-[0.22em] text-stone-300 transition hover:border-amber-300/60 hover:text-amber-100"
+                            className="flex h-10 w-10 items-center justify-center rounded-md border border-white/15 bg-white/5 text-stone-300 transition hover:border-amber-300/50 hover:text-amber-100"
+                            aria-label="Cerrar"
+                            title="Cerrar"
                         >
-                            Cerrar
+                            <X className="h-5 w-5" />
                         </button>
                     </div>
                 </div>
 
-                <div className="grid gap-4 p-4 md:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.9fr)] md:p-5">
-                    <div className="rounded-3xl border border-[#5a412d] bg-black/15 p-3">
-                        <div className="mb-3 flex items-center justify-between">
-                            <p className="text-xs uppercase tracking-[0.24em] text-stone-300/75">
-                                Recetas
-                            </p>
-                            <p className="text-xs text-stone-400">
-                                {recipes.length} disponibles
-                            </p>
-                        </div>
-
-                        <div className="grid max-h-[55vh] gap-2 overflow-y-auto pr-1">
-                            {recipes.map((recipe) => {
-                                const isSelected =
-                                    recipe.itemId === selectedRecipe?.itemId;
+                <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3 sm:p-4 lg:overflow-hidden">
+                    <div className="flex shrink-0 flex-col gap-3 lg:flex-row">
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 lg:flex lg:flex-1">
+                            {CATEGORY_TABS.map((tab) => {
+                                const Icon = tab.icon;
+                                const count = recipesByTab.get(tab.id)?.length ?? 0;
+                                const active = activeTab === tab.id;
 
                                 return (
                                     <button
-                                        key={recipe.itemId}
+                                        key={tab.id}
                                         type="button"
-                                        onClick={() =>
-                                            setSelectedItemId(recipe.itemId)
-                                        }
-                                        className={`flex items-center gap-3 rounded-2xl border px-3 py-2 text-left transition ${
-                                            isSelected
-                                                ? "border-amber-300 bg-[#4a3117]"
-                                                : "border-[#4b3828] bg-[#16100c] hover:border-amber-300/45 hover:bg-[#211812]"
+                                        onClick={() => setActiveTab(tab.id)}
+                                        className={`flex h-12 min-w-0 items-center justify-center gap-2 rounded-md border px-3 text-sm font-semibold transition ${
+                                            active
+                                                ? "border-amber-300 bg-amber-300/18 text-amber-100 shadow-[0_0_18px_rgba(245,177,44,0.28)]"
+                                                : "border-[#4c3519] bg-black/20 text-stone-300 hover:border-amber-300/40 hover:text-amber-100"
                                         }`}
                                     >
-                                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/8 bg-black/25">
-                                            <ItemGraphic
-                                                graphicData={
-                                                    graphicsDB?.[
-                                                        String(recipe.grhIndex)
-                                                    ]
-                                                }
-                                                name={recipe.name}
-                                            />
-                                        </div>
-
-                                        <div className="min-w-0">
-                                            <div className="truncate text-sm font-medium text-stone-100">
-                                                {recipe.name}
-                                            </div>
-                                            <div className="mt-1 text-xs text-stone-400">
-                                                {recipe.category} · Skill{" "}
-                                                {recipe.skill}
-                                            </div>
-                                        </div>
+                                        <Icon className="h-4 w-4 shrink-0" />
+                                        <span className="truncate">{tab.label}</span>
+                                        <span className="shrink-0 text-xs text-stone-400">
+                                            {count}
+                                        </span>
                                     </button>
                                 );
                             })}
                         </div>
+
+                        <label className="relative h-12 shrink-0 lg:w-[310px]">
+                            <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-stone-500" />
+                            <input
+                                value={searchText}
+                                onChange={(event) => setSearchText(event.target.value)}
+                                placeholder="Buscar item..."
+                                className="h-full w-full rounded-md border border-[#4c3519] bg-black/25 pl-10 pr-3 text-sm text-stone-100 outline-none transition placeholder:text-stone-500 focus:border-amber-300/70"
+                            />
+                        </label>
                     </div>
 
-                    <div className="rounded-3xl border border-[#5a412d] bg-black/15 p-4">
-                        {selectedRecipe ? (
-                            <>
-                                <div className="flex items-start gap-4">
-                                    <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/25">
-                                        <ItemGraphic
-                                            graphicData={
-                                                graphicsDB?.[
-                                                    String(
-                                                        selectedRecipe.grhIndex,
-                                                    )
-                                                ]
-                                            }
-                                            name={selectedRecipe.name}
-                                        />
-                                    </div>
+                    <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_360px]">
+                        <div className="min-h-0 overflow-y-auto rounded-lg border border-[#4c3519] bg-black/18 p-2">
+                            {visibleRecipes.length > 0 ? (
+                                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                                    {visibleRecipes.map((recipe) => {
+                                        const recipeKey = getRecipeKey(recipe);
+                                        const active = recipeKey === selectedKey;
 
-                                    <div className="min-w-0">
-                                        <p className="text-[11px] uppercase tracking-[0.24em] text-amber-200/75">
-                                            {selectedRecipe.category}
-                                        </p>
-                                        <h3 className="mt-1 text-lg font-semibold text-[#f3e7c8]">
-                                            {selectedRecipe.name}
-                                        </h3>
-                                        <p className="mt-2 text-sm text-stone-300">
-                                            {selectedRecipe.details ||
-                                                "Sin descripción adicional."}
-                                        </p>
-                                    </div>
+                                        return (
+                                            <button
+                                                key={recipeKey}
+                                                type="button"
+                                                onClick={() => setSelectedKey(recipeKey)}
+                                                className={`grid h-[116px] grid-cols-[58px_minmax(0,1fr)] gap-3 rounded-lg border p-2 text-left transition ${
+                                                    active
+                                                        ? "border-amber-300 bg-[#3a250f] shadow-[0_0_16px_rgba(245,177,44,0.25)]"
+                                                        : "border-[#4c3519] bg-[#17100b] hover:border-amber-300/45"
+                                                }`}
+                                            >
+                                                <div className="flex h-[58px] w-[58px] items-center justify-center rounded-md border border-white/10 bg-black/30">
+                                                    <ItemGraphic
+                                                        graphicData={
+                                                            graphicsDB?.[
+                                                                String(recipe.grhIndex)
+                                                            ]
+                                                        }
+                                                        name={recipe.name}
+                                                        size={50}
+                                                    />
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <div className="truncate text-sm font-semibold text-[#f5e6c8]">
+                                                        {recipe.name}
+                                                    </div>
+                                                    <div className="mt-1 truncate text-xs text-stone-400">
+                                                        {recipe.category} | Skill {recipe.skill}
+                                                    </div>
+                                                    <div className="mt-2 flex items-center gap-1 text-sm font-semibold text-amber-200">
+                                                        <Coins className="h-4 w-4 shrink-0" />
+                                                        <span>{formatAmount(recipe.goldCost)} oro</span>
+                                                    </div>
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
+                            ) : (
+                                <div className="flex h-full min-h-[280px] items-center justify-center text-sm text-stone-400">
+                                    No hay recetas para mostrar.
+                                </div>
+                            )}
+                        </div>
 
-                                <div className="mt-5">
-                                    {selectedRecipe.stats ? (
-                                        <>
-                                            <p className="text-xs uppercase tracking-[0.24em] text-stone-300/75">
-                                                Stats
-                                            </p>
-                                            <div className="mt-3 rounded-2xl border border-[#5a412d] bg-[#120d09] px-3 py-3 text-sm text-stone-200">
-                                                {selectedRecipe.stats}
+                        <div className="flex min-h-0 flex-col rounded-lg border border-[#5d421f] bg-[#170f09]">
+                            {selectedRecipe ? (
+                                <>
+                                    <div className="grid grid-cols-[76px_minmax(0,1fr)] gap-3 border-b border-[#4c3519] p-3">
+                                        <div className="flex h-[76px] w-[76px] items-center justify-center rounded-lg border border-amber-300/30 bg-black/30">
+                                            <ItemGraphic
+                                                graphicData={
+                                                    graphicsDB?.[
+                                                        String(
+                                                            selectedRecipe.grhIndex,
+                                                        )
+                                                    ]
+                                                }
+                                                name={selectedRecipe.name}
+                                                size={68}
+                                            />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <div className="truncate text-lg font-semibold text-[#f5e6c8]">
+                                                {selectedRecipe.name}
                                             </div>
-                                        </>
-                                    ) : null}
-                                </div>
+                                            <div className="mt-1 text-sm text-stone-400">
+                                                {selectedRecipe.category} | Skill{" "}
+                                                {selectedRecipe.skill}
+                                            </div>
+                                            {selectedRecipe.stats ? (
+                                                <div className="mt-2 text-sm text-stone-300">
+                                                    {selectedRecipe.stats}
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                    </div>
 
-                                <div className="mt-5">
-                                    <p className="text-xs uppercase tracking-[0.24em] text-stone-300/75">
-                                        Materiales
-                                    </p>
-                                    <div className="mt-3 space-y-2">
-                                        {selectedRecipe.materials.map(
-                                            (material) => {
+                                    <div className="p-3 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+                                        <div className="mb-2 flex items-center justify-between text-sm">
+                                            <span className="font-semibold text-amber-200">
+                                                Materiales
+                                            </span>
+                                            <span
+                                                className={
+                                                    hasMaterials
+                                                        ? "text-emerald-300"
+                                                        : "text-rose-300"
+                                                }
+                                            >
+                                                {hasMaterials ? "Listo" : "Faltan"}
+                                            </span>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {selectedRecipe.materials.map((material) => {
                                                 const owned =
                                                     inventoryCounts.get(
                                                         material.itemId,
                                                     ) ?? 0;
                                                 const required =
-                                                    material.amount *
-                                                    craftAmount;
-                                                const enough =
-                                                    owned >= required;
+                                                    material.amount * craftAmount;
+                                                const enough = owned >= required;
 
                                                 return (
                                                     <div
-                                                        key={`${selectedRecipe.itemId}-${material.itemId}`}
-                                                        className={`flex items-center justify-between rounded-2xl border px-3 py-2 text-sm ${
+                                                        key={`${getRecipeKey(
+                                                            selectedRecipe,
+                                                        )}-${material.itemId}`}
+                                                        className={`rounded-lg border p-2 ${
                                                             enough
-                                                                ? "border-emerald-400/20 bg-emerald-950/10 text-stone-100"
-                                                                : "border-rose-400/20 bg-rose-950/10 text-stone-100"
+                                                                ? "border-emerald-400/30 bg-emerald-950/10"
+                                                                : "border-rose-400/35 bg-rose-950/10"
                                                         }`}
                                                     >
-                                                        <span>
-                                                            {material.name}
-                                                        </span>
-                                                        <span
-                                                            className={
-                                                                enough
-                                                                    ? "text-emerald-300"
-                                                                    : "text-rose-300"
-                                                            }
-                                                        >
-                                                            {owned} / {required}
-                                                        </span>
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-white/10 bg-black/25">
+                                                                <ItemGraphic
+                                                                    graphicData={
+                                                                        graphicsDB?.[
+                                                                            String(
+                                                                                material.grhIndex,
+                                                                            )
+                                                                        ]
+                                                                    }
+                                                                    name={
+                                                                        material.name
+                                                                    }
+                                                                    size={32}
+                                                                />
+                                                            </div>
+                                                            <div className="min-w-0">
+                                                                <div className="truncate text-xs font-semibold text-stone-100">
+                                                                    {material.name}
+                                                                </div>
+                                                                <div
+                                                                    className={`text-sm font-semibold ${
+                                                                        enough
+                                                                            ? "text-emerald-300"
+                                                                            : "text-rose-300"
+                                                                    }`}
+                                                                >
+                                                                    {formatAmount(
+                                                                        owned,
+                                                                    )}{" "}
+                                                                    /{" "}
+                                                                    {formatAmount(
+                                                                        required,
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 );
-                                            },
-                                        )}
+                                            })}
+                                        </div>
                                     </div>
-                                </div>
 
-                                <div className="mt-5 flex items-end gap-3">
-                                    <label className="min-w-0 flex-1">
-                                        <span className="text-xs uppercase tracking-[0.24em] text-stone-300/75">
-                                            Cantidad
-                                        </span>
-                                        <input
-                                            value={amountText}
-                                            onChange={(event) =>
-                                                setAmountText(
-                                                    event.target.value.replace(
-                                                        /[^0-9]/g,
-                                                        "",
-                                                    ) || "1",
+                                    <div className="shrink-0 border-t border-[#4c3519] p-3">
+                                        <div className="grid grid-cols-2 gap-2 text-sm">
+                                            <div className="rounded-lg border border-[#4c3519] bg-black/20 p-2">
+                                                <div className="text-stone-400">
+                                                    Oro requerido
+                                                </div>
+                                                <div
+                                                    className={`mt-1 flex items-center gap-1 font-semibold ${
+                                                        hasGold
+                                                            ? "text-amber-200"
+                                                            : "text-rose-300"
+                                                    }`}
+                                                >
+                                                    <Coins className="h-4 w-4" />
+                                                    {formatAmount(totalGoldCost)}
+                                                </div>
+                                            </div>
+                                            <div className="rounded-lg border border-[#4c3519] bg-black/20 p-2">
+                                                <div className="text-stone-400">
+                                                    Maximo posible
+                                                </div>
+                                                <div className="mt-1 font-semibold text-stone-100">
+                                                    {formatAmount(maxCraftable)}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-3 grid grid-cols-[40px_minmax(0,1fr)_40px] gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setAmount(craftAmount - 1)}
+                                                className="flex h-10 items-center justify-center rounded-md border border-[#6b4b21] bg-black/20 text-stone-200 transition hover:border-amber-300/50"
+                                                aria-label="Restar cantidad"
+                                                title="Restar cantidad"
+                                            >
+                                                <Minus className="h-4 w-4" />
+                                            </button>
+                                            <input
+                                                value={amountText}
+                                                onChange={(event) =>
+                                                    setAmountText(
+                                                        event.target.value.replace(
+                                                            /[^0-9]/g,
+                                                            "",
+                                                        ) || "1",
+                                                    )
+                                                }
+                                                onBlur={() => setAmount(craftAmount)}
+                                                className="h-10 rounded-md border border-[#6b4b21] bg-black/25 px-3 text-center text-lg font-semibold text-stone-100 outline-none focus:border-amber-300/70"
+                                                inputMode="numeric"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setAmount(craftAmount + 1)}
+                                                className="flex h-10 items-center justify-center rounded-md border border-[#6b4b21] bg-black/20 text-stone-200 transition hover:border-amber-300/50"
+                                                aria-label="Sumar cantidad"
+                                                title="Sumar cantidad"
+                                            >
+                                                <Plus className="h-4 w-4" />
+                                            </button>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                onCraftRequest(
+                                                    selectedRecipe.profession,
+                                                    selectedRecipe.itemId,
+                                                    craftAmount,
                                                 )
                                             }
-                                            className="mt-2 w-full rounded-2xl border border-[#5a412d] bg-[#120d09] px-4 py-3 text-stone-100 outline-none transition focus:border-amber-300/70"
-                                            inputMode="numeric"
-                                        />
-                                    </label>
-
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            onCraftRequest(
-                                                selectedRecipe.itemId,
-                                                craftAmount,
-                                            )
-                                        }
-                                        disabled={!canCraft}
-                                        className="rounded-2xl border border-amber-300/35 bg-amber-300/15 px-5 py-3 text-sm font-medium text-amber-100 transition hover:border-amber-300/60 hover:bg-amber-300/20 disabled:cursor-not-allowed disabled:border-stone-600/40 disabled:bg-stone-800/40 disabled:text-stone-500"
-                                    >
-                                        Craftear
-                                    </button>
+                                            disabled={!canCraft}
+                                            className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-md border border-amber-300/70 bg-[linear-gradient(180deg,#f7d488,#c9922f)] px-4 text-lg font-bold text-[#2a1704] transition hover:brightness-110 disabled:cursor-not-allowed disabled:border-stone-700 disabled:bg-none disabled:bg-stone-800 disabled:text-stone-500"
+                                        >
+                                            <Hammer className="h-5 w-5" />
+                                            Fabricar
+                                        </button>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="flex min-h-[320px] items-center justify-center text-sm text-stone-400">
+                                    Selecciona una receta.
                                 </div>
-                            </>
-                        ) : (
-                            <div className="flex min-h-[240px] items-center justify-center text-sm text-stone-400">
-                                No hay recetas disponibles.
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

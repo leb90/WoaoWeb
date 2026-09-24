@@ -1,4 +1,4 @@
-import type { DataObject, EntityId, Position, RuntimeCharacter, RuntimeClient } from "./types/runtime";
+import type { DataObject, EntityId, Position, RuntimeCharacter, RuntimeClient, RuntimeNpc } from "./types/runtime";
 import type { GameApi } from "./game";
 import type { HandleProtocolApi } from "./handleProtocol";
 import { getCharacterById } from "./runtimeRegistry";
@@ -23,11 +23,14 @@ type CraftingUser = RuntimeCharacter & {
     map: number;
     pos: Position;
     idItemWeapon?: number | string;
+    targetNpcId?: EntityId;
     craftingTarget?: {
         pendingTarget?: boolean;
+        source?: "tool" | "npc";
         profession?: "blacksmith";
         slot?: number;
         itemId?: number;
+        npcId?: EntityId;
     };
 };
 
@@ -38,6 +41,9 @@ type CraftingApi = {
     usesCraftingTool: (idItem: number) => boolean;
     handleToolUse: (ws: RuntimeClient, idPos: number | string) => boolean;
     handleMapClick: (ws: RuntimeClient, x: number, y: number) => boolean;
+    isCraftingNpc: (npc: RuntimeNpc | undefined) => boolean;
+    handleNpcInteraction: (ws: RuntimeClient, npcId: EntityId) => boolean;
+    openNearestCraftingNpc: (ws: RuntimeClient) => boolean;
     handleCraftRequest: (
         ws: RuntimeClient,
         profession: CraftingProfession,
@@ -46,6 +52,9 @@ type CraftingApi = {
     ) => Promise<void>;
     cancelPendingTarget: (idUser: EntityId) => void;
 };
+
+const CRAFTING_NPC_RANGE = 5;
+const LEGACY_CRAFTER_NPC_TYPE = 45;
 
 function getUser(idUser: EntityId) {
     return getCharacterById<CraftingUser>(idUser);
@@ -107,15 +116,48 @@ function getProfessionClassRestriction(user: CraftingUser, profession: CraftingP
 
 function getProfessionRecipes(profession: CraftingProfession, skill: number) {
     return getCraftingRecipes()
-        .filter((recipe) => recipe.profession === profession && recipe.skill <= skill)
+        .filter((recipe) => !recipe.deleted && recipe.profession === profession && recipe.skill <= skill)
         .sort(
             (left, right) =>
                 Number(left.sortOrder ?? left.id) - Number(right.sortOrder ?? right.id) || left.id - right.id,
         );
 }
 
+function getNpcCraftingRecipes() {
+    return getCraftingRecipes()
+        .filter((recipe) => !recipe.deleted)
+        .sort(
+            (left, right) =>
+                Number(left.sortOrder ?? left.id) - Number(right.sortOrder ?? right.id) ||
+                left.profession.localeCompare(right.profession) ||
+                left.id - right.id,
+        );
+}
+
 function isWithinRange(origin: Position, target: Position, maxDistance: number) {
     return Math.abs(origin.x - target.x) <= maxDistance && Math.abs(origin.y - target.y) <= maxDistance;
+}
+
+function getRecipeGoldCost(recipe: CraftingRecipe) {
+    const obj = vars.datObj[recipe.itemId] as DataObject | undefined;
+    const rawValue = Math.floor(Number(obj?.valor ?? 0));
+
+    return Math.max(1, Number.isFinite(rawValue) ? rawValue : 0);
+}
+
+function getNpcCraftingFailure(user: CraftingUser) {
+    const npcId = user.craftingTarget?.npcId;
+    const npc = npcId ? (vars.npcs[npcId] as RuntimeNpc | undefined) : undefined;
+
+    if (!npc || !crafting.isCraftingNpc(npc)) {
+        return "Vuelve a hablar con el crafteador para fabricar.";
+    }
+
+    if (npc.map !== user.map || !isWithinRange(user.pos, npc.pos, CRAFTING_NPC_RANGE)) {
+        return "Te encuentras muy lejos de la mesa de crafteo.";
+    }
+
+    return null;
 }
 
 function isValidAnvilTarget(user: CraftingUser, target: Position) {
@@ -173,7 +215,11 @@ function removeMaterial(user: CraftingUser, itemId: number, amount: number) {
 }
 
 function getRecipe(idItem: number, profession: CraftingProfession) {
-    return getCraftingRecipes().find((recipe) => recipe.profession === profession && recipe.itemId === idItem) ?? null;
+    return (
+        getCraftingRecipes().find(
+            (recipe) => !recipe.deleted && recipe.profession === profession && recipe.itemId === idItem,
+        ) ?? null
+    );
 }
 
 function getCraftedItemStats(obj: DataObject) {
@@ -250,7 +296,7 @@ function getCraftedItemStats(obj: DataObject) {
     }
 }
 
-function serializeRecipe(user: CraftingUser, recipe: CraftingRecipe) {
+function serializeRecipe(user: CraftingUser, recipe: CraftingRecipe, options?: { includeGoldCost?: boolean }) {
     const obj = vars.datObj[recipe.itemId] as DataObject | undefined;
 
     if (!obj) {
@@ -258,9 +304,13 @@ function serializeRecipe(user: CraftingUser, recipe: CraftingRecipe) {
     }
 
     return {
+        profession: recipe.profession,
         itemId: recipe.itemId,
         name: obj.name,
         grhIndex: Number(obj.grhIndex ?? 0),
+        objType: Number(obj.objType ?? 0),
+        subtype: Number(obj.subtipo ?? 0),
+        goldCost: options?.includeGoldCost ? getRecipeGoldCost(recipe) : 0,
         details: recipe.category,
         stats: getCraftedItemStats(obj),
         skill: recipe.skill,
@@ -276,12 +326,15 @@ function serializeRecipe(user: CraftingUser, recipe: CraftingRecipe) {
                 return {
                     itemId: material.itemId,
                     name: materialObj.name,
+                    grhIndex: Number(materialObj.grhIndex ?? 0),
                     amount: material.amount,
                     owned: countInventoryItem(user, material.itemId),
                 };
             })
             .filter(
-                (material): material is { itemId: number; name: string; amount: number; owned: number } =>
+                (
+                    material,
+                ): material is { itemId: number; name: string; grhIndex: number; amount: number; owned: number } =>
                     material !== null,
             ),
     };
@@ -305,6 +358,108 @@ const crafting: CraftingApi = {
 
     usesCraftingTool(idItem) {
         return this.isCarpentryTool(idItem) || this.isTailoringTool(idItem) || this.isBlacksmithTool(idItem);
+    },
+
+    isCraftingNpc(npc) {
+        if (!npc) {
+            return false;
+        }
+
+        const npcType = Number(npc.npcType ?? 0);
+        const nameAndDescription = `${String(npc.nameCharacter ?? "")} ${String(npc.desc ?? "")}`;
+
+        return (
+            npcType === Number(vars.npcType.crafter ?? LEGACY_CRAFTER_NPC_TYPE) ||
+            npcType === LEGACY_CRAFTER_NPC_TYPE ||
+            /crafteo|craftear/i.test(nameAndDescription)
+        );
+    },
+
+    handleNpcInteraction(ws, npcId) {
+        const user = getUser(ws.id!);
+        const npc = vars.npcs[npcId] as RuntimeNpc | undefined;
+
+        if (!user || !npc || !this.isCraftingNpc(npc)) {
+            return false;
+        }
+
+        if (user.dead) {
+            handleProtocol.console("Los muertos no pueden fabricar.", "white", 0, 0, ws);
+            return true;
+        }
+
+        if (npc.map !== user.map || !isWithinRange(user.pos, npc.pos, CRAFTING_NPC_RANGE)) {
+            handleProtocol.console("Te encuentras muy lejos para fabricar.", "white", 1, 0, ws);
+            return true;
+        }
+
+        getGameApi().closeTradeSession(user.id);
+        user.craftingTarget = {
+            source: "npc",
+            npcId,
+        };
+
+        const recipes = getNpcCraftingRecipes()
+            .map((recipe) => serializeRecipe(user, recipe, { includeGoldCost: true }))
+            .filter((recipe) => recipe !== null);
+
+        handleProtocol.openCrafting(
+            {
+                profession: "global",
+                mode: "npc",
+                title: "Mesa de Crafteo",
+                goldAvailable: Math.max(0, Math.floor(Number(user.gold ?? 0))),
+                recipes,
+            },
+            ws,
+        );
+
+        return true;
+    },
+
+    openNearestCraftingNpc(ws) {
+        const user = getUser(ws.id!);
+
+        if (!user) {
+            return false;
+        }
+
+        if (user.dead) {
+            handleProtocol.console("Los muertos no pueden fabricar.", "white", 0, 0, ws);
+            return true;
+        }
+
+        const targetedId = user.targetNpcId;
+        if (targetedId && this.handleNpcInteraction(ws, targetedId)) {
+            return true;
+        }
+
+        let nearestId: EntityId | null = null;
+        let nearestDistance = Number.POSITIVE_INFINITY;
+
+        for (const npc of Object.values(vars.npcs) as RuntimeNpc[]) {
+            if (!npc || !this.isCraftingNpc(npc) || Number(npc.map) !== Number(user.map)) {
+                continue;
+            }
+
+            if (!isWithinRange(user.pos, npc.pos, CRAFTING_NPC_RANGE)) {
+                continue;
+            }
+
+            const distance = Math.max(Math.abs(user.pos.x - npc.pos.x), Math.abs(user.pos.y - npc.pos.y));
+
+            if (distance < nearestDistance) {
+                nearestDistance = distance;
+                nearestId = npc.id;
+            }
+        }
+
+        if (!nearestId) {
+            handleProtocol.console("No hay una mesa de crafteo cerca. Acercate y usa /craftear.", "white", 1, 0, ws);
+            return true;
+        }
+
+        return this.handleNpcInteraction(ws, nearestId);
     },
 
     handleToolUse(ws, idPos) {
@@ -335,6 +490,7 @@ const crafting: CraftingApi = {
 
         if (profession === "blacksmith") {
             user.craftingTarget = {
+                source: "tool",
                 pendingTarget: true,
                 profession,
                 slot: Number(idPos),
@@ -344,6 +500,8 @@ const crafting: CraftingApi = {
             return true;
         }
 
+        user.craftingTarget = undefined;
+
         const recipes = getProfessionRecipes(profession, getCraftingSkill(user, profession))
             .map((recipe) => serializeRecipe(user, recipe))
             .filter((recipe) => recipe !== null);
@@ -351,7 +509,9 @@ const crafting: CraftingApi = {
         handleProtocol.openCrafting(
             {
                 profession,
+                mode: "tool",
                 title: getProfessionLabel(profession),
+                goldAvailable: Math.max(0, Math.floor(Number(user.gold ?? 0))),
                 recipes,
             },
             ws,
@@ -396,7 +556,9 @@ const crafting: CraftingApi = {
         handleProtocol.openCrafting(
             {
                 profession: "blacksmith",
+                mode: "tool",
                 title: getProfessionLabel("blacksmith"),
+                goldAvailable: Math.max(0, Math.floor(Number(user.gold ?? 0))),
                 recipes,
             },
             ws,
@@ -417,7 +579,16 @@ const crafting: CraftingApi = {
             return;
         }
 
-        const classRestriction = getProfessionClassRestriction(user, profession);
+        const npcCrafting = user.craftingTarget?.source === "npc";
+        const npcCraftingFailure = npcCrafting ? getNpcCraftingFailure(user) : null;
+
+        if (npcCraftingFailure) {
+            handleProtocol.console(npcCraftingFailure, "white", 0, 0, ws);
+            user.craftingTarget = undefined;
+            return;
+        }
+
+        const classRestriction = npcCrafting ? null : getProfessionClassRestriction(user, profession);
 
         if (classRestriction) {
             handleProtocol.console(classRestriction, "white", 0, 0, ws);
@@ -431,42 +602,46 @@ const crafting: CraftingApi = {
             return;
         }
 
-        if (getCraftingSkill(user, profession) < recipe.skill) {
+        if (!npcCrafting && getCraftingSkill(user, profession) < recipe.skill) {
             handleProtocol.console("No tienes skill suficiente para fabricar ese objeto.", "white", 0, 0, ws);
             return;
         }
 
-        const hasTool = Object.values(user.inv).some((item) => {
-            if (profession === "carpentry") {
-                return this.isCarpentryTool(item.idItem);
+        if (!npcCrafting) {
+            const hasTool = Object.values(user.inv).some((item) => {
+                if (profession === "carpentry") {
+                    return this.isCarpentryTool(item.idItem);
+                }
+
+                if (profession === "tailoring") {
+                    return this.isTailoringTool(item.idItem);
+                }
+
+                return this.isBlacksmithTool(item.idItem);
+            });
+
+            if (!hasTool) {
+                handleProtocol.console(
+                    profession === "carpentry"
+                        ? "Necesitas un serrucho para trabajar carpintería."
+                        : profession === "tailoring"
+                          ? "Necesitas un costurero para trabajar sastrería."
+                          : "Necesitas un martillo de herrero para trabajar herrería.",
+                    "white",
+                    0,
+                    0,
+                    ws,
+                );
+                return;
             }
 
-            if (profession === "tailoring") {
-                return this.isTailoringTool(item.idItem);
-            }
-
-            return this.isBlacksmithTool(item.idItem);
-        });
-
-        if (!hasTool) {
-            handleProtocol.console(
-                profession === "carpentry"
-                    ? "Necesitas un serrucho para trabajar carpintería."
-                    : profession === "tailoring"
-                      ? "Necesitas un costurero para trabajar sastrería."
-                      : "Necesitas un martillo de herrero para trabajar herrería.",
-                "white",
-                0,
-                0,
-                ws,
-            );
-            return;
         }
 
         const scaledMaterials = recipe.materials.map((material) => ({
             itemId: material.itemId,
             amount: material.amount * safeAmount,
         }));
+        const totalGoldCost = npcCrafting ? getRecipeGoldCost(recipe) * safeAmount : 0;
 
         for (const material of scaledMaterials) {
             if (countInventoryItem(user, material.itemId) < material.amount) {
@@ -481,15 +656,29 @@ const crafting: CraftingApi = {
             return;
         }
 
+        if (totalGoldCost > 0 && Math.floor(Number(user.gold ?? 0)) < totalGoldCost) {
+            handleProtocol.console(`Necesitas ${totalGoldCost} monedas de oro para fabricar.`, "white", 0, 0, ws);
+            return;
+        }
+
         for (const material of scaledMaterials) {
             removeMaterial(user, material.itemId, material.amount);
         }
 
         const game = getGameApi();
 
+        if (totalGoldCost > 0) {
+            user.gold = Math.max(0, Math.floor(Number(user.gold ?? 0)) - totalGoldCost);
+            handleProtocol.actGold(user.gold, ws);
+        }
+
         game.putItemToInv(user.id, recipe.itemId, safeAmount);
-        await game.persistCharacterItemsById(user.id);
-        require("./skills").applyTraining(user, getProfessionSkillId(profession));
+        if (npcCrafting) {
+            await game.persistCharacterSnapshot(user);
+        } else {
+            await game.persistCharacterItemsById(user.id);
+            require("./skills").applyTraining(user, getProfessionSkillId(profession));
+        }
 
         const craftedObj = vars.datObj[recipe.itemId] as DataObject | undefined;
         handleProtocol.console(`Has fabricado ${safeAmount} ${craftedObj?.name ?? "objeto"}.`, "#86efac", 0, 0, ws);

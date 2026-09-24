@@ -435,14 +435,19 @@ export interface BailOffer {
 export interface CraftingMaterial {
     itemId: number;
     name: string;
+    grhIndex: number;
     amount: number;
     owned: number;
 }
 
 export interface CraftingRecipe {
+    profession: "carpentry" | "blacksmith" | "tailoring";
     itemId: number;
     name: string;
     grhIndex: number;
+    objType: number;
+    subtype: number;
+    goldCost: number;
     details: string;
     stats: string;
     skill: number;
@@ -451,8 +456,10 @@ export interface CraftingRecipe {
 }
 
 export interface CraftingState {
-    profession: "carpentry" | "blacksmith" | "tailoring";
+    profession: "carpentry" | "blacksmith" | "tailoring" | "global";
+    mode?: "tool" | "npc";
     title: string;
+    goldAvailable?: number;
     recipes: CraftingRecipe[];
 }
 

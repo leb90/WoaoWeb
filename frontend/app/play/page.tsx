@@ -3857,10 +3857,11 @@ function HomeContent() {
                     title={craftingState.title}
                     recipes={craftingState.recipes}
                     inventory={hud?.inventory ?? []}
+                    goldAvailable={hud?.gold ?? craftingState.goldAvailable ?? 0}
                     onClose={() => setCraftingState(null)}
-                    onCraftRequest={(itemId, amount) =>
+                    onCraftRequest={(profession, itemId, amount) =>
                         setCraftRequest((current) => ({
-                            profession: craftingState.profession,
+                            profession,
                             itemId,
                             amount,
                             token: (current?.token ?? 0) + 1,

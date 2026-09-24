@@ -23,6 +23,7 @@ export type DonationPaymentRecord = {
 export async function createPendingDonationPayment(params: {
     characterId: string;
     accountId: string;
+    provider: "nowpayments" | "moonpay";
     orderId: string;
     packageId: string;
     priceAmount: number;
@@ -32,15 +33,16 @@ export async function createPendingDonationPayment(params: {
     const result = await pool.query<DonationPaymentRecord>(
         `
       INSERT INTO donation_payments (
-        character_id, account_id, order_id, package_id,
+        character_id, account_id, provider, order_id, package_id,
         price_amount, price_currency, points, status
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')
       RETURNING *
     `,
         [
             params.characterId,
             params.accountId,
+            params.provider,
             params.orderId,
             params.packageId,
             params.priceAmount,
@@ -50,6 +52,31 @@ export async function createPendingDonationPayment(params: {
     );
 
     return result.rows[0]!;
+}
+
+// Marca la orden como acreditada de forma atómica: si dos webhooks llegan a
+// la vez, solo uno obtiene la fila y acredita los puntos.
+export async function claimDonationPaymentForCredit(
+    orderId: string,
+): Promise<DonationPaymentRecord | null> {
+    const result = await pool.query<DonationPaymentRecord>(
+        `
+      UPDATE donation_payments
+      SET credited = TRUE, updated_at = NOW()
+      WHERE order_id = $1 AND credited = FALSE
+      RETURNING *
+    `,
+        [orderId],
+    );
+
+    return result.rows[0] ?? null;
+}
+
+export async function releaseDonationPaymentClaim(orderId: string): Promise<void> {
+    await pool.query(
+        `UPDATE donation_payments SET credited = FALSE, updated_at = NOW() WHERE order_id = $1`,
+        [orderId],
+    );
 }
 
 export async function findDonationPaymentByOrderId(

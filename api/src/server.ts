@@ -10,11 +10,19 @@ import {
     isDonationCoin,
 } from "./lib/donationPackages";
 import { createInvoice, verifyIpnSignature } from "./lib/nowpayments";
+import {
+    buildSignedWidgetUrl,
+    getCardMinimumUsd,
+    isMoonpayConfigured,
+    verifyWebhookSignature as verifyMoonpayWebhookSignature,
+} from "./lib/moonpay";
 import { creditDonationPoints } from "./lib/gameServerClient";
 import {
+    claimDonationPaymentForCredit,
     createPendingDonationPayment,
     findDonationPaymentByOrderId,
     markDonationPaymentCredited,
+    releaseDonationPaymentClaim,
     updateDonationPaymentStatus,
 } from "./repositories/donations";
 import {
@@ -262,7 +270,16 @@ async function start(): Promise<void> {
     }
 }
 
-app.use(express.json({ limit: "2mb" }));
+app.use(
+    express.json({
+        limit: "2mb",
+        // MoonPay firma el cuerpo crudo del webhook, hay que conservarlo tal cual llegó.
+        verify: (request, _response, buffer) => {
+            (request as express.Request & { rawBody?: string }).rawBody =
+                buffer.toString("utf8");
+        },
+    }),
+);
 app.use((request, response, next) => {
     const startedAt = Date.now();
 
@@ -2593,8 +2610,17 @@ app.get("/user-online-stats", async (request, response) => {
     }
 });
 
-app.get("/donations/packages", (_request, response) => {
-    response.json({ packages: DONATION_PACKAGES });
+app.get("/donations/packages", async (_request, response) => {
+    const cardEnabled = isMoonpayConfigured();
+
+    response.json({
+        packages: DONATION_PACKAGES,
+        methods: {
+            card: cardEnabled,
+            crypto: Boolean(config.nowpaymentsApiKey),
+        },
+        cardMinUsd: cardEnabled ? await getCardMinimumUsd() : null,
+    });
 });
 
 app.post("/donations/create-invoice", async (request, response) => {
@@ -2638,6 +2664,7 @@ app.post("/donations/create-invoice", async (request, response) => {
         await createPendingDonationPayment({
             characterId: session.selectedCharacterId,
             accountId: session.account._id,
+            provider: "nowpayments",
             orderId,
             packageId: donationPackage.id,
             priceAmount: donationPackage.usd,
@@ -2707,11 +2734,23 @@ app.post("/donations/webhook", async (request, response) => {
             return;
         }
 
-        await creditDonationPoints({
-            characterId: paymentRecord.character_id,
-            points: paymentRecord.points,
-            orderId,
-        });
+        const claimed = await claimDonationPaymentForCredit(orderId);
+
+        if (!claimed) {
+            response.status(200).json({ ok: true });
+            return;
+        }
+
+        try {
+            await creditDonationPoints({
+                characterId: claimed.character_id,
+                points: claimed.points,
+                orderId,
+            });
+        } catch (error) {
+            await releaseDonationPaymentClaim(orderId);
+            throw error;
+        }
 
         await markDonationPaymentCredited({
             orderId,
@@ -2720,6 +2759,188 @@ app.post("/donations/webhook", async (request, response) => {
             payAmount: payload.pay_amount ?? null,
             payCurrency: payload.pay_currency ?? null,
             rawPayload: payload,
+        });
+
+        response.status(200).json({ ok: true });
+    } catch (error) {
+        response.status(500).json({
+            error: error instanceof Error ? error.message : "Unexpected error",
+        });
+    }
+});
+
+app.post("/donations/create-card-checkout", async (request, response) => {
+    try {
+        const authorized = await getAuthorizedSession(request);
+
+        if (!authorized) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        const { session } = authorized;
+
+        if (!session.selectedCharacterId) {
+            response
+                .status(400)
+                .json({ error: "Seleccioná un personaje antes de donar." });
+            return;
+        }
+
+        const donationPackage = getDonationPackage(
+            String(request.body?.packageId ?? ""),
+        );
+
+        if (!donationPackage) {
+            response.status(400).json({ error: "Paquete de donación inválido." });
+            return;
+        }
+
+        if (!isMoonpayConfigured()) {
+            response
+                .status(503)
+                .json({ error: "El pago con tarjeta no está disponible en este momento." });
+            return;
+        }
+
+        const cardMinUsd = await getCardMinimumUsd();
+
+        if (cardMinUsd !== null && donationPackage.usd < cardMinUsd) {
+            response.status(400).json({
+                error: `Con tarjeta el monto mínimo es ${Math.ceil(cardMinUsd)} USD. Elegí un paquete mayor.`,
+            });
+            return;
+        }
+
+        const orderId = crypto.randomUUID();
+
+        await createPendingDonationPayment({
+            characterId: session.selectedCharacterId,
+            accountId: session.account._id,
+            provider: "moonpay",
+            orderId,
+            packageId: donationPackage.id,
+            priceAmount: donationPackage.usd,
+            priceCurrency: "usd",
+            points: donationPackage.points,
+        });
+
+        const checkoutUrl = buildSignedWidgetUrl({
+            orderId,
+            usdAmount: donationPackage.usd,
+            redirectUrl: `${config.siteUrl}/donaciones?status=success`,
+        });
+
+        response.json({ checkoutUrl });
+    } catch (error) {
+        response.status(500).json({
+            error: error instanceof Error ? error.message : "Unexpected error",
+        });
+    }
+});
+
+app.post("/donations/moonpay-webhook", async (request, response) => {
+    try {
+        const rawBody = (request as express.Request & { rawBody?: string }).rawBody ?? "";
+
+        if (
+            !verifyMoonpayWebhookSignature(
+                rawBody,
+                request.header("Moonpay-Signature-V2"),
+            )
+        ) {
+            response.status(401).json({ error: "Firma inválida" });
+            return;
+        }
+
+        const event = request.body as {
+            type?: string;
+            data?: {
+                id?: string;
+                status?: string;
+                externalTransactionId?: string;
+                baseCurrencyAmount?: number;
+                baseCurrencyCode?: string;
+            };
+        };
+
+        if (event.type !== "transaction_updated" || !event.data) {
+            response.status(200).json({ ok: true });
+            return;
+        }
+
+        const orderId = String(event.data.externalTransactionId ?? "");
+        const paymentRecord = orderId
+            ? await findDonationPaymentByOrderId(orderId)
+            : null;
+
+        if (!paymentRecord || paymentRecord.provider !== "moonpay") {
+            response.status(200).json({ ok: true });
+            return;
+        }
+
+        if (paymentRecord.credited) {
+            response.status(200).json({ ok: true });
+            return;
+        }
+
+        const providerPaymentId = event.data.id ? String(event.data.id) : null;
+        const status = event.data.status ?? "unknown";
+
+        if (status !== "completed") {
+            await updateDonationPaymentStatus({
+                orderId,
+                providerPaymentId,
+                status,
+                rawPayload: event,
+            });
+            response.status(200).json({ ok: true });
+            return;
+        }
+
+        const paidAmount = Number(event.data.baseCurrencyAmount);
+        const paidCurrency = String(event.data.baseCurrencyCode ?? "").toLowerCase();
+
+        if (
+            Number.isFinite(paidAmount) &&
+            paidCurrency === "usd" &&
+            paidAmount < Number(paymentRecord.price_amount) * 0.99
+        ) {
+            await updateDonationPaymentStatus({
+                orderId,
+                providerPaymentId,
+                status: "amount_mismatch",
+                rawPayload: event,
+            });
+            response.status(200).json({ ok: true });
+            return;
+        }
+
+        const claimed = await claimDonationPaymentForCredit(orderId);
+
+        if (!claimed) {
+            response.status(200).json({ ok: true });
+            return;
+        }
+
+        try {
+            await creditDonationPoints({
+                characterId: claimed.character_id,
+                points: claimed.points,
+                orderId,
+            });
+        } catch (error) {
+            await releaseDonationPaymentClaim(orderId);
+            throw error;
+        }
+
+        await markDonationPaymentCredited({
+            orderId,
+            providerPaymentId,
+            status: "completed",
+            payAmount: Number.isFinite(paidAmount) ? paidAmount : null,
+            payCurrency: paidCurrency || null,
+            rawPayload: event,
         });
 
         response.status(200).json({ ok: true });

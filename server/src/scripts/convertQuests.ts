@@ -174,6 +174,7 @@ function main() {
 
     const npcPatched = [
         path.join(API_JSONS, "npcs.json"),
+        path.join(SERVER_JSONS, "npcs.json"),
         path.join(FRONT_INIT, "npcs.json"),
     ].reduce((total, filePath) => total + patchNpcQuestNumbers(filePath, givers), 0);
 

@@ -1,9 +1,9 @@
 import type { DataObject } from "./types/runtime";
 
-import { normalizeNpcData, type DataNpc } from "./npcData";
-import { normalizeObjectsData } from "./objectData";
+import { loadDefaultNpcsData, normalizeNpcData, type DataNpc } from "./npcData";
+import { loadDefaultObjectsData, normalizeObjectsData } from "./objectData";
 import { applyBalanceDataToVars, normalizeBalanceData, type RuntimeBalanceData } from "./balanceData";
-import { normalizeCraftingRecipesData } from "./craftingRecipeData";
+import { loadDefaultCraftingRecipesData, normalizeCraftingRecipesData } from "./craftingRecipeData";
 import { normalizeSmeltingRecipesData } from "./smeltingRecipeData";
 import { getClientById } from "./runtimeRegistry";
 import type { CraftingRecipe } from "./craftingRecipes";
@@ -88,6 +88,7 @@ type SmeltingRecipeChangesResponse = {
 };
 
 const vars = require("./vars");
+const config = require("./config");
 const funct = require("./functions");
 const game = require("./game");
 const balance = require("./balance");
@@ -110,6 +111,41 @@ function sortValue(value: unknown): unknown {
 
 function stableStringify(value: unknown): string {
     return JSON.stringify(sortValue(value));
+}
+
+function usesRemoteGameDataSource(): boolean {
+    return config.gameDataSource === "api" || config.gameDataSource === "db";
+}
+
+function countRecordDiffs(
+    current: Record<string, unknown> | undefined,
+    next: Record<string, unknown>,
+): number {
+    const ids = new Set([...Object.keys(current ?? {}), ...Object.keys(next)]);
+    let changed = 0;
+
+    for (const id of ids) {
+        if (stableStringify(current?.[id] ?? null) !== stableStringify(next[id] ?? null)) {
+            changed += 1;
+        }
+    }
+
+    return changed;
+}
+
+function countCraftingRecipeDiffs(currentRecipes: CraftingRecipe[], nextRecipes: CraftingRecipe[]): number {
+    const currentById = new Map(currentRecipes.map((recipe) => [recipe.id, recipe]));
+    const nextById = new Map(nextRecipes.map((recipe) => [recipe.id, recipe]));
+    const ids = new Set([...currentById.keys(), ...nextById.keys()]);
+    let changed = 0;
+
+    for (const id of ids) {
+        if (stableStringify(currentById.get(id) ?? null) !== stableStringify(nextById.get(id) ?? null)) {
+            changed += 1;
+        }
+    }
+
+    return changed;
 }
 
 function applyObjectChanges(changes: ObjectChangesResponse["changes"]): number {
@@ -294,8 +330,53 @@ function patchLiveNpc(npc: Record<string, unknown>, data: DataNpc): void {
     }
 }
 
+function patchLiveNpcsForTemplateChanges(changedIds: Set<number>): {
+    patchedLiveNpcs: number;
+    skippedLiveNpcs: number;
+} {
+    let patchedLiveNpcs = 0;
+    let skippedLiveNpcs = 0;
+
+    for (const npc of Object.values(vars.npcs as Record<string, Record<string, unknown>>)) {
+        const templateNpcIndex = Number(npc.templateNpcIndex ?? 0);
+        if (!templateNpcIndex || !changedIds.has(templateNpcIndex)) {
+            continue;
+        }
+
+        if (!isNpcSafeToPatch(npc)) {
+            skippedLiveNpcs += 1;
+            continue;
+        }
+
+        const data = vars.datNpc[templateNpcIndex] as DataNpc | undefined;
+        if (!data) {
+            continue;
+        }
+
+        patchLiveNpc(npc, data);
+        patchedLiveNpcs += 1;
+    }
+
+    return { patchedLiveNpcs, skippedLiveNpcs };
+}
+
 async function reloadObjectsDiff(): Promise<ReloadObjectsDiffResult> {
     const previousVersion = Number(vars.gameDataVersions?.objs ?? 0);
+
+    if (!usesRemoteGameDataSource()) {
+        const nextObjects = loadDefaultObjectsData();
+        const updatedObjects = countRecordDiffs(vars.datObj as Record<string, unknown>, nextObjects);
+
+        vars.datObj = nextObjects;
+        vars.gameDataVersions.objs = 0;
+
+        return {
+            previousVersion,
+            currentVersion: 0,
+            updatedObjects,
+        };
+    }
+
     const result = (await funct.fetchUrl(`/internal/game-data/objects/changes?sinceVersion=${previousVersion}`, {
         headers: {
             Authorization: vars.tokenAuth,
@@ -332,34 +413,39 @@ async function reloadObjectsDiff(): Promise<ReloadObjectsDiffResult> {
 
 async function reloadNpcsDiff(): Promise<ReloadNpcsDiffResult> {
     const previousVersion = Number(vars.gameDataVersions?.npcs ?? 0);
+
+    if (!usesRemoteGameDataSource()) {
+        const nextNpcs = loadDefaultNpcsData();
+        const changedIds = new Set<number>();
+        const ids = new Set([...Object.keys(vars.datNpc ?? {}), ...Object.keys(nextNpcs)]);
+
+        for (const id of ids) {
+            if (stableStringify(vars.datNpc?.[id] ?? null) !== stableStringify(nextNpcs[id] ?? null)) {
+                changedIds.add(Number(id));
+            }
+        }
+
+        vars.datNpc = nextNpcs;
+        vars.gameDataVersions.npcs = 0;
+
+        const { patchedLiveNpcs, skippedLiveNpcs } = patchLiveNpcsForTemplateChanges(changedIds);
+
+        return {
+            previousVersion,
+            currentVersion: 0,
+            updatedTemplates: changedIds.size,
+            patchedLiveNpcs,
+            skippedLiveNpcs,
+        };
+    }
+
     const result = (await funct.fetchUrl(`/internal/game-data/npcs/changes?sinceVersion=${previousVersion}`, {
         headers: {
             Authorization: vars.tokenAuth,
         },
     })) as NpcChangesResponse;
     const changedIds = applyNpcTemplateChanges(result.changes);
-    let patchedLiveNpcs = 0;
-    let skippedLiveNpcs = 0;
-
-    for (const npc of Object.values(vars.npcs as Record<string, Record<string, unknown>>)) {
-        const templateNpcIndex = Number(npc.templateNpcIndex ?? 0);
-        if (!templateNpcIndex || !changedIds.has(templateNpcIndex)) {
-            continue;
-        }
-
-        if (!isNpcSafeToPatch(npc)) {
-            skippedLiveNpcs += 1;
-            continue;
-        }
-
-        const data = vars.datNpc[templateNpcIndex] as DataNpc | undefined;
-        if (!data) {
-            continue;
-        }
-
-        patchLiveNpc(npc, data);
-        patchedLiveNpcs += 1;
-    }
+    const { patchedLiveNpcs, skippedLiveNpcs } = patchLiveNpcsForTemplateChanges(changedIds);
 
     vars.gameDataVersions.npcs = result.currentVersion;
 
@@ -374,6 +460,22 @@ async function reloadNpcsDiff(): Promise<ReloadNpcsDiffResult> {
 
 async function reloadCraftingRecipesDiff(): Promise<ReloadCraftingRecipesDiffResult> {
     const previousVersion = Number(vars.gameDataVersions?.craftingRecipes ?? 0);
+
+    if (!usesRemoteGameDataSource()) {
+        const currentRecipes = Array.isArray(vars.craftingRecipes) ? (vars.craftingRecipes as CraftingRecipe[]) : [];
+        const nextRecipes = loadDefaultCraftingRecipesData();
+        const updatedRecipes = countCraftingRecipeDiffs(currentRecipes, nextRecipes);
+
+        vars.craftingRecipes = nextRecipes;
+        vars.gameDataVersions.craftingRecipes = 0;
+
+        return {
+            previousVersion,
+            currentVersion: 0,
+            updatedRecipes,
+        };
+    }
+
     const result = (await funct.fetchUrl(
         `/internal/game-data/crafting-recipes/changes?sinceVersion=${previousVersion}`,
         {

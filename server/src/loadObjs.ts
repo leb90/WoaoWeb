@@ -1,6 +1,6 @@
 export {};
-const { initializeObjectsFromApi } = require("./gameDataSync");
 const vars = require("./vars");
+const { loadDefaultObjectsData } = require("./objectData");
 
 class LoadObjs {
     constructor() {}
@@ -12,25 +12,12 @@ class LoadObjs {
     }
 
     load() {
-        return new Promise(async (resolve: any, reject: any) => {
-            vars.datObj = {};
+        vars.datObj = loadDefaultObjectsData();
+        vars.gameDataVersions.objs = 0;
 
-            try {
-                const result = await initializeObjectsFromApi();
-                console.log(
-                    `[GAME DATA] Objs hidratados desde DB: ${result.loadedObjects}. Version aplicada: ${result.currentVersion}.`,
-                );
-                if (result.loadedObjects <= 0) {
-                    reject(new Error("No se pudieron cargar objetos desde la API."));
-                    return;
-                }
-            } catch (error) {
-                reject(error);
-                return;
-            }
+        console.log(`[GAME DATA] Objs cargados desde fuente configurada: ${Object.keys(vars.datObj).length}.`);
 
-            resolve(true);
-        });
+        return Promise.resolve(true);
     }
 }
 

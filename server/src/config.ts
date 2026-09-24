@@ -6,6 +6,7 @@ type RuntimeConfig = {
     isTestDeployment: boolean;
     initialOnlineRecord: number;
     resetConnectedCharactersOnStartup: boolean;
+    gameDataSource: "local" | "api" | "db";
     port: number;
     apiBaseUrl: string;
     tokenAuth: string;
@@ -53,6 +54,16 @@ function getRequiredEnv(name: string, fallback = "") {
     return value;
 }
 
+function getGameDataSource(): RuntimeConfig["gameDataSource"] {
+    const value = (process.env.GAME_DATA_SOURCE ?? "local").trim().toLowerCase();
+
+    if (value === "api" || value === "db") {
+        return value;
+    }
+
+    return "local";
+}
+
 readEnvFile();
 
 const config: RuntimeConfig = {
@@ -60,6 +71,7 @@ const config: RuntimeConfig = {
     isTestDeployment: process.env.AOWEB_TEST_MODE === "true",
     initialOnlineRecord: Number(process.env.INITIAL_ONLINE_RECORD ?? 0),
     resetConnectedCharactersOnStartup: process.env.RESET_CONNECTED_CHARACTERS_ON_STARTUP === "true",
+    gameDataSource: getGameDataSource(),
     port: Number(process.env.PORT ?? 7666),
     apiBaseUrl: getRequiredEnv("API_BASE_URL", "http://127.0.0.1:3001"),
     tokenAuth: getRequiredEnv("TOKEN_AUTH", "changeme"),

@@ -131,15 +131,6 @@ function toInt(value: string | undefined, fallback = 0): number {
     return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function toNumber(value: string | undefined, fallback = 0): number {
-    if (!value) {
-        return fallback;
-    }
-
-    const parsed = Number(value.replace(",", "."));
-    return Number.isFinite(parsed) ? parsed : fallback;
-}
-
 function toDecimalNumber(value: string | undefined): number | null {
     const match = value?.trim().replace(",", ".").match(/^-?\d+(?:\.\d+)?/);
     if (!match) {
@@ -966,6 +957,8 @@ function main() {
 
     writeJson(path.join(API_JSONS, "objs.json"), objects);
     writeJson(path.join(API_JSONS, "npcs.json"), npcs);
+    writeJson(path.join(SERVER_JSONS, "objs.json"), objects);
+    writeJson(path.join(SERVER_JSONS, "npcs.json"), npcs);
     writeJson(path.join(SERVER_JSONS, "spells.json"), spells);
     writeJson(path.join(API_JSONS, "spells.json"), spells);
     writeJson(path.join(FRONT_INIT, "objs.json"), toClientObjects(objects));

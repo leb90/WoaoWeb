@@ -506,7 +506,7 @@ function rollStabbingSuccess(skillApu: number, isAsesino: boolean): boolean {
 const COMBAT_HIT_FX_ID = 14;
 const COMBAT_SHIELD_BLOCK_FX_ID = 88;
 const COMBAT_STABBING_FX_ID = 89;
-const COMBAT_MISS_FX_ID = 90;
+const COMBAT_MISS_FX_ID = 144;
 
 function clampChance(value: number, min = 5, max = 95): number {
     return Math.max(min, Math.min(max, value));

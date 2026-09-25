@@ -24,7 +24,7 @@ import {
     createRoofRowContainers,
 } from "../rendering/rowLayerContainers";
 import { destroySharedTextureCaches } from "../rendering/textureCaches";
-import { createWeatherOverlay, destroyWeatherFx } from "../rendering/weatherFx";
+import { createWeatherOverlay } from "../rendering/weatherFx";
 import {
     getHudStatusTextStyle,
     setTextIfChanged,
@@ -346,11 +346,9 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                             height: options.screenSize.height,
                             backgroundColor: 0x000000,
                             antialias: false,
-                            resolution: Math.min(
-                                window.devicePixelRatio || 1,
-                                2,
-                            ),
-                            autoDensity: true,
+                            resolution: 1,
+                            autoDensity: false,
+                            roundPixels: true,
                         });
                         return app;
                     } catch (error) {
@@ -392,6 +390,7 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                 app.canvas.style.height = "100%";
                 app.canvas.style.display = "block";
                 app.canvas.style.borderRadius = "0";
+                app.canvas.style.imageRendering = "pixelated";
                 engine.app = app;
                 options.updateCanvasCursor();
 

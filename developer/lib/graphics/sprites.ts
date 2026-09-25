@@ -29,14 +29,26 @@ export function loadHeadsDb(): Record<string, DirMap> {
   return headsCache;
 }
 
-/** Direction "4" = south (facing camera), same convention as the game. */
-export function resolveBodyGrh(idBody: number, direction = "4"): number {
+/**
+ * Heading keys in bodies/heads.json match Engine.DIRECTIONS:
+ * 1=Up, 2=Down, 3=Right, 4=Left
+ * Default preview: Down (facing camera).
+ */
+export const PREVIEW_HEADING = "2" as const;
+
+export function resolveBodyGrh(
+  idBody: number,
+  direction: string = PREVIEW_HEADING,
+): number {
   if (!idBody) return 0;
   const body = loadBodiesDb()[String(idBody)];
   return Number(body?.[direction] ?? 0);
 }
 
-export function resolveHeadGrh(idHead: number, direction = "4"): number {
+export function resolveHeadGrh(
+  idHead: number,
+  direction: string = PREVIEW_HEADING,
+): number {
   if (!idHead) return 0;
   const head = loadHeadsDb()[String(idHead)];
   return Number(head?.[direction] ?? 0);

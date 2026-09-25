@@ -3,12 +3,18 @@ import { jsonError, requireSession } from "@/lib/security/api";
 import {
   deleteNpc,
   duplicateNpc,
+  findNpcReferences,
   getNpc,
   listObjectSummaries,
   listSpellSummaries,
   restartHintsFor,
   upsertNpc,
 } from "@/lib/game-data/catalog";
+import {
+  resolveBodyGrh,
+  resolveHeadGrh,
+  resolveHeadOffset,
+} from "@/lib/graphics/sprites";
 
 export const runtime = "nodejs";
 
@@ -22,13 +28,23 @@ export async function GET(_request: Request, { params }: Params) {
     if (!data) {
       return NextResponse.json({ error: "No encontrado" }, { status: 404 });
     }
+    const idBody = Number(data.idBody ?? 0);
+    const idHead = Number(data.idHead ?? 0);
     return NextResponse.json({
       id,
       data,
+      preview: {
+        bodyGrh: resolveBodyGrh(idBody),
+        headGrh: resolveHeadGrh(idHead),
+        headOffset: resolveHeadOffset(idBody),
+      },
       catalogs: {
         objects: listObjectSummaries().map((o) => ({
           id: o.id,
           name: o.name,
+          grhIndex: o.grhIndex,
+          valor: o.valor,
+          objType: o.objType,
         })),
         spells: listSpellSummaries().map((s) => ({
           id: s.id,
@@ -57,10 +73,23 @@ export async function PUT(request: Request, { params }: Params) {
   }
 }
 
-export async function DELETE(_request: Request, { params }: Params) {
+export async function DELETE(request: Request, { params }: Params) {
   try {
     const session = await requireSession();
     const id = Number((await params).id);
+    const url = new URL(request.url);
+    const force = url.searchParams.get("force") === "1";
+    const references = findNpcReferences(id);
+    if (references.length > 0 && !force) {
+      return NextResponse.json(
+        {
+          error: "NPC referenciado",
+          references,
+          count: references.length,
+        },
+        { status: 409 },
+      );
+    }
     deleteNpc(id, session);
     return NextResponse.json({ ok: true, hints: restartHintsFor("npcs") });
   } catch (error) {

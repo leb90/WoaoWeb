@@ -1,5 +1,5 @@
-import { NpcsBrowser } from "@/components/npcs/NpcsBrowser";
+import { NpcList } from "@/components/npcs/NpcList";
 
 export default function NpcsPage() {
-  return <NpcsBrowser />;
+  return <NpcList />;
 }

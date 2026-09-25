@@ -1,5 +1,5 @@
-import { ObjectsBrowser } from "@/components/objects/ObjectsBrowser";
+import { ObjectList } from "@/components/objects/ObjectList";
 
 export default function ObjectsPage() {
-  return <ObjectsBrowser />;
+  return <ObjectList />;
 }

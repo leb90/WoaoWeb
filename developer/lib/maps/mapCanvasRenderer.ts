@@ -42,6 +42,14 @@ export type RenderFrameArgs = {
   selected: { x: number; y: number } | null;
   stampPreview: IndexReferencia | null;
   stampTool: boolean;
+  /** Ghost of what brush/stamp will place at cursor (1-based origin) */
+  placementPreview: {
+    x: number;
+    y: number;
+    cells: Array<{ dx: number; dy: number; grh: number; layer: number }>;
+  } | null;
+  /** Mass selection rectangle, 1-based inclusive */
+  selectionRect: { x1: number; y1: number; x2: number; y2: number } | null;
   objects: CatalogObj[];
   npcs: CatalogNpc[];
   grhCache: Map<number, GrhMeta | null>;
@@ -79,6 +87,8 @@ export function renderMapFrame(args: RenderFrameArgs): void {
     selected,
     stampPreview,
     stampTool,
+    placementPreview,
+    selectionRect,
     objects,
     npcs,
     grhCache,
@@ -490,6 +500,62 @@ export function renderMapFrame(args: RenderFrameArgs): void {
       (cursor.y - 1) * TILE_SIZE,
       TILE_SIZE * w,
       TILE_SIZE * h,
+    );
+  }
+
+  // Ghost placement preview (brush / stamp GRHs)
+  if (placementPreview && placementPreview.cells.length > 0) {
+    const ox = (placementPreview.x - 1) * TILE_SIZE;
+    const oy = (placementPreview.y - 1) * TILE_SIZE;
+    for (const cell of placementPreview.cells) {
+      if (!cell.grh) continue;
+      const bottom = cell.layer >= 2;
+      drawGrh(
+        cell.grh,
+        ox + cell.dx * TILE_SIZE,
+        oy + cell.dy * TILE_SIZE,
+        bottom,
+        0.45,
+      );
+    }
+    // outline footprint
+    let maxDx = 0;
+    let maxDy = 0;
+    for (const cell of placementPreview.cells) {
+      maxDx = Math.max(maxDx, cell.dx);
+      maxDy = Math.max(maxDy, cell.dy);
+    }
+    ctx.strokeStyle = "rgba(120,200,255,0.9)";
+    ctx.lineWidth = 1.5 / zoom;
+    ctx.setLineDash([4 / zoom, 3 / zoom]);
+    ctx.strokeRect(
+      ox,
+      oy,
+      TILE_SIZE * (maxDx + 1),
+      TILE_SIZE * (maxDy + 1),
+    );
+    ctx.setLineDash([]);
+  }
+
+  if (selectionRect) {
+    const minX = Math.min(selectionRect.x1, selectionRect.x2) - 1;
+    const maxX = Math.max(selectionRect.x1, selectionRect.x2) - 1;
+    const minY = Math.min(selectionRect.y1, selectionRect.y2) - 1;
+    const maxY = Math.max(selectionRect.y1, selectionRect.y2) - 1;
+    ctx.fillStyle = "rgba(61,139,253,0.18)";
+    ctx.fillRect(
+      minX * TILE_SIZE,
+      minY * TILE_SIZE,
+      (maxX - minX + 1) * TILE_SIZE,
+      (maxY - minY + 1) * TILE_SIZE,
+    );
+    ctx.strokeStyle = "#3d8bfd";
+    ctx.lineWidth = 2 / zoom;
+    ctx.strokeRect(
+      minX * TILE_SIZE,
+      minY * TILE_SIZE,
+      (maxX - minX + 1) * TILE_SIZE,
+      (maxY - minY + 1) * TILE_SIZE,
     );
   }
 

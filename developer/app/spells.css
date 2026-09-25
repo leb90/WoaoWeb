@@ -1,0 +1,77 @@
+.spell-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.spell-badge.damage {
+  background: rgba(227, 93, 106, 0.18);
+  color: #ff8a95;
+}
+.spell-badge.heal {
+  background: rgba(60, 179, 113, 0.18);
+  color: #6ee7a0;
+}
+.spell-badge.support {
+  background: rgba(61, 139, 253, 0.18);
+  color: #7db4ff;
+}
+.spell-badge.control {
+  background: rgba(212, 160, 23, 0.2);
+  color: #f0c75e;
+}
+.spell-badge.summon {
+  background: rgba(168, 85, 247, 0.18);
+  color: #d8b4fe;
+}
+.spell-badge.other {
+  background: rgba(139, 151, 168, 0.15);
+  color: #b0bccb;
+}
+
+.spell-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 16px;
+  align-items: start;
+}
+
+.spell-fx-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  max-height: 280px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  background:
+    linear-gradient(45deg, #1a2030 25%, transparent 25%),
+    linear-gradient(-45deg, #1a2030 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #1a2030 75%),
+    linear-gradient(-45deg, transparent 75%, #1a2030 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  display: grid;
+  place-items: center;
+}
+
+.spell-fx-stage.dark {
+  background: #0a0c10;
+}
+
+.spell-fx-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  align-items: center;
+}
+
+@media (max-width: 980px) {
+  .spell-editor {
+    grid-template-columns: 1fr;
+  }
+}

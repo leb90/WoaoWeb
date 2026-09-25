@@ -121,6 +121,53 @@ export function atomicWriteJsonFile(absolutePath: string, data: unknown): void {
   fs.renameSync(tmp, absolutePath);
 }
 
+/**
+ * Write multiple JSON files as one operation: all temps first, then renames.
+ * On failure after partial renames, restores from the provided backup id.
+ */
+export function atomicWriteMultipleJson(
+  writes: Array<{ absolutePath: string; data: unknown }>,
+  opts?: { backupId?: string },
+): void {
+  const temps: Array<{ tmp: string; dest: string }> = [];
+  try {
+    for (const w of writes) {
+      const dir = path.dirname(w.absolutePath);
+      ensureDir(dir);
+      const tmp = path.join(
+        dir,
+        `.${path.basename(w.absolutePath)}.${process.pid}.${Date.now()}.${temps.length}.tmp`,
+      );
+      const serialized = JSON.stringify(w.data);
+      JSON.parse(serialized);
+      fs.writeFileSync(tmp, serialized, "utf8");
+      temps.push({ tmp, dest: w.absolutePath });
+    }
+    for (const t of temps) {
+      fs.renameSync(t.tmp, t.dest);
+    }
+  } catch (error) {
+    for (const t of temps) {
+      try {
+        if (fs.existsSync(t.tmp)) fs.unlinkSync(t.tmp);
+      } catch {
+        /* ignore */
+      }
+    }
+    if (opts?.backupId) {
+      try {
+        restoreBackup(
+          opts.backupId,
+          writes.map((w) => w.absolutePath),
+        );
+      } catch {
+        /* ignore secondary */
+      }
+    }
+    throw error;
+  }
+}
+
 /** Pretty-print for human-edited catalogs (objs/npcs can be huge — keep compact) */
 export function atomicWriteJsonFilePretty(
   absolutePath: string,

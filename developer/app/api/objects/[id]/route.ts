@@ -3,6 +3,7 @@ import { jsonError, requireSession } from "@/lib/security/api";
 import {
   deleteObject,
   duplicateObject,
+  findObjectReferences,
   getObject,
   restartHintsFor,
   upsertObject,
@@ -53,10 +54,23 @@ export async function PUT(request: Request, { params }: Params) {
   }
 }
 
-export async function DELETE(_request: Request, { params }: Params) {
+export async function DELETE(request: Request, { params }: Params) {
   try {
     const session = await requireSession();
     const id = Number((await params).id);
+    const url = new URL(request.url);
+    const force = url.searchParams.get("force") === "1";
+    const references = findObjectReferences(id);
+    if (references.length > 0 && !force) {
+      return NextResponse.json(
+        {
+          error: "Objeto referenciado",
+          references,
+          count: references.length,
+        },
+        { status: 409 },
+      );
+    }
     deleteObject(id, session);
     return NextResponse.json({ ok: true, hints: restartHintsFor("objs") });
   } catch (error) {

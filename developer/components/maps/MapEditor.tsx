@@ -16,6 +16,7 @@ import {
   saveMapEditorPrefs,
   type MapEditorPrefs,
 } from "@/lib/maps/mapEditorPrefs";
+import { applyBorderExits, AO_BORDER } from "@/lib/maps/borderExits";
 import { cloneEditorState, floodFillLayer } from "@/lib/maps/terrain";
 import {
   WOAO_TRIGGERS,
@@ -23,6 +24,7 @@ import {
 } from "@/lib/maps/triggerCatalog";
 import type {
   EditorMapState,
+  EditorTile,
   IndexReferencia,
   MapTool,
   MapViewMode,
@@ -42,6 +44,11 @@ type CatalogNpc = {
 type CatalogObj = { id: number; name: string; grhIndex: number };
 type PlaceMode = "blocked" | "npc" | "object" | "exit" | "trigger" | null;
 type RightTab = "tile" | "palette" | "npcs" | "objects" | "triggers";
+type TileClipboard = {
+  width: number;
+  height: number;
+  tiles: EditorTile[][];
+};
 
 const ZOOM_LEVELS = [0.25, 0.5, 0.75, 1, 1.5, 2] as const;
 
@@ -92,13 +99,30 @@ export function MapEditor({ mapId }: { mapId: number }) {
   const [npcQ, setNpcQ] = useState("");
   const [objQ, setObjQ] = useState("");
   const [spaceDown, setSpaceDown] = useState(false);
+  const [massSelectMode, setMassSelectMode] = useState(false);
+  const [selectionRect, setSelectionRect] = useState<{
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+  } | null>(null);
+  const [clipboard, setClipboard] = useState<TileClipboard | null>(null);
+  const [borderModalOpen, setBorderModalOpen] = useState(false);
+  const [borderForm, setBorderForm] = useState({
+    north: "",
+    south: "",
+    east: "",
+    west: "",
+    replaceExisting: true,
+  });
 
   const historyRef = useRef<EditorMapState[]>([]);
   const futureRef = useRef<EditorMapState[]>([]);
-  const paintingRef = useRef(false);
+  const strokeActiveRef = useRef(false);
   const stateRef = useRef<EditorMapState | null>(null);
   stateRef.current = state;
   const shapeStartRef = useRef<{ x0: number; y0: number } | null>(null);
+  const massSelectStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -127,25 +151,40 @@ export function MapEditor({ mapId }: { mapId: number }) {
 
   const pushHistory = useCallback((current: EditorMapState) => {
     historyRef.current.push(cloneEditorState(current));
-    if (historyRef.current.length > 60) historyRef.current.shift();
+    if (historyRef.current.length > 80) historyRef.current.shift();
     futureRef.current = [];
   }, []);
 
+  /** One undo step per stroke / discrete action (not per tile). */
+  const beginStroke = useCallback(() => {
+    if (strokeActiveRef.current) return;
+    const cur = stateRef.current;
+    if (!cur) return;
+    pushHistory(cur);
+    strokeActiveRef.current = true;
+  }, [pushHistory]);
+
+  const endStroke = useCallback(() => {
+    strokeActiveRef.current = false;
+  }, []);
+
   const undo = useCallback(() => {
+    endStroke();
     setState((prev) => {
       if (!prev || historyRef.current.length === 0) return prev;
       futureRef.current.push(cloneEditorState(prev));
       return historyRef.current.pop()!;
     });
-  }, []);
+  }, [endStroke]);
 
   const redo = useCallback(() => {
+    endStroke();
     setState((prev) => {
       if (!prev || futureRef.current.length === 0) return prev;
       historyRef.current.push(cloneEditorState(prev));
       return futureRef.current.pop()!;
     });
-  }, []);
+  }, [endStroke]);
 
   useEffect(() => {
     setLoading(true);
@@ -340,13 +379,9 @@ export function MapEditor({ mapId }: { mapId: number }) {
   );
 
   const applyAt = useCallback(
-    (x0: number, y0: number, recordHistory: boolean) => {
+    (x0: number, y0: number) => {
       setState((prev) => {
         if (!prev) return prev;
-        if (recordHistory && !paintingRef.current) {
-          pushHistory(prev);
-          paintingRef.current = true;
-        }
         const next = cloneEditorState(prev);
         const key = tileKey(x0 + 1, y0 + 1);
 
@@ -386,7 +421,6 @@ export function MapEditor({ mapId }: { mapId: number }) {
       triggerValue,
       prefs.tool,
       paintTerrainAt,
-      pushHistory,
     ],
   );
 
@@ -394,11 +428,9 @@ export function MapEditor({ mapId }: { mapId: number }) {
     (x0a: number, y0a: number, x0b: number, y0b: number, asLine: boolean) => {
       setState((prev) => {
         if (!prev || layerLocked) return prev;
-        pushHistory(prev);
         const next = cloneEditorState(prev);
         const layer = prefs.activeLayer;
         if (asLine) {
-          // Bresenham
           let x0 = x0a;
           let y0 = y0a;
           const x1 = x0b;
@@ -435,15 +467,15 @@ export function MapEditor({ mapId }: { mapId: number }) {
         return next;
       });
     },
-    [layerLocked, prefs.activeLayer, selectedGrh, pushHistory],
+    [layerLocked, prefs.activeLayer, selectedGrh],
   );
 
   const eraseSpecialAt = useCallback(
     (x: number, y: number) => {
       const key = tileKey(x, y);
+      beginStroke();
       setState((prev) => {
         if (!prev) return prev;
-        pushHistory(prev);
         const next = cloneEditorState(prev);
         delete next.specials.npcs[key];
         delete next.specials.objects[key];
@@ -451,9 +483,159 @@ export function MapEditor({ mapId }: { mapId: number }) {
         delete next.specials.triggers[key];
         return next;
       });
+      endStroke();
     },
-    [pushHistory],
+    [beginStroke, endStroke],
   );
+
+  const copySelectionToClipboard = useCallback(
+    (rect: { x1: number; y1: number; x2: number; y2: number }) => {
+      const cur = stateRef.current;
+      if (!cur) return;
+      const minX = Math.min(rect.x1, rect.x2);
+      const maxX = Math.max(rect.x1, rect.x2);
+      const minY = Math.min(rect.y1, rect.y2);
+      const maxY = Math.max(rect.y1, rect.y2);
+      const tiles: EditorTile[][] = [];
+      for (let y = minY; y <= maxY; y++) {
+        const row: EditorTile[] = [];
+        for (let x = minX; x <= maxX; x++) {
+          const t = cur.tiles[y - 1]![x - 1]!;
+          row.push({
+            layers: [...t.layers] as [number, number, number, number],
+            blocked: t.blocked,
+          });
+        }
+        tiles.push(row);
+      }
+      setClipboard({
+        width: maxX - minX + 1,
+        height: maxY - minY + 1,
+        tiles,
+      });
+      setMessage(
+        `Copiado ${maxX - minX + 1}×${maxY - minY + 1} tiles (Ctrl+V para pegar)`,
+      );
+    },
+    [],
+  );
+
+  const pasteClipboardAt = useCallback(
+    (x1: number, y1: number) => {
+      const cur = stateRef.current;
+      if (!cur || !clipboard) return;
+      beginStroke();
+      setState((prev) => {
+        if (!prev) return prev;
+        const next = cloneEditorState(prev);
+        for (let dy = 0; dy < clipboard.height; dy++) {
+          for (let dx = 0; dx < clipboard.width; dx++) {
+            const tx = x1 - 1 + dx;
+            const ty = y1 - 1 + dy;
+            if (tx < 0 || ty < 0 || tx >= next.width || ty >= next.height)
+              continue;
+            const src = clipboard.tiles[dy]![dx]!;
+            next.tiles[ty]![tx] = {
+              layers: [...src.layers] as [number, number, number, number],
+              blocked: src.blocked,
+            };
+          }
+        }
+        return next;
+      });
+      endStroke();
+    },
+    [clipboard, beginStroke, endStroke],
+  );
+
+  const applyAutoBorders = useCallback(() => {
+    const parse = (s: string) => {
+      const n = Number.parseInt(s.trim(), 10);
+      return Number.isFinite(n) && n > 0 ? n : null;
+    };
+    const form = {
+      north: parse(borderForm.north),
+      south: parse(borderForm.south),
+      east: parse(borderForm.east),
+      west: parse(borderForm.west),
+      replaceExisting: borderForm.replaceExisting,
+    };
+    if (!form.north && !form.south && !form.east && !form.west) {
+      setMessage("Indicá al menos un mapa vecino");
+      return;
+    }
+    const cur = stateRef.current;
+    if (!cur) return;
+    beginStroke();
+    const { state: next, placed, cleared } = applyBorderExits(cur, form);
+    setState(next);
+    setMessage(
+      `Bordes: ${placed} traslados` +
+        (cleared ? ` (${cleared} previos reemplazados)` : ""),
+    );
+    endStroke();
+    setBorderModalOpen(false);
+  }, [borderForm, beginStroke, endStroke]);
+
+  const placementPreview = useMemo(() => {
+    if (!cursor) return null;
+    if (placeMode) return null;
+    if (massSelectMode) return null;
+    if (
+      prefs.tool !== "brush" &&
+      prefs.tool !== "stamp" &&
+      prefs.tool !== "eraser" &&
+      prefs.tool !== "fill" &&
+      prefs.tool !== "rect" &&
+      prefs.tool !== "line"
+    ) {
+      return null;
+    }
+    if (prefs.tool === "eraser") {
+      return {
+        x: cursor.x,
+        y: cursor.y,
+        cells: [{ dx: 0, dy: 0, grh: 0, layer: prefs.activeLayer }],
+      };
+    }
+    if (selectedStamp && (prefs.tool === "stamp" || prefs.tool === "brush")) {
+      const grid = expandStampGrhs(selectedStamp);
+      const layer =
+        selectedStamp.capa >= 1 && selectedStamp.capa <= 4
+          ? selectedStamp.capa - 1
+          : prefs.activeLayer;
+      const cells: Array<{
+        dx: number;
+        dy: number;
+        grh: number;
+        layer: number;
+      }> = [];
+      for (let dy = 0; dy < grid.length; dy++) {
+        for (let dx = 0; dx < grid[dy]!.length; dx++) {
+          cells.push({ dx, dy, grh: grid[dy]![dx]!, layer });
+        }
+      }
+      return { x: cursor.x, y: cursor.y, cells };
+    }
+    if (selectedGrh > 0) {
+      return {
+        x: cursor.x,
+        y: cursor.y,
+        cells: [
+          { dx: 0, dy: 0, grh: selectedGrh, layer: prefs.activeLayer },
+        ],
+      };
+    }
+    return null;
+  }, [
+    cursor,
+    placeMode,
+    massSelectMode,
+    prefs.tool,
+    prefs.activeLayer,
+    selectedStamp,
+    selectedGrh,
+  ]);
 
   // Main canvas draw
   useEffect(() => {
@@ -485,6 +667,8 @@ export function MapEditor({ mapId }: { mapId: number }) {
       selected,
       stampPreview: selectedStamp,
       stampTool: prefs.tool === "stamp" || (prefs.tool === "brush" && !!selectedStamp),
+      placementPreview,
+      selectionRect,
       objects,
       npcs,
       grhCache: grhCache.current,
@@ -520,8 +704,11 @@ export function MapEditor({ mapId }: { mapId: number }) {
     cursor,
     selected,
     selectedStamp,
+    placementPreview,
+    selectionRect,
     objects,
     npcs,
+    cacheTick,
   ]);
 
   // Minimap
@@ -602,13 +789,23 @@ export function MapEditor({ mapId }: { mapId: number }) {
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
+      const target = e.target as HTMLElement | null;
+      const typing =
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable);
+      if (typing) return;
+
       if (e.code === "Space") setSpaceDown(true);
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+        if (e.repeat) return;
         e.preventDefault();
         if (e.shiftKey) redo();
         else undo();
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") {
+        if (e.repeat) return;
         e.preventDefault();
         redo();
       }
@@ -616,8 +813,23 @@ export function MapEditor({ mapId }: { mapId: number }) {
         e.preventDefault();
         void saveRef.current();
       }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "c") {
+        e.preventDefault();
+        setMassSelectMode(true);
+        setPlaceMode(null);
+        setPrefs((p) => ({ ...p, tool: "select" }));
+        setMessage("Selección en masa: arrastrá un rectángulo (Ctrl+V pega)");
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "v") {
+        if (!clipboard || !cursor) return;
+        e.preventDefault();
+        pasteClipboardAt(cursor.x, cursor.y);
+      }
       if (e.key === "Escape") {
         setPlaceMode(null);
+        setMassSelectMode(false);
+        setSelectionRect(null);
+        setBorderModalOpen(false);
         setPrefs((p) => ({ ...p, tool: "select" }));
       }
       if (e.key.toLowerCase() === "b" && !e.ctrlKey) {
@@ -664,7 +876,7 @@ export function MapEditor({ mapId }: { mapId: number }) {
       window.removeEventListener("keyup", onKeyUp);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [undo, redo]);
+  }, [undo, redo, clipboard, cursor, pasteClipboardAt]);
 
   // Panel resize
   useEffect(() => {
@@ -813,6 +1025,30 @@ export function MapEditor({ mapId }: { mapId: number }) {
           </select>
         </label>
         <div style={{ flex: 1 }} />
+        <button
+          className="me-btn"
+          onClick={() => {
+            setMassSelectMode(true);
+            setPlaceMode(null);
+            setPrefs((p) => ({ ...p, tool: "select" }));
+            setMessage("Selección en masa: arrastrá un rectángulo");
+          }}
+          title="Ctrl+C — selección en masa"
+          style={
+            massSelectMode
+              ? { outline: "1px solid var(--me-accent, #3d8bfd)" }
+              : undefined
+          }
+        >
+          Selección
+        </button>
+        <button
+          className="me-btn"
+          onClick={() => setBorderModalOpen(true)}
+          title="Auto-colocar traslados de borde"
+        >
+          Bordes / traslados
+        </button>
         <button className="me-btn" onClick={undo} title="Ctrl+Z">
           Undo
         </button>
@@ -1193,13 +1429,8 @@ export function MapEditor({ mapId }: { mapId: number }) {
                 e.button === 1 ||
                 e.button === 2 ||
                 spaceDown ||
-                (e.button === 0 && e.shiftKey) ||
-                (prefs.tool === "select" && !placeMode)
+                (e.button === 0 && e.shiftKey)
               ) {
-                if (e.button === 0 && prefs.tool === "select" && !placeMode) {
-                  const t = screenToTile(e.clientX, e.clientY);
-                  if (t) setSelected({ x: t.x, y: t.y });
-                }
                 dragRef.current = {
                   mode: "pan",
                   lastX: e.clientX,
@@ -1210,13 +1441,35 @@ export function MapEditor({ mapId }: { mapId: number }) {
               if (e.button !== 0) return;
               const t = screenToTile(e.clientX, e.clientY);
               if (!t) return;
+
+              if (massSelectMode) {
+                massSelectStartRef.current = { x: t.x, y: t.y };
+                setSelectionRect({ x1: t.x, y1: t.y, x2: t.x, y2: t.y });
+                dragRef.current = {
+                  mode: "paint",
+                  lastX: e.clientX,
+                  lastY: e.clientY,
+                };
+                return;
+              }
+
+              if (prefs.tool === "select" && !placeMode) {
+                setSelected({ x: t.x, y: t.y });
+                dragRef.current = {
+                  mode: "pan",
+                  lastX: e.clientX,
+                  lastY: e.clientY,
+                };
+                return;
+              }
+
               setSelected({ x: t.x, y: t.y });
               if (prefs.tool === "rect" || prefs.tool === "line") {
                 shapeStartRef.current = { x0: t.x0, y0: t.y0 };
                 return;
               }
-              paintingRef.current = false;
-              applyAt(t.x0, t.y0, true);
+              beginStroke();
+              applyAt(t.x0, t.y0);
               dragRef.current = {
                 mode: "paint",
                 lastX: e.clientX,
@@ -1236,22 +1489,53 @@ export function MapEditor({ mapId }: { mapId: number }) {
                 setPan((p) => ({ x: p.x + dx, y: p.y + dy }));
               } else if (
                 drag.mode === "paint" &&
+                massSelectMode &&
+                massSelectStartRef.current &&
+                t
+              ) {
+                setSelectionRect({
+                  x1: massSelectStartRef.current.x,
+                  y1: massSelectStartRef.current.y,
+                  x2: t.x,
+                  y2: t.y,
+                });
+              } else if (
+                drag.mode === "paint" &&
                 t &&
                 (prefs.tool === "brush" ||
                   prefs.tool === "eraser" ||
                   prefs.tool === "stamp" ||
                   placeMode)
               ) {
-                applyAt(t.x0, t.y0, true);
+                applyAt(t.x0, t.y0);
               }
             }}
             onPointerUp={(e) => {
+              if (massSelectMode && massSelectStartRef.current) {
+                const t = screenToTile(e.clientX, e.clientY);
+                const start = massSelectStartRef.current;
+                const end = t ? { x: t.x, y: t.y } : start;
+                const rect = {
+                  x1: start.x,
+                  y1: start.y,
+                  x2: end.x,
+                  y2: end.y,
+                };
+                setSelectionRect(rect);
+                copySelectionToClipboard(rect);
+                massSelectStartRef.current = null;
+                setMassSelectMode(false);
+                dragRef.current.mode = null;
+                endStroke();
+                return;
+              }
               if (
                 (prefs.tool === "rect" || prefs.tool === "line") &&
                 shapeStartRef.current
               ) {
                 const t = screenToTile(e.clientX, e.clientY);
                 if (t) {
+                  beginStroke();
                   fillShape(
                     shapeStartRef.current.x0,
                     shapeStartRef.current.y0,
@@ -1259,28 +1543,37 @@ export function MapEditor({ mapId }: { mapId: number }) {
                     t.y0,
                     prefs.tool === "line",
                   );
+                  endStroke();
                 }
                 shapeStartRef.current = null;
               }
               dragRef.current.mode = null;
-              paintingRef.current = false;
+              endStroke();
             }}
             onPointerLeave={() => {
               setCursor(null);
               setHoverScreen(null);
               dragRef.current.mode = null;
-              paintingRef.current = false;
+              endStroke();
             }}
             onWheel={(e) => {
               e.preventDefault();
-              const idx = ZOOM_LEVELS.indexOf(
-                prefs.zoom as (typeof ZOOM_LEVELS)[number],
-              );
-              if (e.deltaY < 0 && idx < ZOOM_LEVELS.length - 1) {
-                setPrefs((p) => ({ ...p, zoom: ZOOM_LEVELS[idx + 1]! }));
-              } else if (e.deltaY > 0 && idx > 0) {
-                setPrefs((p) => ({ ...p, zoom: ZOOM_LEVELS[idx - 1]! }));
+              // Ctrl+rueda = zoom; rueda sola = pan vertical; Shift = pan horizontal
+              if (e.ctrlKey || e.metaKey) {
+                const idx = ZOOM_LEVELS.indexOf(
+                  prefs.zoom as (typeof ZOOM_LEVELS)[number],
+                );
+                if (e.deltaY < 0 && idx < ZOOM_LEVELS.length - 1) {
+                  setPrefs((p) => ({ ...p, zoom: ZOOM_LEVELS[idx + 1]! }));
+                } else if (e.deltaY > 0 && idx > 0) {
+                  setPrefs((p) => ({ ...p, zoom: ZOOM_LEVELS[idx - 1]! }));
+                }
+                return;
               }
+              const speed = e.deltaMode === 1 ? 24 : 1;
+              const dx = e.shiftKey ? -e.deltaY * speed : -e.deltaX * speed;
+              const dy = e.shiftKey ? 0 : -e.deltaY * speed;
+              setPan((p) => ({ x: p.x + dx, y: p.y + dy }));
             }}
           />
           {cursor && hoverScreen && wrapRef.current && (
@@ -1476,15 +1769,16 @@ export function MapEditor({ mapId }: { mapId: number }) {
                             className="me-btn"
                             title="Borrar ese GRH"
                             onClick={() => {
+                              beginStroke();
                               setState((prev) => {
                                 if (!prev) return prev;
-                                pushHistory(prev);
                                 const next = cloneEditorState(prev);
                                 next.tiles[c.y - 1]![c.x - 1]!.layers[
                                   c.layer - 1
                                 ] = 0;
                                 return next;
                               });
+                              endStroke();
                             }}
                           >
                             Borrar
@@ -1500,19 +1794,27 @@ export function MapEditor({ mapId }: { mapId: number }) {
                     label="Bloqueado"
                     value={selTile.blocked ? "Sí" : "No"}
                     onEdit={() => {
-                      setPlaceMode("blocked");
-                      applyAt(selected.x - 1, selected.y - 1, true);
-                      setPlaceMode(null);
-                    }}
-                    onClear={() => {
+                      beginStroke();
                       setState((prev) => {
                         if (!prev || !selected) return prev;
-                        pushHistory(prev);
+                        const next = cloneEditorState(prev);
+                        const t =
+                          next.tiles[selected.y - 1]![selected.x - 1]!;
+                        t.blocked = !t.blocked;
+                        return next;
+                      });
+                      endStroke();
+                    }}
+                    onClear={() => {
+                      beginStroke();
+                      setState((prev) => {
+                        if (!prev || !selected) return prev;
                         const next = cloneEditorState(prev);
                         next.tiles[selected.y - 1]![selected.x - 1]!.blocked =
                           false;
                         return next;
                       });
+                      endStroke();
                     }}
                   />
                   <PropRow
@@ -1527,13 +1829,14 @@ export function MapEditor({ mapId }: { mapId: number }) {
                       setPlaceMode("trigger");
                     }}
                     onClear={() => {
+                      beginStroke();
                       setState((prev) => {
                         if (!prev || !selected) return prev;
-                        pushHistory(prev);
                         const next = cloneEditorState(prev);
                         delete next.specials.triggers[selKey];
                         return next;
                       });
+                      endStroke();
                     }}
                   />
                   <PropRow
@@ -1843,7 +2146,131 @@ export function MapEditor({ mapId }: { mapId: number }) {
             </span>
           </>
         )}
+        {massSelectMode && (
+          <span style={{ color: "#7dd3fc" }}>
+            Selección en masa activa — arrastrá
+          </span>
+        )}
+        {clipboard && (
+          <span>
+            Portapapeles: {clipboard.width}×{clipboard.height}
+          </span>
+        )}
       </div>
+
+      {borderModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.55)",
+            zIndex: 50,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          onClick={() => setBorderModalOpen(false)}
+        >
+          <div
+            className="me-side"
+            style={{
+              width: 420,
+              maxWidth: "92vw",
+              padding: 16,
+              borderRadius: 8,
+              border: "1px solid var(--me-border)",
+              background: "var(--me-bg, #121820)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: "0 0 8px", fontSize: 15 }}>
+              Auto-colocar bordes / traslados
+            </h3>
+            <p
+              style={{
+                margin: "0 0 12px",
+                fontSize: 12,
+                color: "var(--me-muted)",
+                lineHeight: 1.4,
+              }}
+            >
+              Escribí el ID del mapa vecino en cada lado (vacío = no tocar).
+              Usa el layout clásico AO: N y={AO_BORDER.northY}→{AO_BORDER.northDestY},
+              S y={AO_BORDER.southY}→{AO_BORDER.southDestY}, O x={AO_BORDER.westX}→
+              {AO_BORDER.westDestX}, E x={AO_BORDER.eastX}→{AO_BORDER.eastDestX}.
+            </p>
+            {(
+              [
+                ["north", "Norte"],
+                ["south", "Sur"],
+                ["west", "Oeste"],
+                ["east", "Este"],
+              ] as const
+            ).map(([key, label]) => (
+              <label
+                key={key}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  marginBottom: 8,
+                  fontSize: 13,
+                }}
+              >
+                <span style={{ width: 56 }}>{label}</span>
+                <input
+                  className="me-input"
+                  type="number"
+                  min={1}
+                  placeholder="mapa #"
+                  value={borderForm[key]}
+                  onChange={(e) =>
+                    setBorderForm((f) => ({ ...f, [key]: e.target.value }))
+                  }
+                  style={{ flex: 1 }}
+                />
+              </label>
+            ))}
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                margin: "10px 0 14px",
+                fontSize: 12,
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={borderForm.replaceExisting}
+                onChange={(e) =>
+                  setBorderForm((f) => ({
+                    ...f,
+                    replaceExisting: e.target.checked,
+                  }))
+                }
+              />
+              Reemplazar traslados previos en esos bordes
+            </label>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                className="me-btn"
+                onClick={() => setBorderModalOpen(false)}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="me-btn primary"
+                onClick={applyAutoBorders}
+              >
+                Colocar traslados
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

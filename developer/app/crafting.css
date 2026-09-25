@@ -1,0 +1,92 @@
+.craft-badge-level {
+  display: inline-flex;
+  min-width: 28px;
+  justify-content: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.craft-badge-level.l10 {
+  background: rgba(60, 179, 113, 0.2);
+  color: #6ee7a0;
+}
+.craft-badge-level.l20 {
+  background: rgba(61, 139, 253, 0.2);
+  color: #7db4ff;
+}
+.craft-badge-level.l30 {
+  background: rgba(168, 85, 247, 0.2);
+  color: #d8b4fe;
+}
+.craft-badge-level.l40 {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+}
+.craft-badge-level.l50 {
+  background: rgba(227, 93, 106, 0.2);
+  color: #ff8a95;
+}
+
+.craft-level-picker {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.craft-level-btn {
+  width: 48px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #0f141c;
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 700;
+}
+.craft-level-btn.active.l10 {
+  border-color: #3cb371;
+  background: rgba(60, 179, 113, 0.2);
+}
+.craft-level-btn.active.l20 {
+  border-color: #3d8bfd;
+  background: rgba(61, 139, 253, 0.2);
+}
+.craft-level-btn.active.l30 {
+  border-color: #a855f7;
+  background: rgba(168, 85, 247, 0.2);
+}
+.craft-level-btn.active.l40 {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.2);
+}
+.craft-level-btn.active.l50 {
+  border-color: #e35d6a;
+  background: rgba(227, 93, 106, 0.2);
+}
+
+.craft-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.9fr);
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .craft-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.craft-mat-icons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.craft-mat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+}

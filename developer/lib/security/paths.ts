@@ -25,7 +25,9 @@ export type AllowedResource =
   | "spells"
   | "craftingRecipes"
   | "smeltingRecipes"
-  | "balance";
+  | "balance"
+  | "quests"
+  | "questGivers";
 
 const RESOURCE_FILES: Record<AllowedResource, () => string[]> = {
   objs: () => [path.join(PATHS.apiJsons(), "objs.json")],
@@ -37,6 +39,11 @@ const RESOURCE_FILES: Record<AllowedResource, () => string[]> = {
   craftingRecipes: () => [path.join(PATHS.apiJsons(), "craftingRecipes.json")],
   smeltingRecipes: () => [path.join(PATHS.apiJsons(), "smeltingRecipes.json")],
   balance: () => [path.join(PATHS.apiJsons(), "balance.json")],
+  quests: () => [
+    path.join(PATHS.serverJsons(), "quests.json"),
+    path.join(PATHS.frontendInit(), "woao", "quests.json"),
+  ],
+  questGivers: () => [path.join(PATHS.serverJsons(), "questGivers.json")],
 };
 
 /** Resolve a resource to absolute path(s). Throws if unknown. */

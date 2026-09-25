@@ -10,6 +10,7 @@ const NAV = [
   { href: "/npcs", label: "NPCs" },
   { href: "/spells", label: "Hechizos" },
   { href: "/crafting", label: "Crafting" },
+  { href: "/quests", label: "Quests" },
   { href: "/balance", label: "Balance" },
   { href: "/validation", label: "Validación" },
   { href: "/backups", label: "Backups" },

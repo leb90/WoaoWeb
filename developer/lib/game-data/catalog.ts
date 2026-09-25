@@ -460,6 +460,15 @@ export function restartHintsFor(resource: AllowedResource): string[] {
         "Este cambio requiere reiniciar el Game Server",
         "Se actualizaron api/src/jsons/spells.json y server/jsons/spells.json",
       ];
+    case "quests":
+      return [
+        "Reiniciá el Game Server (quests se cargan al arranque; no hay /recargarquests)",
+        "Se actualizaron server/jsons/quests.json y frontend/public/init/woao/quests.json",
+      ];
+    case "questGivers":
+      return [
+        "Reiniciá el Game Server (questGivers se cargan al arranque)",
+      ];
     default:
       return [];
   }

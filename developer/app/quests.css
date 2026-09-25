@@ -1,0 +1,608 @@
+/* Quests module — dense dark UI aligned with Developer Tools */
+
+.quest-page .obj-header-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #3d8bfd, #2563c7);
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  box-shadow: 0 4px 14px rgba(61, 139, 253, 0.35);
+}
+
+.quest-banner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--obj-border, #2a3444);
+  background: rgba(61, 139, 253, 0.12);
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.quest-banner.warn {
+  border-color: #d4a017;
+  background: rgba(212, 160, 23, 0.12);
+}
+
+.quest-banner button {
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.quest-conflict-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.quest-yes {
+  color: #3cb371;
+  font-weight: 600;
+}
+
+.quest-no {
+  color: #e35d6a;
+  font-weight: 600;
+}
+
+.quest-name-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: inherit;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.quest-name-link:hover {
+  color: #3d8bfd;
+}
+
+.quest-scroll-ico {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: rgba(61, 139, 253, 0.18);
+  color: #7eb6ff;
+  display: inline-grid;
+  place-items: center;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.quest-obj-cell,
+.quest-reward-cell {
+  display: block;
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.quest-giver-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.quest-row-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.quest-page .obj-icon-btn {
+  border: 1px solid var(--obj-border, #2a3444);
+  background: #1c2430;
+  color: #c5d0e0;
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.quest-page .obj-icon-btn.danger {
+  color: #ff8a95;
+}
+
+.quest-pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.quest-pager-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.quest-table td {
+  vertical-align: middle;
+}
+
+/* —— Editor —— */
+
+.quest-editor-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.quest-back-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.quest-back {
+  color: #9db0c9;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.quest-back:hover {
+  color: #fff;
+}
+
+.quest-editor-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.quest-dirty {
+  color: #d4a017;
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+
+.quest-top-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.quest-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .quest-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.quest-hero {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background: var(--obj-panel, #161b24);
+  border: 1px solid var(--obj-border, #2a3444);
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+
+.quest-hero-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #4b8dff, #1d4ed8);
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35);
+}
+
+.quest-hero-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.quest-hero-name-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.quest-hero-name {
+  flex: 1;
+  min-width: 180px;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+  padding: 0;
+  outline: none;
+}
+
+.quest-pill {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.quest-pill.rep {
+  background: rgba(139, 92, 246, 0.2);
+  color: #c4b5fd;
+  border: 1px solid rgba(139, 92, 246, 0.45);
+}
+
+.quest-pill.once {
+  background: rgba(61, 139, 253, 0.15);
+  color: #93c5fd;
+  border: 1px solid rgba(61, 139, 253, 0.4);
+}
+
+.quest-hero-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+  font-size: 13px;
+  color: #9db0c9;
+}
+
+.quest-hero-meta .dot {
+  opacity: 0.5;
+}
+
+.quest-hero-desc {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.quest-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.quest-toggle.inline {
+  gap: 8px;
+}
+
+.quest-switch {
+  border: 1px solid var(--obj-border, #2a3444);
+  background: #1c2430;
+  color: #9db0c9;
+  border-radius: 999px;
+  padding: 3px 12px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.quest-switch.on {
+  background: #2563c7;
+  color: #fff;
+  border-color: #3d8bfd;
+}
+
+.quest-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--obj-border, #2a3444);
+  padding-bottom: 4px;
+}
+
+.quest-tab {
+  border: 1px solid transparent;
+  background: transparent;
+  color: #9db0c9;
+  padding: 8px 12px;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.quest-tab.active {
+  background: #1c2430;
+  border-color: var(--obj-border, #2a3444);
+  border-bottom-color: #1c2430;
+  color: #fff;
+  font-weight: 600;
+}
+
+.quest-section,
+.quest-aside-card {
+  background: var(--obj-panel, #161b24);
+  border: 1px solid var(--obj-border, #2a3444);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.quest-section h3,
+.quest-aside-card h3 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+.quest-aside-card h4 {
+  margin: 12px 0 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #9db0c9;
+}
+
+.quest-aside-card ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+}
+
+.quest-section-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 800px) {
+  .quest-section-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.quest-yesno {
+  display: flex;
+  gap: 8px;
+}
+
+.quest-yesno button {
+  border: 1px solid var(--obj-border, #2a3444);
+  background: #1c2430;
+  color: #c5d0e0;
+  padding: 8px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.quest-yesno button.active {
+  background: #2563c7;
+  border-color: #3d8bfd;
+  color: #fff;
+}
+
+.quest-help {
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+.quest-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 900px) {
+  .quest-quick-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.quest-quick-card {
+  background: #1c2430;
+  border: 1px solid var(--obj-border, #2a3444);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.quest-quick-card h4 {
+  margin: 0 0 10px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #9db0c9;
+}
+
+.quest-quick-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quest-quick-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.quest-reward-bullets {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.quest-reward-bullets .coin {
+  color: #f0c75e;
+}
+
+.quest-reward-bullets .xp {
+  color: #7dd3fc;
+}
+
+.quest-reward-bullets .pts {
+  color: #c4b5fd;
+}
+
+.quest-req-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.quest-req-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--obj-border, #2a3444);
+  border-radius: 8px;
+  background: #1c2430;
+}
+
+.quest-amount {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #9db0c9;
+}
+
+.quest-amount input {
+  width: 88px;
+}
+
+.quest-reward-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.quest-reward-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: #9db0c9;
+}
+
+.quest-picker-wrap {
+  margin-top: 10px;
+}
+
+.quest-giver-card {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 12px;
+  border: 1px solid var(--obj-border, #2a3444);
+  border-radius: 8px;
+  background: #1c2430;
+  margin-bottom: 12px;
+}
+
+.quest-radio {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 6px 0;
+}
+
+.quest-create-npc {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.quest-aside-giver {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.quest-aside-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.quest-loc {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--obj-border, #2a3444);
+  font-size: 13px;
+}
+
+.quest-loc:last-child {
+  border-bottom: none;
+}
+
+.quest-json {
+  background: #0d1117;
+  border: 1px solid var(--obj-border, #2a3444);
+  border-radius: 8px;
+  padding: 12px;
+  overflow: auto;
+  max-height: 480px;
+  font-size: 12px;
+  margin: 0;
+}
+
+.quest-json.compact {
+  max-height: 220px;
+  font-size: 11px;
+}
+
+.obj-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: grid;
+  place-items: center;
+  z-index: 50;
+}
+
+.obj-modal {
+  background: #161b24;
+  border: 1px solid #2a3444;
+  border-radius: 12px;
+  padding: 20px;
+  width: min(480px, 92vw);
+}
+
+.obj-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}

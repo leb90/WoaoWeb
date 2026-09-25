@@ -53,7 +53,9 @@ type RefItem = {
   href?: string;
 };
 
-type Props = { mode: "edit"; id: number } | { mode: "create" };
+type Props =
+  | { mode: "edit"; id: number; fromQuest?: number }
+  | { mode: "create"; fromQuest?: number };
 
 const TAB_LABELS: Record<NpcTabId, string> = {
   commerce: "Inventario / Comercio",
@@ -89,6 +91,7 @@ export function NpcEditor(props: Props) {
   const router = useRouter();
   const isNew = props.mode === "create";
   const editId = props.mode === "edit" ? props.id : null;
+  const fromQuest = props.fromQuest;
 
   const [data, setData] = useState<NpcData | null>(null);
   const [baseline, setBaseline] = useState("");
@@ -388,6 +391,15 @@ export function NpcEditor(props: Props) {
           >
             ← NPCs
           </button>
+          {fromQuest != null && Number.isFinite(fromQuest) && (
+            <button
+              type="button"
+              className="obj-btn"
+              onClick={() => leaveGuard(`/quests/${fromQuest}`)}
+            >
+              ← Volver a Quest #{fromQuest}
+            </button>
+          )}
           <div>
             <h1 style={{ margin: 0, fontSize: 22 }}>
               NPC #{assignedId} — {String(data.name ?? "")}

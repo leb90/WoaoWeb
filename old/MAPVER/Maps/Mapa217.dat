@@ -1,0 +1,14 @@
+[mapa217]
+Name=La Hispaniola zona indigena
+StartPos=0-0-0
+Terreno=ISLA
+Zona=CAMPO
+Restringir=No
+MusicNum=33-1
+pk=0
+MagiaSinefecto=0
+InviSinEfecto=0
+ResuSinEfecto=0
+NoEncriptarMP=0
+BackUp= 0
+Domar= 1

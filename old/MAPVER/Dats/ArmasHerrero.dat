@@ -1,0 +1,60 @@
+[INIT]
+NumArmas=16
+
+[Arma1]'daga +3
+Index=366
+
+[Arma2]'daga + 4
+Index=367
+
+[Arma3]'daga de plata
+Index=597
+
+[Arma4]'hacha de oro
+Index=605
+
+[Arma5]'espada de plata
+Index=403
+
+[Arma6]'excalibur
+Index=611
+
+[Arma7]'espada de oro
+Index=625
+
+[Arma8]'Diablo
+Index=559
+
+[Arma9]'matadrakos
+Index=402
+
+[Arma10]'doble espada +2
+Index=1085
+
+[Arma11]'Munición Pesada para honda (1-3)
+Index=965
+
+[Arma12]'espada fuego
+Index=1056
+
+[Arma13]'doble espada
+Index=1055
+
+[Arma14]'doble espada +1
+Index=1084
+
+[Arma15]'espada venenosa
+Index=1066
+
+[Arma16]'Puñal de Asesino
+Index=845
+
+
+'falta el bastón de poder, y muchas armas nuevas que están a la venta
+
+'[Arma??]'Bastón del Poder
+'Index=839
+
+'[Arma??]'vara de mago
+'Index=400
+

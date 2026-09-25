@@ -1,0 +1,13 @@
+[MAPA66]
+Name=Prision de Bandebill
+MusicNum=14-1
+MagiaSinefecto=0
+InviSinEfecto=0
+ResuSinEfecto=0
+NoEncriptarMP=0
+Terreno=PRISION
+Zona=PRISION
+Restringir=No
+BackUp= 0
+Pk=0
+Domar= 1

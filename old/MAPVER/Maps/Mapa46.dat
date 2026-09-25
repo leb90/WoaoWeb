@@ -1,0 +1,15 @@
+[mapa46]
+Name=Bosque Dorck
+MusicNum=3-1
+StartPos=0-0-0
+Terreno=BOSQUE
+Zona=BOSQUE
+Restringir=No
+pk=0
+MagiaSinefecto=0
+InviSinEfecto=0
+ResuSinEfecto=0
+NoEncriptarMP=0
+BackUp= 0
+Mascotas=1
+Domar= 1

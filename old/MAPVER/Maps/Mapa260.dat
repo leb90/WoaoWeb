@@ -1,0 +1,15 @@
+[mapa260]
+Name=DUNGEON
+MusicNum=34-1
+StartPos=0-0-0
+PK=0
+Terreno=DUNGEON
+Zona=DUNGEON
+Restringir=No
+BackUp= 1
+Dueño=1
+Domar=1
+MagiaSinefecto=0
+InviSinEfecto=0
+ResuSinEfecto=0
+NoEncriptarMP=0

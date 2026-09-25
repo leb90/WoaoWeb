@@ -500,6 +500,29 @@ CREATE TABLE IF NOT EXISTS game_crafting_recipes (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS character_crafting_recipes (
+    character_id UUID NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+    recipe_id INTEGER NOT NULL REFERENCES game_crafting_recipes(id) ON DELETE CASCADE,
+    learned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (character_id, recipe_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_character_crafting_recipes_recipe_id
+    ON character_crafting_recipes(recipe_id);
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'character_crafting_recipes_recipe_id_fkey'
+    ) THEN
+        ALTER TABLE character_crafting_recipes
+            ADD CONSTRAINT character_crafting_recipes_recipe_id_fkey
+            FOREIGN KEY (recipe_id) REFERENCES game_crafting_recipes(id) ON DELETE CASCADE;
+    END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS game_smelting_recipes (
     id INTEGER PRIMARY KEY,
     mineral_item_id INTEGER NOT NULL,

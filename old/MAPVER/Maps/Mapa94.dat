@@ -1,0 +1,14 @@
+[MAPA94]
+Name=DUNGEON AGUA
+MusicNum=0
+MagiaSinefecto=0
+InviSinEfecto=0
+ResuSinEfecto=0
+NoEncriptarMP=0
+Terreno=DEUNGEON
+Zona=DUNGEON
+Restringir=No
+BackUp= 0
+Pk=0
+Domar=1
+Lluvia=1

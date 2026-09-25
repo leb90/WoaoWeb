@@ -1,0 +1,15 @@
+[Mapa102]
+Name=Isla
+MusicNum=5-1
+StartPos=0-0-0
+Terreno=Isla
+Zona=Isla
+Restringir=No
+MagiaSinefecto=0
+InviSinEfecto=0
+ResuSinEfecto=0
+NoEncriptarMP=0
+BackUp= 0
+Pk=0
+Mascotas=1
+Domar= 1

@@ -1,0 +1,13 @@
+[Mapa115]
+Name=TORNEO
+MusicNum=0
+MagiaSinefecto=0
+InviSinEfecto=1
+ResuSinEfecto=1
+NoEncriptarMP=0
+Terreno=TORNEO
+Zona=TORNEO
+Restringir=No
+BackUp= 0
+Pk=0
+Domar= 1

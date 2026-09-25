@@ -1,0 +1,15 @@
+[mapa277]
+Name=CASA DE ALQUIMIA
+MusicNum=72-1
+StartPos=0-0-0
+PK=0
+Terreno=ALQUIMISTA
+Zona=ALQUIMISTA
+Restringir=No
+Lluvia=1
+Domar=1
+MagiaSinefecto=0
+InviSinEfecto=0
+ResuSinEfecto=1
+NoEncriptarMP=0
+BackUp= 0

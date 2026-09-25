@@ -1,0 +1,16 @@
+[mapa19]
+Name=Aldea Orca
+MusicNum=34-1
+StartPos=0-0-0
+PK=0
+Terreno=ALDEA
+Zona=CAMPO
+Restringir=No
+BackUp= 0
+Aldea=1
+MagiaSinefecto=0
+InviSinEfecto=0
+ResuSinEfecto=0
+NoEncriptarMP=0
+Mascotas=1
+Domar= 1

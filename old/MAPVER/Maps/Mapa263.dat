@@ -1,0 +1,15 @@
+[mapa263]
+Name=Quest
+MusicNum=34-1
+StartPos=0-0-0
+PK=0
+Terreno=Quest
+Zona=Quest
+Restringir=No
+BackUp= 0
+Aldea=1
+MagiaSinefecto=0
+InviSinEfecto=0
+ResuSinEfecto=0
+NoEncriptarMP=0
+Domar= 1

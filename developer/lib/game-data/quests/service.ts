@@ -8,6 +8,7 @@ import {
 } from "../../security/paths";
 import { createBackup, restoreBackup } from "../backups";
 import { loadNpcs, loadObjects, restartHintsFor } from "../catalog";
+import { buildResourceWrites } from "../resourceWrites";
 import { createNpcDraft } from "../npcs/defaults";
 import {
   buildListItem,
@@ -136,24 +137,15 @@ function persistAtomic(
 }
 
 function questWritePayload(quests: QuestsFile) {
-  return resolveResourcePaths("quests").map((absolutePath) => ({
-    absolutePath,
-    data: quests,
-  }));
+  return buildResourceWrites("quests", quests);
 }
 
 function giverWritePayload(givers: QuestGiversFile) {
-  return resolveResourcePaths("questGivers").map((absolutePath) => ({
-    absolutePath,
-    data: givers,
-  }));
+  return buildResourceWrites("questGivers", givers);
 }
 
 function npcWritePayload(npcs: Record<string, unknown>) {
-  return resolveResourcePaths("npcs").map((absolutePath) => ({
-    absolutePath,
-    data: npcs,
-  }));
+  return buildResourceWrites("npcs", npcs);
 }
 
 function bindGiverOrCreate(opts: {

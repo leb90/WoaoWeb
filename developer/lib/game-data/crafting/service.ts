@@ -1,5 +1,4 @@
 import type { SessionPayload } from "../../security/auth";
-import { resolveResourcePaths } from "../../security/paths";
 import { appendAudit } from "../../security/audit";
 import {
   loadCraftingRecipes,
@@ -9,6 +8,7 @@ import {
   saveSmeltingRecipes,
 } from "../catalog";
 import { atomicWriteMultipleJson, createBackup } from "../backups";
+import { buildResourceWrites } from "../resourceWrites";
 import {
   createRecipeObjectData,
   isRecipeLevel,
@@ -49,24 +49,29 @@ function persistCraftingAndObjs(
   action: string,
   resourceId?: number,
 ): void {
-  const craftPaths = resolveResourcePaths("craftingRecipes");
-  const objPaths = resolveResourcePaths("objs");
-  const allPaths = [...craftPaths, ...objPaths];
+  const craftWrites = buildResourceWrites("craftingRecipes", crafting);
+  const objWrites = buildResourceWrites("objs", objs);
+  const writes = [...craftWrites, ...objWrites];
+  const allPaths = writes.map((write) => write.absolutePath);
   const backup = createBackup({
     resource: "crafting+objs",
     resourceId: resourceId ?? null,
     absoluteFiles: allPaths,
     note: action,
   });
-  const writes = [
-    ...craftPaths.map((absolutePath) => ({ absolutePath, data: crafting })),
-    ...objPaths.map((absolutePath) => ({ absolutePath, data: objs })),
-  ];
   atomicWriteMultipleJson(writes, { backupId: backup.id });
-  for (const file of allPaths) {
+  for (const file of craftWrites.map((write) => write.absolutePath)) {
     appendAudit(session, {
       action,
       resourceType: "craftingRecipes",
+      resourceId: resourceId ?? null,
+      file,
+    });
+  }
+  for (const file of objWrites.map((write) => write.absolutePath)) {
+    appendAudit(session, {
+      action,
+      resourceType: "objs",
       resourceId: resourceId ?? null,
       file,
     });

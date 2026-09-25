@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { appendAudit } from "../security/audit";
 import type { SessionPayload } from "../security/auth";
-import { createBackup } from "../game-data/backups";
+import { atomicWriteMultipleJson, createBackup } from "../game-data/backups";
 import { assertPathUnder, ensureDir, PATHS } from "../security/paths";
 import { buildEditorState, collapseTerrain } from "./terrain";
 import type {
@@ -11,13 +11,39 @@ import type {
   NpcPlacement,
   SpecialsFile,
   TerrainFile,
+  TileExit,
 } from "./types";
 import { tileKey } from "./types";
 
+type CompactTile = {
+  b?: 1;
+  g?: number | Array<number | null>;
+  e?: { m: number; x: number; y: number };
+  n?: number;
+  t?: number;
+  o?: { i: number; a: number };
+};
+
+type CompactMap = {
+  id: number;
+  w: number;
+  h: number;
+  d: number[];
+  cx?: CompactTile[];
+};
+
 function mapDir(mapId: number): string {
-  const root = PATHS.serverMaps();
+  return mapDirForRoot(PATHS.serverMaps(), mapId);
+}
+
+function mapDirForRoot(root: string, mapId: number): string {
   const dir = path.join(root, `mapa_${mapId}`);
   return assertPathUnder(dir, root);
+}
+
+function frontendMapPath(root: string, mapId: number): string {
+  const file = path.join(root, `mapa_${mapId}.json`);
+  return assertPathUnder(file, root);
 }
 
 function readJson<T>(filePath: string): T {
@@ -205,18 +231,208 @@ function npcsToPlacements(state: EditorMapState): NpcPlacement[] {
   return out;
 }
 
+function toFiniteNumber(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+}
+
+function normalizeExitDestination(
+  exit: TileExit | undefined,
+): { map: number; x: number; y: number } | null {
+  const raw =
+    exit && typeof exit === "object" && "destinations" in exit
+      ? exit.destinations?.[0]
+      : exit;
+  if (!raw) return null;
+
+  const map = toFiniteNumber(raw.map);
+  const x = toFiniteNumber(raw.x);
+  const y = toFiniteNumber(raw.y);
+  if (map === undefined || x === undefined || y === undefined) {
+    return null;
+  }
+  return { map, x, y };
+}
+
+function buildCompactTile(
+  x: number,
+  y: number,
+  terrain: TerrainFile,
+  specials: SpecialsFile,
+): CompactTile {
+  const paletteId = terrain.rows[y - 1]?.[x - 1] ?? 0;
+  const terrainTile = paletteId > 0 ? terrain.palette[String(paletteId)] : undefined;
+  const coordinateKey = `${x},${y}`;
+  const compactTile: CompactTile = {};
+
+  if (terrainTile?.blocked) {
+    compactTile.b = 1;
+  }
+
+  if (terrainTile?.graphics !== undefined) {
+    compactTile.g = terrainTile.graphics;
+  }
+
+  const exit = normalizeExitDestination(specials.exits?.[coordinateKey]);
+  if (exit) {
+    compactTile.e = { m: exit.map, x: exit.x, y: exit.y };
+  }
+
+  const objectInfo = specials.objects?.[coordinateKey];
+  const objIndex = toFiniteNumber(objectInfo?.objIndex);
+  const amount = toFiniteNumber(objectInfo?.amount);
+  if (objIndex !== undefined && amount !== undefined) {
+    compactTile.o = { i: objIndex, a: amount };
+  }
+
+  const trigger = toFiniteNumber(specials.triggers?.[coordinateKey]);
+  if (trigger !== undefined) {
+    compactTile.t = trigger;
+  }
+
+  const npcIndex = toFiniteNumber(specials.npcs?.[coordinateKey]);
+  if (npcIndex !== undefined) {
+    compactTile.n = npcIndex;
+  }
+
+  return sortCompactTile(compactTile);
+}
+
+function sortCompactTile(tile: CompactTile): CompactTile {
+  const result: CompactTile = {};
+  if (tile.b) result.b = 1;
+  if (tile.g !== undefined) result.g = tile.g;
+  if (tile.e) result.e = tile.e;
+  if (tile.n !== undefined) result.n = tile.n;
+  if (tile.t !== undefined) result.t = tile.t;
+  if (tile.o) result.o = tile.o;
+  return result;
+}
+
+function buildCompactMap(
+  mapId: number,
+  terrain: TerrainFile,
+  specials: SpecialsFile,
+): CompactMap {
+  const width = Math.max(1, toFiniteNumber(terrain.width) ?? 100);
+  const height = Math.max(1, toFiniteNumber(terrain.height) ?? 100);
+  const complexTiles: CompactTile[] = [];
+  const complexIndexBySignature = new Map<string, number>();
+  const data: number[] = [];
+
+  for (let y = 1; y <= height; y++) {
+    for (let x = 1; x <= width; x++) {
+      const compactTile = buildCompactTile(x, y, terrain, specials);
+      const tileKeys = Object.keys(compactTile);
+      if (tileKeys.length === 0) {
+        data.push(0);
+        continue;
+      }
+
+      if (tileKeys.length === 1 && typeof compactTile.g === "number") {
+        data.push(compactTile.g);
+        continue;
+      }
+
+      if (
+        tileKeys.length === 2 &&
+        compactTile.b === 1 &&
+        typeof compactTile.g === "number"
+      ) {
+        data.push(100000 + compactTile.g);
+        continue;
+      }
+
+      const signature = JSON.stringify(compactTile);
+      let complexIndex = complexIndexBySignature.get(signature);
+      if (complexIndex === undefined) {
+        complexIndex = complexTiles.length;
+        complexIndexBySignature.set(signature, complexIndex);
+        complexTiles.push(compactTile);
+      }
+      data.push(-(complexIndex + 1));
+    }
+  }
+
+  return complexTiles.length > 0
+    ? { id: mapId, w: width, h: height, d: data, cx: complexTiles }
+    : { id: mapId, w: width, h: height, d: data };
+}
+
+function graphicsToExpanded(
+  graphics: CompactTile["g"],
+): Record<string, number> | undefined {
+  if (typeof graphics === "number") {
+    return { "1": graphics };
+  }
+  if (!Array.isArray(graphics)) {
+    return undefined;
+  }
+
+  const out: Record<string, number> = {};
+  for (let i = 0; i < graphics.length; i++) {
+    const value = graphics[i];
+    if (typeof value === "number") {
+      out[String(i + 1)] = value;
+    }
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
+function compactTileToExpanded(tile: CompactTile): Record<string, unknown> {
+  const expanded: Record<string, unknown> = {};
+  if (tile.b) expanded.blocked = tile.b;
+  const graphics = graphicsToExpanded(tile.g);
+  if (graphics) expanded.graphics = graphics;
+  if (tile.e) {
+    expanded.tileExit = { map: tile.e.m, x: tile.e.x, y: tile.e.y };
+  }
+  if (tile.t !== undefined) expanded.trigger = tile.t;
+  if (tile.o) {
+    expanded.objInfo = { objIndex: tile.o.i, amount: tile.o.a };
+  }
+  return expanded;
+}
+
+function buildExpandedClientMap(
+  mapId: number,
+  terrain: TerrainFile,
+  specials: SpecialsFile,
+): Record<string, unknown> {
+  const width = Math.max(1, toFiniteNumber(terrain.width) ?? 100);
+  const height = Math.max(1, toFiniteNumber(terrain.height) ?? 100);
+  const rows: Record<string, Record<string, unknown>> = {};
+
+  for (let y = 1; y <= height; y++) {
+    const row: Record<string, unknown> = {};
+    for (let x = 1; x <= width; x++) {
+      row[String(x)] = compactTileToExpanded(
+        buildCompactTile(x, y, terrain, specials),
+      );
+    }
+    rows[String(y)] = row;
+  }
+
+  return { [String(mapId)]: rows };
+}
+
 export function saveMapEditorState(
   state: EditorMapState,
   session: SessionPayload,
 ): void {
   validateEditorState(state);
-  const dir = mapDir(state.id);
-  ensureDir(dir);
+  const serverDir = mapDir(state.id);
+  const apiDir = mapDirForRoot(PATHS.apiMaps(), state.id);
+  ensureDir(serverDir);
+  ensureDir(apiDir);
 
-  const metaPath = path.join(dir, "meta.json");
-  const terrainPath = path.join(dir, "terrain.json");
-  const specialsPath = path.join(dir, "specials.json");
-  const npcsPath = path.join(dir, "npcs.json");
+  const sourceDirs = [serverDir, apiDir];
 
   const terrain = collapseTerrain(
     state.id,
@@ -229,49 +445,43 @@ export function saveMapEditorState(
   JSON.parse(JSON.stringify(state.meta));
   const specials = specialsToFile(state);
   const placements = npcsToPlacements(state);
-
-  createBackup({
-    resource: "map",
-    resourceId: state.id,
-    absoluteFiles: [metaPath, terrainPath, specialsPath, npcsPath].filter((f) =>
-      fs.existsSync(f),
-    ),
-  });
-
-  const meta: MapMeta = { ...state.meta, id: state.id };
-
-  // Atomic: write temps then rename
-  const writes: Array<{ dest: string; data: unknown }> = [
-    { dest: metaPath, data: meta },
-    { dest: terrainPath, data: terrain },
-    { dest: specialsPath, data: specials },
-    { dest: npcsPath, data: placements },
+  const compactMap = buildCompactMap(state.id, terrain, specials);
+  const frontendWrites: Array<{ absolutePath: string; data: unknown }> = [
+    {
+      absolutePath: frontendMapPath(PATHS.frontendMaps(), state.id),
+      data: compactMap,
+    },
+    {
+      absolutePath: frontendMapPath(PATHS.frontendMapsOptimized(), state.id),
+      data: compactMap,
+    },
   ];
 
-  const temps: string[] = [];
-  try {
-    for (const { dest, data } of writes) {
-      const tmp = `${dest}.${process.pid}.${Date.now()}.tmp`;
-      const serialized = JSON.stringify(data);
-      JSON.parse(serialized);
-      fs.writeFileSync(tmp, serialized, "utf8");
-      temps.push(tmp);
-    }
-    for (let i = 0; i < writes.length; i++) {
-      fs.renameSync(temps[i]!, writes[i]!.dest);
-    }
-  } catch (error) {
-    for (const tmp of temps) {
-      try {
-        if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
-      } catch {
-        /* ignore */
-      }
-    }
-    throw error;
+  if (state.id >= 500 && state.id < 600) {
+    frontendWrites.push({
+      absolutePath: frontendMapPath(PATHS.frontendLocalMaps(), state.id),
+      data: buildExpandedClientMap(state.id, terrain, specials),
+    });
   }
 
-  for (const file of [metaPath, terrainPath, specialsPath, npcsPath]) {
+  const meta: MapMeta = { ...state.meta, id: state.id };
+  const writes: Array<{ absolutePath: string; data: unknown }> = [
+    ...sourceDirs.flatMap((dir) => [
+      { absolutePath: path.join(dir, "meta.json"), data: meta },
+      { absolutePath: path.join(dir, "terrain.json"), data: terrain },
+      { absolutePath: path.join(dir, "specials.json"), data: specials },
+      { absolutePath: path.join(dir, "npcs.json"), data: placements },
+    ]),
+    ...frontendWrites,
+  ];
+  const backup = createBackup({
+    resource: "map",
+    resourceId: state.id,
+    absoluteFiles: writes.map((write) => write.absolutePath),
+  });
+  atomicWriteMultipleJson(writes, { backupId: backup.id });
+
+  for (const file of writes.map((write) => write.absolutePath)) {
     appendAudit(session, {
       action: "save-map",
       resourceType: "maps",
@@ -283,5 +493,5 @@ export function saveMapEditorState(
 
 export const MAP_RESTART_HINTS = [
   "Este cambio requiere reiniciar el Game Server",
-  "Para ver el mapa en el cliente: exportar mapas optimizados + hard refresh",
+  "Se publicaron copias para server, api y cliente; hacer hard refresh del cliente",
 ];

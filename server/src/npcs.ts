@@ -48,7 +48,7 @@ const DEFAULT_NPC_SPELL_RANGE_Y = 9;
 const DRAGON_RESPAWN_COOLDOWN_MS = 1 * 60 * 60 * 1000;
 const COMBAT_HIT_FX_ID = 14;
 const COMBAT_SHIELD_BLOCK_FX_ID = 88;
-const COMBAT_MISS_FX_ID = 90;
+const COMBAT_MISS_FX_ID = 144;
 
 type Direction = number;
 type NpcCharacter = RuntimeNpc & {

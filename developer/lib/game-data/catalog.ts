@@ -1,15 +1,15 @@
 import fs from "node:fs";
 import {
-  atomicWriteJsonFile,
+  atomicWriteMultipleJson,
   createBackup,
 } from "./backups";
 import {
   resolvePrimaryResourcePath,
-  resolveResourcePaths,
   type AllowedResource,
 } from "../security/paths";
 import type { SessionPayload } from "../security/auth";
 import { appendAudit } from "../security/audit";
+import { buildResourceWrites } from "./resourceWrites";
 
 export type ObjRecord = Record<string, unknown> & {
   name?: string;
@@ -204,14 +204,15 @@ export function saveResourceFile(
   session: SessionPayload,
   opts?: { resourceId?: string | number | null; action?: string },
 ): void {
-  const paths = resolveResourcePaths(resource);
-  createBackup({
+  const writes = buildResourceWrites(resource, data);
+  const paths = writes.map((write) => write.absolutePath);
+  const backup = createBackup({
     resource,
     resourceId: opts?.resourceId ?? null,
     absoluteFiles: paths,
   });
+  atomicWriteMultipleJson(writes, { backupId: backup.id });
   for (const filePath of paths) {
-    atomicWriteJsonFile(filePath, data);
     appendAudit(session, {
       action: opts?.action ?? "save",
       resourceType: resource,
@@ -427,6 +428,46 @@ export function saveBalance(
 }
 
 export function restartHintsFor(resource: AllowedResource): string[] {
+  const hints: Record<AllowedResource, string[]> = {
+    objs: [
+      "Se actualizaron server/jsons, api/src/jsons y frontend/public/init",
+      "En juego (GM): /recargarobjs",
+      "Si el navegador tenia cache: hard refresh",
+    ],
+    npcs: [
+      "Se actualizaron server/jsons, api/src/jsons y frontend/public/init",
+      "En juego (GM): /recargarnpcs",
+      "Si el navegador tenia cache: hard refresh",
+    ],
+    spells: [
+      "Se actualizaron server/jsons, api/src/jsons y frontend/public/init",
+      "Reinicia el Game Server",
+    ],
+    craftingRecipes: [
+      "Se actualizaron server/jsons y api/src/jsons",
+      "En juego (GM): /recargarcrafting",
+    ],
+    smeltingRecipes: [
+      "Se actualizaron server/jsons y api/src/jsons",
+      "Reinicia el Game Server (no hay /recargarsmelting)",
+    ],
+    balance: [
+      "Se actualizo api/src/jsons/balance.json",
+      "En juego (GM): /recargarbalance",
+    ],
+    quests: [
+      "Se actualizaron server/jsons y frontend/public/init",
+      "Reinicia el Game Server (quests se cargan al arranque)",
+    ],
+    questGivers: [
+      "Se actualizo server/jsons/questGivers.json",
+      "Reinicia el Game Server",
+    ],
+  };
+  return hints[resource] ?? [];
+}
+
+export function restartHintsForLegacy(resource: AllowedResource): string[] {
   switch (resource) {
     case "objs":
       return [

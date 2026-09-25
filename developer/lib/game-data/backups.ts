@@ -8,6 +8,7 @@ export type BackupMeta = {
   resource: string;
   resourceId: string | number | null;
   files: string[];
+  entries?: Array<{ target: string; backupFile: string }>;
   note?: string;
 };
 
@@ -30,16 +31,14 @@ export function createBackup(opts: {
   ensureDir(dir);
 
   const copied: string[] = [];
+  const entries: Array<{ target: string; backupFile: string }> = [];
   for (const file of opts.absoluteFiles) {
     if (!fs.existsSync(file)) continue;
     const base = path.basename(file);
-    // Disambiguate same basename from different dirs
-    const destName =
-      opts.absoluteFiles.filter((f) => path.basename(f) === base).length > 1
-        ? `${path.basename(path.dirname(file))}_${base}`
-        : base;
+    const destName = `${copied.length}_${path.basename(path.dirname(file))}_${base}`;
     fs.copyFileSync(file, path.join(dir, destName));
     copied.push(destName);
+    entries.push({ target: path.resolve(file), backupFile: destName });
   }
 
   const meta: BackupMeta = {
@@ -48,6 +47,7 @@ export function createBackup(opts: {
     resource: opts.resource,
     resourceId: opts.resourceId ?? null,
     files: copied,
+    entries,
     note: opts.note,
   };
   fs.writeFileSync(path.join(dir, "meta.json"), JSON.stringify(meta, null, 2));
@@ -87,7 +87,11 @@ export function restoreBackup(
 
   for (const target of targetFiles) {
     const base = path.basename(target);
+    const mapped = meta.entries?.find(
+      (entry) => path.resolve(entry.target) === path.resolve(target),
+    );
     const candidates = [
+      ...(mapped ? [path.join(dir, mapped.backupFile)] : []),
       path.join(dir, `${path.basename(path.dirname(target))}_${base}`),
       path.join(dir, base),
     ];

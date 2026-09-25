@@ -9,6 +9,7 @@ const GRAPHICS_DIR = path.join(PROJECT_ROOT, "frontend/public/graphics");
 const GRAPHICS_PATH = path.join(PROJECT_ROOT, "frontend/public/init/graficos.json");
 const GRAPHICS_OPTIMIZED_PATH = path.join(PROJECT_ROOT, "frontend/public/init/graficos_optimized.json");
 const API_OBJS_PATH = path.join(PROJECT_ROOT, "api/src/jsons/objs.json");
+const SERVER_OBJS_PATH = path.join(PROJECT_ROOT, "server/jsons/objs.json");
 const CLIENT_OBJS_PATH = path.join(PROJECT_ROOT, "frontend/public/init/objs.json");
 const CATALOG_PATH = path.join(PROJECT_ROOT, "crafting-resource-catalog.csv");
 
@@ -204,6 +205,7 @@ function csvEscape(value) {
 }
 
 const apiObjs = readJson(API_OBJS_PATH);
+const serverObjs = fs.existsSync(SERVER_OBJS_PATH) ? readJson(SERVER_OBJS_PATH) : { ...apiObjs };
 const clientObjs = readJson(CLIENT_OBJS_PATH);
 const graphics = readJson(GRAPHICS_PATH);
 const optimizedGraphics = readJson(GRAPHICS_OPTIMIZED_PATH);
@@ -246,6 +248,7 @@ for (const [index, resource] of RESOURCES.entries()) {
     };
 
     apiObjs[objectId] = obj;
+    serverObjs[objectId] = obj;
     clientObjs[objectId] = obj;
     catalog.push({
         itemId: objectId,
@@ -260,6 +263,7 @@ for (const [index, resource] of RESOURCES.entries()) {
 }
 
 writeJson(API_OBJS_PATH, apiObjs);
+writeJson(SERVER_OBJS_PATH, serverObjs);
 writeJson(CLIENT_OBJS_PATH, clientObjs);
 writeJson(GRAPHICS_PATH, graphics);
 writeJson(GRAPHICS_OPTIMIZED_PATH, optimizedGraphics);

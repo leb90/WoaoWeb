@@ -7,8 +7,10 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PROJECT_ROOT = path.resolve(ROOT, "..");
 const CSV_PATH = path.join(PROJECT_ROOT, "crafting-candidates-from-old.csv");
 const API_OBJS_PATH = path.join(PROJECT_ROOT, "api/src/jsons/objs.json");
+const SERVER_OBJS_PATH = path.join(PROJECT_ROOT, "server/jsons/objs.json");
 const CLIENT_OBJS_PATH = path.join(PROJECT_ROOT, "frontend/public/init/objs.json");
 const API_NPCS_PATH = path.join(PROJECT_ROOT, "api/src/jsons/npcs.json");
+const SERVER_NPCS_PATH = path.join(PROJECT_ROOT, "server/jsons/npcs.json");
 const CRAFTING_API_PATH = path.join(PROJECT_ROOT, "api/src/jsons/craftingRecipes.json");
 const CRAFTING_SERVER_PATH = path.join(PROJECT_ROOT, "server/jsons/craftingRecipes.json");
 const GRAPHICS_PATH = path.join(PROJECT_ROOT, "frontend/public/init/graficos.json");
@@ -303,8 +305,10 @@ const rows = parseCsv(fs.readFileSync(CSV_PATH, "utf8"))
     .filter((row) => row.itemId > 0 && row.materials.length > 0);
 
 const apiObjs = readJson(API_OBJS_PATH);
+const serverObjs = fs.existsSync(SERVER_OBJS_PATH) ? readJson(SERVER_OBJS_PATH) : { ...apiObjs };
 const clientObjs = readJson(CLIENT_OBJS_PATH);
 const apiNpcs = readJson(API_NPCS_PATH);
+const serverNpcs = fs.existsSync(SERVER_NPCS_PATH) ? readJson(SERVER_NPCS_PATH) : structuredClone(apiNpcs);
 const graphics = readJson(GRAPHICS_PATH);
 const optimizedGraphics = readJson(GRAPHICS_OPTIMIZED_PATH);
 const craftingItemIds = new Set(rows.map((row) => row.itemId));
@@ -318,6 +322,14 @@ for (const npc of Object.values(apiNpcs)) {
     const before = npc.objs.length;
     npc.objs = npc.objs.filter((entry) => !craftingItemIds.has(Number(entry?.item ?? 0)));
     removedVendorEntries += before - npc.objs.length;
+}
+
+for (const npc of Object.values(serverNpcs)) {
+    if (!Array.isArray(npc.objs)) {
+        continue;
+    }
+
+    npc.objs = npc.objs.filter((entry) => !craftingItemIds.has(Number(entry?.item ?? 0)));
 }
 
 const baseObject = {
@@ -376,6 +388,7 @@ const recipes = rows.map((row, index) => {
     const recipeObject = createRecipeObject(baseObject, recipe, craftedName);
 
     apiObjs[String(recipeItemId)] = recipeObject;
+    serverObjs[String(recipeItemId)] = recipeObject;
     clientObjs[String(recipeItemId)] = recipeObject;
 
     return recipe;
@@ -407,8 +420,10 @@ for (const [level, data] of Object.entries(LEVEL_GRAPHICS)) {
 }
 
 writeJson(API_OBJS_PATH, apiObjs);
+writeJson(SERVER_OBJS_PATH, serverObjs);
 writeJson(CLIENT_OBJS_PATH, clientObjs);
 writeJson(API_NPCS_PATH, apiNpcs);
+writeJson(SERVER_NPCS_PATH, serverNpcs);
 writeJson(GRAPHICS_PATH, graphics);
 writeJson(GRAPHICS_OPTIMIZED_PATH, optimizedGraphics);
 writeJson(CRAFTING_API_PATH, recipes);

@@ -5457,7 +5457,9 @@ function Game(this: GameApi) {
                     return;
                 }
 
-                if (datObj.agarrable) {
+                // agarrable=1 marca objetos fijos / no recolectables para jugadores.
+                // Los GM pueden agarrarlos igual (limpieza de mapas, set legendario, etc.).
+                if (datObj.agarrable && Number(user.privileges ?? 0) < 1) {
                     return;
                 }
 

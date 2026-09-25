@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
+import path from "node:path";
 
 import type { DataObject } from "./types/runtime";
 
@@ -8,6 +9,7 @@ const config = require("./config");
 type ObjectsById = Record<string, DataObject>;
 
 const DEFAULT_OBJECTS_API_PATH = "/internal/game-data/objects/changes?sinceVersion=0";
+const DEFAULT_OBJECTS_JSON_PATH = path.resolve(__dirname, "../jsons/objs.json");
 
 const OBJECT_DEFAULTS: Record<string, unknown> = {
     name: "",
@@ -117,7 +119,11 @@ function getObjectsDbUrl(): string | null {
 }
 
 function shouldPreferDbSource(): boolean {
-    return (process.env.GAME_DATA_SOURCE ?? "").toLowerCase() === "db";
+    return config.gameDataSource === "db";
+}
+
+function shouldPreferApiSource(): boolean {
+    return config.gameDataSource === "api";
 }
 
 function fetchObjectsChangesFromApi(): ObjectChangesResponse {
@@ -181,15 +187,11 @@ export function loadDefaultObjectsData(): ObjectsById {
         return loadObjectsDataFromDb(dbUrl);
     }
 
-    try {
+    if (shouldPreferApiSource()) {
         return loadObjectsDataFromApi();
-    } catch (apiError) {
-        if (dbUrl) {
-            return loadObjectsDataFromDb(dbUrl);
-        }
-
-        throw apiError;
     }
+
+    return loadObjectsDataFromJsonFile(DEFAULT_OBJECTS_JSON_PATH);
 }
 
-export { DEFAULT_OBJECTS_API_PATH };
+export { DEFAULT_OBJECTS_API_PATH, DEFAULT_OBJECTS_JSON_PATH };

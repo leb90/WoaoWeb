@@ -1,7 +1,7 @@
 export {};
 import { buildNpcRespawnKey, getNpcRespawnCooldown, initializeNpcRespawnCooldowns } from "./npcRespawnCooldowns";
 import { loadAllMapNpcPlacements, replaceAllMapNpcPlacements } from "./mapNpcStorage";
-const { initializeNpcTemplatesFromApi } = require("./gameDataSync");
+const { loadDefaultNpcsData } = require("./npcData");
 const game = require("./game");
 const vars = require("./vars");
 const npcs = require("./npcs");
@@ -20,17 +20,10 @@ class LoadNpcs {
 
     load() {
         return new Promise(async (resolve: any, reject: any) => {
-            vars.datNpc = {};
-
             try {
-                const result = await initializeNpcTemplatesFromApi();
-                console.log(
-                    `[GAME DATA] NPC templates hidratados desde DB: ${result.loadedTemplates}. Version aplicada: ${result.currentVersion}.`,
-                );
-                if (result.loadedTemplates <= 0) {
-                    reject(new Error("No se pudieron cargar NPCs desde la API."));
-                    return;
-                }
+                vars.datNpc = loadDefaultNpcsData();
+                vars.gameDataVersions.npcs = 0;
+                console.log(`[GAME DATA] NPC templates cargados desde fuente configurada: ${Object.keys(vars.datNpc).length}.`);
             } catch (error) {
                 reject(error);
                 return;

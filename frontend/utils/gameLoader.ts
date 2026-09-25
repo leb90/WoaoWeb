@@ -368,14 +368,16 @@ function decompressMap(optimizedMap: any) {
     }
 
     if (optimizedMap.d) {
-        // Enhanced ultra-compact format
+        // Enhanced ultra-compact format.
+        // `d` is row-major: for y=1..h, for x=1..w (same as exportFrontendOptimizedMaps
+        // and server mapas_source). Store as mapData[y][x] to match getTileAt().
         const result: any = {};
         const mapData: any = {};
         let index = 0;
 
-        for (let x = 1; x <= optimizedMap.w; x++) {
-            mapData[x] = {};
-            for (let y = 1; y <= optimizedMap.h; y++) {
+        for (let y = 1; y <= optimizedMap.h; y++) {
+            mapData[y] = {};
+            for (let x = 1; x <= optimizedMap.w; x++) {
                 const value = optimizedMap.d[index++];
                 if (value === 0) continue; // Empty tile
 
@@ -433,7 +435,7 @@ function decompressMap(optimizedMap: any) {
                     }
                 }
 
-                mapData[x][y] = tile;
+                mapData[y][x] = tile;
             }
         }
 

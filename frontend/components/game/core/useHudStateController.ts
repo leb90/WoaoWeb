@@ -4,6 +4,7 @@ import {
     type RefObject,
     type SetStateAction,
 } from "react";
+import { OBJECT_TYPE } from "../../../lib/aowProtocol";
 import type {
     BailOffer,
     CraftingState,
@@ -162,6 +163,14 @@ export function useHudStateController({
             partyMemberIdsRef.current = nextPartyMemberIds;
             if (engineRef.current) {
                 engineRef.current.partyMemberIds = nextPartyMemberIds;
+                engineRef.current.canAutoEmbark = Boolean(
+                    hud?.inventory?.some(
+                        (item) =>
+                            item.objType === OBJECT_TYPE.barcos &&
+                            item.amount > 0 &&
+                            item.validForUser,
+                    ),
+                );
                 if (engineRef.current.user) {
                     engineRef.current.user.zonaSegura = hud?.zonaSegura;
                 }

@@ -660,6 +660,7 @@ export const OBJECT_TYPE = {
     gemas: 29,
     lingotes: 36,
     instrumentosMusicales: 26,
+    barcos: 31,
     flechas: 32,
     recetas: 46,
 } as const;

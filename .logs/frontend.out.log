@@ -1,0 +1,19 @@
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://0.0.0.0:3000
+- Environments: .env.local
+✓ Ready in 1147ms
+Creating turbopack project {
+  dir: 'C:\\Programación\\Proyectos\\WoaoWeb\\frontend',
+  testMode: true
+}
+
+ GET /play 200 in 1847ms (next.js: 631ms, application-code: 1216ms)
+ GET /manifest.webmanifest 200 in 145ms (next.js: 107ms, application-code: 38ms)
+ GET /api/auth/me 200 in 450ms (next.js: 148ms, application-code: 301ms)
+ GET /api/auth/me 200 in 75ms (next.js: 12ms, application-code: 63ms)
+ GET /api/runtime-config 200 in 134ms (next.js: 94ms, application-code: 40ms)
+ GET /api/auth/session 200 in 322ms (next.js: 99ms, application-code: 223ms)
+ POST /api/auth/game-ticket 200 in 224ms (next.js: 76ms, application-code: 148ms)
+ GET /api/auth/character-settings 200 in 245ms (next.js: 159ms, application-code: 86ms)
+[?25h

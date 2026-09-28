@@ -539,12 +539,28 @@ function isArmorBlockedByRace(obj: DataObject, idRaza: number) {
     );
 }
 
+function isBoatValidForUser(user: ProtocolCharacter, obj: DataObject) {
+    const characterSkills = require("./skills");
+    const workProfessions = require("./workProfessions");
+    const currentSkill = characterSkills.getSkill(user, characterSkills.SKILLS.navegacion);
+    const requiredSkill = workProfessions.getRequiredNavegacionSkill(
+        Number(obj.minSkill ?? 0),
+        Number(user.idClase ?? 0),
+    );
+
+    return currentSkill >= requiredSkill;
+}
+
 function itemValidUser(idUser: EntityId, idItem: number) {
     const user = getCharacter(idUser);
     const obj = getObject(idItem);
 
     if (!user) {
         return 1;
+    }
+
+    if (obj.objType === vars.objType.barcos) {
+        return isBoatValidForUser(user, obj) ? 1 : 0;
     }
 
     if (

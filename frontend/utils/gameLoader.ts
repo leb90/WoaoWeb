@@ -520,8 +520,8 @@ export async function loadGraphicsDB(): Promise<GraphicsDB> {
     try {
         const optimizedGraphicsDb =
             await fetchJsonWithFallback<CompactGraphicsDB>(
-                "/init/graficos_optimized.json?v=3.4",
-                "/init/graficos_optimized.json?v=3.4",
+                "/init/graficos_optimized.json?v=3.5",
+                "/init/graficos_optimized.json?v=3.5",
                 "optimized graphics database",
                 { preferLocal: PREFER_LOCAL_GRAPHICS },
             );

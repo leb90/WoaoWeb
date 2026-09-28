@@ -558,6 +558,7 @@ export class Engine {
     user: PlayerCharacter | null = null;
     isServerDriven = false;
     partyMemberIds: Set<string> = new Set();
+    canAutoEmbark = false;
     healthBarEntityIds: Set<number> = new Set();
     remoteEntities: Map<number, Container> = new Map();
     worldName = "";
@@ -1328,6 +1329,46 @@ export class Engine {
         return !isWaterTile;
     }
 
+    private isNavigationTransitionTileWalkable(
+        character: Character | null | undefined,
+        tX: number,
+        tY: number,
+    ): boolean {
+        if (!this.mapData || !character) {
+            return false;
+        }
+
+        if (
+            tX < 1 ||
+            tX > this.mapDimensions.width ||
+            tY < 1 ||
+            tY > this.mapDimensions.height
+        ) {
+            return false;
+        }
+
+        const tile = getTileAt(this.mapData, this.mapNumber, tX, tY);
+        if (tile?.blocked === 1) {
+            return false;
+        }
+
+        const currentIsWater = this.isWaterTile(
+            character.pos.x,
+            character.pos.y,
+        );
+        const destinationIsWater = this.isWaterTile(tX, tY);
+
+        if (!character.navegando && !currentIsWater && destinationIsWater) {
+            return this.canAutoEmbark;
+        }
+
+        if (character.navegando && currentIsWater && !destinationIsWater) {
+            return true;
+        }
+
+        return false;
+    }
+
     private getGhostDisplacementHeadings(heading: number): number[] {
         switch (heading) {
             case this.DIRECTIONS.UP:
@@ -1469,7 +1510,11 @@ export class Engine {
         heading: number = this.user?.heading ?? 0,
     ): boolean {
         try {
-            if (!this.isTileWalkableForCharacter(this.user, tX, tY)) {
+            const canWalk =
+                this.isTileWalkableForCharacter(this.user, tX, tY) ||
+                this.isNavigationTransitionTileWalkable(this.user, tX, tY);
+
+            if (!canWalk) {
                 return false;
             }
 

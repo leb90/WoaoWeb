@@ -573,6 +573,7 @@ function trackClientActivity(ws: RuntimeClient, packageID: number) {
     require("./factionWars").initialize();
     require("./diaEspecial").initialize();
     require("./bossEvents").initialize();
+    require("./mountEggDrops").initialize();
 
     vars.serverReady = true;
     const endInitialize = Date.now() - startInitialize;

@@ -86,14 +86,19 @@ export function doTame(idUser: string) {
         return { ok: false, message: "No hay un item de mascota para esa criatura." };
     }
 
-    const already = Object.values(user.inv ?? {}).some((item: any) => Number(item?.idItem) === itemId);
-    if (already) {
-        return { ok: false, message: "Ya tienes esa clase de mascota." };
+    const mounts = require("./mounts") as typeof import("./mounts");
+    const mountTypeId = mounts.getMountTypeIdFromItem(itemId);
+    if (mountTypeId > 0 && mounts.ownsMountType(user, mountTypeId)) {
+        return { ok: false, message: "Ya tienes una mascota de esa especie." };
     }
 
     game.putItemToInv(idUser, itemId, 1);
-    require("./mounts").prepareMount(user, itemId);
+    const prepared = mounts.prepareMount(user, itemId);
+    if (!prepared.ok) {
+        return { ok: false, message: prepared.message || "No se pudo crear la mascota." };
+    }
+
     require("./npcs").muereNpc(npc.id);
-    const name = vars.datObj?.[itemId]?.name ?? npc.nameCharacter ?? "mascota";
+    const name = prepared.mount?.name ?? vars.datObj?.[itemId]?.name ?? npc.nameCharacter ?? "mascota";
     return { ok: true, message: `Has domado a ${name}.` };
 }

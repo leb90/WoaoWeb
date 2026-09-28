@@ -166,6 +166,69 @@ const CRAFTING_RECIPE_OBJECT_TYPE = 46;
 const CLAN_RING_MAP_ID = 273;
 const MERCHANT_NPC_TYPE = 10;
 
+type MerchantTradeItem = { item: number; cant?: number };
+
+function hasTradeObjects(objs: unknown) {
+    if (Array.isArray(objs)) {
+        return objs.length > 0;
+    }
+
+    return objs && typeof objs === "object"
+        ? Object.keys(objs).length > 0
+        : false;
+}
+
+function getNpcTemplate(npc: { templateNpcIndex?: unknown } | undefined) {
+    const templateNpcIndex = Number(npc?.templateNpcIndex ?? 0);
+
+    return Number.isFinite(templateNpcIndex) && templateNpcIndex > 0
+        ? vars.datNpc?.[templateNpcIndex]
+        : undefined;
+}
+
+function getMerchantTradeObjects(npc: { templateNpcIndex?: unknown; objs?: unknown } | undefined) {
+    if (hasTradeObjects(npc?.objs)) {
+        return npc?.objs as Record<string, MerchantTradeItem> | MerchantTradeItem[];
+    }
+
+    return getNpcTemplate(npc)?.objs ?? {};
+}
+
+function getMerchantItems(npc: { templateNpcIndex?: unknown; objs?: unknown } | undefined): MerchantTradeItem[] {
+    return Object.values(getMerchantTradeObjects(npc) as Record<string, MerchantTradeItem>).filter(
+        (entry): entry is MerchantTradeItem => Number(entry?.item ?? 0) > 0,
+    );
+}
+
+function getMerchantItemAtSlot(
+    npc: { templateNpcIndex?: unknown; objs?: unknown } | undefined,
+    idPos: number | string,
+): MerchantTradeItem | undefined {
+    const tradeObjects = getMerchantTradeObjects(npc) as Record<string, MerchantTradeItem>;
+    const item = tradeObjects[String(idPos)];
+
+    return Number(item?.item ?? 0) > 0 ? item : undefined;
+}
+
+function isMerchantNpc(npc: { templateNpcIndex?: unknown; npcType?: unknown; comercia?: unknown; objs?: unknown } | undefined) {
+    if (!npc) {
+        return false;
+    }
+
+    const templateNpc = getNpcTemplate(npc);
+    const npcType = Number(npc.npcType ?? templateNpc?.npcType ?? 0);
+
+    if (npcType === MERCHANT_NPC_TYPE) {
+        return true;
+    }
+
+    if (Number(npc.comercia ?? templateNpc?.comercia ?? 0) !== 1) {
+        return false;
+    }
+
+    return getMerchantItems(npc).length > 0;
+}
+
 type TileExitDestination = {
     map: number;
     x: number;
@@ -210,13 +273,11 @@ function isItemSoldByMerchantNpc(itemId: number): boolean {
     }
 
     for (const npc of Object.values(vars.npcs as Record<string, Record<string, unknown>>)) {
-        if (Number(npc?.npcType ?? 0) !== MERCHANT_NPC_TYPE) {
+        if (!isMerchantNpc(npc)) {
             continue;
         }
 
-        const merchantItems = Array.isArray(npc?.objs) ? npc.objs : [];
-
-        if (merchantItems.some((entry) => Number(entry?.item ?? 0) === itemId)) {
+        if (getMerchantItems(npc).some((entry) => Number(entry?.item ?? 0) === itemId)) {
             return true;
         }
     }
@@ -245,13 +306,11 @@ function getTravelTicketDestination(obj: DataObject | undefined): TravelTicketDe
 
 function findNearbyMerchantNpcSellingItem(user: Pick<GameCharacter, "map" | "pos">, itemId: number): GameNpc | null {
     for (const npc of Object.values(vars.npcs as Record<string, GameNpc>)) {
-        if (npc.map !== user.map || npc.npcType !== MERCHANT_NPC_TYPE) {
+        if (npc.map !== user.map || !isMerchantNpc(npc)) {
             continue;
         }
 
-        const merchantItems = Array.isArray(npc.objs) ? npc.objs : [];
-
-        if (!merchantItems.some((entry) => Number(entry?.item ?? 0) === itemId)) {
+        if (!getMerchantItems(npc).some((entry) => Number(entry?.item ?? 0) === itemId)) {
             continue;
         }
 
@@ -459,7 +518,8 @@ type GameNpc = RuntimeNpc & {
     envenenado?: number;
     aguaValida?: boolean;
     tierraInvalida?: boolean;
-    objs?: Record<number, { item: number; cant?: number }>;
+    comercia?: number;
+    objs?: Record<string, MerchantTradeItem> | MerchantTradeItem[];
     rute: unknown[];
     hitExpAwarded?: number;
 };
@@ -518,6 +578,42 @@ function getCharacterSkill(user: GameCharacter | null | undefined, skillId: numb
 
 function trainCharacterSkill(user: GameCharacter | null | undefined, skillId: number) {
     skills.applyTraining(user, skillId);
+}
+
+function findBestBoatItemForUser(user: GameCharacter): number | undefined {
+    let fallbackBoat: { idItem: number; requiredSkill: number } | undefined;
+    const currentSkill = getCharacterSkill(user, skills.SKILLS.navegacion);
+
+    for (const item of Object.values(user.inv ?? {})) {
+        if (!item || Number(item.cant ?? 0) <= 0) {
+            continue;
+        }
+
+        const idItem = Number(item.idItem ?? 0);
+        const obj = vars.datObj[idItem] as DataObject | undefined;
+
+        if (!obj || obj.objType !== vars.objType.barcos) {
+            continue;
+        }
+
+        const requiredSkill = workProfessions.getRequiredNavegacionSkill(
+            Number(obj.minSkill ?? 0),
+            Number(user.idClase ?? 0),
+        );
+
+        if (currentSkill >= requiredSkill) {
+            return idItem;
+        }
+
+        if (!fallbackBoat || requiredSkill < fallbackBoat.requiredSkill) {
+            fallbackBoat = {
+                idItem,
+                requiredSkill,
+            };
+        }
+    }
+
+    return fallbackBoat?.idItem;
 }
 
 function getAttackTrainSkillId(user: GameCharacter): number {
@@ -1770,6 +1866,50 @@ function dismountMount(user: GameCharacter) {
     user.mounted = 0;
     user.mountBodyId = 0;
     user.mountTypeId = 0;
+    user.mountInstanceId = "";
+    return true;
+}
+
+function suspendMountForBoat(user: GameCharacter) {
+    if (!user.mounted) {
+        return false;
+    }
+
+    const suspendedMount = {
+        bodyId: Number(user.mountBodyId ?? user.idBody ?? 0),
+        typeId: Number(user.mountTypeId ?? 0),
+        instanceId: String(user.mountInstanceId ?? ""),
+    };
+
+    if (!dismountMount(user)) {
+        return false;
+    }
+
+    if (suspendedMount.bodyId > 0) {
+        user.mountSuspendedByBoat = suspendedMount;
+    }
+
+    return true;
+}
+
+function remountAfterBoat(user: GameCharacter) {
+    const suspendedMount = user.mountSuspendedByBoat;
+    user.mountSuspendedByBoat = null;
+
+    if (!suspendedMount || user.dead || suspendedMount.bodyId <= 0) {
+        return false;
+    }
+
+    user.idLastBody = Number(user.idBody ?? user.idLastBody ?? 0);
+    user.idLastHead = Number(user.idHead ?? user.idLastHead ?? 0);
+    user.idLastWeapon = Number(user.idWeapon ?? 0);
+    user.idLastHelmet = Number(user.idHelmet ?? 0);
+    user.idLastShield = Number(user.idShield ?? 0);
+    user.idBody = suspendedMount.bodyId;
+    user.mounted = 1;
+    user.mountBodyId = suspendedMount.bodyId;
+    user.mountTypeId = suspendedMount.typeId;
+    user.mountInstanceId = suspendedMount.instanceId;
     return true;
 }
 
@@ -1784,6 +1924,7 @@ function dismountUser(user: GameCharacter) {
 
     restoreDismountedAppearance(user);
     user.navegando = 0;
+    user.mountSuspendedByBoat = null;
 }
 
 function resolveBoatBodyId(currentBodyId: number | undefined, dead: number | boolean) {
@@ -2595,6 +2736,9 @@ function applyUserSpellDamage(
 }
 
 function notifyNpcSpellDamage(user: GameCharacter, npc: GameNpc, dmg: number) {
+    const petDamage = applyMountNpcAttack(user, npc, dmg, "magic");
+    const totalDamage = dmg + petDamage;
+
     withUserClient(user.id, (userClient) => {
         handleProtocol.console(
             "Le has quitado " + dmg + " puntos de vida a " + npc.nameCharacter,
@@ -2603,6 +2747,16 @@ function notifyNpcSpellDamage(user: GameCharacter, npc: GameNpc, dmg: number) {
             0,
             userClient,
         );
+
+        if (petDamage > 0) {
+            handleProtocol.console(
+                "La Mascota ha causado " + petDamage + " puntos de daño.",
+                "#E69500",
+                1,
+                0,
+                userClient,
+            );
+        }
     });
 
     game.loopAreaPos(npc.map, npc.pos, function (target: GameCharacter) {
@@ -2615,8 +2769,30 @@ function notifyNpcSpellDamage(user: GameCharacter, npc: GameNpc, dmg: number) {
         });
     });
 
-    game.calcularExp(user.id, npc.id, dmg);
+    game.calcularExp(user.id, npc.id, totalDamage);
     broadcastNpcVitalsDelta(npc);
+}
+
+function applyMountNpcAttack(
+    user: GameCharacter,
+    npc: GameNpc,
+    baseDamage: number,
+    kind: "melee" | "ranged" | "magic",
+) {
+    if (Number(npc.hp ?? 0) <= 0) {
+        return 0;
+    }
+
+    const mounts = require("./mounts") as typeof import("./mounts");
+    const result = mounts.rollNpcAttackDamage(user, baseDamage, kind);
+    const damage = Math.min(Math.max(0, Math.floor(Number(result.damage ?? 0))), Math.max(0, Number(npc.hp ?? 0)));
+
+    if (damage <= 0) {
+        return 0;
+    }
+
+    npc.hp -= damage;
+    return damage;
 }
 
 function notifyUserSpellDamage(user: GameCharacter, userAttacked: GameCharacter, dmg: number) {
@@ -3334,12 +3510,14 @@ export type GameApi = {
     setHiddenSkill: (idUser: EntityId, enabled: boolean) => void;
     closeForce: (idUser: EntityId) => Promise<void>;
     calcularExp: (idUser: EntityId, idNpc: EntityId, dmg: number) => void;
-    distribuirExpRestanteNpc: (idUser: EntityId, idNpc: EntityId) => void;
+    distribuirExpRestanteNpc: (idUser: EntityId, idNpc: EntityId) => number;
     distribuirOroNpc: (idUser: EntityId, idNpc: EntityId, totalGold: number) => void;
     markNpcAggressor: (idNpc: EntityId, idAttacker: EntityId) => void;
     forceDismount: (idUser: EntityId) => void;
     useMount: (idUser: EntityId, idItem: number) => void;
-    navegar: (idUser: EntityId, idBarco?: number) => void;
+    navegar: (idUser: EntityId, idBarco?: number) => boolean;
+    autoEmbarkForMovement: (idUser: EntityId) => boolean;
+    autoDisembarkForMovement: (idUser: EntityId) => boolean;
     deleteUserToAllNpcs: (idUser: EntityId) => void;
     hacerCriminal: (idUser: EntityId) => void;
     setCharacterFaction: (idUser: EntityId, faction: CharacterFaction) => void;
@@ -5293,6 +5471,20 @@ function Game(this: GameApi) {
                 case vars.objType.barcos:
                     game.navegar(clientId, idItem);
                     break;
+                case vars.objType.huevos: {
+                    const mounts = require("./mounts") as typeof import("./mounts");
+                    const result = mounts.hatchMountEgg(user, idItem);
+                    handleProtocol.console(result.message, result.ok ? "#E69500" : "white", 1, 0, ws);
+
+                    if (!result.ok) {
+                        return;
+                    }
+
+                    game.quitarUserInvItem(clientId, idPos, 1);
+                    await persistCharacterItems(user);
+                    mounts.sendMountState(String(clientId));
+                    break;
+                }
                 case vars.objType.mascotas:
                     game.useMount(clientId, idItem);
                     break;
@@ -5457,9 +5649,11 @@ function Game(this: GameApi) {
                     return;
                 }
 
-                // agarrable=1 marca objetos fijos / no recolectables para jugadores.
-                // Los GM pueden agarrarlos igual (limpieza de mapas, set legendario, etc.).
-                if (datObj.agarrable && Number(user.privileges ?? 0) < 1) {
+                const isDroppedItem = isDroppedFloorItem(item);
+
+                // Some fixed map props use agarrable=1 as a guard against being lifted.
+                // Runtime drops are explicitly marked with cleanupSource and must remain pickupable.
+                if (!isDroppedItem && datObj.agarrable && Number(user.privileges ?? 0) < 1) {
                     return;
                 }
 
@@ -8198,6 +8392,9 @@ function Game(this: GameApi) {
             });
 
             if (dmg > 0) {
+                const petDamage = applyMountNpcAttack(user, npc, dmg, "magic");
+                const totalDamage = dmg + petDamage;
+
                 withUserClient(idUser, (userClient) => {
                     handleProtocol.console(
                         "Le has quitado " + dmg + " puntos de vida a " + npc.nameCharacter,
@@ -8206,6 +8403,16 @@ function Game(this: GameApi) {
                         0,
                         userClient,
                     );
+
+                    if (petDamage > 0) {
+                        handleProtocol.console(
+                            "La Mascota ha causado " + petDamage + " puntos de daño.",
+                            "#E69500",
+                            1,
+                            0,
+                            userClient,
+                        );
+                    }
                 });
 
                 game.loopAreaPos(npc.map, npc.pos, function (target: GameCharacter) {
@@ -8218,7 +8425,8 @@ function Game(this: GameApi) {
                     });
                 });
 
-                game.calcularExp(idUser, idNpc, dmg);
+                game.calcularExp(idUser, idNpc, totalDamage);
+                dmg = totalDamage;
             } else if (dmg < 0) {
                 withUserClient(idUser, (userClient) => {
                     handleProtocol.console(
@@ -8881,6 +9089,7 @@ function Game(this: GameApi) {
                 user,
                 modifyOutgoingPhysicalDamage(user, dmg, isRanged ? "ranged" : "melee"),
                 isRanged ? "ranged" : "melee",
+                false,
             );
         } catch (err) {
             funct.dumpError(err);
@@ -8984,6 +9193,10 @@ function Game(this: GameApi) {
                     stabResult = game.apuNpc(idUser, idNpc, dmg);
                 }
 
+                const attackKind = Boolean(vars.datObj[weaponItemId]?.proyectil) ? "ranged" : "melee";
+                const petDamage = applyMountNpcAttack(user, npc, stabResult.totalDamage, attackKind);
+                const totalDamage = stabResult.totalDamage + petDamage;
+
                 if (stabResult.stabbed) {
                     emitNpcFxToArea(npc, COMBAT_STABBING_FX_ID);
                     withUserClient(idUser, (userClient) => {
@@ -9008,6 +9221,18 @@ function Game(this: GameApi) {
                     });
                 }
 
+                if (petDamage > 0) {
+                    withUserClient(idUser, (userClient) => {
+                        handleProtocol.console(
+                            "La Mascota ha causado " + petDamage + " puntos de daño.",
+                            "#E69500",
+                            1,
+                            0,
+                            userClient,
+                        );
+                    });
+                }
+
                 game.loopAreaPos(npc.map, npc.pos, function (target: GameCharacter) {
                     withUserClient(target.id, (targetClient) => {
                         handleProtocol.playSound(idUser, vars.arSounds.SND_IMPACTO, targetClient);
@@ -9019,7 +9244,7 @@ function Game(this: GameApi) {
                     });
                 });
 
-                game.calcularExp(idUser, idNpc, dmg);
+                game.calcularExp(idUser, idNpc, totalDamage);
                 broadcastNpcVitalsDelta(npc);
                 trainCharacterSkill(user, getAttackTrainSkillId(user));
 
@@ -9027,7 +9252,7 @@ function Game(this: GameApi) {
                     trainCharacterSkill(user, skills.SKILLS.apunalar);
                 }
 
-                return stabResult.stabbed ? `¡${stabResult.totalDamage}!` : dmg;
+                return stabResult.stabbed ? `¡${totalDamage}!` : totalDamage;
             } else {
                 trainCharacterSkill(user, skills.SKILLS.tacticas);
                 emitNpcFxToArea(npc, COMBAT_MISS_FX_ID);
@@ -9572,7 +9797,6 @@ function Game(this: GameApi) {
 
                 if (extraDamage > 0) {
                     npc.hp -= extraDamage;
-                    game.calcularExp(idUser, idNpc, extraDamage);
                 }
 
                 return {
@@ -10293,7 +10517,7 @@ function Game(this: GameApi) {
                     return;
                 }
 
-                const itemNpc = npc.objs?.[idPos];
+                const itemNpc = getMerchantItemAtSlot(npc, idPos);
 
                 if (!itemNpc) {
                     return;
@@ -10742,7 +10966,7 @@ function Game(this: GameApi) {
             const npc = vars.npcs[idNpc] as GameNpc | undefined;
 
             if (!npc || npc.exp <= 0) {
-                return;
+                return 0;
             }
 
             const totalScaledExp = scaleNpcExpReward(npc.exp);
@@ -10750,8 +10974,10 @@ function Game(this: GameApi) {
             const remainingExp = Math.max(0, totalScaledExp - hitExpAwarded);
 
             distribuirExpNpcEscalada(idUser, npc, remainingExp);
+            return totalScaledExp;
         } catch (err) {
             funct.dumpError(err);
+            return 0;
         }
     };
 
@@ -10868,6 +11094,18 @@ function Game(this: GameApi) {
                 return;
             }
 
+            const mountResult = require("./mounts").prepareMount(user, idItem) as {
+                ok: boolean;
+                message?: string;
+            };
+
+            if (!mountResult.ok) {
+                withUserClient(idUser, (userClient) => {
+                    handleProtocol.console(mountResult.message ?? "No se pudo usar la mascota.", "white", 0, 0, userClient);
+                });
+                return;
+            }
+
             user.idLastBody = Number(user.idBody ?? user.idLastBody ?? 0);
             user.idLastHead = Number(user.idHead ?? user.idLastHead ?? 0);
             user.idLastWeapon = Number(user.idWeapon ?? 0);
@@ -10876,7 +11114,6 @@ function Game(this: GameApi) {
             user.idBody = mountBodyId;
             user.mounted = 1;
             user.mountBodyId = mountBodyId;
-            require("./mounts").prepareMount(user, idItem);
             broadcastAppearance(idUser);
         } catch (err) {
             funct.dumpError(err);
@@ -10888,12 +11125,45 @@ function Game(this: GameApi) {
      * @param  {[type]} idUser [description]
      * @return {[type]}        [description]
      */
+    this.autoEmbarkForMovement = function (idUser: EntityId) {
+        try {
+            const user = getCharacterById(idUser);
+
+            if (!user) {
+                return false;
+            }
+
+            const idBarco = findBestBoatItemForUser(user);
+
+            if (!idBarco) {
+                withUserClient(idUser, (userClient) => {
+                    handleProtocol.console("Necesitas una barca para navegar.", "white", 0, 0, userClient);
+                });
+                return false;
+            }
+
+            return game.navegar(idUser, idBarco);
+        } catch (err) {
+            funct.dumpError(err);
+            return false;
+        }
+    };
+
+    this.autoDisembarkForMovement = function (idUser: EntityId) {
+        try {
+            return game.navegar(idUser);
+        } catch (err) {
+            funct.dumpError(err);
+            return false;
+        }
+    };
+
     this.navegar = function (idUser: EntityId, idBarco?: number) {
         try {
             const user = getCharacterById(idUser);
 
             if (!user) {
-                return;
+                return false;
             }
 
             const barco = idBarco ? vars.datObj[idBarco] : undefined;
@@ -10920,7 +11190,7 @@ function Game(this: GameApi) {
                         userClient,
                     );
                 });
-                return;
+                return false;
             }
 
             const hayAguaCerca = () => {
@@ -10957,6 +11227,7 @@ function Game(this: GameApi) {
                     user.idShield = user.idLastShield;
 
                     user.navegando = 0;
+                    remountAfterBoat(user);
 
                     withUserClient(idUser, (userClient) => {
                         handleProtocol.selfMapMetaDelta(
@@ -10976,6 +11247,7 @@ function Game(this: GameApi) {
                             }
                         }
                     });
+                    return true;
                 } else {
                     withUserClient(idUser, (userClient) => {
                         handleProtocol.console(
@@ -10986,10 +11258,12 @@ function Game(this: GameApi) {
                             userClient,
                         );
                     });
-                    return;
+                    return false;
                 }
             } else {
                 if (hayAguaCerca()) {
+                    suspendMountForBoat(user);
+
                     if (user.idHead != 500) {
                         user.idLastHead = Number(user.idHead);
                     }
@@ -11032,6 +11306,7 @@ function Game(this: GameApi) {
                             }
                         }
                     });
+                    return true;
                 } else {
                     withUserClient(idUser, (userClient) => {
                         handleProtocol.console(
@@ -11042,11 +11317,12 @@ function Game(this: GameApi) {
                             userClient,
                         );
                     });
-                    return;
+                    return false;
                 }
             }
         } catch (err) {
             funct.dumpError(err);
+            return false;
         }
     };
 

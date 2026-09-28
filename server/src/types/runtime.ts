@@ -359,6 +359,12 @@ export type RuntimeCharacter = {
     mounted?: NumericFlag;
     mountBodyId?: number;
     mountTypeId?: number;
+    mountInstanceId?: string;
+    mountSuspendedByBoat?: {
+        bodyId: number;
+        typeId: number;
+        instanceId: string;
+    } | null;
     targetNpcId?: EntityId;
     puntosCanje?: number;
     puntosDonacion?: number;
@@ -504,7 +510,8 @@ export type RuntimeNpc = {
     summonCreatedAt?: number;
     color?: string;
     clan?: string;
-    objs?: Record<string, TradeItem>;
+    comercia?: number;
+    objs?: Record<string, TradeItem> | TradeItem[];
     drop?: DropItem[];
     [key: string]: unknown;
 };

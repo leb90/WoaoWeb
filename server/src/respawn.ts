@@ -231,7 +231,7 @@ function Respawn(this: any) {
                         },
                     });
 
-                    game.distribuirExpRestanteNpc(ws.id, idPersonaje);
+                    const npcRewardExp = game.distribuirExpRestanteNpc(ws.id, idPersonaje);
 
                     if (goldGanado > 0) {
                         game.distribuirOroNpc(ws.id, idPersonaje, goldGanado);
@@ -247,7 +247,7 @@ function Respawn(this: any) {
                     );
                     user.npcMatados++;
                     require("./quests").onNpcKilled(String(ws.id), Number(pjSelected.templateNpcIndex ?? 0));
-                    require("./mounts").onNpcKilled(String(ws.id));
+                    require("./mounts").onNpcKilled(String(ws.id), Number(npcRewardExp ?? 0));
                     require("./factionWars").onNpcDied(Number(pjSelected.templateNpcIndex ?? 0));
                     require("./clanCastles").onCastleNpcKilled(user, pjSelected);
                     summonRoom.onNpcDied(pjSelected);

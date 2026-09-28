@@ -5,6 +5,7 @@ const handleProtocol = require("./handleProtocol");
 type TradeOffer = {
     gold: number;
     items: Array<{ slot: string; idItem: number; amount: number }>;
+    mounts: string[];
     accepted: boolean;
 };
 
@@ -24,7 +25,7 @@ function tell(idUser: string, message: string) {
 }
 
 function emptyOffer(): TradeOffer {
-    return { gold: 0, items: [], accepted: false };
+    return { gold: 0, items: [], mounts: [], accepted: false };
 }
 
 function getSession(idUser: string) {
@@ -141,6 +142,40 @@ export function offerGold(idUser: string, amount: number) {
     return { ok: true, message: `Ofreces ${safeAmount} oro.` };
 }
 
+export function offerMount(idUser: string, mountInstanceId: string) {
+    const session = getSession(idUser);
+    const user = vars.personajes[idUser];
+    if (!session || !user) {
+        return { ok: false, message: "No estas comerciando." };
+    }
+
+    const mounts = require("./mounts") as typeof import("./mounts");
+    const partner = partnerId(session, idUser);
+    const partnerUser = vars.personajes[partner];
+    if (!partnerUser) {
+        return { ok: false, message: "El otro jugador no esta disponible." };
+    }
+
+    const validation = mounts.validateMountTransferByInstanceId(user, partnerUser, mountInstanceId);
+    if (!validation.ok) {
+        return validation;
+    }
+
+    const mount = mounts.resolveMountReference(user, mountInstanceId);
+    const offer = session.offers[String(idUser)];
+    offer.mounts = [mountInstanceId];
+    offer.accepted = false;
+    session.offers[partner].accepted = false;
+    tell(
+        partner,
+        `${user.nameCharacter} ofrece mascota ${mount?.name ?? "?"} #${String(mountInstanceId).slice(0, 6)} (se transfiere con nivel, EXP, stats y talentos).`,
+    );
+    return {
+        ok: true,
+        message: `Ofreces ${mount?.name ?? "mascota"} #${String(mountInstanceId).slice(0, 6)}.`,
+    };
+}
+
 export function acceptTrade(idUser: string) {
     const session = getSession(idUser);
     if (!session) {
@@ -169,6 +204,36 @@ export function acceptTrade(idUser: string) {
         return { ok: false, message: "No hay oro suficiente." };
     }
 
+    const mounts = require("./mounts") as typeof import("./mounts");
+    for (const offerItemEntry of offerA.items) {
+        const validation = mounts.validateMountTransferForItem(userA, userB, offerItemEntry.idItem);
+        if (!validation.ok) {
+            closeSession(session, validation.message);
+            return { ok: false, message: validation.message };
+        }
+    }
+    for (const offerItemEntry of offerB.items) {
+        const validation = mounts.validateMountTransferForItem(userB, userA, offerItemEntry.idItem);
+        if (!validation.ok) {
+            closeSession(session, validation.message);
+            return { ok: false, message: validation.message };
+        }
+    }
+    for (const mountId of offerA.mounts ?? []) {
+        const validation = mounts.validateMountTransferByInstanceId(userA, userB, mountId);
+        if (!validation.ok) {
+            closeSession(session, validation.message);
+            return { ok: false, message: validation.message };
+        }
+    }
+    for (const mountId of offerB.mounts ?? []) {
+        const validation = mounts.validateMountTransferByInstanceId(userB, userA, mountId);
+        if (!validation.ok) {
+            closeSession(session, validation.message);
+            return { ok: false, message: validation.message };
+        }
+    }
+
     if (offerA.gold) {
         userA.gold -= offerA.gold;
         userB.gold += offerA.gold;
@@ -183,11 +248,22 @@ export function acceptTrade(idUser: string) {
     for (const offerItemEntry of offerA.items) {
         game.quitarUserInvItem(session.a, offerItemEntry.slot, offerItemEntry.amount);
         game.putItemToInv(session.b, offerItemEntry.idItem, offerItemEntry.amount);
+        mounts.transferMountForItem(userA, userB, offerItemEntry.idItem);
     }
     for (const offerItemEntry of offerB.items) {
         game.quitarUserInvItem(session.b, offerItemEntry.slot, offerItemEntry.amount);
         game.putItemToInv(session.a, offerItemEntry.idItem, offerItemEntry.amount);
+        mounts.transferMountForItem(userB, userA, offerItemEntry.idItem);
     }
+    for (const mountId of offerA.mounts ?? []) {
+        mounts.transferMountByInstanceId(userA, userB, mountId);
+    }
+    for (const mountId of offerB.mounts ?? []) {
+        mounts.transferMountByInstanceId(userB, userA, mountId);
+    }
+
+    mounts.sendMountState(session.a);
+    mounts.sendMountState(session.b);
 
     closeSession(session, "Comercio completado.");
     return { ok: true, message: "Comercio completado." };

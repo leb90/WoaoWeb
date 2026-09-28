@@ -1,0 +1,125 @@
+[     667ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[     761ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[     837ms] [INFO] Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner. @ http://localhost:3000/play:0
+[    1327ms] [LOG] Loading resources... @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[    1807ms] [ERROR] WebSocket connection to 'ws://localhost:7666/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/components_game_0oi51v4._.js:2007
+[   38252ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   38269ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   38403ms] [INFO] Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner. @ http://localhost:3000/play:0
+[   38599ms] [LOG] Loading resources... @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   39227ms] [LOG] Parsing server packet with ID: 9 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   39320ms] [LOG] Parsing server packet with ID: 1 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   39321ms] [LOG] Parsing server packet with ID: 85 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   39321ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   39321ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   39321ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   39321ms] [LOG] Parsing server packet with ID: 83 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   39321ms] [LOG] Parsing server packet with ID: 84 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   39321ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   39321ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   39321ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   39322ms] [LOG] Parsing server packet with ID: 75 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   39322ms] [LOG] Parsing server packet with ID: 72 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   39322ms] [LOG] Parsing server packet with ID: 73 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   39322ms] [LOG] Parsing server packet with ID: 74 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   39447ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   39448ms] [LOG] Parsing server packet with ID: 19 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   39448ms] [LOG] Parsing server packet with ID: 49 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   39497ms] [WARNING] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_0j3-bqo._.js:3161
+[   39674ms] [LOG] Parsing server packet with ID: 78 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   45105ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   45105ms] [LOG] Parsing server packet with ID: 87 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   47784ms] [LOG] Parsing server packet with ID: 78 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   49196ms] [LOG] Parsing server packet with ID: 9 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   51622ms] [INFO] Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner. @ http://localhost:3000/characters:0
+[   52945ms] [INFO] Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner. @ http://localhost:3000/play:0
+[   52982ms] [LOG] Loading resources... @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   53244ms] [LOG] Parsing server packet with ID: 9 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   53354ms] [LOG] Parsing server packet with ID: 1 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   53354ms] [LOG] Parsing server packet with ID: 85 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   53354ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   53354ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   53354ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   53354ms] [LOG] Parsing server packet with ID: 83 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   53354ms] [LOG] Parsing server packet with ID: 84 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   53354ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   53354ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   53355ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   53355ms] [LOG] Parsing server packet with ID: 75 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   53355ms] [LOG] Parsing server packet with ID: 72 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   53355ms] [LOG] Parsing server packet with ID: 73 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   53355ms] [LOG] Parsing server packet with ID: 74 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   53442ms] [LOG] Parsing server packet with ID: 19 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   53442ms] [LOG] Parsing server packet with ID: 49 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   53719ms] [LOG] Parsing server packet with ID: 78 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   56985ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   56985ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   56985ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   56985ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   56985ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   56985ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   56985ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   56985ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   56985ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   56985ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   56985ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   56986ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   56986ms] [LOG] Parsing server packet with ID: 87 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   61764ms] [LOG] Parsing server packet with ID: 78 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   63254ms] [LOG] Parsing server packet with ID: 9 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   69981ms] [LOG] Parsing server packet with ID: 78 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   73246ms] [LOG] Parsing server packet with ID: 9 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   78079ms] [LOG] Parsing server packet with ID: 78 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   83248ms] [LOG] Parsing server packet with ID: 9 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   86232ms] [LOG] Parsing server packet with ID: 78 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   93246ms] [LOG] Parsing server packet with ID: 9 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   94265ms] [LOG] Parsing server packet with ID: 84 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[   94566ms] [LOG] Parsing server packet with ID: 78 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  102782ms] [LOG] Parsing server packet with ID: 78 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  103247ms] [LOG] Parsing server packet with ID: 9 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  111321ms] [LOG] Parsing server packet with ID: 78 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  113245ms] [LOG] Parsing server packet with ID: 9 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  118478ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  118732ms] [LOG] [Fast Refresh] done in 313ms @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  119471ms] [LOG] Parsing server packet with ID: 78 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  123246ms] [LOG] Parsing server packet with ID: 9 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  127589ms] [LOG] Parsing server packet with ID: 78 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  133260ms] [LOG] Parsing server packet with ID: 9 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  135754ms] [LOG] Parsing server packet with ID: 78 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  143323ms] [LOG] Parsing server packet with ID: 9 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  143426ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  143442ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  143539ms] [INFO] Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner. @ http://localhost:3000/play:0
+[  143760ms] [LOG] Loading resources... @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  144219ms] [LOG] Parsing server packet with ID: 9 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  144318ms] [LOG] Parsing server packet with ID: 1 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  144318ms] [LOG] Parsing server packet with ID: 85 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  144318ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  144318ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  144318ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  144319ms] [LOG] Parsing server packet with ID: 83 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  144319ms] [LOG] Parsing server packet with ID: 84 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  144319ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  144319ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  144319ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  144319ms] [LOG] Parsing server packet with ID: 75 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  144319ms] [LOG] Parsing server packet with ID: 72 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  144319ms] [LOG] Parsing server packet with ID: 73 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  144319ms] [LOG] Parsing server packet with ID: 74 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  144433ms] [LOG] Parsing server packet with ID: 19 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  144433ms] [LOG] Parsing server packet with ID: 49 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  144550ms] [LOG] Parsing server packet with ID: 78 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  145687ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  145687ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  145687ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  145687ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  145687ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  145688ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  145688ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  145688ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  145688ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  145688ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  145688ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  145688ms] [LOG] Parsing server packet with ID: 8 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  145688ms] [LOG] Parsing server packet with ID: 87 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[  148781ms] [LOG] Parsing server packet with ID: 43 @ http://localhost:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477

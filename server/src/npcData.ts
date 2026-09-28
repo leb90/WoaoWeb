@@ -43,6 +43,7 @@ export type DataNpc = {
     spellCastIntervalMs?: number;
     spellRange?: number;
     spells?: NpcSpellEntry[];
+    comercia?: number;
     objs?: NpcDropEntry[];
     drop?: NpcDropEntry[];
     [key: string]: unknown;
@@ -79,6 +80,7 @@ const NPC_DEFAULTS: Record<string, unknown> = {
     spellCastIntervalMs: 0,
     spellRange: 0,
     spells: [],
+    comercia: 0,
     objs: [],
     drop: [],
 };

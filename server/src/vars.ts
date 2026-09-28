@@ -264,6 +264,7 @@ function Vars(this: any) {
         flores: 30,
         barcos: 31,
         flechas: 32,
+        huevos: 43,
         mascotas: 60,
         botellasVacias: 33,
         botellasLlenas: 34,

@@ -1,0 +1,62 @@
+{
+  "1": {
+    "10": ["unicorn_pvp_magic_3", "unicorn_magic_defense_4", "unicorn_max_mana_4"],
+    "20": ["unicorn_pve_magic_6", "unicorn_magic_defense_6", "unicorn_mana_regen_5"],
+    "30": ["unicorn_pvp_magic_5", "unicorn_pve_magic_10", "unicorn_magic_defense_8"]
+  },
+  "2": {
+    "10": ["black_horse_pvp_physical_3", "black_horse_physical_defense_4", "black_horse_evasion_3"],
+    "20": ["black_horse_pve_6", "black_horse_physical_defense_5", "black_horse_evasion_5"],
+    "30": ["black_horse_pvp_physical_5", "black_horse_pve_10", "black_horse_physical_defense_8"]
+  },
+  "3": {
+    "10": ["white_tiger_pvp_physical_3", "white_tiger_evasion_4", "white_tiger_pve_5"],
+    "20": ["white_tiger_pve_7", "white_tiger_evasion_6", "white_tiger_physical_defense_4"],
+    "30": ["white_tiger_pvp_physical_5", "white_tiger_pve_10", "white_tiger_evasion_9"]
+  },
+  "4": {
+    "10": ["elephant_max_life_5", "elephant_physical_defense_4", "elephant_projectile_defense_4"],
+    "20": ["elephant_max_life_7", "elephant_physical_defense_6", "elephant_npc_damage_reduction_6"],
+    "30": ["elephant_max_life_10", "elephant_physical_defense_8", "elephant_npc_damage_reduction_10"]
+  },
+  "5": {
+    "10": ["golden_dragon_pvp_physical_3", "golden_dragon_pvp_magic_3", "golden_dragon_pvp_projectile_3"],
+    "20": ["golden_dragon_pve_7", "golden_dragon_all_defenses_5", "golden_dragon_evasion_5"],
+    "30": ["golden_dragon_pvp_profile_5", "golden_dragon_pve_10", "golden_dragon_all_defenses_8"]
+  },
+  "6": {
+    "10": ["jabato_physical_defense_4", "jabato_projectile_defense_4", "jabato_evasion_3"],
+    "20": ["jabato_physical_defense_6", "jabato_max_life_5", "jabato_npc_damage_reduction_5"],
+    "30": ["jabato_physical_defense_8", "jabato_npc_damage_reduction_8", "jabato_max_life_7"]
+  },
+  "7": {
+    "10": ["kong_pvp_physical_3", "kong_max_life_5", "kong_physical_defense_4"],
+    "20": ["kong_pve_7", "kong_max_life_7", "kong_physical_defense_6"],
+    "30": ["kong_pvp_physical_5", "kong_pve_10", "kong_max_life_10"]
+  },
+  "8": {
+    "10": ["griffin_pvp_projectile_3", "griffin_evasion_4", "griffin_magic_defense_4"],
+    "20": ["griffin_pve_7", "griffin_evasion_6", "griffin_magic_defense_6"],
+    "30": ["griffin_pvp_projectile_5", "griffin_pve_10", "griffin_evasion_9"]
+  },
+  "9": {
+    "10": ["rinosaur_pvp_physical_3", "rinosaur_physical_defense_4", "rinosaur_pve_5"],
+    "20": ["rinosaur_pve_7", "rinosaur_physical_defense_6", "rinosaur_max_life_6"],
+    "30": ["rinosaur_pvp_physical_5", "rinosaur_pve_10", "rinosaur_physical_defense_9"]
+  },
+  "10": {
+    "10": ["cerberus_pvp_physical_3", "cerberus_pvp_magic_3", "cerberus_magic_defense_4"],
+    "20": ["cerberus_pve_6", "cerberus_magic_defense_6", "cerberus_max_life_5"],
+    "30": ["cerberus_pvp_profile_5", "cerberus_pve_10", "cerberus_magic_defense_8"]
+  },
+  "11": {
+    "10": ["wyvern_pvp_magic_3", "wyvern_evasion_4", "wyvern_projectile_defense_4"],
+    "20": ["wyvern_pve_magic_7", "wyvern_evasion_6", "wyvern_projectile_defense_6"],
+    "30": ["wyvern_pvp_magic_5", "wyvern_pve_10", "wyvern_evasion_9"]
+  },
+  "12": {
+    "10": ["ostrich_evasion_4", "ostrich_projectile_defense_3", "ostrich_pvp_projectile_3"],
+    "20": ["ostrich_evasion_6", "ostrich_projectile_defense_5", "ostrich_pve_6"],
+    "30": ["ostrich_evasion_8", "ostrich_projectile_defense_7", "ostrich_pve_10"]
+  }
+}

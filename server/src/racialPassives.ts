@@ -231,8 +231,15 @@ export function applyIncomingHit(
     user: Combatant | null | undefined,
     damage: number,
     kind: "melee" | "ranged" | "magic",
+    fromNpc = false,
 ): number {
     let next = kind === "magic" ? damage : modifyIncomingPhysicalDamage(user, damage, kind);
+    try {
+        const mounts = require("./mounts") as typeof import("./mounts");
+        next = mounts.applyIncomingMountDamage(user as any, next, kind, fromNpc);
+    } catch {
+        /* mounts optional during early boot */
+    }
     next = applyLethalSave(user, next);
     if (user) {
         user.hp = Number(user.hp ?? 0) - next;

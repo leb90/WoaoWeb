@@ -244,7 +244,7 @@ type ProtocolNpc = RuntimeNpc & {
     heading: number;
     color: string;
     clan: string;
-    objs?: Record<string, TradeItem>;
+    objs?: Record<string, TradeItem> | TradeItem[];
 };
 
 type QuestStatePayload = {
@@ -398,6 +398,7 @@ export type HandleProtocolApi = {
     areaMetaSnapshot: (snapshot: AreaMetaSnapshot, client: RuntimeClient) => void;
     questState: (payload: QuestStatePayload, client: RuntimeClient) => void;
     questProgressNotice: (payload: QuestProgressNoticePayload, client: RuntimeClient) => void;
+    mountState: (payload: unknown, client: RuntimeClient) => void;
     selfFlagsDelta: (payload: SelfFlagsDeltaPayload, client: RuntimeClient) => void;
     selfVitalsDelta: (payload: SelfVitalsDeltaPayload, client: RuntimeClient) => void;
     selfMapMetaDelta: (payload: SelfMapMetaDeltaPayload, client: RuntimeClient) => void;
@@ -481,6 +482,29 @@ function getInvisibilitySpellRemainingMs(cooldownStartedAt?: number) {
 
 function getNpc(idNpc: EntityId) {
     return vars.npcs[idNpc] as ProtocolNpc;
+}
+
+function hasTradeObjects(objs: unknown) {
+    if (Array.isArray(objs)) {
+        return objs.length > 0;
+    }
+
+    return objs && typeof objs === "object"
+        ? Object.keys(objs).length > 0
+        : false;
+}
+
+function getNpcTradeObjects(npc: ProtocolNpc) {
+    if (hasTradeObjects(npc.objs)) {
+        return npc.objs;
+    }
+
+    const templateNpcIndex = Number(npc.templateNpcIndex ?? 0);
+    const templateNpc = Number.isFinite(templateNpcIndex) && templateNpcIndex > 0
+        ? vars.datNpc?.[templateNpcIndex]
+        : undefined;
+
+    return templateNpc?.objs ?? {};
 }
 
 function getObject(idItem: number) {
@@ -1317,6 +1341,12 @@ const handleServer: HandleProtocolApi = {
         socket.send(client);
     },
 
+    mountState(payload, client) {
+        pkg.setPackageID(pkg.clientPacketID.mountState);
+        pkg.writeString(JSON.stringify(payload));
+        socket.send(client);
+    },
+
     selfFlagsDelta(payload, client) {
         pkg.setPackageID(pkg.clientPacketID.selfFlagsDelta);
         pkg.writeByte(payload.zonaSegura);
@@ -1519,7 +1549,7 @@ const handleServer: HandleProtocolApi = {
         }
 
         const isBankTrade = user.tradeMode === "bank" || npc.npcType === vars.npcType.banquero;
-        const tradeObjects = (isBankTrade ? (user.tradeBankItems ?? user.bank ?? {}) : (npc.objs ?? {})) as Record<
+        const tradeObjects = (isBankTrade ? (user.tradeBankItems ?? user.bank ?? {}) : getNpcTradeObjects(npc)) as Record<
             string,
             {
                 item?: number;

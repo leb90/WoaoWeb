@@ -22,6 +22,8 @@ export type WoaoProgress = {
     done: number[];
     lastQuestOffer: number;
     mounts: Record<string, MountProgress>;
+    activeMountInstanceId: string;
+    mountMigrationVersion: number;
     remort: number;
     remorted: string;
     elo: number;
@@ -43,6 +45,8 @@ function emptyProgress(): WoaoProgress {
         done: [],
         lastQuestOffer: 0,
         mounts: {},
+        activeMountInstanceId: "",
+        mountMigrationVersion: 0,
         remort: 0,
         remorted: "",
         elo: 300,
@@ -70,6 +74,9 @@ function loadStore() {
                 quests: Array.isArray(value.quests) ? value.quests : [],
                 done: Array.isArray(value.done) ? value.done : [],
                 mounts: value.mounts ?? {},
+                activeMountInstanceId:
+                    typeof value.activeMountInstanceId === "string" ? value.activeMountInstanceId : "",
+                mountMigrationVersion: Number(value.mountMigrationVersion ?? 0),
                 houseKeys: Array.isArray(value.houseKeys) ? value.houseKeys : [],
             });
         }

@@ -347,7 +347,6 @@ function resolveBaseInstanceMapId(mapId: number | null | undefined): number | nu
     );
 }
 const DEFAULT_MAP_GRID_SIZE = 100;
-const MINIMAP_MARKER_MARGIN = 2;
 const WORLD_MAP_MARKER_SIZE = 10;
 const SPELL_LIST_ROW_HEIGHT = 24;
 const SPELL_LIST_AUTOSCROLL_EDGE_PX = 22;
@@ -461,19 +460,17 @@ function getMinimapMarkerStyle(
     const maxCoordinate = DEFAULT_MAP_GRID_SIZE;
     const normalizedX = Math.max(
         0,
-        Math.min(1, (pos.x - 1) / Math.max(1, maxCoordinate - 1)),
+        Math.min(1, (pos.x - 0.5) / maxCoordinate),
     );
     const normalizedY = Math.max(
         0,
-        Math.min(1, (pos.y - 1) / Math.max(1, maxCoordinate - 1)),
+        Math.min(1, (pos.y - 0.5) / maxCoordinate),
     );
     const frame = getMinimapFrame(aspectRatio);
-    const usableWidth = Math.max(0, frame.width - MINIMAP_MARKER_MARGIN * 2);
-    const usableHeight = Math.max(0, frame.height - MINIMAP_MARKER_MARGIN * 2);
 
     return {
-        left: `${frame.leftOffset + MINIMAP_MARKER_MARGIN + normalizedX * usableWidth}px`,
-        top: `${frame.topOffset + MINIMAP_MARKER_MARGIN + normalizedY * usableHeight}px`,
+        left: `${frame.leftOffset + normalizedX * frame.width}px`,
+        top: `${frame.topOffset + normalizedY * frame.height}px`,
     };
 }
 
@@ -3230,6 +3227,8 @@ export default function InventoryFloatingPanel({
                                           left: minimapMarkerPosition.left,
                                           top: minimapMarkerPosition.top,
                                           transform: "translate(-50%, -50%)",
+                                          transition:
+                                              "left 120ms linear, top 120ms linear",
                                       }}
                                   />
                               ) : null}
@@ -3243,6 +3242,8 @@ export default function InventoryFloatingPanel({
                                           left: marker.left,
                                           top: marker.top,
                                           transform: "translate(-50%, -50%)",
+                                          transition:
+                                              "left 120ms linear, top 120ms linear",
                                       }}
                                   />
                               ))}
@@ -3256,6 +3257,8 @@ export default function InventoryFloatingPanel({
                                           left: marker.left,
                                           top: marker.top,
                                           transform: "translate(-50%, -50%)",
+                                          transition:
+                                              "left 120ms linear, top 120ms linear",
                                       }}
                                   />
                               ))}

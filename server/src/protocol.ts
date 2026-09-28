@@ -2905,6 +2905,18 @@ function assignSkill(ws: RuntimeClient) {
 
         if (skills.assignSkillPoint(user, skillId)) {
             skills.sendSkillsState(user);
+
+            if (skillId === skills.SKILLS.navegacion) {
+                const inventory = user.inv as InventoryRecord;
+
+                for (const [slot, item] of Object.entries(inventory)) {
+                    const obj = vars.datObj[item?.idItem] as DataObject | undefined;
+
+                    if (obj?.objType === vars.objType.barcos) {
+                        handleProtocol.agregarUserInvItem(user.id, slot, ws);
+                    }
+                }
+            }
         }
     } catch (err) {
         funct.dumpError(err);

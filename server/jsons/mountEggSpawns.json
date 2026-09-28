@@ -1,0 +1,12 @@
+[
+  { "npcId": 616, "npcName": "Unicornio", "count": 1, "maps": [35] },
+  { "npcId": 617, "npcName": "Caballo Negro", "count": 1, "maps": [35] },
+  { "npcId": 618, "npcName": "Tigre Blanco", "count": 1, "maps": [35] },
+  { "npcId": 619, "npcName": "Elefante", "count": 1, "maps": [35] },
+  { "npcId": 620, "npcName": "Dragon Dorado", "count": 1, "maps": [35] },
+  { "npcId": 669, "npcName": "Jabato", "count": 1, "maps": [35] },
+  { "npcId": 672, "npcName": "Rinosaurio", "count": 1, "maps": [35] },
+  { "npcId": 673, "npcName": "Cerbero", "count": 1, "maps": [35] },
+  { "npcId": 674, "npcName": "Wyvern", "count": 1, "maps": [35] },
+  { "npcId": 675, "npcName": "Avestruz", "count": 1, "maps": [35] }
+]

@@ -46,6 +46,7 @@ type QuestEntryState = {
     desc: string;
     status: "available" | "active" | "ready" | "done";
     npcId?: number;
+    npcName?: string;
     requiredLevel: number;
     objectives: QuestObjectiveState[];
     rewards: QuestRewardState[];
@@ -200,7 +201,7 @@ function buildQuestEntryState(
     user: any,
     quest: QuestDefinition,
     status: QuestEntryState["status"],
-    options?: { npcId?: unknown; progress?: QuestProgress },
+    options?: { npcId?: unknown; npcName?: string; progress?: QuestProgress },
 ): QuestEntryState {
     return {
         id: quest.id,
@@ -208,10 +209,21 @@ function buildQuestEntryState(
         desc: quest.desc,
         status,
         npcId: typeof options?.npcId === "number" ? options.npcId : Number(options?.npcId ?? 0) || undefined,
+        npcName: options?.npcName,
         requiredLevel: quest.requiredLevel,
         objectives: buildObjectives(user, quest, options?.progress),
         rewards: buildRewards(quest),
     };
+}
+
+function getNpcDisplayName(npc: any): string | undefined {
+    const directName = String(npc?.name ?? "").trim();
+    if (directName) {
+        return directName;
+    }
+
+    const templateName = vars.datNpc?.[Number(npc?.templateNpcIndex ?? 0)]?.name;
+    return templateName ? String(templateName) : undefined;
 }
 
 function getActiveQuestStates(user: any): QuestEntryState[] {
@@ -421,9 +433,16 @@ export function handleQuest(idUser: string) {
     if (slot >= 0) {
         const entry = progress.quests[slot];
         const status = isQuestReady(user, quest, entry) ? "ready" : "active";
-        sendQuestState(idUser, buildQuestEntryState(user, quest, status, { npcId: npc.id, progress: entry }));
+        sendQuestState(
+            idUser,
+            buildQuestEntryState(user, quest, status, {
+                npcId: npc.id,
+                npcName: getNpcDisplayName(npc),
+                progress: entry,
+            }),
+        );
         if (status === "ready") {
-            finishQuest(idUser, questNumber, npc.id);
+            npcTalk(idUser, npc.id, "Ya completaste los objetivos. Entregame la mision para recibir tu recompensa.");
         } else {
             npcTalk(idUser, npc.id, "Todavia no has completado todos los objetivos de esta mision.");
         }
@@ -437,7 +456,7 @@ export function handleQuest(idUser: string) {
 
     progress.lastQuestOffer = questNumber;
     saveProgress(user);
-    sendQuestState(idUser, buildQuestEntryState(user, quest, "available", { npcId: npc.id }));
+    sendQuestState(idUser, buildQuestEntryState(user, quest, "available", { npcId: npc.id, npcName: getNpcDisplayName(npc) }));
     for (const line of describeQuest(quest)) {
         tell(idUser, line);
     }
@@ -498,6 +517,46 @@ export function abandonQuest(idUser: string, questNumber: number) {
     sendQuestState(idUser, null);
     sendAreaNpcQuestSnapshot(idUser);
     tell(idUser, `Abandonaste la mision "${quest?.name ?? questNumber}".`);
+}
+
+export function turnInQuest(idUser: string) {
+    const user = vars.personajes[idUser];
+    const npc = getNearbyQuestNpc(idUser);
+
+    if (!user || !npc) {
+        tell(idUser, "No hay ningun NPC de mision cerca.");
+        return;
+    }
+
+    const questNumber = getNpcQuestNumber(npc);
+    const quest = quests.get(questNumber);
+    if (!quest) {
+        npcTalk(idUser, npc.id, "No tengo ninguna mision para recibir.");
+        return;
+    }
+
+    const progress = getProgress(user);
+    const slot = findQuestSlot(progress.quests, questNumber);
+    if (slot < 0) {
+        handleQuest(idUser);
+        return;
+    }
+
+    const entry = progress.quests[slot];
+    if (!isQuestReady(user, quest, entry)) {
+        sendQuestState(
+            idUser,
+            buildQuestEntryState(user, quest, "active", {
+                npcId: npc.id,
+                npcName: getNpcDisplayName(npc),
+                progress: entry,
+            }),
+        );
+        npcTalk(idUser, npc.id, "Todavia no has completado todos los objetivos de esta mision.");
+        return;
+    }
+
+    finishQuest(idUser, questNumber, npc.id);
 }
 
 export function listQuests(idUser: string) {

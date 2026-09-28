@@ -799,7 +799,7 @@ export default function InventoryFloatingPanel({
     const [isPartyModalOpen, setIsPartyModalOpen] = React.useState(false);
     const [isClanModalOpen, setIsClanModalOpen] = React.useState(false);
     const [woaoHubTab, setWoaoHubTab] = React.useState<WoaoHubTab | null>(null);
-    const lastQuestOfferOpenKeyRef = React.useRef<string | null>(null);
+    const [isQuestNpcDialogOpen, setIsQuestNpcDialogOpen] = React.useState(false);
     const [clanOverview, setClanOverview] = React.useState<ClanOverview | null>(
         null,
     );
@@ -1074,16 +1074,11 @@ export default function InventoryFloatingPanel({
     React.useEffect(() => {
         const offer = hud?.questState?.offer;
         if (!offer) {
-            lastQuestOfferOpenKeyRef.current = null;
+            setIsQuestNpcDialogOpen(false);
             return;
         }
 
-        const openKey = `${offer.id}:${offer.status}:${offer.objectives.map((objective) => `${objective.current}/${objective.amount}`).join("|")}`;
-        if (lastQuestOfferOpenKeyRef.current === openKey) {
-            return;
-        }
-
-        lastQuestOfferOpenKeyRef.current = openKey;
+        setIsQuestNpcDialogOpen(true);
         setWoaoHubTab("misiones");
     }, [hud?.questState?.offer]);
 
@@ -3044,6 +3039,7 @@ export default function InventoryFloatingPanel({
                                     <button
                                         type="button"
                                         onClick={() => {
+                                            setIsQuestNpcDialogOpen(false);
                                             setWoaoHubTab("misiones");
                                             onSendCommand?.("/quests");
                                         }}
@@ -3686,10 +3682,18 @@ export default function InventoryFloatingPanel({
                           tab={woaoHubTab}
                           mapId={hud?.map}
                           questState={hud?.questState}
+                          mountState={hud?.mountState}
+                          questDialog={isQuestNpcDialogOpen ? hud?.questState?.offer ?? null : null}
                           questPoints={hud?.puntosCanje ?? 0}
                           donationPoints={hud?.puntosDonacion ?? 0}
-                          onTabChange={setWoaoHubTab}
-                          onClose={() => setWoaoHubTab(null)}
+                          onTabChange={(nextTab) => {
+                              setIsQuestNpcDialogOpen(false);
+                              setWoaoHubTab(nextTab);
+                          }}
+                          onClose={() => {
+                              setIsQuestNpcDialogOpen(false);
+                              setWoaoHubTab(null);
+                          }}
                           onSendCommand={onSendCommand}
                       />,
                       portalTarget ?? document.body,

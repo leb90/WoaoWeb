@@ -2,28 +2,33 @@
 
 import React from "react";
 import {
+    Activity,
+    Check,
     Coins,
     Gift,
+    Heart,
     Minus,
+    Package,
+    PawPrint,
     Plus,
     Search,
+    Shield,
     ShoppingCart,
+    Skull,
+    Sparkles,
+    Swords,
     X,
 } from "lucide-react";
-import type { QuestEntryState, QuestStatePayload } from "../lib/aowProtocol";
+import type {
+    MountStateEntry,
+    MountStatePayload,
+    QuestEntryState,
+    QuestStatePayload,
+} from "../lib/aowProtocol";
 import type { GraphicData, ObjectsDB } from "../types/game";
 import { getTexturePath, loadGraphicsDB, loadObjectsDB } from "../utils/gameLoader";
 
 export type WoaoHubTab = "misiones" | "montura" | "premios" | "ranked" | "viajes" | "guerra" | "eventos";
-
-type MountDef = {
-    id: number;
-    name: string;
-    topeLevel: number;
-    aumentoCuerpo: number;
-    aumentoFlecha: number;
-    aumentoMagia: number;
-};
 
 type PremioDef = {
     id: number;
@@ -45,6 +50,8 @@ type WoaoHubModalProps = {
     tab: WoaoHubTab;
     mapId?: number;
     questState?: QuestStatePayload | null;
+    mountState?: MountStatePayload | null;
+    questDialog?: QuestEntryState | null;
     questPoints?: number;
     donationPoints?: number;
     onTabChange: (tab: WoaoHubTab) => void;
@@ -91,7 +98,14 @@ function QuestProgressRows({ quest }: { quest: QuestEntryState }) {
                 return (
                     <div key={`${objective.type}-${objective.index}`} className="space-y-1">
                         <div className="flex items-center justify-between gap-3 text-xs font-semibold">
-                            <span className={complete ? "text-emerald-200" : "text-stone-200"}>{objective.name}</span>
+                            <span className={`flex min-w-0 items-center gap-2 ${complete ? "text-emerald-200" : "text-stone-200"}`}>
+                                {objective.type === "npc" ? (
+                                    <Skull aria-hidden="true" className="h-4 w-4 shrink-0 text-stone-300" strokeWidth={1.8} />
+                                ) : (
+                                    <Package aria-hidden="true" className="h-4 w-4 shrink-0 text-stone-300" strokeWidth={1.8} />
+                                )}
+                                <span className="truncate">{objective.name}</span>
+                            </span>
                             <span className={complete ? "text-emerald-200" : "text-amber-200"}>
                                 {formatAmount(objective.current)}/{formatAmount(objective.amount)}
                             </span>
@@ -109,7 +123,72 @@ function QuestProgressRows({ quest }: { quest: QuestEntryState }) {
     );
 }
 
-function QuestRewardPills({ quest }: { quest: QuestEntryState }) {
+function resolveObjectGraphic(
+    itemId: number | undefined,
+    objectsDB: ObjectsDB | null,
+    graphicsDB: Record<string, GraphicData> | null,
+): GraphicData | undefined {
+    if (!itemId) {
+        return undefined;
+    }
+
+    const objectData = objectsDB?.[String(itemId)];
+    const grhIndex = Number(objectData?.grhIndex ?? 0);
+    if (!Number.isFinite(grhIndex) || grhIndex <= 0) {
+        return undefined;
+    }
+
+    return graphicsDB?.[String(grhIndex)];
+}
+
+function QuestRewardIcon({
+    reward,
+    objectsDB,
+    graphicsDB,
+}: {
+    reward: QuestEntryState["rewards"][number];
+    objectsDB: ObjectsDB | null;
+    graphicsDB: Record<string, GraphicData> | null;
+}) {
+    if (reward.type === "item") {
+        const graphicData = resolveObjectGraphic(reward.index, objectsDB, graphicsDB);
+        if (graphicData?.numFile) {
+            const scale = Math.min(1.7, 30 / Math.max(graphicData.width, graphicData.height, 1));
+            return (
+                <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded border border-amber-200/20 bg-black/35">
+                    <span
+                        aria-label={reward.label}
+                        className="absolute left-1/2 top-1/2 bg-no-repeat drop-shadow-[0_6px_8px_rgba(0,0,0,0.55)]"
+                        style={{
+                            width: graphicData.width,
+                            height: graphicData.height,
+                            backgroundImage: `url(${getTexturePath(graphicData)})`,
+                            backgroundPosition: `-${graphicData.sX}px -${graphicData.sY}px`,
+                            transform: `translate(-50%, -50%) scale(${scale})`,
+                            transformOrigin: "center",
+                        }}
+                    />
+                </span>
+            );
+        }
+    }
+
+    if (reward.type === "gold") {
+        return <Coins aria-hidden="true" className="h-6 w-6 shrink-0 text-amber-200" strokeWidth={1.8} />;
+    }
+
+    return <Gift aria-hidden="true" className="h-6 w-6 shrink-0 text-amber-200" strokeWidth={1.8} />;
+}
+
+function QuestRewardPills({
+    quest,
+    objectsDB,
+    graphicsDB,
+}: {
+    quest: QuestEntryState;
+    objectsDB: ObjectsDB | null;
+    graphicsDB: Record<string, GraphicData> | null;
+}) {
     if (!quest.rewards.length) {
         return null;
     }
@@ -117,13 +196,149 @@ function QuestRewardPills({ quest }: { quest: QuestEntryState }) {
     return (
         <div className="mt-5 flex flex-wrap gap-2">
             {quest.rewards.map((reward, index) => (
-                <span
+                <div
                     key={`${reward.type}-${reward.index ?? index}`}
-                    className="rounded border border-amber-300/30 bg-amber-300/10 px-3 py-1.5 text-xs font-semibold text-amber-100"
+                    className="flex min-h-[46px] items-center gap-2 rounded border border-amber-300/35 bg-[linear-gradient(180deg,rgba(245,158,11,0.12),rgba(0,0,0,0.22))] px-3 py-1.5 text-xs font-semibold text-amber-100"
                 >
-                    {formatAmount(reward.amount)} {reward.label}
-                </span>
+                    <QuestRewardIcon reward={reward} objectsDB={objectsDB} graphicsDB={graphicsDB} />
+                    <span>
+                        {formatAmount(reward.amount)} {reward.label}
+                    </span>
+                </div>
             ))}
+        </div>
+    );
+}
+
+function QuestNpcDialog({
+    quest,
+    objectsDB,
+    graphicsDB,
+    onClose,
+    onSendCommand,
+}: {
+    quest: QuestEntryState;
+    objectsDB: ObjectsDB | null;
+    graphicsDB: Record<string, GraphicData> | null;
+    onClose: () => void;
+    onSendCommand?: (message: string) => void;
+}) {
+    const isOffer = quest.status === "available";
+    const isReady = quest.status === "ready";
+    const title = isOffer ? "Aceptar misión" : isReady ? "Entregar misión" : "Consultar misión";
+    const primaryLabel = isOffer ? "Aceptar misión" : isReady ? "Entregar misión" : "";
+    const statusLabel = isReady ? "Lista para entregar" : questStatusLabel(quest.status);
+
+    const handlePrimary = () => {
+        if (isOffer) {
+            onSendCommand?.("/questaceptar");
+            onClose();
+            return;
+        }
+
+        if (isReady) {
+            onSendCommand?.("/quest entregar");
+            onClose();
+        }
+    };
+
+    return (
+        <div
+            className="fixed inset-0 z-[84] flex items-center justify-center bg-black/55 px-4 backdrop-blur-[4px]"
+            onClick={onClose}
+        >
+            <div
+                className="flex h-[min(620px,calc(100vh-32px))] w-[min(900px,calc(100vw-32px))] flex-col overflow-hidden rounded border border-amber-200/25 bg-[#120c08]/96 text-stone-100 shadow-[0_28px_90px_rgba(0,0,0,0.66)]"
+                onClick={(event) => event.stopPropagation()}
+            >
+                <div className="flex items-center justify-between gap-4 border-b border-amber-200/12 bg-[linear-gradient(180deg,rgba(127,78,35,0.32),rgba(18,12,8,0))] px-5 py-3">
+                    <div>
+                        <p className="text-[11px] uppercase tracking-[0.34em] text-amber-300/80">World of AO</p>
+                        <h3 className="mt-1 text-xl font-semibold text-[#f2e5ca]">{title}</h3>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="flex h-11 w-11 items-center justify-center rounded-full border border-stone-700 bg-black/20 text-stone-300 transition hover:border-stone-500 hover:text-white"
+                        aria-label="Cerrar misión"
+                    >
+                        <X aria-hidden="true" className="h-5 w-5" strokeWidth={1.8} />
+                    </button>
+                </div>
+
+                <div className="min-h-0 overflow-y-auto p-4">
+                    <div className="grid gap-4 md:grid-cols-[196px_minmax(0,1fr)]">
+                        <aside className="rounded border border-amber-300/25 bg-black/32 p-3">
+                            <div className="flex aspect-square max-h-[176px] items-center justify-center rounded border border-amber-200/20 bg-[radial-gradient(circle_at_50%_35%,rgba(245,158,11,0.18),rgba(0,0,0,0.22)_58%)]">
+                                <span className="text-6xl font-bold text-amber-200/75">?</span>
+                            </div>
+                            <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-200">
+                                NPC
+                            </p>
+                            <p className="mt-1 text-lg font-semibold text-stone-50">
+                                {quest.npcName ?? "Misión"}
+                            </p>
+                            <div className="mt-4 h-px bg-amber-200/10" />
+                            <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-200">
+                                Nivel
+                            </p>
+                            <p className="mt-1 text-sm text-stone-200">Requiere nivel {quest.requiredLevel}</p>
+                        </aside>
+
+                        <section className="rounded border border-amber-200/12 bg-black/24 p-4">
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="min-w-0">
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-amber-200">
+                                        Misión
+                                    </p>
+                                    <h2 className="mt-1 text-2xl font-semibold leading-tight text-stone-50">
+                                        {quest.name}
+                                    </h2>
+                                </div>
+                                <span className="shrink-0 rounded border border-stone-500/40 bg-white/[0.04] px-3 py-1.5 text-sm text-stone-200">
+                                    {statusLabel}
+                                </span>
+                            </div>
+
+                            <p className="mt-3 text-sm leading-6 text-stone-200">{quest.desc}</p>
+
+                            <div className="my-4 h-px bg-[linear-gradient(90deg,transparent,rgba(245,158,11,0.5),transparent)]" />
+
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-amber-200">
+                                Objetivos
+                            </p>
+                            <div className="mt-3 rounded border border-white/5 bg-white/[0.025] p-3">
+                                <QuestProgressRows quest={quest} />
+                            </div>
+
+                            <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.34em] text-amber-200">
+                                Recompensas
+                            </p>
+                            <QuestRewardPills quest={quest} objectsDB={objectsDB} graphicsDB={graphicsDB} />
+                        </section>
+                    </div>
+                </div>
+
+                <div className="flex flex-wrap justify-end gap-3 border-t border-amber-200/10 px-5 py-3">
+                    {primaryLabel ? (
+                        <button
+                            type="button"
+                            onClick={handlePrimary}
+                            className="flex min-h-[48px] min-w-[178px] items-center justify-center gap-3 rounded border border-amber-300/70 bg-[linear-gradient(180deg,#f7c84f,#a96512)] px-5 text-base font-bold text-stone-950 shadow-[0_0_24px_rgba(245,158,11,0.22)] transition hover:brightness-110"
+                        >
+                            <Check aria-hidden="true" className="h-5 w-5" strokeWidth={2} />
+                            {primaryLabel}
+                        </button>
+                    ) : null}
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="min-h-[48px] min-w-[130px] rounded border border-stone-600/70 px-5 text-base font-semibold text-stone-100 transition hover:border-stone-400 hover:text-white"
+                    >
+                        Cerrar
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }
@@ -199,17 +414,352 @@ function PremioGraphic({
     );
 }
 
+function MountGraphic({
+    mount,
+    objectsDB,
+    graphicsDB,
+    compact = false,
+}: {
+    mount: Pick<MountStateEntry, "name" | "itemId">;
+    objectsDB: ObjectsDB | null;
+    graphicsDB: Record<string, GraphicData> | null;
+    compact?: boolean;
+}) {
+    const graphicData = resolveObjectGraphic(mount.itemId, objectsDB, graphicsDB);
+    const targetSize = compact ? 72 : 154;
+
+    if (!graphicData?.numFile) {
+        return (
+            <div className="flex h-full min-h-[72px] w-full items-center justify-center rounded border border-amber-300/15 bg-black/30 text-amber-200/60">
+                <PawPrint aria-hidden="true" className={compact ? "h-7 w-7" : "h-12 w-12"} strokeWidth={1.6} />
+            </div>
+        );
+    }
+
+    const scale = Math.min(compact ? 2.2 : 3.6, targetSize / Math.max(graphicData.width, graphicData.height, 1));
+    return (
+        <div className="relative h-full min-h-[72px] w-full overflow-hidden rounded border border-amber-300/18 bg-[radial-gradient(circle_at_50%_45%,rgba(245,186,71,0.16),rgba(0,0,0,0.32)_60%)]">
+            <div
+                aria-label={mount.name}
+                className="absolute left-1/2 top-1/2 bg-no-repeat drop-shadow-[0_12px_18px_rgba(0,0,0,0.58)]"
+                style={{
+                    width: graphicData.width,
+                    height: graphicData.height,
+                    backgroundImage: `url(${getTexturePath(graphicData)})`,
+                    backgroundPosition: `-${graphicData.sX}px -${graphicData.sY}px`,
+                    transform: `translate(-50%, -50%) scale(${scale})`,
+                    transformOrigin: "center",
+                }}
+            />
+        </div>
+    );
+}
+
+function MountStat({
+    icon,
+    label,
+    value,
+}: {
+    icon: React.ReactNode;
+    label: string;
+    value: number;
+}) {
+    return (
+        <div className="flex items-center justify-between gap-2 border-b border-white/8 px-1 py-1 text-[11px]">
+            <span className="flex min-w-0 items-center gap-2 text-stone-300">
+                <span className="text-amber-200">{icon}</span>
+                <span className="truncate">{label}</span>
+            </span>
+            <span className="shrink-0 font-semibold text-stone-100">{formatAmount(value)}</span>
+        </div>
+    );
+}
+
+function MountExperienceBar({ mount }: { mount: MountStateEntry }) {
+    const progress =
+        mount.expRequired > 0 ? Math.max(0, Math.min(1, mount.exp / Math.max(1, mount.expRequired))) : 1;
+
+    return (
+        <div className="mt-3">
+            <div className="flex items-center justify-between gap-3 text-xs font-semibold">
+                <span className="text-stone-100">Nivel {mount.level}</span>
+                <span className="text-stone-300">
+                    {mount.expRequired > 0
+                        ? `${formatAmount(mount.exp)} / ${formatAmount(mount.expRequired)} EXP`
+                        : "Nivel maximo"}
+                </span>
+            </div>
+            <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-[#322a25]">
+                <div className="h-full bg-[linear-gradient(90deg,#f7c84f,#ffe084)]" style={{ width: `${progress * 100}%` }} />
+            </div>
+        </div>
+    );
+}
+
+function MountHubTab({
+    ownedMounts,
+    selectedMount,
+    setSelectedMountId,
+    objectsDB,
+    graphicsDB,
+    onSendCommand,
+}: {
+    ownedMounts: MountStateEntry[];
+    selectedMount: MountStateEntry | null;
+    setSelectedMountId: React.Dispatch<React.SetStateAction<string | null>>;
+    objectsDB: ObjectsDB | null;
+    graphicsDB: Record<string, GraphicData> | null;
+    onSendCommand?: (message: string) => void;
+}) {
+    const selectedRef = selectedMount?.shortId || selectedMount?.id || "";
+    const activeOwner = selectedMount?.mounted || selectedMount?.active ? "Mi Personaje" : "-";
+
+    return (
+        <div className="grid h-full min-h-0 gap-3 lg:grid-cols-[minmax(270px,0.9fr)_minmax(390px,1.25fr)_minmax(260px,0.85fr)]">
+            <section className="flex min-h-0 flex-col rounded border border-amber-200/10 bg-black/30">
+                <div className="flex items-center justify-between gap-3 border-b border-white/10 px-3 py-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-200">
+                        Mis monturas
+                    </p>
+                    <span className="text-xs font-semibold text-stone-100">{ownedMounts.length}/12</span>
+                </div>
+
+                <div className="min-h-0 flex-1 overflow-y-auto p-2">
+                    {ownedMounts.length ? (
+                        <div className="space-y-1.5">
+                            {ownedMounts.map((mount) => {
+                                const selected = selectedMount?.id === mount.id;
+                                const progress =
+                                    mount.expRequired > 0
+                                        ? Math.max(0, Math.min(1, mount.exp / Math.max(1, mount.expRequired)))
+                                        : 1;
+                                return (
+                                    <button
+                                        key={mount.id}
+                                        type="button"
+                                        onClick={() => setSelectedMountId(mount.id)}
+                                        className={`grid w-full grid-cols-[54px_minmax(0,1fr)_104px] gap-2 rounded border p-1.5 text-left transition ${
+                                            selected
+                                                ? "border-amber-300/80 bg-[linear-gradient(90deg,rgba(245,158,11,0.18),rgba(0,0,0,0.08))]"
+                                                : "border-transparent bg-white/[0.03] hover:border-stone-600/70 hover:bg-white/[0.06]"
+                                        }`}
+                                    >
+                                        <div className="h-[48px]">
+                                            <MountGraphic mount={mount} objectsDB={objectsDB} graphicsDB={graphicsDB} compact />
+                                        </div>
+                                        <div className="min-w-0 self-center">
+                                            <p className="truncate text-sm font-semibold leading-5 text-stone-50">{mount.name}</p>
+                                            <p className="text-xs leading-4 text-stone-300">Nivel {mount.level}</p>
+                                        </div>
+                                        <div className="self-center">
+                                            <div className="flex justify-end text-[11px] leading-4 text-stone-200">
+                                                <span>
+                                                    {formatAmount(mount.exp)} / {formatAmount(mount.expRequired || 0)} EXP
+                                                </span>
+                                            </div>
+                                            <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[#332c27]">
+                                                <div
+                                                    className="h-full bg-[linear-gradient(90deg,#8df26a,#f8d65b)]"
+                                                    style={{ width: `${progress * 100}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <div className="flex h-full min-h-[250px] items-center justify-center px-4 text-center text-sm text-stone-400">
+                            No tenes monturas todavia.
+                        </div>
+                    )}
+                </div>
+            </section>
+
+            <section className="flex min-h-0 flex-col rounded border border-amber-200/10 bg-black/24">
+                {selectedMount ? (
+                    <>
+                        <div className="flex items-start justify-between gap-4 px-4 pt-3">
+                            <div className="min-w-0">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-200">
+                                    Montura
+                                </p>
+                                <h3 className="mt-1 truncate text-xl font-semibold leading-tight text-stone-50">
+                                    {selectedMount.name}
+                                </h3>
+                            </div>
+                            {selectedMount.active ? (
+                                <span className="shrink-0 text-sm font-semibold text-emerald-300">
+                                    <span className="mr-1 inline-block h-2 w-2 rounded-full bg-emerald-400" />
+                                    Activa
+                                </span>
+                            ) : null}
+                        </div>
+
+                        <div className="min-h-0 flex-1 p-4 pt-2">
+                            <div className="grid gap-3 md:grid-cols-[minmax(210px,1fr)_134px]">
+                                <div className="min-w-0">
+                                    <div className="h-[112px]">
+                                        <MountGraphic mount={selectedMount} objectsDB={objectsDB} graphicsDB={graphicsDB} />
+                                    </div>
+                                    <MountExperienceBar mount={selectedMount} />
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => onSendCommand?.(`/activarmontura ${selectedRef}`)}
+                                        className="min-h-[38px] rounded border border-amber-300/60 bg-amber-400/24 px-4 text-sm font-semibold text-amber-50 transition hover:bg-amber-400/32"
+                                    >
+                                        Montar
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const nextName = window.prompt("Nuevo nombre", selectedMount.name)?.trim();
+                                            if (nextName) {
+                                                onSendCommand?.(`/renombrarmontura ${selectedRef} ${nextName}`);
+                                            }
+                                        }}
+                                        className="min-h-[38px] rounded border border-stone-600/70 px-4 text-sm font-semibold text-stone-100 transition hover:border-stone-400"
+                                    >
+                                        Renombrar
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (window.confirm(`Liberar a ${selectedMount.name}?`)) {
+                                                onSendCommand?.(`/liberarmontura ${selectedRef}`);
+                                            }
+                                        }}
+                                        className="min-h-[38px] rounded border border-stone-600/70 px-4 text-sm font-semibold text-stone-100 transition hover:border-stone-400"
+                                    >
+                                        Liberar
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="mt-3 rounded border border-amber-200/10 bg-black/24 p-3">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-200">
+                                    Estadisticas
+                                </p>
+                                <div className="mt-2 grid gap-x-6 sm:grid-cols-2">
+                                    <MountStat icon={<Heart className="h-4 w-4" />} label="Vida" value={selectedMount.vida} />
+                                    <MountStat icon={<Swords className="h-4 w-4" />} label="Golpe" value={selectedMount.npcDamage} />
+                                    <MountStat icon={<Swords className="h-4 w-4" />} label="Atk. cuerpo" value={selectedMount.meleeAttack} />
+                                    <MountStat icon={<Shield className="h-4 w-4" />} label="Def. cuerpo" value={selectedMount.meleeDefense} />
+                                    <MountStat icon={<Swords className="h-4 w-4" />} label="Atk. proyectiles" value={selectedMount.rangedAttack} />
+                                    <MountStat icon={<Shield className="h-4 w-4" />} label="Def. proyectiles" value={selectedMount.rangedDefense} />
+                                    <MountStat icon={<Sparkles className="h-4 w-4" />} label="Atk. magico" value={selectedMount.magicAttack} />
+                                    <MountStat icon={<Shield className="h-4 w-4" />} label="Def. magica" value={selectedMount.magicDefense} />
+                                    <MountStat icon={<Activity className="h-4 w-4" />} label="Evasion" value={selectedMount.evasion} />
+                                    <MountStat icon={<Sparkles className="h-4 w-4" />} label="Daño a NPCs" value={selectedMount.npcDamage} />
+                                </div>
+                            </div>
+                        </div>
+                    </>
+                ) : (
+                    <div className="flex h-full min-h-[360px] items-center justify-center text-center text-sm text-stone-400">
+                        Selecciona una montura para ver sus estadisticas.
+                    </div>
+                )}
+            </section>
+
+            <aside className="grid min-h-0 grid-rows-[auto_1fr] gap-3">
+                <div className="rounded border border-amber-200/10 bg-black/26">
+                    <div className="border-b border-white/10 px-3 py-2">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-200">
+                            Información
+                        </p>
+                    </div>
+                    <div className="p-3">
+                        {selectedMount ? (
+                            <div className="space-y-2 text-xs">
+                                <div className="flex justify-between gap-3 border-b border-white/10 pb-1.5">
+                                    <span className="text-stone-400">Nombre</span>
+                                    <span className="text-right text-stone-100">{selectedMount.name}</span>
+                                </div>
+                                <div className="flex justify-between gap-3 border-b border-white/10 pb-1.5">
+                                    <span className="text-stone-400">Nivel</span>
+                                    <span className="text-stone-100">{selectedMount.level} / {selectedMount.maxLevel}</span>
+                                </div>
+                                <div className="flex justify-between gap-3 border-b border-white/10 pb-1.5">
+                                    <span className="text-stone-400">Experiencia</span>
+                                    <span className="text-right text-stone-100">
+                                        {formatAmount(selectedMount.exp)}
+                                        {selectedMount.expRequired ? ` / ${formatAmount(selectedMount.expRequired)}` : ""}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between gap-3 border-b border-white/10 pb-1.5">
+                                    <span className="text-stone-400">Daño a NPCs</span>
+                                    <span className="text-stone-100">{formatAmount(selectedMount.npcDamage)}</span>
+                                </div>
+                                <div className="flex justify-between gap-3 border-b border-white/10 pb-1.5">
+                                    <span className="text-stone-400">Dueño</span>
+                                    <span className="text-stone-100">{activeOwner}</span>
+                                </div>
+                                <div className="flex justify-between gap-3">
+                                    <span className="text-stone-400">ID</span>
+                                    <span className="text-stone-100">#{selectedMount.shortId}</span>
+                                </div>
+                            </div>
+                        ) : (
+                            <p className="text-sm text-stone-400">Sin montura seleccionada.</p>
+                        )}
+                    </div>
+                </div>
+
+                <div className="rounded border border-amber-200/10 bg-black/26">
+                    <div className="border-b border-white/10 px-3 py-2">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-200">
+                            Talentos obtenidos
+                        </p>
+                    </div>
+                    <div className="p-3">
+                        {selectedMount ? (
+                            <div className="grid gap-2">
+                                {[10, 20, 30].map((milestone) => {
+                                    const perk = selectedMount.perks.find((entry) => entry.milestone === milestone);
+                                    const unlocked = selectedMount.level >= milestone;
+                                    return (
+                                        <div
+                                            key={milestone}
+                                            className="grid grid-cols-[62px_minmax(0,1fr)] gap-2 rounded border border-white/10 bg-white/[0.025] px-3 py-2 text-xs"
+                                        >
+                                            <span className="text-stone-300">Nivel {milestone}</span>
+                                            <div className="min-w-0">
+                                                <p className={perk ? "font-semibold text-amber-100" : "text-stone-400"}>
+                                                    {perk?.label ?? (unlocked ? "Sin talento" : "Sin descubrir")}
+                                                </p>
+                                                {!unlocked ? (
+                                                    <p className="mt-0.5 text-[11px] text-stone-500">
+                                                        Se obtiene al llegar al nivel {milestone}.
+                                                    </p>
+                                                ) : null}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : null}
+                    </div>
+                </div>
+            </aside>
+        </div>
+    );
+}
+
 export default function WoaoHubModal({
     tab,
     mapId,
     questState,
+    mountState,
+    questDialog,
     questPoints = 0,
     donationPoints = 0,
     onTabChange,
     onClose,
     onSendCommand,
 }: WoaoHubModalProps) {
-    const [mounts, setMounts] = React.useState<MountDef[]>([]);
     const [premios, setPremios] = React.useState<PremioDef[]>([]);
     const [donacionPremios, setDonacionPremios] = React.useState<PremioDef[]>([]);
     const [routes, setRoutes] = React.useState<TravelRoute[]>([]);
@@ -219,13 +769,13 @@ export default function WoaoHubModal({
     const [premioSearch, setPremioSearch] = React.useState("");
     const [selectedPremioId, setSelectedPremioId] = React.useState<number | null>(null);
     const [premioQuantities, setPremioQuantities] = React.useState<Record<string, number>>({});
+    const [selectedMountId, setSelectedMountId] = React.useState<string | null>(null);
 
     React.useEffect(() => {
         let cancelled = false;
 
         const load = async () => {
-            const [mountRes, premioRes, donacionRes, travelRes] = await Promise.all([
-                fetch("/init/woao/mountTypes.json").then((res) => res.json()).catch(() => ({})),
+            const [premioRes, donacionRes, travelRes] = await Promise.all([
                 fetch("/init/woao/premios.json").then((res) => res.json()).catch(() => ({})),
                 fetch("/init/woao/donaciones.json").then((res) => res.json()).catch(() => ({})),
                 fetch("/init/woao/fastTravel.json").then((res) => res.json()).catch(() => []),
@@ -235,7 +785,6 @@ export default function WoaoHubModal({
                 return;
             }
 
-            setMounts(Object.values(mountRes ?? {}) as MountDef[]);
             setPremios(Object.values(premioRes ?? {}) as PremioDef[]);
             setDonacionPremios(Object.values(donacionRes ?? {}) as PremioDef[]);
             setRoutes(Array.isArray(travelRes) ? travelRes : []);
@@ -343,16 +892,8 @@ export default function WoaoHubModal({
     }, [activePremios, selectedPremioId]);
 
     const visibleQuestEntries = React.useMemo(() => {
-        const active = questState?.active ?? [];
-        const offer = questState?.offer;
-        const entries = [...active];
-
-        if (offer && !entries.some((entry) => entry.id === offer.id)) {
-            entries.unshift(offer);
-        }
-
-        return entries;
-    }, [questState?.active, questState?.offer]);
+        return questState?.active ?? [];
+    }, [questState?.active]);
     const [selectedQuestId, setSelectedQuestId] = React.useState<number | null>(null);
     const selectedQuest =
         visibleQuestEntries.find((entry) => entry.id === selectedQuestId) ?? visibleQuestEntries[0] ?? null;
@@ -365,18 +906,47 @@ export default function WoaoHubModal({
         setSelectedQuestId(visibleQuestEntries[0]?.id ?? null);
     }, [selectedQuestId, visibleQuestEntries]);
 
+    const ownedMounts = React.useMemo(() => mountState?.mounts ?? [], [mountState?.mounts]);
+    const selectedMount =
+        ownedMounts.find((mount) => mount.id === selectedMountId) ??
+        ownedMounts.find((mount) => mount.active) ??
+        ownedMounts[0] ??
+        null;
+
+    React.useEffect(() => {
+        if (selectedMountId && ownedMounts.some((mount) => mount.id === selectedMountId)) {
+            return;
+        }
+
+        setSelectedMountId(ownedMounts.find((mount) => mount.active)?.id ?? ownedMounts[0]?.id ?? null);
+    }, [ownedMounts, selectedMountId]);
+
+    if (tab === "misiones" && questDialog) {
+        return (
+            <QuestNpcDialog
+                quest={questDialog}
+                objectsDB={objectsDB}
+                graphicsDB={graphicsDB}
+                onClose={onClose}
+                onSendCommand={onSendCommand}
+            />
+        );
+    }
+
     return (
         <div
             className="fixed inset-0 z-[84] flex items-center justify-center bg-black/45 px-4 backdrop-blur-[3px]"
             onClick={onClose}
         >
             <div
-                className={`flex max-h-[82vh] w-full flex-col overflow-hidden rounded border border-amber-200/20 bg-[#120c08]/96 text-stone-100 shadow-[0_28px_90px_rgba(0,0,0,0.6)] ${
+                className={`flex ${tab === "montura" ? "h-[min(680px,calc(100vh-32px))]" : "h-[min(620px,calc(100vh-32px))]"} w-[min(900px,calc(100vw-32px))] flex-col overflow-hidden rounded border border-amber-200/20 bg-[#120c08]/96 text-stone-100 shadow-[0_28px_90px_rgba(0,0,0,0.6)] ${
                     tab === "premios"
-                        ? "max-w-6xl"
-                        : tab === "misiones"
-                          ? "max-w-4xl"
-                          : "max-w-xl"
+                        ? "md:w-[min(1120px,calc(100vw-32px))]"
+                        : tab === "montura"
+                          ? "md:w-[min(1220px,calc(100vw-32px))]"
+                          : tab === "misiones"
+                          ? ""
+                          : "md:w-[min(620px,calc(100vw-32px))]"
                 }`}
                 onClick={(event) => event.stopPropagation()}
             >
@@ -418,12 +988,12 @@ export default function WoaoHubModal({
 
                 <div
                     className={`min-h-0 flex-1 px-4 py-3 text-sm text-[#f2e5ca] ${
-                        tab === "premios" ? "overflow-hidden" : "overflow-y-auto"
+                        tab === "premios" || tab === "montura" ? "overflow-hidden" : "overflow-y-auto"
                     }`}
                 >
                     {tab === "misiones" ? (
-                        <div className="grid min-h-[420px] gap-3 md:grid-cols-[minmax(220px,0.85fr)_minmax(280px,1.15fr)]">
-                            <div className="min-h-0 rounded border border-amber-200/10 bg-black/32">
+                        <div className="grid h-full min-h-0 gap-3 md:grid-cols-[minmax(220px,0.85fr)_minmax(280px,1.15fr)]">
+                            <div className="flex min-h-0 flex-col rounded border border-amber-200/10 bg-black/32">
                                 <div className="flex items-center justify-between gap-3 border-b border-white/10 px-3 py-2">
                                     <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-200">
                                         Misiones
@@ -437,7 +1007,7 @@ export default function WoaoHubModal({
                                     </button>
                                 </div>
 
-                                <div className="max-h-[360px] overflow-y-auto p-2">
+                                <div className="min-h-0 flex-1 overflow-y-auto p-2">
                                     {visibleQuestEntries.length ? (
                                         <div className="space-y-2">
                                             {visibleQuestEntries.map((quest) => (
@@ -469,9 +1039,9 @@ export default function WoaoHubModal({
                                 </div>
                             </div>
 
-                            <div className="min-h-0 rounded border border-amber-200/10 bg-black/28 p-4">
+                            <div className="min-h-0 overflow-hidden rounded border border-amber-200/10 bg-black/28">
                                 {selectedQuest ? (
-                                    <>
+                                    <div className="h-full overflow-y-auto p-4">
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="min-w-0">
                                                 <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-200">
@@ -488,7 +1058,11 @@ export default function WoaoHubModal({
 
                                         <p className="mt-4 text-sm leading-6 text-stone-300">{selectedQuest.desc}</p>
                                         <QuestProgressRows quest={selectedQuest} />
-                                        <QuestRewardPills quest={selectedQuest} />
+                                        <QuestRewardPills
+                                            quest={selectedQuest}
+                                            objectsDB={objectsDB}
+                                            graphicsDB={graphicsDB}
+                                        />
 
                                         <div className="mt-6 flex justify-end gap-2">
                                             {selectedQuest.status === "available" ? (
@@ -506,18 +1080,11 @@ export default function WoaoHubModal({
                                                     onClick={() => onSendCommand?.("/quest")}
                                                     className="rounded border border-amber-300/40 bg-amber-300/15 px-4 py-2 text-sm font-semibold text-amber-100 transition hover:bg-amber-300/25"
                                                 >
-                                                    Entregar
-                                                </button>
-                                            ) : null}
-                                            <button
-                                                type="button"
-                                                onClick={onClose}
-                                                className="rounded border border-stone-600/50 px-4 py-2 text-sm text-stone-200 transition hover:border-stone-400 hover:text-white"
-                                            >
-                                                Cerrar
+                                                Entregar
                                             </button>
+                                        ) : null}
                                         </div>
-                                    </>
+                                    </div>
                                 ) : (
                                     <div className="flex h-full min-h-[320px] items-center justify-center text-center text-sm text-stone-400">
                                         Selecciona una mision para ver progreso y recompensas.
@@ -528,7 +1095,16 @@ export default function WoaoHubModal({
                     ) : null}
 
                     {tab === "montura" ? (
-                        <div className="space-y-3">
+                        <>
+                        <MountHubTab
+                            ownedMounts={ownedMounts}
+                            selectedMount={selectedMount}
+                            setSelectedMountId={setSelectedMountId}
+                            objectsDB={objectsDB}
+                            graphicsDB={graphicsDB}
+                            onSendCommand={onSendCommand}
+                        />
+                        <div className="hidden" data-mount-tab="legacy">
                             <button
                                 type="button"
                                 onClick={() => onSendCommand?.("/montura")}
@@ -536,7 +1112,7 @@ export default function WoaoHubModal({
                             >
                                 Ver mis mascotas
                             </button>
-                            {mounts.map((mount) => (
+                            {([] as Array<{ id: number; name: string; topeLevel: number; aumentoCuerpo: number; aumentoFlecha: number; aumentoMagia: number }>).map((mount) => (
                                 <div key={mount.id} className="rounded-[12px] border border-amber-200/10 bg-black/20 p-3">
                                     <p className="font-semibold">{mount.name}</p>
                                     <p className="mt-1 text-xs text-stone-300">
@@ -545,6 +1121,7 @@ export default function WoaoHubModal({
                                 </div>
                             ))}
                         </div>
+                        </>
                     ) : null}
 
                     {tab === "premios" ? (
@@ -911,6 +1488,16 @@ export default function WoaoHubModal({
                             </div>
                         </div>
                     ) : null}
+                </div>
+
+                <div className="flex shrink-0 justify-end border-t border-amber-200/10 bg-black/20 px-4 py-3">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="min-h-[40px] min-w-[96px] rounded border border-stone-600/60 px-4 text-sm font-semibold text-stone-100 transition hover:border-stone-400 hover:text-white"
+                    >
+                        Cerrar
+                    </button>
                 </div>
             </div>
         </div>

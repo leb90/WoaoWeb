@@ -116,6 +116,7 @@ class LoadNpcs {
             : [];
         if (datNpc.drop) tmpNPC.drop = datNpc.drop;
         if (datNpc.objs) tmpNPC.objs = datNpc.objs;
+        tmpNPC.comercia = Number(datNpc.comercia ?? 0);
         tmpNPC.aguaValida = datNpc.aguaValida;
         tmpNPC.tierraInvalida = datNpc.tierraInvalida ?? 0;
         if (datNpc.desc) tmpNPC.desc = datNpc.desc;

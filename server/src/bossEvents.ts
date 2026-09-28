@@ -347,6 +347,7 @@ function spawnBoss(config: BossEventConfig, options?: { map?: number; pos?: Posi
         : [];
     npc.drop = Array.isArray(datNpc.drop) ? datNpc.drop : [];
     npc.objs = datNpc.objs ?? [];
+    npc.comercia = Number(datNpc.comercia ?? 0);
     npc.aguaValida = datNpc.aguaValida ?? 0;
     npc.tierraInvalida = datNpc.tierraInvalida ?? 0;
     npc.desc = datNpc.desc ?? "";

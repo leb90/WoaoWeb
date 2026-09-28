@@ -119,6 +119,7 @@ const clientPacketID = {
     environmentUpdate: 84,
     questState: 85,
     questProgressNotice: 86,
+    mountState: 87,
 } as const;
 
 const serverPacketID = {

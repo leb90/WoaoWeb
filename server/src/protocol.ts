@@ -977,6 +977,41 @@ function startPendingReviveCast(
     broadcastReviveCastBar(ws.id!, true, REVIVE_CAST_MS);
 }
 
+function hasTradeObjects(objs: unknown) {
+    if (Array.isArray(objs)) {
+        return objs.length > 0;
+    }
+
+    return objs && typeof objs === "object"
+        ? Object.keys(objs).length > 0
+        : false;
+}
+
+function isMerchantNpc(target: unknown) {
+    if (!target || typeof target !== "object") {
+        return false;
+    }
+
+    const npc = target as { npcType?: unknown; templateNpcIndex?: unknown; objs?: unknown; comercia?: unknown };
+    const templateNpcIndex = Number(npc.templateNpcIndex ?? 0);
+    const templateNpc = Number.isFinite(templateNpcIndex) && templateNpcIndex > 0
+        ? vars.datNpc?.[templateNpcIndex]
+        : undefined;
+    const npcType = Number(npc.npcType ?? templateNpc?.npcType ?? 0);
+    const comercia = Number(npc.comercia ?? templateNpc?.comercia ?? 0);
+    const tradeObjects = hasTradeObjects(npc.objs) ? npc.objs : templateNpc?.objs;
+
+    if (npcType === vars.npcType.comerciante) {
+        return true;
+    }
+
+    if (comercia !== 1) {
+        return false;
+    }
+
+    return hasTradeObjects(tradeObjects);
+}
+
 function isNonHostileCityNpcSpellTarget(target: AreaTarget | undefined) {
     if (!target?.isNpc || target.summonedByUserId) {
         return false;
@@ -993,7 +1028,7 @@ function isNonHostileCityNpcSpellTarget(target: AreaTarget | undefined) {
         target.npcType === vars.npcType.noble ||
         target.npcType === vars.npcType.timbero ||
         target.npcType === vars.npcType.sacerdoteNewbie ||
-        target.npcType === vars.npcType.comerciante ||
+        isMerchantNpc(target) ||
         target.npcType === vars.npcType.subastador ||
         target.npcType === vars.npcType.crafter
     );
@@ -2103,6 +2138,30 @@ function processUserMovement(ws: RuntimeClient, heading: number, moveId: number,
     posX = phasedDestination.x;
     posY = phasedDestination.y;
     const ghostMove = resolveGhostDisplacement(user, posX, posY, heading);
+    const destinationIsWater = game.hayAgua(user.map, { x: posX, y: posY });
+
+    if (!user.navegando && destinationIsWater) {
+        if (!game.legalPos(posX, posY, user.map, true, ghostMove?.ghost.id)) {
+            sendOwnPositionUpdate(ws, user);
+            return;
+        }
+
+        if (!game.autoEmbarkForMovement(ws.id!)) {
+            sendOwnPositionUpdate(ws, user);
+            return;
+        }
+    } else if (user.navegando && !destinationIsWater) {
+        if (!game.legalPos(posX, posY, user.map, false, ghostMove?.ghost.id)) {
+            sendOwnPositionUpdate(ws, user);
+            return;
+        }
+
+        if (!game.autoDisembarkForMovement(ws.id!)) {
+            sendOwnPositionUpdate(ws, user);
+            return;
+        }
+    }
+
     const canReachTargetPosition = game.legalPos(posX, posY, user.map, Boolean(user.navegando), ghostMove?.ghost.id);
     const deniedPortalMessage = game.getFactionPortalDeniedMessage(user, user.map, posX, posY);
 
@@ -2602,7 +2661,7 @@ function eventClick(ws: RuntimeClient) {
             if (
                 selectedNpc &&
                 !selectedNpcIsClassicTournament &&
-                selectedNpc.npcType === vars.npcType.comerciante &&
+                isMerchantNpc(selectedNpc) &&
                 !user.dead
             ) {
                 game.closeTradeSession(ws.id);

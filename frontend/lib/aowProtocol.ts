@@ -82,6 +82,7 @@ export const CLIENT_PACKET_ID = {
     environmentUpdate: 84,
     questState: 85,
     questProgressNotice: 86,
+    mountState: 87,
 } as const;
 
 export const CHARACTER_SWING_WEAPON = 1;
@@ -335,6 +336,7 @@ export type QuestEntryState = {
     desc: string;
     status: "available" | "active" | "ready" | "done";
     npcId?: number;
+    npcName?: string;
     requiredLevel: number;
     objectives: QuestObjectiveProgress[];
     rewards: QuestRewardEntry[];
@@ -344,6 +346,46 @@ export type QuestStatePayload = {
     active: QuestEntryState[];
     offer?: QuestEntryState | null;
     completedQuestId?: number;
+};
+
+export type MountStateEntry = {
+    id: string;
+    shortId: string;
+    typeId: number;
+    name: string;
+    speciesName: string;
+    level: number;
+    exp: number;
+    expRequired: number;
+    maxLevel: number;
+    npcDamage: number;
+    vida: number;
+    meleeAttack: number;
+    meleeDefense: number;
+    rangedAttack: number;
+    rangedDefense: number;
+    magicAttack: number;
+    magicDefense: number;
+    evasion: number;
+    bodyId: number;
+    itemId: number;
+    active: boolean;
+    mounted: boolean;
+    perks: Array<{ milestone: number; id: string; label: string }>;
+};
+
+export type MountHatchPoolEntry = {
+    typeId: number;
+    weight: number;
+    name: string;
+    bodyId: number;
+    eggItemId: number;
+};
+
+export type MountStatePayload = {
+    maxOwned: number | null;
+    mounts: MountStateEntry[];
+    hatchPool: MountHatchPoolEntry[];
 };
 
 export type QuestProgressNoticePayload = {
@@ -591,6 +633,7 @@ export interface PlayerHudState {
     inventory: InventoryItem[];
     spells: SpellEntry[];
     questState?: QuestStatePayload;
+    mountState?: MountStatePayload;
     partyMembers: PartyHudMember[];
     clanMembers: ClanHudMember[];
 }
@@ -911,6 +954,7 @@ export type ParsedServerPacket =
     | { type: "environmentUpdate"; payload: EnvironmentState }
     | { type: "questState"; payload: QuestStatePayload }
     | { type: "questProgressNotice"; payload: QuestProgressNoticePayload }
+    | { type: "mountState"; payload: MountStatePayload }
     | { type: "partyState"; payload: PartyHudStateDelta }
     | { type: "clanState"; payload: ClanHudStateDelta }
     | { type: "startCastBar"; payload: { id: number; durationMs: number } }
@@ -2046,6 +2090,22 @@ function parseServerPacketById(
                         completed: false,
                         message: "",
                     },
+                };
+            }
+        }
+
+        case CLIENT_PACKET_ID.mountState: {
+            const rawPayload = reader.getString();
+
+            try {
+                return {
+                    type: "mountState",
+                    payload: JSON.parse(rawPayload) as MountStatePayload,
+                };
+            } catch {
+                return {
+                    type: "mountState",
+                    payload: { maxOwned: null, mounts: [], hatchPool: [] },
                 };
             }
         }

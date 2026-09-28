@@ -303,6 +303,7 @@ function patchLiveNpc(npc: Record<string, unknown>, data: DataNpc): void {
     npc.soundClose = data.soundClose ?? 0;
     npc.drop = data.drop ?? [];
     npc.objs = data.objs ?? [];
+    npc.comercia = data.comercia ?? 0;
     npc.desc = data.desc ?? "";
     npc.exp = data.exp ?? 0;
     npc.gold = data.gold ?? 0;

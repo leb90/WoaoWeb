@@ -637,7 +637,7 @@ function convertObjects(): JsonRecord {
             apu: toInt(getValue(section, "Apu") ?? getValue(section, "Apunala")),
             spellIndex: toInt(getValue(section, "HechizoIndex") ?? getValue(section, "SpellIndex") ?? getValue(section, "Hechizo")),
             razaEnana: toInt(getValue(section, "RazaEnana")),
-            agarrable: toInt(getValue(section, "Agarrable"), 1),
+            agarrable: toInt(getValue(section, "Agarrable")),
             noSeCae: toInt(getValue(section, "NoSeCae") ?? getValue(section, "nocaer")),
             staffDamageBonus: toInt(getValue(section, "StaffDamageBonus")),
             magicDamageBonus: toInt(getValue(section, "MagicDamageBonus") ?? getValue(section, "Magia")),

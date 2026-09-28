@@ -27,6 +27,7 @@ import {
 } from "./racialPassives";
 import { getLegacyNpcDropChancePercent, shouldDropNpcItem } from "./npcDrops";
 import { rollCraftingRecipeDrops } from "./craftingRecipeDrops";
+import { rollMountEggDrops } from "./mountEggDrops";
 
 export {};
 
@@ -681,7 +682,7 @@ function tryNpcCastSpell(
                 damage = 1;
             }
 
-            damage = applyIncomingHit(target, damage, "magic");
+            damage = applyIncomingHit(target, damage, "magic", true);
             withUserClient(target.id, (targetClient) => {
                 handleProtocol.updateHP(target.hp, targetClient);
                 handleProtocol.console(
@@ -2614,7 +2615,7 @@ function Npcs(this: NpcsApi) {
                         dmg = 1;
                     }
 
-                    dmg = applyIncomingHit(user, dmg, "melee");
+                    dmg = applyIncomingHit(user, dmg, "melee", true);
                     user.lastCombatActivityAt = Date.now();
                     emitCharacterFxToUserArea(idUser, COMBAT_HIT_FX_ID);
                     withUserClient(idUser, (userClient) => {
@@ -3123,6 +3124,14 @@ function Npcs(this: NpcsApi) {
             }
 
             for (const item of rollCraftingRecipeDrops(npc)) {
+                if (!vars.datObj[item.item]) {
+                    continue;
+                }
+
+                this.tirarItemAlSuelo(item.item, item.cant, npc.map, npc.pos, idNpc, reservedDropPositions);
+            }
+
+            for (const item of rollMountEggDrops(npc)) {
                 if (!vars.datObj[item.item]) {
                     continue;
                 }

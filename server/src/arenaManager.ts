@@ -170,6 +170,7 @@ const arenaManager = {
 
             if (datNpc.drop) tmpNpc.drop = datNpc.drop;
             if (datNpc.objs) tmpNpc.objs = datNpc.objs;
+            tmpNpc.comercia = Number(datNpc.comercia ?? 0);
             if (datNpc.desc) tmpNpc.desc = datNpc.desc;
 
             tmpNpc.aguaValida = datNpc.aguaValida;

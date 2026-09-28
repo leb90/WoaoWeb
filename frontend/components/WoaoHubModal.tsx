@@ -6,7 +6,6 @@ import {
     Check,
     Coins,
     Gift,
-    Heart,
     Minus,
     Package,
     PawPrint,
@@ -17,6 +16,7 @@ import {
     Skull,
     Sparkles,
     Swords,
+    Target,
     X,
 } from "lucide-react";
 import type {
@@ -140,6 +140,21 @@ function resolveObjectGraphic(
 
     return graphicsDB?.[String(grhIndex)];
 }
+
+const MOUNT_ICON_OFFSETS: Record<number, { x: number; y: number }> = {
+    888: { x: 5, y: 0 },
+    889: { x: 3, y: 0 },
+    890: { x: 4, y: 0 },
+    891: { x: 3, y: 0 },
+    892: { x: 2, y: 1 },
+    893: { x: 3, y: 0 },
+    894: { x: 4, y: 0 },
+    895: { x: 4, y: 0 },
+    896: { x: 3, y: 0 },
+    897: { x: 3, y: 0 },
+    898: { x: 3, y: 0 },
+    899: { x: 4, y: 0 },
+};
 
 function QuestRewardIcon({
     reward,
@@ -426,7 +441,9 @@ function MountGraphic({
     compact?: boolean;
 }) {
     const graphicData = resolveObjectGraphic(mount.itemId, objectsDB, graphicsDB);
-    const targetSize = compact ? 72 : 154;
+    const targetSize = compact ? 38 : 96;
+    const iconOffset = MOUNT_ICON_OFFSETS[Number(mount.itemId)] ?? { x: 0, y: 0 };
+    const offsetScale = compact ? 0.6 : 1;
 
     if (!graphicData?.numFile) {
         return (
@@ -436,7 +453,7 @@ function MountGraphic({
         );
     }
 
-    const scale = Math.min(compact ? 2.2 : 3.6, targetSize / Math.max(graphicData.width, graphicData.height, 1));
+    const scale = Math.min(compact ? 1.35 : 2.45, targetSize / Math.max(graphicData.width, graphicData.height, 1));
     return (
         <div className="relative h-full min-h-[72px] w-full overflow-hidden rounded border border-amber-300/18 bg-[radial-gradient(circle_at_50%_45%,rgba(245,186,71,0.16),rgba(0,0,0,0.32)_60%)]">
             <div
@@ -447,7 +464,7 @@ function MountGraphic({
                     height: graphicData.height,
                     backgroundImage: `url(${getTexturePath(graphicData)})`,
                     backgroundPosition: `-${graphicData.sX}px -${graphicData.sY}px`,
-                    transform: `translate(-50%, -50%) scale(${scale})`,
+                    transform: `translate(calc(-50% + ${iconOffset.x * offsetScale}px), calc(-50% + ${iconOffset.y * offsetScale}px)) scale(${scale})`,
                     transformOrigin: "center",
                 }}
             />
@@ -459,10 +476,14 @@ function MountStat({
     icon,
     label,
     value,
+    canAssign = false,
+    onAssign,
 }: {
     icon: React.ReactNode;
     label: string;
     value: number;
+    canAssign?: boolean;
+    onAssign?: () => void;
 }) {
     return (
         <div className="flex items-center justify-between gap-2 border-b border-white/8 px-1 py-1 text-[11px]">
@@ -470,7 +491,19 @@ function MountStat({
                 <span className="text-amber-200">{icon}</span>
                 <span className="truncate">{label}</span>
             </span>
-            <span className="shrink-0 font-semibold text-stone-100">{formatAmount(value)}</span>
+            <span className="flex shrink-0 items-center gap-1">
+                <span className="font-semibold text-stone-100">{formatAmount(value)}</span>
+                {canAssign ? (
+                    <button
+                        type="button"
+                        onClick={onAssign}
+                        className="grid h-5 w-5 place-items-center rounded border border-amber-300/50 bg-amber-300/12 text-amber-100 transition hover:bg-amber-300/24"
+                        title={`Asignar punto a ${label}`}
+                    >
+                        <Plus aria-hidden="true" className="h-3 w-3" strokeWidth={2} />
+                    </button>
+                ) : null}
+            </span>
         </div>
     );
 }
@@ -513,6 +546,17 @@ function MountHubTab({
 }) {
     const selectedRef = selectedMount?.shortId || selectedMount?.id || "";
     const activeOwner = selectedMount?.mounted || selectedMount?.active ? "Mi Personaje" : "-";
+    const canAssignStats = Number(selectedMount?.freeStatPoints ?? 0) > 0;
+    const assignMountStat = React.useCallback(
+        (stat: string) => {
+            if (!selectedRef) {
+                return;
+            }
+
+            onSendCommand?.(`/monturastat ${selectedRef} ${stat}`);
+        },
+        [onSendCommand, selectedRef],
+    );
 
     return (
         <div className="grid h-full min-h-0 gap-3 lg:grid-cols-[minmax(270px,0.9fr)_minmax(390px,1.25fr)_minmax(260px,0.85fr)]">
@@ -538,13 +582,13 @@ function MountHubTab({
                                         key={mount.id}
                                         type="button"
                                         onClick={() => setSelectedMountId(mount.id)}
-                                        className={`grid w-full grid-cols-[54px_minmax(0,1fr)_104px] gap-2 rounded border p-1.5 text-left transition ${
+                                        className={`grid w-full grid-cols-[42px_minmax(0,1fr)_100px] gap-2 rounded border p-1.5 text-left transition ${
                                             selected
                                                 ? "border-amber-300/80 bg-[linear-gradient(90deg,rgba(245,158,11,0.18),rgba(0,0,0,0.08))]"
                                                 : "border-transparent bg-white/[0.03] hover:border-stone-600/70 hover:bg-white/[0.06]"
                                         }`}
                                     >
-                                        <div className="h-[48px]">
+                                        <div className="h-[38px]">
                                             <MountGraphic mount={mount} objectsDB={objectsDB} graphicsDB={graphicsDB} compact />
                                         </div>
                                         <div className="min-w-0 self-center">
@@ -599,7 +643,7 @@ function MountHubTab({
                         <div className="min-h-0 flex-1 p-4 pt-2">
                             <div className="grid gap-3 md:grid-cols-[minmax(210px,1fr)_134px]">
                                 <div className="min-w-0">
-                                    <div className="h-[112px]">
+                                    <div className="h-[92px]">
                                         <MountGraphic mount={selectedMount} objectsDB={objectsDB} graphicsDB={graphicsDB} />
                                     </div>
                                     <MountExperienceBar mount={selectedMount} />
@@ -639,20 +683,23 @@ function MountHubTab({
                             </div>
 
                             <div className="mt-3 rounded border border-amber-200/10 bg-black/24 p-3">
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-200">
-                                    Estadisticas
-                                </p>
+                                <div className="flex items-center justify-between gap-3">
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-200">
+                                        Estadisticas
+                                    </p>
+                                    <span className="text-xs font-semibold text-amber-100">
+                                        Puntos libres: {formatAmount(selectedMount.freeStatPoints)}
+                                    </span>
+                                </div>
                                 <div className="mt-2 grid gap-x-6 sm:grid-cols-2">
-                                    <MountStat icon={<Heart className="h-4 w-4" />} label="Vida" value={selectedMount.vida} />
-                                    <MountStat icon={<Swords className="h-4 w-4" />} label="Golpe" value={selectedMount.npcDamage} />
-                                    <MountStat icon={<Swords className="h-4 w-4" />} label="Atk. cuerpo" value={selectedMount.meleeAttack} />
-                                    <MountStat icon={<Shield className="h-4 w-4" />} label="Def. cuerpo" value={selectedMount.meleeDefense} />
-                                    <MountStat icon={<Swords className="h-4 w-4" />} label="Atk. proyectiles" value={selectedMount.rangedAttack} />
-                                    <MountStat icon={<Shield className="h-4 w-4" />} label="Def. proyectiles" value={selectedMount.rangedDefense} />
-                                    <MountStat icon={<Sparkles className="h-4 w-4" />} label="Atk. magico" value={selectedMount.magicAttack} />
-                                    <MountStat icon={<Shield className="h-4 w-4" />} label="Def. magica" value={selectedMount.magicDefense} />
-                                    <MountStat icon={<Activity className="h-4 w-4" />} label="Evasion" value={selectedMount.evasion} />
-                                    <MountStat icon={<Sparkles className="h-4 w-4" />} label="Daño a NPCs" value={selectedMount.npcDamage} />
+                                    <MountStat icon={<Target className="h-4 w-4" />} label="Daño a NPCs" value={selectedMount.npcDamage} />
+                                    <MountStat icon={<Swords className="h-4 w-4" />} label="Atk. cuerpo" value={selectedMount.meleeAttack} canAssign={canAssignStats} onAssign={() => assignMountStat("cuerpo")} />
+                                    <MountStat icon={<Shield className="h-4 w-4" />} label="Def. cuerpo" value={selectedMount.meleeDefense} canAssign={canAssignStats} onAssign={() => assignMountStat("defcuerpo")} />
+                                    <MountStat icon={<Swords className="h-4 w-4" />} label="Atk. proyectiles" value={selectedMount.rangedAttack} canAssign={canAssignStats} onAssign={() => assignMountStat("proyectiles")} />
+                                    <MountStat icon={<Shield className="h-4 w-4" />} label="Def. proyectiles" value={selectedMount.rangedDefense} canAssign={canAssignStats} onAssign={() => assignMountStat("defproyectiles")} />
+                                    <MountStat icon={<Sparkles className="h-4 w-4" />} label="Atk. magico" value={selectedMount.magicAttack} canAssign={canAssignStats} onAssign={() => assignMountStat("magia")} />
+                                    <MountStat icon={<Shield className="h-4 w-4" />} label="Def. magica" value={selectedMount.magicDefense} canAssign={canAssignStats} onAssign={() => assignMountStat("defmagia")} />
+                                    <MountStat icon={<Activity className="h-4 w-4" />} label="Evasion" value={selectedMount.evasion} canAssign={canAssignStats} onAssign={() => assignMountStat("evasion")} />
                                 </div>
                             </div>
                         </div>
@@ -692,6 +739,10 @@ function MountHubTab({
                                 <div className="flex justify-between gap-3 border-b border-white/10 pb-1.5">
                                     <span className="text-stone-400">Daño a NPCs</span>
                                     <span className="text-stone-100">{formatAmount(selectedMount.npcDamage)}</span>
+                                </div>
+                                <div className="flex justify-between gap-3 border-b border-white/10 pb-1.5">
+                                    <span className="text-stone-400">Puntos libres</span>
+                                    <span className="text-stone-100">{formatAmount(selectedMount.freeStatPoints)}</span>
                                 </div>
                                 <div className="flex justify-between gap-3 border-b border-white/10 pb-1.5">
                                     <span className="text-stone-400">Dueño</span>

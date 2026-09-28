@@ -360,6 +360,7 @@ export type MountStateEntry = {
     maxLevel: number;
     npcDamage: number;
     vida: number;
+    freeStatPoints: number;
     meleeAttack: number;
     meleeDefense: number;
     rangedAttack: number;

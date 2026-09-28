@@ -3057,6 +3057,15 @@ const command: CommandApi = {
                     break;
                 }
 
+                case "/monturastat": {
+                    const mounts = require("./mounts") as typeof import("./mounts");
+                    const [ref, stat] = nextText.trim().split(/\s+/);
+                    const result = mounts.assignStatPoint(user, ref, stat);
+                    handleProtocol.console(result.message, result.ok ? "#E69500" : "white", 1, 0, ws as CommandClient);
+                    mounts.sendMountState(String(clientId));
+                    break;
+                }
+
                 case "/ofertarmontura": {
                     const mounts = require("./mounts") as typeof import("./mounts");
                     const trade = require("./playerTrade") as typeof import("./playerTrade");
@@ -3072,7 +3081,7 @@ const command: CommandApi = {
 
                 case "/woao": {
                     handleProtocol.console(
-                        "WOAO: /quest /quests /questaceptar /questabandonar /montura /activarmontura /renombrarmontura /liberarmontura /ofertarmontura /premios /canjear /donaciones /canjeardonacion /viaje /comerciar /ranked /hunger /torneo /participar /atorneo /remort /ciudades /castillos /castillo /clanpuntos /bloodcastle /guerra /templo /domar /robar /critico /pagarmulta /casa /dia /party /aceptar /partyinfo /salirparty",
+                        "WOAO: /quest /quests /questaceptar /questabandonar /montura /activarmontura /renombrarmontura /liberarmontura /monturastat /ofertarmontura /premios /canjear /donaciones /canjeardonacion /viaje /comerciar /ranked /hunger /torneo /participar /atorneo /remort /ciudades /castillos /castillo /clanpuntos /bloodcastle /guerra /templo /domar /robar /critico /pagarmulta /casa /dia /party /aceptar /partyinfo /salirparty",
                         "#E69500",
                         1,
                         0,

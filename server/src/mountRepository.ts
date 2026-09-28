@@ -39,6 +39,7 @@ export type MountInstance = {
     magicAttack: number;
     magicDefense: number;
     evasion: number;
+    freeStatPoints: number;
     perks: MountPerks;
     rollHistory: MountRoll[];
     previousOwners: string[];
@@ -54,6 +55,46 @@ type MountStore = {
 
 const DATA_PATH = path.resolve(__dirname, "../data/mountInstances.json");
 const SCHEMA_VERSION = 1;
+const ASSIGNABLE_STAT_KEYS = [
+    "meleeAttack",
+    "meleeDefense",
+    "rangedAttack",
+    "rangedDefense",
+    "magicAttack",
+    "magicDefense",
+    "evasion",
+] as const;
+
+function normalizeRollHistory(rawRollHistory: unknown): MountRoll[] {
+    if (!Array.isArray(rawRollHistory)) {
+        return [];
+    }
+
+    return rawRollHistory
+        .map((roll): MountRoll | null => {
+            if (!roll || typeof roll !== "object") {
+                return null;
+            }
+
+            const source = roll as Partial<MountRoll>;
+            const kind = source.kind === "create" || source.kind === "level" ? source.kind : "level";
+            return {
+                level: Math.max(1, Math.floor(Number(source.level ?? 1))),
+                kind,
+                npcDamageDelta: Math.max(0, Math.floor(Number(source.npcDamageDelta ?? 0))),
+                vidaDelta: Math.max(0, Math.floor(Number(source.vidaDelta ?? 0))),
+                meleeAttackDelta: Math.max(0, Math.floor(Number(source.meleeAttackDelta ?? 0))),
+                meleeDefenseDelta: Math.max(0, Math.floor(Number(source.meleeDefenseDelta ?? 0))),
+                rangedAttackDelta: Math.max(0, Math.floor(Number(source.rangedAttackDelta ?? 0))),
+                rangedDefenseDelta: Math.max(0, Math.floor(Number(source.rangedDefenseDelta ?? 0))),
+                magicAttackDelta: Math.max(0, Math.floor(Number(source.magicAttackDelta ?? 0))),
+                magicDefenseDelta: Math.max(0, Math.floor(Number(source.magicDefenseDelta ?? 0))),
+                evasionDelta: Math.max(0, Math.floor(Number(source.evasionDelta ?? 0))),
+                createdAt: String(source.createdAt ?? new Date().toISOString()),
+            };
+        })
+        .filter((roll): roll is MountRoll => Boolean(roll));
+}
 
 let loaded = false;
 let store: MountStore = {
@@ -66,15 +107,10 @@ function normalizeInstance(raw: Partial<MountInstance>): MountInstance | null {
         return null;
     }
 
-    return {
-        id: String(raw.id),
-        typeId: Number(raw.typeId),
-        ownerCharacterId: String(raw.ownerCharacterId),
-        name: String(raw.name ?? "Mascota"),
-        level: Math.max(1, Math.floor(Number(raw.level ?? 1))),
-        exp: Math.max(0, Math.floor(Number(raw.exp ?? 0))),
-        npcDamage: Math.max(0, Math.floor(Number(raw.npcDamage ?? 0))),
-        vida: Math.max(0, Math.floor(Number(raw.vida ?? 0))),
+    const level = Math.max(1, Math.floor(Number(raw.level ?? 1)));
+    const rollHistory = normalizeRollHistory(raw.rollHistory);
+    const assignableBudget = Math.max(0, level * 2);
+    const rawStats = {
         meleeAttack: Math.max(0, Math.floor(Number(raw.meleeAttack ?? 0))),
         meleeDefense: Math.max(0, Math.floor(Number(raw.meleeDefense ?? 0))),
         rangedAttack: Math.max(0, Math.floor(Number(raw.rangedAttack ?? 0))),
@@ -82,8 +118,69 @@ function normalizeInstance(raw: Partial<MountInstance>): MountInstance | null {
         magicAttack: Math.max(0, Math.floor(Number(raw.magicAttack ?? 0))),
         magicDefense: Math.max(0, Math.floor(Number(raw.magicDefense ?? 0))),
         evasion: Math.max(0, Math.floor(Number(raw.evasion ?? 0))),
+    };
+    const rawAssigned = ASSIGNABLE_STAT_KEYS.reduce((sum, key) => sum + rawStats[key], 0);
+    const normalizedStats = { ...rawStats };
+
+    if (rawAssigned > assignableBudget && rawAssigned > 0) {
+        let assigned = 0;
+
+        for (const key of ASSIGNABLE_STAT_KEYS) {
+            const nextValue = Math.floor((rawStats[key] / rawAssigned) * assignableBudget);
+            normalizedStats[key] = nextValue;
+            assigned += nextValue;
+        }
+
+        let remaining = assignableBudget - assigned;
+        for (const key of ASSIGNABLE_STAT_KEYS) {
+            if (remaining <= 0) {
+                break;
+            }
+            if (rawStats[key] > 0) {
+                normalizedStats[key] += 1;
+                remaining -= 1;
+            }
+        }
+    }
+
+    const assignedStats = ASSIGNABLE_STAT_KEYS.reduce((sum, key) => sum + normalizedStats[key], 0);
+    const storedFreePoints = Math.max(0, Math.floor(Number(raw.freeStatPoints ?? 0)));
+    const availableFreePoints = Math.max(0, assignableBudget - assignedStats);
+    const freeStatPoints = rawAssigned > assignableBudget
+        ? availableFreePoints
+        : Number.isFinite(Number(raw.freeStatPoints))
+          ? Math.min(storedFreePoints, availableFreePoints)
+          : availableFreePoints;
+    const storedNpcDamage = Math.max(0, Math.floor(Number(raw.npcDamage ?? 0)));
+    const npcDamageFromHistory = rollHistory.reduce(
+        (sum, roll) => sum + Math.max(0, Math.floor(Number(roll.npcDamageDelta ?? 0))),
+        0,
+    );
+    const storedVida = Math.max(0, Math.floor(Number(raw.vida ?? 0)));
+    const vidaFromHistory = rollHistory.reduce(
+        (sum, roll) => sum + Math.max(0, Math.floor(Number(roll.vidaDelta ?? 0))),
+        0,
+    );
+
+    return {
+        id: String(raw.id),
+        typeId: Number(raw.typeId),
+        ownerCharacterId: String(raw.ownerCharacterId),
+        name: String(raw.name ?? "Mascota"),
+        level,
+        exp: Math.max(0, Math.floor(Number(raw.exp ?? 0))),
+        npcDamage: storedNpcDamage > 0 ? storedNpcDamage : npcDamageFromHistory,
+        vida: storedVida > 0 ? storedVida : vidaFromHistory,
+        meleeAttack: normalizedStats.meleeAttack,
+        meleeDefense: normalizedStats.meleeDefense,
+        rangedAttack: normalizedStats.rangedAttack,
+        rangedDefense: normalizedStats.rangedDefense,
+        magicAttack: normalizedStats.magicAttack,
+        magicDefense: normalizedStats.magicDefense,
+        evasion: normalizedStats.evasion,
+        freeStatPoints,
         perks: raw.perks ?? {},
-        rollHistory: Array.isArray(raw.rollHistory) ? raw.rollHistory : [],
+        rollHistory,
         previousOwners: Array.isArray(raw.previousOwners) ? raw.previousOwners.map(String) : [],
         createdAt: String(raw.createdAt ?? new Date().toISOString()),
         updatedAt: String(raw.updatedAt ?? new Date().toISOString()),
@@ -220,4 +317,3 @@ export function transferMountInstance(
     persistStore();
     return instance;
 }
-

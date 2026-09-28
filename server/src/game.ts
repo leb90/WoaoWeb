@@ -2736,6 +2736,9 @@ function applyUserSpellDamage(
 }
 
 function notifyNpcSpellDamage(user: GameCharacter, npc: GameNpc, dmg: number) {
+    const petDamage = applyMountNpcAttack(user, npc, dmg, "magic");
+    const totalDamage = dmg + petDamage;
+
     withUserClient(user.id, (userClient) => {
         handleProtocol.console(
             "Le has quitado " + dmg + " puntos de vida a " + npc.nameCharacter,
@@ -2744,6 +2747,16 @@ function notifyNpcSpellDamage(user: GameCharacter, npc: GameNpc, dmg: number) {
             0,
             userClient,
         );
+
+        if (petDamage > 0) {
+            handleProtocol.console(
+                "La Mascota ha causado " + petDamage + " puntos de daño.",
+                "#E69500",
+                1,
+                0,
+                userClient,
+            );
+        }
     });
 
     game.loopAreaPos(npc.map, npc.pos, function (target: GameCharacter) {
@@ -2756,8 +2769,30 @@ function notifyNpcSpellDamage(user: GameCharacter, npc: GameNpc, dmg: number) {
         });
     });
 
-    game.calcularExp(user.id, npc.id, dmg);
+    game.calcularExp(user.id, npc.id, totalDamage);
     broadcastNpcVitalsDelta(npc);
+}
+
+function applyMountNpcAttack(
+    user: GameCharacter,
+    npc: GameNpc,
+    baseDamage: number,
+    kind: "melee" | "ranged" | "magic",
+) {
+    if (Number(npc.hp ?? 0) <= 0) {
+        return 0;
+    }
+
+    const mounts = require("./mounts") as typeof import("./mounts");
+    const result = mounts.rollNpcAttackDamage(user, baseDamage, kind);
+    const damage = Math.min(Math.max(0, Math.floor(Number(result.damage ?? 0))), Math.max(0, Number(npc.hp ?? 0)));
+
+    if (damage <= 0) {
+        return 0;
+    }
+
+    npc.hp -= damage;
+    return damage;
 }
 
 function notifyUserSpellDamage(user: GameCharacter, userAttacked: GameCharacter, dmg: number) {
@@ -8357,6 +8392,9 @@ function Game(this: GameApi) {
             });
 
             if (dmg > 0) {
+                const petDamage = applyMountNpcAttack(user, npc, dmg, "magic");
+                const totalDamage = dmg + petDamage;
+
                 withUserClient(idUser, (userClient) => {
                     handleProtocol.console(
                         "Le has quitado " + dmg + " puntos de vida a " + npc.nameCharacter,
@@ -8365,6 +8403,16 @@ function Game(this: GameApi) {
                         0,
                         userClient,
                     );
+
+                    if (petDamage > 0) {
+                        handleProtocol.console(
+                            "La Mascota ha causado " + petDamage + " puntos de daño.",
+                            "#E69500",
+                            1,
+                            0,
+                            userClient,
+                        );
+                    }
                 });
 
                 game.loopAreaPos(npc.map, npc.pos, function (target: GameCharacter) {
@@ -8377,7 +8425,8 @@ function Game(this: GameApi) {
                     });
                 });
 
-                game.calcularExp(idUser, idNpc, dmg);
+                game.calcularExp(idUser, idNpc, totalDamage);
+                dmg = totalDamage;
             } else if (dmg < 0) {
                 withUserClient(idUser, (userClient) => {
                     handleProtocol.console(
@@ -9128,13 +9177,6 @@ function Game(this: GameApi) {
                         });
                     } else {
                         dmg = Math.max(1, Math.floor(dmg * critResult.multiplier));
-                        const mounts = require("./mounts") as typeof import("./mounts");
-                        dmg = mounts.applyOutgoingDamage(
-                            user,
-                            dmg,
-                            isRanged ? "ranged" : "melee",
-                            true,
-                        );
                         npc.hp -= dmg;
                     }
 
@@ -9150,6 +9192,10 @@ function Game(this: GameApi) {
                 if (!isDragonSlayerHit && npc.hp > 0 && game.puedeApu(idUser)) {
                     stabResult = game.apuNpc(idUser, idNpc, dmg);
                 }
+
+                const attackKind = Boolean(vars.datObj[weaponItemId]?.proyectil) ? "ranged" : "melee";
+                const petDamage = applyMountNpcAttack(user, npc, stabResult.totalDamage, attackKind);
+                const totalDamage = stabResult.totalDamage + petDamage;
 
                 if (stabResult.stabbed) {
                     emitNpcFxToArea(npc, COMBAT_STABBING_FX_ID);
@@ -9175,6 +9221,18 @@ function Game(this: GameApi) {
                     });
                 }
 
+                if (petDamage > 0) {
+                    withUserClient(idUser, (userClient) => {
+                        handleProtocol.console(
+                            "La Mascota ha causado " + petDamage + " puntos de daño.",
+                            "#E69500",
+                            1,
+                            0,
+                            userClient,
+                        );
+                    });
+                }
+
                 game.loopAreaPos(npc.map, npc.pos, function (target: GameCharacter) {
                     withUserClient(target.id, (targetClient) => {
                         handleProtocol.playSound(idUser, vars.arSounds.SND_IMPACTO, targetClient);
@@ -9186,7 +9244,7 @@ function Game(this: GameApi) {
                     });
                 });
 
-                game.calcularExp(idUser, idNpc, dmg);
+                game.calcularExp(idUser, idNpc, totalDamage);
                 broadcastNpcVitalsDelta(npc);
                 trainCharacterSkill(user, getAttackTrainSkillId(user));
 
@@ -9194,7 +9252,7 @@ function Game(this: GameApi) {
                     trainCharacterSkill(user, skills.SKILLS.apunalar);
                 }
 
-                return stabResult.stabbed ? `¡${stabResult.totalDamage}!` : dmg;
+                return stabResult.stabbed ? `¡${totalDamage}!` : totalDamage;
             } else {
                 trainCharacterSkill(user, skills.SKILLS.tacticas);
                 emitNpcFxToArea(npc, COMBAT_MISS_FX_ID);
@@ -9739,7 +9797,6 @@ function Game(this: GameApi) {
 
                 if (extraDamage > 0) {
                     npc.hp -= extraDamage;
-                    game.calcularExp(idUser, idNpc, extraDamage);
                 }
 
                 return {

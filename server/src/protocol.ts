@@ -3772,7 +3772,14 @@ function attackMele(ws: RuntimeClient) {
                                 return;
                             }
 
-                            handleProtocol.dialog(ws.id, "" + dmg, "", "red", 0, targetClient);
+                            handleProtocol.dialog(
+                                resolvedTarget.isNpc ? resolvedTarget.id : ws.id,
+                                "" + dmg,
+                                "",
+                                "red",
+                                0,
+                                targetClient,
+                            );
                         });
                     }
                 });
@@ -3987,7 +3994,14 @@ function attackRange(ws: RuntimeClient) {
                                         return;
                                     }
 
-                                    handleProtocol.dialog(ws.id, "" + dmg, "", "red", 0, targetClient);
+                                    handleProtocol.dialog(
+                                        resolvedTarget.isNpc ? resolvedTarget.id : ws.id,
+                                        "" + dmg,
+                                        "",
+                                        "red",
+                                        0,
+                                        targetClient,
+                                    );
                                 });
                             }
                         });
@@ -4380,6 +4394,20 @@ function attackSpell(ws: RuntimeClient) {
                         soundId: datSpell.wav,
                         msg: datSpell.palabrasMagicas,
                     });
+
+                    if (spellTarget.isNpc && typeof dmg === "number" && dmg > 0) {
+                        game.loopArea(ws, function (target: AreaTarget) {
+                            if (!target.isNpc) {
+                                withTargetClient(target.id, (targetClient) => {
+                                    if (!canReceiveCharacterEvent(target.id, ws.id)) {
+                                        return;
+                                    }
+
+                                    handleProtocol.dialog(spellTarget.id, "" + dmg, "", "red", 0, targetClient);
+                                });
+                            }
+                        });
+                    }
 
                     for (const extraTargetId of extraTargetIds) {
                         if (String(extraTargetId) === String(spellTarget.id)) {

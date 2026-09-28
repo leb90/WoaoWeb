@@ -15,7 +15,6 @@ import {
 import {
     applyMountIncomingDamage,
     applyMountNpcDamageReduction,
-    applyMountOutgoingPveDamage,
     applyMountOutgoingPvpDamage,
     describeTalentId,
     getActiveMountTalentBonuses,
@@ -57,6 +56,45 @@ type MountUser = {
     mountInstanceId?: string;
 };
 
+const ASSIGNABLE_STATS = [
+    "meleeAttack",
+    "meleeDefense",
+    "rangedAttack",
+    "rangedDefense",
+    "magicAttack",
+    "magicDefense",
+    "evasion",
+] as const;
+type AssignableMountStat = typeof ASSIGNABLE_STATS[number];
+
+const STAT_ALIASES: Record<string, AssignableMountStat> = {
+    cuerpo: "meleeAttack",
+    ataque_cuerpo: "meleeAttack",
+    melee: "meleeAttack",
+    meleeattack: "meleeAttack",
+    defcuerpo: "meleeDefense",
+    defensa_cuerpo: "meleeDefense",
+    meleedefense: "meleeDefense",
+    flecha: "rangedAttack",
+    proyectil: "rangedAttack",
+    proyectiles: "rangedAttack",
+    ranged: "rangedAttack",
+    rangedattack: "rangedAttack",
+    defflecha: "rangedDefense",
+    defproyectil: "rangedDefense",
+    defproyectiles: "rangedDefense",
+    rangeddefense: "rangedDefense",
+    magia: "magicAttack",
+    ataque_magico: "magicAttack",
+    magic: "magicAttack",
+    magicattack: "magicAttack",
+    defmagia: "magicDefense",
+    defensa_magica: "magicDefense",
+    magicdefense: "magicDefense",
+    evasion: "evasion",
+    evasión: "evasion",
+};
+
 export const MAX_OWNED_MOUNTS = null;
 export {
     PVP_DAMAGE_CAP,
@@ -91,6 +129,9 @@ const mountTypes = new Map<number, MountType>();
 const eggItemsToType = new Map<number, number>();
 let talentTable: Record<string, Record<string, string[]>> = {};
 
+const DRAGON_TYPE_ID = 5;
+const DONATION_POWER_TYPE_IDS = new Set([7, 8]);
+
 function tell(idUser: string, message: string) {
     const client = vars.clients[idUser];
     if (client) {
@@ -100,6 +141,33 @@ function tell(idUser: string, message: string) {
 
 function randomInt(min: number, max: number) {
     return funct.randomIntFromInterval(Math.ceil(min), Math.floor(max));
+}
+
+function normalizeStatRef(statRef: string): AssignableMountStat | null {
+    const normalized = String(statRef ?? "")
+        .trim()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[\s-]+/g, "_");
+
+    return STAT_ALIASES[normalized] ?? null;
+}
+
+function assignRandomStatPoint(instance: MountInstance) {
+    const stat = ASSIGNABLE_STATS[randomInt(0, ASSIGNABLE_STATS.length - 1)];
+    instance[stat] = Math.max(0, Number(instance[stat] ?? 0)) + 1;
+}
+
+function rollNpcDamageDelta(mountType: MountType) {
+    const base = Number(mountType.golpePorLevel ?? 13);
+    const tunedBase = DONATION_POWER_TYPE_IDS.has(mountType.id)
+        ? Math.max(base, 16)
+        : mountType.id === DRAGON_TYPE_ID
+          ? Math.max(base, 15)
+          : base;
+
+    return randomInt(Math.max(1, Math.floor(tunedBase / 2)), tunedBase);
 }
 
 export function getMountExpRequired(level: number) {
@@ -120,40 +188,26 @@ function getType(typeId: number) {
 }
 
 function createRoll(mountType: MountType, level: number, kind: MountRoll["kind"]): MountRoll {
-    const profileAttack = Math.max(
-        1,
-        mountType.aumentoCuerpo,
-        mountType.aumentoFlecha,
-        mountType.aumentoMagia,
-        2,
-    );
-
     return {
         level,
         kind,
-        npcDamageDelta: randomInt(5, 20),
-        vidaDelta: randomInt(Math.max(1, Math.ceil(mountType.vidaPorLevel / 2)), mountType.vidaPorLevel),
-        meleeAttackDelta: randomInt(0, Math.max(1, mountType.aumentoCuerpo || profileAttack)),
-        meleeDefenseDelta: randomInt(0, Math.max(1, Math.ceil(mountType.vidaPorLevel / 15))),
-        rangedAttackDelta: randomInt(0, Math.max(1, mountType.aumentoFlecha || profileAttack)),
-        rangedDefenseDelta: randomInt(0, Math.max(1, Math.ceil(mountType.vidaPorLevel / 18))),
-        magicAttackDelta: randomInt(0, Math.max(1, mountType.aumentoMagia || profileAttack)),
-        magicDefenseDelta: randomInt(0, Math.max(1, Math.ceil(mountType.vidaPorLevel / 18))),
-        evasionDelta: randomInt(0, Math.max(1, mountType.aumentoEvasion || 2)),
+        npcDamageDelta: rollNpcDamageDelta(mountType),
+        vidaDelta: 0,
+        meleeAttackDelta: 0,
+        meleeDefenseDelta: 0,
+        rangedAttackDelta: 0,
+        rangedDefenseDelta: 0,
+        magicAttackDelta: 0,
+        magicDefenseDelta: 0,
+        evasionDelta: 0,
         createdAt: new Date().toISOString(),
     };
 }
 
 function applyRoll(instance: MountInstance, roll: MountRoll) {
-    instance.npcDamage += roll.npcDamageDelta;
-    instance.vida += roll.vidaDelta;
-    instance.meleeAttack += roll.meleeAttackDelta;
-    instance.meleeDefense += roll.meleeDefenseDelta;
-    instance.rangedAttack += roll.rangedAttackDelta;
-    instance.rangedDefense += roll.rangedDefenseDelta;
-    instance.magicAttack += roll.magicAttackDelta;
-    instance.magicDefense += roll.magicDefenseDelta;
-    instance.evasion += roll.evasionDelta;
+    instance.npcDamage = Math.max(0, Number(instance.npcDamage ?? 0)) + Math.max(0, Number(roll.npcDamageDelta ?? 0));
+    instance.vida = Math.max(0, Number(instance.vida ?? 0)) + Math.max(0, Number(roll.vidaDelta ?? 0));
+    instance.freeStatPoints = Math.max(0, Number(instance.freeStatPoints ?? 0)) + 2;
     instance.rollHistory.push(roll);
 }
 
@@ -197,11 +251,19 @@ function createFreshMount(ownerCharacterId: string, mountType: MountType): Mount
         magicAttack: 0,
         magicDefense: 0,
         evasion: 0,
+        freeStatPoints: 0,
         perks: {},
         rollHistory: [],
         previousOwners: [],
     });
     applyRoll(instance, initialRoll);
+    for (let i = 0; i < 2; i += 1) {
+        if (instance.freeStatPoints <= 0) {
+            break;
+        }
+        assignRandomStatPoint(instance);
+        instance.freeStatPoints -= 1;
+    }
     saveMountInstance(instance);
     return instance;
 }
@@ -219,15 +281,16 @@ function migrateLegacyMount(ownerCharacterId: string, typeId: number, legacy: Mo
         name: legacy.name || mountType.name,
         level,
         exp: Math.max(0, Math.floor(Number(legacy.exp ?? 0))),
-        npcDamage: Math.max(0, Math.floor(Number(legacy.golpe ?? 0))),
-        vida: Math.max(0, Math.floor(Number(legacy.vida ?? 0))),
-        meleeAttack: Math.max(0, Math.floor(mountType.aumentoCuerpo ?? 0)),
+        npcDamage: 0,
+        vida: 0,
+        meleeAttack: 0,
         meleeDefense: 0,
-        rangedAttack: Math.max(0, Math.floor(mountType.aumentoFlecha ?? 0)),
+        rangedAttack: 0,
         rangedDefense: 0,
-        magicAttack: Math.max(0, Math.floor(mountType.aumentoMagia ?? 0)),
+        magicAttack: 0,
         magicDefense: 0,
-        evasion: Math.max(0, Math.floor(mountType.aumentoEvasion ?? 0)),
+        evasion: 0,
+        freeStatPoints: level * 2,
         perks: {},
         rollHistory: [],
         previousOwners: [],
@@ -440,7 +503,7 @@ export function applyOutgoingDamage(
     const bonuses = getActiveMountTalentBonuses(mount);
 
     if (targetIsNpc) {
-        return applyMountOutgoingPveDamage(damage, mount, bonuses, kind);
+        return damage;
     }
 
     // PvP: percentage talents + tiny legacy stat contribution (capped together via pvp cap)
@@ -448,6 +511,36 @@ export function applyOutgoingDamage(
         kind === "ranged" ? mount.rangedAttack : kind === "magic" ? mount.magicAttack : mount.meleeAttack;
     const withLegacy = Math.max(1, Math.floor(damage * (1 + getMountPvpDamageBonus(Math.max(0, legacyStat) / 1000))));
     return applyMountOutgoingPvpDamage(withLegacy, bonuses, kind);
+}
+
+export function rollNpcAttackDamage(
+    user: MountUser,
+    baseDamage: number,
+    kind: "melee" | "ranged" | "magic" = "melee",
+) {
+    if (!user?.mounted) {
+        return { damage: 0, mount: null as MountInstance | null };
+    }
+
+    const mount = resolveActiveMount(user);
+    if (!mount) {
+        return { damage: 0, mount };
+    }
+
+    const stat = kind === "ranged" ? mount.rangedAttack : kind === "magic" ? mount.magicAttack : mount.meleeAttack;
+    if (Math.max(0, Number(stat ?? 0)) <= 0) {
+        return { damage: 0, mount };
+    }
+
+    const bonuses = getActiveMountTalentBonuses(mount);
+    const percent = kind === "magic" ? Math.max(bonuses.pveMagic, bonuses.pve) : bonuses.pve;
+    const talentDamage = Math.floor(Math.max(0, Number(baseDamage ?? 0)) * getMountPveDamageBonus(percent));
+    const damage = Math.max(0, Math.floor(Number(mount.npcDamage ?? 0)) + talentDamage);
+
+    return {
+        damage,
+        mount,
+    };
 }
 
 export function applyIncomingMountDamage(
@@ -546,6 +639,56 @@ export function releaseMount(user: MountUser, ref: string) {
     return { ok: true, message: `Liberaste a ${mount.name}.`, mount };
 }
 
+export function assignStatPoint(user: MountUser, ref: string, statRef: string) {
+    const stat = normalizeStatRef(statRef);
+    if (!stat) {
+        return {
+            ok: false,
+            message: "Stat invalida. Usa cuerpo, defcuerpo, proyectiles, defproyectiles, magia, defmagia o evasion.",
+        };
+    }
+
+    const mount = resolveMountReference(user, ref);
+    if (!mount) {
+        return { ok: false, message: "No encontre esa mascota." };
+    }
+
+    const freePoints = Math.max(0, Math.floor(Number(mount.freeStatPoints ?? 0)));
+    if (freePoints <= 0) {
+        return { ok: false, message: `${mount.name} no tiene puntos libres.` };
+    }
+
+    mount[stat] = Math.max(0, Number(mount[stat] ?? 0)) + 1;
+    mount.freeStatPoints = freePoints - 1;
+    saveMountInstance(mount);
+    return {
+        ok: true,
+        message: `Asignaste 1 punto a ${describeStat(stat)} de ${mount.name}.`,
+        mount,
+    };
+}
+
+function describeStat(stat: AssignableMountStat) {
+    switch (stat) {
+        case "meleeAttack":
+            return "Ataque cuerpo";
+        case "meleeDefense":
+            return "Defensa cuerpo";
+        case "rangedAttack":
+            return "Ataque proyectiles";
+        case "rangedDefense":
+            return "Defensa proyectiles";
+        case "magicAttack":
+            return "Ataque magico";
+        case "magicDefense":
+            return "Defensa magica";
+        case "evasion":
+            return "Evasion";
+        default:
+            return stat;
+    }
+}
+
 export function transferMountByInstanceId(
     fromUser: MountUser,
     toUser: MountUser,
@@ -610,6 +753,7 @@ export type MountStateEntry = {
     maxLevel: number;
     npcDamage: number;
     vida: number;
+    freeStatPoints: number;
     meleeAttack: number;
     meleeDefense: number;
     rangedAttack: number;
@@ -642,6 +786,7 @@ export function buildMountState(user: MountUser) {
             maxLevel,
             npcDamage: mount.npcDamage,
             vida: mount.vida,
+            freeStatPoints: Math.max(0, Number(mount.freeStatPoints ?? 0)),
             meleeAttack: mount.meleeAttack,
             meleeDefense: mount.meleeDefense,
             rangedAttack: mount.rangedAttack,
@@ -747,7 +892,7 @@ export function describeMount(idUser: string) {
             .join(", ");
         tell(
             idUser,
-            `${mount.name} #${mount.id.slice(0, 6)}${active}: nivel ${mount.level}/${mountType?.topeLevel ?? 30} exp ${mount.exp}/${nextExp} dano NPC ${mount.npcDamage} vida ${mount.vida}${perks ? ` talentos ${perks}` : ""}`,
+            `${mount.name} #${mount.id.slice(0, 6)}${active}: nivel ${mount.level}/${mountType?.topeLevel ?? 30} exp ${mount.exp}/${nextExp} puntos libres ${Math.max(0, Number(mount.freeStatPoints ?? 0))}${perks ? ` talentos ${perks}` : ""}`,
         );
     }
     sendMountState(idUser);

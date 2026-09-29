@@ -104,6 +104,7 @@ type ClanSummary = {
     name: string;
     alignment: ClanAlignment;
     minJoinLevel: number;
+    points: number;
     memberCount: number;
     leaderName: string;
 };
@@ -116,6 +117,10 @@ type ClanMember = {
     criminal: boolean;
     online: boolean | null;
     role: "leader" | "co_leader" | "member";
+    seasonPointsWon: number;
+    seasonPointsLost: number;
+    lifetimePointsWon: number;
+    lifetimePointsLost: number;
 };
 
 type ClanRequest = {
@@ -135,6 +140,7 @@ type ClanDetails = {
     name: string;
     alignment: ClanAlignment;
     minJoinLevel: number;
+    points: number;
     leaderCharacterId: string;
     leaderName: string;
     memberCount: number;
@@ -211,6 +217,18 @@ const classLabels: Record<number, string> = {
 const clanNamePattern = /^[A-Za-z ]+$/;
 const CLAN_CREATION_LEVEL_REQUIRED = 30;
 const CLAN_CREATION_COST = 150_000;
+
+function normalizeClanSearch(value: string): string {
+    return value
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim()
+        .toLowerCase();
+}
+
+function getClanMemberNetPoints(member: ClanMember): number {
+    return member.seasonPointsWon - member.seasonPointsLost;
+}
 
 type HotkeySection = {
     title: string;
@@ -1018,7 +1036,7 @@ export default function InventoryFloatingPanel({
         null,
     );
     const [clanView, setClanView] = React.useState<
-        "list" | "detail" | "manage" | "create"
+        "list" | "detail" | "manage" | "create" | "ranking"
     >("list");
     const [clanLoading, setClanLoading] = React.useState(false);
     const [clanError, setClanError] = React.useState<string | null>(null);
@@ -1027,6 +1045,12 @@ export default function InventoryFloatingPanel({
     );
     const [selectedClanDetails, setSelectedClanDetails] =
         React.useState<ClanDetails | null>(null);
+    const [clanListSearch, setClanListSearch] = React.useState("");
+    const [clanRankingSearch, setClanRankingSearch] = React.useState("");
+    const [clanMemberSearch, setClanMemberSearch] = React.useState("");
+    const [clanMemberSort, setClanMemberSort] = React.useState<
+        "points_desc" | "points_asc" | "name"
+    >("points_desc");
     const [clanCreateName, setClanCreateName] = React.useState("");
     const [clanCreateMinLevel, setClanCreateMinLevel] = React.useState("1");
     const [clanRequestMessage, setClanRequestMessage] = React.useState("");
@@ -1460,13 +1484,99 @@ export default function InventoryFloatingPanel({
                   member.characterId === clanMemberActionMenu.characterId,
           ) ?? null)
         : null;
+    const normalizedClanListSearch = React.useMemo(
+        () => normalizeClanSearch(clanListSearch),
+        [clanListSearch],
+    );
+    const normalizedClanRankingSearch = React.useMemo(
+        () => normalizeClanSearch(clanRankingSearch),
+        [clanRankingSearch],
+    );
+    const normalizedClanMemberSearch = React.useMemo(
+        () => normalizeClanSearch(clanMemberSearch),
+        [clanMemberSearch],
+    );
+    const filteredClans = React.useMemo(() => {
+        const clans = clanOverview?.clans ?? [];
+
+        if (!normalizedClanListSearch) {
+            return clans;
+        }
+
+        return clans.filter((clan) =>
+            normalizeClanSearch(`${clan.name} ${clan.leaderName}`).includes(
+                normalizedClanListSearch,
+            ),
+        );
+    }, [clanOverview?.clans, normalizedClanListSearch]);
+    const rankedClans = React.useMemo(() => {
+        const clans = [...(clanOverview?.clans ?? [])].sort((left, right) => {
+            const byPoints = right.points - left.points;
+
+            if (byPoints !== 0) {
+                return byPoints;
+            }
+
+            return left.name.localeCompare(right.name);
+        });
+
+        if (!normalizedClanRankingSearch) {
+            return clans;
+        }
+
+        return clans.filter((clan) =>
+            normalizeClanSearch(`${clan.name} ${clan.leaderName}`).includes(
+                normalizedClanRankingSearch,
+            ),
+        );
+    }, [clanOverview?.clans, normalizedClanRankingSearch]);
+    const managedClanMembers = React.useMemo(() => {
+        const members = [...(currentClan?.members ?? [])].filter((member) => {
+            if (!normalizedClanMemberSearch) {
+                return true;
+            }
+
+            return normalizeClanSearch(member.name).includes(
+                normalizedClanMemberSearch,
+            );
+        });
+
+        return members.sort((left, right) => {
+            if (clanMemberSort === "name") {
+                return left.name.localeCompare(right.name);
+            }
+
+            const leftPoints = getClanMemberNetPoints(left);
+            const rightPoints = getClanMemberNetPoints(right);
+            const byPoints =
+                clanMemberSort === "points_desc"
+                    ? rightPoints - leftPoints
+                    : leftPoints - rightPoints;
+
+            if (byPoints !== 0) {
+                return byPoints;
+            }
+
+            return left.name.localeCompare(right.name);
+        });
+    }, [clanMemberSort, currentClan?.members, normalizedClanMemberSearch]);
 
     React.useEffect(() => {
         if (!isClanModalOpen) {
             return;
         }
 
-        setClanView(currentClan ? "manage" : "list");
+        setClanView((current) => {
+            if (current === "ranking" || current === "detail") {
+                return current;
+            }
+
+            if (current === "create" && !currentClan) {
+                return current;
+            }
+
+            return currentClan ? "manage" : "list";
+        });
     }, [currentClan, isClanModalOpen]);
 
     function formatClanAlignment(alignment: ClanAlignment) {
@@ -4229,9 +4339,11 @@ export default function InventoryFloatingPanel({
                                         ? `<${detailClan.name}>`
                                         : clanView === "create"
                                           ? "Crear clan"
-                                          : currentClan
-                                            ? `<${currentClan.name}>`
-                                            : "Clanes disponibles"}
+                                          : clanView === "ranking"
+                                            ? "Ranking de clanes"
+                                            : currentClan
+                                              ? `<${currentClan.name}>`
+                                              : "Clanes disponibles"}
                                 </h3>
                             </div>
                             <div className="flex items-center gap-2">
@@ -4253,6 +4365,15 @@ export default function InventoryFloatingPanel({
                                         Ver clanes
                                     </button>
                                 ) : null}
+                                {clanView !== "ranking" ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => setClanView("ranking")}
+                                        className="rounded-[10px] border border-[#8b6a47] bg-[linear-gradient(180deg,#46331f_0%,#26180e_100%)] px-3 py-2 text-[11px] font-bold text-amber-100 transition hover:border-[#c39a6a]"
+                                    >
+                                        Ranking
+                                    </button>
+                                ) : null}
                                 {clanView === "detail" ? (
                                     <button
                                         type="button"
@@ -4266,10 +4387,15 @@ export default function InventoryFloatingPanel({
                                         Volver
                                     </button>
                                 ) : null}
-                                {clanView === "create" ? (
+                                {clanView === "create" ||
+                                clanView === "ranking" ? (
                                     <button
                                         type="button"
-                                        onClick={() => setClanView("list")}
+                                        onClick={() =>
+                                            setClanView(
+                                                currentClan ? "manage" : "list",
+                                            )
+                                        }
                                         className="rounded-[10px] border border-[#8b6a47] bg-[linear-gradient(180deg,#46331f_0%,#26180e_100%)] px-3 py-2 text-[11px] font-bold text-amber-100 transition hover:border-[#c39a6a]"
                                     >
                                         Volver
@@ -4306,12 +4432,26 @@ export default function InventoryFloatingPanel({
                                                 Clanes disponibles
                                             </p>
                                             <span className="text-[11px] text-stone-400">
-                                                {clanOverview?.clans.length ??
-                                                    0}
+                                                {filteredClans.length}/
+                                                {clanOverview?.clans.length ?? 0}
                                             </span>
                                         </div>
+                                        <label className="mt-3 flex items-center gap-2 rounded-[12px] border border-white/10 bg-black/20 px-3 py-2 text-sm text-stone-200">
+                                            <Search className="h-4 w-4 shrink-0 text-stone-500" />
+                                            <input
+                                                type="search"
+                                                value={clanListSearch}
+                                                onChange={(event) =>
+                                                    setClanListSearch(
+                                                        event.target.value,
+                                                    )
+                                                }
+                                                placeholder="Buscar clan o lider"
+                                                className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-stone-500"
+                                            />
+                                        </label>
                                         <div className="mt-3 max-h-[420px] space-y-3 overflow-y-auto pr-1">
-                                            {(clanOverview?.clans ?? []).map(
+                                            {filteredClans.map(
                                                 (clan) => (
                                                     <div
                                                         key={clan.id}
@@ -4332,6 +4472,11 @@ export default function InventoryFloatingPanel({
                                                                     }
                                                                 </div>
                                                                 <div className="mt-1 text-xs text-stone-500">
+                                                                    Puntos{" "}
+                                                                    {formatNumber(
+                                                                        clan.points,
+                                                                    )}{" "}
+                                                                    -{" "}
                                                                     Miembros{" "}
                                                                     {
                                                                         clan.memberCount
@@ -4361,16 +4506,93 @@ export default function InventoryFloatingPanel({
                                             {!clanLoading &&
                                             !clanError &&
                                             !(
-                                                clanOverview?.clans.length ?? 0
+                                                filteredClans.length
                                             ) ? (
                                                 <div className="rounded-[14px] border border-white/8 bg-white/3 px-3 py-4 text-sm text-stone-400">
-                                                    No hay clanes creados
+                                                    No hay clanes para mostrar.
                                                     todavía.
                                                 </div>
                                             ) : null}
                                         </div>
                                     </section>
                                 </div>
+                            ) : null}
+
+                            {clanView === "ranking" ? (
+                                <section className="rounded-[18px] border border-white/8 bg-white/4 p-4">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <p className="text-[11px] uppercase tracking-[0.22em] text-amber-300/78">
+                                            Ranking de clanes
+                                        </p>
+                                        <span className="text-[11px] text-stone-400">
+                                            {rankedClans.length}/
+                                            {clanOverview?.clans.length ?? 0}
+                                        </span>
+                                    </div>
+                                    <label className="mt-3 flex items-center gap-2 rounded-[12px] border border-white/10 bg-black/20 px-3 py-2 text-sm text-stone-200">
+                                        <Search className="h-4 w-4 shrink-0 text-stone-500" />
+                                        <input
+                                            type="search"
+                                            value={clanRankingSearch}
+                                            onChange={(event) =>
+                                                setClanRankingSearch(
+                                                    event.target.value,
+                                                )
+                                            }
+                                            placeholder="Buscar clan o lider"
+                                            className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-stone-500"
+                                        />
+                                    </label>
+                                    <div className="mt-3 max-h-[470px] space-y-2 overflow-y-auto pr-1">
+                                        {rankedClans.map((clan, index) => (
+                                            <div
+                                                key={clan.id}
+                                                className="flex items-center gap-3 rounded-[14px] border border-white/8 bg-white/3 px-3 py-3"
+                                            >
+                                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-amber-300/20 bg-amber-400/10 text-sm font-bold text-amber-200">
+                                                    #{index + 1}
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="truncate text-sm font-semibold text-stone-100">
+                                                        {`<${clan.name}>`}
+                                                    </div>
+                                                    <div className="mt-1 text-xs text-stone-400">
+                                                        Lider {clan.leaderName}{" "}
+                                                        - Miembros{" "}
+                                                        {clan.memberCount}
+                                                    </div>
+                                                </div>
+                                                <div className="shrink-0 text-right">
+                                                    <div className="text-sm font-semibold text-amber-200">
+                                                        {formatNumber(
+                                                            clan.points,
+                                                        )}
+                                                    </div>
+                                                    <div className="text-[11px] uppercase tracking-[0.16em] text-stone-500">
+                                                        pts
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        openClanDetail(clan.id)
+                                                    }
+                                                    aria-label={`Ver clan ${clan.name}`}
+                                                    className="shrink-0 rounded-[10px] border border-[#8b6a47] bg-[linear-gradient(180deg,#46331f_0%,#26180e_100%)] px-3 py-2 text-[11px] font-bold text-amber-100 transition hover:border-[#c39a6a]"
+                                                >
+                                                    Ver
+                                                </button>
+                                            </div>
+                                        ))}
+                                        {!clanLoading &&
+                                        !clanError &&
+                                        !rankedClans.length ? (
+                                            <div className="rounded-[14px] border border-white/8 bg-white/3 px-3 py-4 text-sm text-stone-400">
+                                                No hay clanes para mostrar.
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                </section>
                             ) : null}
 
                             {clanView === "create" && !currentClan ? (
@@ -4447,6 +4669,10 @@ export default function InventoryFloatingPanel({
                                             Miembros {detailClan.memberCount} •
                                             Nivel minimo{" "}
                                             {detailClan.minJoinLevel}
+                                        </p>
+                                        <p className="mt-1 text-sm text-stone-400">
+                                            Puntos de clan{" "}
+                                            {formatNumber(detailClan.points)}
                                         </p>
                                         {!currentClan ? (
                                             <>
@@ -4543,6 +4769,20 @@ export default function InventoryFloatingPanel({
                                                                 </>
                                                             )}
                                                         </div>
+                                                        <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
+                                                            <span className="rounded-[8px] border border-emerald-400/20 bg-emerald-500/10 px-2 py-1 text-emerald-200">
+                                                                Ganados{" "}
+                                                                {formatNumber(
+                                                                    member.seasonPointsWon,
+                                                                )}
+                                                            </span>
+                                                            <span className="rounded-[8px] border border-rose-400/20 bg-rose-500/10 px-2 py-1 text-rose-200">
+                                                                Perdidos{" "}
+                                                                {formatNumber(
+                                                                    member.seasonPointsLost,
+                                                                )}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                 ),
                                             )}
@@ -4594,6 +4834,12 @@ export default function InventoryFloatingPanel({
                                                 Nivel minimo{" "}
                                                 {currentClan.minJoinLevel}
                                             </p>
+                                            <p className="mt-1 text-sm text-stone-400">
+                                                Puntos de clan{" "}
+                                                {formatNumber(
+                                                    currentClan.points,
+                                                )}
+                                            </p>
                                             {!isClanLeader && (
                                                 <button
                                                     type="button"
@@ -4614,8 +4860,47 @@ export default function InventoryFloatingPanel({
                                             <p className="text-[11px] uppercase tracking-[0.22em] text-amber-300/78">
                                                 Miembros
                                             </p>
+                                            <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_170px]">
+                                                <label className="flex items-center gap-2 rounded-[12px] border border-white/10 bg-black/20 px-3 py-2 text-sm text-stone-200">
+                                                    <Search className="h-4 w-4 shrink-0 text-stone-500" />
+                                                    <input
+                                                        type="search"
+                                                        value={
+                                                            clanMemberSearch
+                                                        }
+                                                        onChange={(event) =>
+                                                            setClanMemberSearch(
+                                                                event.target
+                                                                    .value,
+                                                            )
+                                                        }
+                                                        placeholder="Buscar usuario"
+                                                        className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-stone-500"
+                                                    />
+                                                </label>
+                                                <select
+                                                    value={clanMemberSort}
+                                                    onChange={(event) =>
+                                                        setClanMemberSort(
+                                                            event.target
+                                                                .value as typeof clanMemberSort,
+                                                        )
+                                                    }
+                                                    className="rounded-[12px] border border-white/10 bg-stone-950/80 px-3 py-2 text-sm text-stone-200 outline-none transition focus:border-amber-300/60"
+                                                >
+                                                    <option value="points_desc">
+                                                        Mas puntos
+                                                    </option>
+                                                    <option value="points_asc">
+                                                        Menos puntos
+                                                    </option>
+                                                    <option value="name">
+                                                        Nombre
+                                                    </option>
+                                                </select>
+                                            </div>
                                             <div className="mt-3 max-h-[300px] space-y-2 overflow-y-auto pr-1">
-                                                {currentClan.members.map(
+                                                {managedClanMembers.map(
                                                     (member) => {
                                                         const canKick =
                                                             isClanLeader &&
@@ -4679,6 +4964,28 @@ export default function InventoryFloatingPanel({
                                                                                 </>
                                                                             )}
                                                                         </div>
+                                                                        <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
+                                                                            <span className="rounded-[8px] border border-amber-300/20 bg-amber-400/10 px-2 py-1 text-amber-200">
+                                                                                Neto{" "}
+                                                                                {formatNumber(
+                                                                                    getClanMemberNetPoints(
+                                                                                        member,
+                                                                                    ),
+                                                                                )}
+                                                                            </span>
+                                                                            <span className="rounded-[8px] border border-emerald-400/20 bg-emerald-500/10 px-2 py-1 text-emerald-200">
+                                                                                Ganados{" "}
+                                                                                {formatNumber(
+                                                                                    member.seasonPointsWon,
+                                                                                )}
+                                                                            </span>
+                                                                            <span className="rounded-[8px] border border-rose-400/20 bg-rose-500/10 px-2 py-1 text-rose-200">
+                                                                                Perdidos{" "}
+                                                                                {formatNumber(
+                                                                                    member.seasonPointsLost,
+                                                                                )}
+                                                                            </span>
+                                                                        </div>
                                                                     </div>
                                                                     {canTransferLeadership ||
                                                                     canManageRole ||
@@ -4717,6 +5024,12 @@ export default function InventoryFloatingPanel({
                                                         );
                                                     },
                                                 )}
+                                                {!managedClanMembers.length ? (
+                                                    <div className="rounded-[14px] border border-white/8 bg-white/3 px-3 py-4 text-sm text-stone-400">
+                                                        No hay miembros para
+                                                        mostrar.
+                                                    </div>
+                                                ) : null}
                                             </div>
                                         </section>
                                     </div>

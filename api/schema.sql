@@ -160,6 +160,57 @@ ALTER TABLE clan_members
     ADD CONSTRAINT clan_members_role_check
     CHECK (role IN ('leader', 'co_leader', 'member'));
 
+ALTER TABLE clans
+    ADD COLUMN IF NOT EXISTS points INTEGER NOT NULL DEFAULT 0;
+
+ALTER TABLE clan_members
+    ADD COLUMN IF NOT EXISTS season_points_won INTEGER NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS season_points_lost INTEGER NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS lifetime_points_won INTEGER NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS lifetime_points_lost INTEGER NOT NULL DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS clan_point_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_type TEXT NOT NULL CHECK (event_type IN ('CASTLE_REWARD', 'PVP_TRANSFER', 'ADMIN_ADJUSTMENT', 'SEASON_RESET')),
+    clan_id UUID REFERENCES clans(id) ON DELETE SET NULL,
+    opposing_clan_id UUID REFERENCES clans(id) ON DELETE SET NULL,
+    killer_character_id UUID REFERENCES characters(id) ON DELETE SET NULL,
+    victim_character_id UUID REFERENCES characters(id) ON DELETE SET NULL,
+    castle_id TEXT,
+    amount INTEGER NOT NULL CHECK (amount >= 0),
+    reason TEXT NOT NULL DEFAULT '',
+    validation JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS clan_pvp_pair_cooldowns (
+    killer_character_id UUID NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+    victim_character_id UUID NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+    last_transfer_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (killer_character_id, victim_character_id)
+);
+
+CREATE TABLE IF NOT EXISTS clan_castle_states (
+    castle_id TEXT PRIMARY KEY,
+    owner_clan_id UUID REFERENCES clans(id) ON DELETE SET NULL,
+    owner_clan_name TEXT NOT NULL DEFAULT '',
+    captured_at TIMESTAMPTZ,
+    next_reward_at TIMESTAMPTZ,
+    points_per_reward INTEGER NOT NULL DEFAULT 0,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO clan_castle_states (castle_id, points_per_reward)
+VALUES
+    ('norte', 3),
+    ('sur', 3),
+    ('este', 3),
+    ('oeste', 3),
+    ('fortaleza', 4)
+ON CONFLICT (castle_id) DO UPDATE
+SET points_per_reward = EXCLUDED.points_per_reward,
+    updated_at = NOW();
+
 CREATE TABLE IF NOT EXISTS clan_requests (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     clan_id UUID NOT NULL REFERENCES clans(id) ON DELETE CASCADE,
@@ -173,6 +224,10 @@ CREATE INDEX IF NOT EXISTS idx_clans_leader_character_id ON clans(leader_charact
 CREATE INDEX IF NOT EXISTS idx_characters_clan_id ON characters(clan_id);
 CREATE INDEX IF NOT EXISTS idx_clan_members_clan_id ON clan_members(clan_id);
 CREATE INDEX IF NOT EXISTS idx_clan_requests_clan_id ON clan_requests(clan_id);
+CREATE INDEX IF NOT EXISTS idx_clan_point_events_clan_id ON clan_point_events(clan_id);
+CREATE INDEX IF NOT EXISTS idx_clan_point_events_created_at ON clan_point_events(created_at);
+CREATE INDEX IF NOT EXISTS idx_clan_point_events_event_type ON clan_point_events(event_type);
+CREATE INDEX IF NOT EXISTS idx_clan_castle_states_owner_clan_id ON clan_castle_states(owner_clan_id);
 
 ALTER TABLE characters
     ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;

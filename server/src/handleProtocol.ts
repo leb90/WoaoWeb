@@ -272,6 +272,34 @@ function arePartyMembersForViewer(viewerId: EntityId | undefined, character: Run
     return Boolean(viewer && viewer.partyId && character.partyId && viewer.partyId === character.partyId);
 }
 
+function normalizeClanTag(value: unknown): string {
+    return String(value ?? "")
+        .replace(/[<>]/g, "")
+        .trim()
+        .toLowerCase();
+}
+
+function areClanMembersForViewer(viewerId: EntityId | undefined, character: RuntimeCharacter | undefined): boolean {
+    if (typeof viewerId === "undefined" || !character) {
+        return false;
+    }
+
+    const viewer = getCharacterById(viewerId);
+
+    if (!viewer) {
+        return false;
+    }
+
+    if (viewer.clanId && character.clanId) {
+        return String(viewer.clanId) === String(character.clanId);
+    }
+
+    const viewerClanTag = normalizeClanTag(viewer.clan);
+    const characterClanTag = normalizeClanTag(character.clan);
+
+    return Boolean(viewerClanTag && characterClanTag && viewerClanTag === characterClanTag);
+}
+
 function getMovementRestrictionState(
     entity: Pick<RuntimeCharacter | RuntimeNpc, "inmovilizado" | "paralizado"> | undefined,
 ): number {
@@ -763,6 +791,8 @@ function writeCharacterPayload(character: ProtocolCharacter, viewerId?: EntityId
         pkg.writeShort(character.maxMana);
         pkg.writeByte(character.adminSummonedBot ? 1 : 0);
     }
+
+    pkg.writeByte(areClanMembersForViewer(viewerId, character) ? 1 : 0);
 }
 
 function getNpcQuestStatusForViewer(npc: ProtocolNpc, viewerId?: EntityId): number {

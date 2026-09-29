@@ -1,9 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-import { getProgress, saveProgress } from "./woaoProgress";
+import { getProgress } from "./woaoProgress";
 
 const handleProtocol = require("./handleProtocol");
 const vars = require("./vars");
+const funct = require("./functions");
 
 type ClanMeta = {
     points: number;
@@ -12,8 +13,21 @@ type ClanMeta = {
     enemies: string[];
 };
 
+type PvpTransferResponse = {
+    ok: true;
+    transferred: boolean;
+    reason?: string;
+    winnerClanId?: string;
+    winnerClanName?: string;
+    loserClanId?: string;
+    loserClanName?: string;
+    winnerClanPoints?: number;
+    loserClanPoints?: number;
+};
+
 const DATA_PATH = path.resolve(__dirname, "../data/clanMeta.json");
 const store = new Map<string, ClanMeta>();
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function emptyMeta(): ClanMeta {
     return { points: 0, level: 1, allies: [], enemies: [] };
@@ -91,6 +105,25 @@ export function applyReputation(clanId: string | null | undefined, delta: number
     persistStore();
 }
 
+export function setReputation(clanId: string | null | undefined, points: number | undefined): void {
+    if (!clanId || typeof points !== "number" || Number.isNaN(points)) {
+        return;
+    }
+
+    const meta = getMeta(String(clanId));
+    meta.points = Math.max(0, Math.floor(points));
+    while (meta.points >= meta.level * 500) {
+        meta.level += 1;
+        handleProtocol.consoleToAll(`Clan> un clan subio al nivel ${meta.level}.`, "#E69500", 1, 0);
+    }
+    persistStore();
+}
+
+function getCharacterUuid(character: any): string | null {
+    const value = String(character?._id ?? character?.idCharacter ?? "");
+    return UUID_PATTERN.test(value) ? value : null;
+}
+
 export function describeClan(idUser: string) {
     const user = vars.personajes[idUser];
     if (!user?.clanId) {
@@ -140,19 +173,37 @@ export function onPlayerKill(attackerId: string, victimId: string) {
         return;
     }
 
-    const attackerMeta = getMeta(String(attacker.clanId));
-    attackerMeta.points += 1;
-    if (attackerMeta.points >= attackerMeta.level * 500) {
-        attackerMeta.level += 1;
-        handleProtocol.consoleToAll(`Clan> ${attacker.clan} subio al nivel ${attackerMeta.level}.`, "#E69500", 1, 0);
+    const killerCharacterId = getCharacterUuid(attacker);
+    const victimCharacterId = getCharacterUuid(victim);
+    if (!killerCharacterId || !victimCharacterId) {
+        return;
     }
-    persistStore();
 
-    const progress = getProgress(attacker);
-    progress.pClan += 1;
-    attacker.pClan = progress.pClan;
-    saveProgress(attacker);
-    tell(String(attackerId), "Has sumado 1 punto al clan.");
+    void funct
+        .fetchUrl("/internal/clan-points/pvp-kill", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: vars.tokenAuth,
+            },
+            body: JSON.stringify({
+                killerCharacterId,
+                victimCharacterId,
+            }),
+        })
+        .then((result: PvpTransferResponse) => {
+            if (!result.transferred) {
+                return;
+            }
+
+            setReputation(result.winnerClanId, result.winnerClanPoints);
+            setReputation(result.loserClanId, result.loserClanPoints);
+            tell(String(attackerId), `Ganaste 1 punto para tu clan por matar a ${victim.nameCharacter}.`);
+            tell(String(victimId), `Tu clan perdiÃ³ 1 punto por morir contra ${attacker.nameCharacter}.`);
+        })
+        .catch((error: unknown) => {
+            funct.dumpError(error);
+        });
 }
 
 export function initialize() {

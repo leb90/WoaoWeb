@@ -2,26 +2,36 @@
   "norte": {
     "clanName": "",
     "clanId": "",
-    "conqueredAt": 0
+    "conqueredAt": 0,
+    "nextRewardAt": 0,
+    "pointsPerReward": 0
   },
   "sur": {
     "clanName": "",
     "clanId": "",
-    "conqueredAt": 0
+    "conqueredAt": 0,
+    "nextRewardAt": 0,
+    "pointsPerReward": 0
   },
   "este": {
     "clanName": "<Woao Staff>",
     "clanId": "",
-    "conqueredAt": 1790683036207
+    "conqueredAt": 1790683036207,
+    "nextRewardAt": 0,
+    "pointsPerReward": 0
   },
   "oeste": {
-    "clanName": "<Woao Staff>",
-    "clanId": "",
-    "conqueredAt": 1790683893588
+    "clanName": "Oeste Dos",
+    "clanId": "fd709c97-8c79-45eb-ad11-6c534bd0ad9e",
+    "conqueredAt": 1790683893588,
+    "nextRewardAt": 1790706600000,
+    "pointsPerReward": 0
   },
   "fortaleza": {
     "clanName": "",
     "clanId": "",
-    "conqueredAt": 0
+    "conqueredAt": 0,
+    "nextRewardAt": 0,
+    "pointsPerReward": 0
   }
 }

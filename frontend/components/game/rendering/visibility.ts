@@ -38,6 +38,13 @@ function lerp(start: number, end: number, progress: number): number {
     return start + (end - start) * progress;
 }
 
+function normalizeClanTag(value: string | null | undefined): string {
+    return String(value ?? "")
+        .replace(/[<>]/g, "")
+        .trim()
+        .toLowerCase();
+}
+
 export function hasPulsingInvisibility(
     character: Character | null | undefined,
 ): boolean {
@@ -66,8 +73,17 @@ export function isInvisibleClanMember(
         return false;
     }
 
+    if (character.isClanMember) {
+        return true;
+    }
+
+    const normalizedLocalClanTag = normalizeClanTag(localClanTag);
+    const normalizedCharacterClanTag = normalizeClanTag(character.clan);
+
     return Boolean(
-        localClanTag && character.clan && character.clan === localClanTag,
+        normalizedLocalClanTag &&
+            normalizedCharacterClanTag &&
+            normalizedLocalClanTag === normalizedCharacterClanTag,
     );
 }
 

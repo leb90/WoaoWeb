@@ -58,6 +58,11 @@ import {
     transferClanLeadership,
 } from "./repositories/clans";
 import {
+    awardDueCastleClanPoints,
+    captureClanCastle,
+    transferClanPointForPvp,
+} from "./repositories/clanPoints";
+import {
     connectArenaRoomByAccount,
     createArenaGameTicket,
     createArenaRoom,
@@ -2609,6 +2614,51 @@ app.post("/internal/clans/kick", requireAuth, async (request, response) => {
         });
     }
 });
+
+app.post(
+    "/internal/clan-points/pvp-kill",
+    requireAuth,
+    async (request, response) => {
+        try {
+            response.json(await transferClanPointForPvp(request.body));
+        } catch (error) {
+            response.status(400).json({
+                error:
+                    error instanceof Error ? error.message : "Unexpected error",
+            });
+        }
+    },
+);
+
+app.post(
+    "/internal/clan-points/castle-capture",
+    requireAuth,
+    async (request, response) => {
+        try {
+            response.json(await captureClanCastle(request.body));
+        } catch (error) {
+            response.status(400).json({
+                error:
+                    error instanceof Error ? error.message : "Unexpected error",
+            });
+        }
+    },
+);
+
+app.post(
+    "/internal/clan-points/castle-awards/run",
+    requireAuth,
+    async (_request, response) => {
+        try {
+            response.json(await awardDueCastleClanPoints());
+        } catch (error) {
+            response.status(400).json({
+                error:
+                    error instanceof Error ? error.message : "Unexpected error",
+            });
+        }
+    },
+);
 
 app.post(
     "/internal/challenges/history",

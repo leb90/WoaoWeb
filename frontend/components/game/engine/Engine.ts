@@ -221,6 +221,7 @@ export interface Character {
     hiddenSkill?: boolean;
     invisibilityCycleStartedAt?: number;
     isPartyMember?: boolean;
+    isClanMember?: boolean;
     color?: string;
     clan?: string;
     zonaSegura?: number;
@@ -724,6 +725,7 @@ export class Engine {
                 ? Date.now()
                 : undefined,
             isPartyMember: snapshot.isPartyMember,
+            isClanMember: snapshot.isClanMember,
             color: snapshot.color,
             clan: snapshot.clan,
             zonaSegura: snapshot.zonaSegura,
@@ -809,6 +811,7 @@ export class Engine {
                 : Date.now()
             : undefined;
         character.isPartyMember = snapshot.isPartyMember;
+        character.isClanMember = snapshot.isClanMember;
         character.color = snapshot.color;
         character.clan = snapshot.clan;
         character.zonaSegura = snapshot.zonaSegura;

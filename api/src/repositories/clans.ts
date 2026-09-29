@@ -95,6 +95,7 @@ type ClanRow = {
     name: string;
     alignment: ClanAlignment;
     min_join_level: number;
+    points: number;
     leader_character_id: string;
     leader_name: string;
     member_count: string;
@@ -107,6 +108,7 @@ export type CharacterClanSummary = {
     clanAlignment: ClanAlignment | null;
     clanMinJoinLevel: number | null;
     clanRole: ClanRole | null;
+    clanPoints: number | null;
 };
 
 function normalizeClanName(name: string): string {
@@ -175,6 +177,10 @@ function mapClanMember(
         criminal: Boolean(row.criminal),
         online: includeOnlineStatus ? Boolean(row.connected) : null,
         role: row.role,
+        seasonPointsWon: Number(row.season_points_won ?? 0),
+        seasonPointsLost: Number(row.season_points_lost ?? 0),
+        lifetimePointsWon: Number(row.lifetime_points_won ?? 0),
+        lifetimePointsLost: Number(row.lifetime_points_lost ?? 0),
     };
 }
 
@@ -240,6 +246,7 @@ async function getCharacterClanSummaryWithClient(
         clan_alignment: ClanAlignment | null;
         clan_min_join_level: number | null;
         clan_role: ClanRole | null;
+        clan_points: number | null;
     }>(
         `
       SELECT
@@ -247,6 +254,7 @@ async function getCharacterClanSummaryWithClient(
         cl.name AS clan_name,
         cl.alignment AS clan_alignment,
         cl.min_join_level AS clan_min_join_level,
+        cl.points AS clan_points,
         cm.role AS clan_role
       FROM characters c
       LEFT JOIN clans cl ON cl.id = c.clan_id
@@ -267,6 +275,7 @@ async function getCharacterClanSummaryWithClient(
         clanAlignment: row?.clan_alignment ?? null,
         clanMinJoinLevel: row?.clan_min_join_level ?? null,
         clanRole: row?.clan_role ?? null,
+        clanPoints: row?.clan_points ?? null,
     };
 }
 
@@ -285,6 +294,10 @@ async function getClanMembers(
         cm.character_id,
         cm.role,
         cm.joined_at,
+        COALESCE(cm.season_points_won, 0) AS season_points_won,
+        COALESCE(cm.season_points_lost, 0) AS season_points_lost,
+        COALESCE(cm.lifetime_points_won, 0) AS lifetime_points_won,
+        COALESCE(cm.lifetime_points_lost, 0) AS lifetime_points_lost,
         c.name,
         c.id_clase,
         c.level,
@@ -362,6 +375,7 @@ async function getClanDetails(
         cl.name,
         cl.alignment,
         cl.min_join_level,
+        COALESCE(cl.points, 0) AS points,
         cl.leader_character_id,
         leader.name AS leader_name,
         COUNT(cm.character_id)::text AS member_count
@@ -369,7 +383,7 @@ async function getClanDetails(
       JOIN characters leader ON leader.id = cl.leader_character_id
       LEFT JOIN clan_members cm ON cm.clan_id = cl.id
       WHERE cl.id = $1
-      GROUP BY cl.id, cl.name, cl.alignment, cl.min_join_level, cl.leader_character_id, leader.name
+      GROUP BY cl.id, cl.name, cl.alignment, cl.min_join_level, cl.points, cl.leader_character_id, leader.name
       LIMIT 1
     `,
         [clanId],
@@ -394,6 +408,7 @@ async function getClanDetails(
         name: row.name,
         alignment: row.alignment,
         minJoinLevel: row.min_join_level,
+        points: Number(row.points ?? 0),
         leaderCharacterId: row.leader_character_id,
         leaderName: row.leader_name,
         memberCount: Number(row.member_count),
@@ -469,14 +484,15 @@ export async function listClansForCharacter(
             cl.name,
             cl.alignment,
             cl.min_join_level,
+            COALESCE(cl.points, 0) AS points,
             cl.leader_character_id,
             leader.name AS leader_name,
             COUNT(cm.character_id)::text AS member_count
           FROM clans cl
           JOIN characters leader ON leader.id = cl.leader_character_id
           LEFT JOIN clan_members cm ON cm.clan_id = cl.id
-          GROUP BY cl.id, cl.name, cl.alignment, cl.min_join_level, cl.leader_character_id, leader.name
-          ORDER BY cl.created_at ASC, cl.name ASC
+          GROUP BY cl.id, cl.name, cl.alignment, cl.min_join_level, cl.points, cl.leader_character_id, leader.name
+          ORDER BY cl.points DESC, cl.created_at ASC, cl.name ASC
         `,
             ),
             client.query<{ clan_id: string }>(
@@ -512,6 +528,7 @@ export async function listClansForCharacter(
                 name: row.name,
                 alignment: row.alignment,
                 minJoinLevel: row.min_join_level,
+                points: Number(row.points ?? 0),
                 memberCount: Number(row.member_count),
                 leaderName: row.leader_name,
             })),

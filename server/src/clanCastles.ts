@@ -3,6 +3,7 @@ import path from "node:path";
 
 const handleProtocol = require("./handleProtocol");
 const vars = require("./vars");
+const funct = require("./functions");
 
 type CastleId = "norte" | "sur" | "este" | "oeste" | "fortaleza";
 
@@ -10,6 +11,8 @@ type CastleRecord = {
     clanName: string;
     clanId: string;
     conqueredAt: number;
+    nextRewardAt?: number;
+    pointsPerReward?: number;
 };
 
 type CastleUser = {
@@ -74,7 +77,7 @@ const CASTLES: Record<
         maps: number[];
         innerMaps: number[];
         announce: string;
-        basePoints: number;
+        pointsPerReward: number;
     }
 > = {
     norte: {
@@ -82,41 +85,66 @@ const CASTLES: Record<
         maps: [166, 268],
         innerMaps: [166],
         announce: "HA CONQUISTADO EL CASTILLO NORTE",
-        basePoints: 10,
+        pointsPerReward: 3,
     },
     sur: {
         label: "Castillo Sur",
         maps: [167, 269],
         innerMaps: [167],
         announce: "HA CONQUISTADO EL CASTILLO SUR",
-        basePoints: 10,
+        pointsPerReward: 3,
     },
     este: {
         label: "Castillo Este",
         maps: [168, 270],
         innerMaps: [168],
         announce: "HA CONQUISTADO EL CASTILLO ESTE",
-        basePoints: 10,
+        pointsPerReward: 3,
     },
     oeste: {
         label: "Castillo Oeste",
         maps: [169, 271],
         innerMaps: [169],
         announce: "HA CONQUISTADO EL CASTILLO OESTE",
-        basePoints: 10,
+        pointsPerReward: 3,
     },
     fortaleza: {
         label: "Fortaleza",
         maps: [185, 186],
         innerMaps: [185],
         announce: "HA CONQUISTADO LA FORTALEZA",
-        basePoints: 15,
+        pointsPerReward: 4,
     },
 };
 
 const CASTLE_IDS: CastleId[] = ["norte", "sur", "este", "oeste"];
 const owners = new Map<CastleId, CastleRecord>();
 const castleUnderAttack = new Map<CastleId, boolean>();
+const CASTLE_REWARD_INTERVAL_MS = 60 * 60 * 1000;
+const CASTLE_AWARD_SYNC_INTERVAL_MS = 60 * 1000;
+let castleAwardTimer: NodeJS.Timeout | null = null;
+
+type CastleCaptureResponse = {
+    ok: true;
+    castleId: CastleId;
+    ownerClanId: string;
+    ownerClanName: string;
+    capturedAt: string;
+    nextRewardAt: string;
+    pointsPerReward: number;
+};
+
+type CastleAwardResponse = {
+    ok: true;
+    awards: Array<{
+        castleId: CastleId;
+        clanId: string;
+        clanName: string;
+        amount: number;
+        nextRewardAt: string;
+        clanPoints: number;
+    }>;
+};
 
 const CASTLE_FIXED_NPCS: Record<
     CastleId,
@@ -147,7 +175,7 @@ const CASTLE_FIXED_NPCS: Record<
 };
 
 function emptyCastle(): CastleRecord {
-    return { clanName: "", clanId: "", conqueredAt: 0 };
+    return { clanName: "", clanId: "", conqueredAt: 0, nextRewardAt: 0, pointsPerReward: 0 };
 }
 
 function normalizeClanName(value?: string | null): string {
@@ -183,6 +211,8 @@ function loadOwners() {
                 clanName: String(value.clanName ?? ""),
                 clanId: String(value.clanId ?? ""),
                 conqueredAt: Number(value.conqueredAt ?? 0),
+                nextRewardAt: Number(value.nextRewardAt ?? 0),
+                pointsPerReward: Number(value.pointsPerReward ?? 0),
             });
         }
     } catch {
@@ -201,6 +231,75 @@ function persistOwners() {
 
 function getCastle(id: CastleId): CastleRecord {
     return owners.get(id) ?? emptyCastle();
+}
+
+function updateCastleRecordFromApi(castleId: CastleId, response: CastleCaptureResponse): void {
+    owners.set(castleId, {
+        clanName: response.ownerClanName,
+        clanId: response.ownerClanId,
+        conqueredAt: new Date(response.capturedAt).getTime(),
+        nextRewardAt: new Date(response.nextRewardAt).getTime(),
+        pointsPerReward: response.pointsPerReward,
+    });
+    persistOwners();
+}
+
+function syncCastleCaptureWithApi(castleId: CastleId, record: CastleRecord): void {
+    if (!record.clanId) {
+        return;
+    }
+
+    void funct
+        .fetchUrl("/internal/clan-points/castle-capture", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: vars.tokenAuth,
+            },
+            body: JSON.stringify({
+                castleId,
+                ownerClanId: record.clanId,
+                ownerClanName: record.clanName,
+            }),
+        })
+        .then((response: CastleCaptureResponse) => {
+            updateCastleRecordFromApi(castleId, response);
+        })
+        .catch((error: unknown) => {
+            funct.dumpError(error);
+        });
+}
+
+function runCastleAwardTick(): void {
+    void funct
+        .fetchUrl("/internal/clan-points/castle-awards/run", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: vars.tokenAuth,
+            },
+        })
+        .then((response: CastleAwardResponse) => {
+            if (!response.awards.length) {
+                return;
+            }
+
+            const clanMeta = require("./clanMeta");
+            for (const award of response.awards) {
+                clanMeta.setReputation(award.clanId, award.clanPoints);
+                const record = getCastle(award.castleId);
+                owners.set(award.castleId, {
+                    ...record,
+                    clanName: award.clanName || record.clanName,
+                    clanId: award.clanId || record.clanId,
+                    nextRewardAt: new Date(award.nextRewardAt).getTime(),
+                });
+            }
+            persistOwners();
+        })
+        .catch((error: unknown) => {
+            funct.dumpError(error);
+        });
 }
 
 function castleIdByMap(mapId: number): CastleId | undefined {
@@ -551,28 +650,8 @@ function occupancyLimit(clanId?: string | null): number {
     return Math.min(8, 2 + level);
 }
 
-function countOnlineClanMembers(clanId?: string | null, clanName?: string): number {
-    const expectedName = normalizeClanName(clanName);
-    return Object.values(vars.personajes ?? {}).filter((character: any) => {
-        if (!character?.connected || character.cerrado) {
-            return false;
-        }
-
-        if (clanId && character.clanId && String(character.clanId) === String(clanId)) {
-            return true;
-        }
-
-        return expectedName && normalizeClanName(character.clan) === expectedName;
-    }).length;
-}
-
 function ownsAllOuterCastles(user: CastleUser | undefined): boolean {
     return CASTLE_IDS.every((id) => sameClan(user, getCastle(id)));
-}
-
-function conquestPoints(basePoints: number, memberCount: number): number {
-    const percentage = Math.max(0, 60 - Math.max(1, memberCount));
-    return Math.round(basePoints + percentage / 2);
 }
 
 export function listCastles(): string[] {
@@ -681,28 +760,19 @@ export function onCastleNpcKilled(user: CastleUser | undefined, npc: CastleNpc |
         return;
     }
 
-    const memberCount = Math.max(1, countOnlineClanMembers(user.clanId, user.clan));
-    const points = conquestPoints(CASTLES[castleId].basePoints, memberCount);
-    const clanMeta = require("./clanMeta");
-    if (user.clanId) {
-        clanMeta.applyReputation(String(user.clanId), points);
-    }
-    if (previous.clanId) {
-        clanMeta.applyReputation(previous.clanId, -points);
-    }
-
-    const progress = require("./woaoProgress");
-    const userProgress = progress.getProgress(user);
-    userProgress.pClan += castleId === "fortaleza" ? 10 : 3;
-    (user as { pClan?: number }).pClan = userProgress.pClan;
-    progress.saveProgress(user);
-
-    owners.set(castleId, {
+    const capturedAt = Date.now();
+    const nextRewardAt = capturedAt + CASTLE_REWARD_INTERVAL_MS;
+    const record: CastleRecord = {
         clanName: String(user.clan),
         clanId: String(user.clanId ?? ""),
-        conqueredAt: Date.now(),
-    });
+        conqueredAt: capturedAt,
+        nextRewardAt,
+        pointsPerReward: CASTLES[castleId].pointsPerReward,
+    };
+
+    owners.set(castleId, record);
     persistOwners();
+    syncCastleCaptureWithApi(castleId, record);
 
     handleProtocol.consoleToAll(
         `El CLAN ${String(user.clan).toUpperCase()} ${CASTLES[castleId].announce}`,
@@ -830,6 +900,12 @@ export function initialize() {
         if (door && findFixedNpc(door)) {
             setDoorTilesBlocked(door, true);
         }
+    }
+
+    if (!castleAwardTimer) {
+        castleAwardTimer = setInterval(runCastleAwardTick, CASTLE_AWARD_SYNC_INTERVAL_MS);
+        castleAwardTimer.unref?.();
+        runCastleAwardTick();
     }
 
     console.log(`[Castillos] Dueños cargados: ${owners.size || "ninguno"}`);

@@ -272,6 +272,7 @@ export interface CharacterSnapshot {
     hiddenSkill?: boolean;
     invisibleSpellRemainingMs?: number;
     isPartyMember?: boolean;
+    isClanMember?: boolean;
     color?: string;
     clan?: string;
     inmovilizado?: number;
@@ -1330,6 +1331,11 @@ function parseCharacter(
             snapshot.maxMana = reader.getShort();
             snapshot.adminSummonedBot = reader.getByte() === 1;
         }
+
+        if (reader.canReadBytes(2)) {
+            snapshot.isClanMember = reader.getByte() === 1;
+        }
+
         snapshot.tt = reader.canReadBytes(1) ? reader.getByte() : 0;
     }
 

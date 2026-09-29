@@ -127,6 +127,7 @@ type ClanCharacterSummary = {
     clanAlignment: "citizen" | "criminal" | null;
     clanMinJoinLevel: number | null;
     clanRole: "leader" | "co_leader" | "member" | null;
+    clanPoints: number | null;
 };
 
 type ChatChannel = "global" | "party" | "clan" | "whisper";
@@ -855,6 +856,7 @@ async function refreshOnlineCharacterClanStateByPersistedId(characterId?: string
     onlineCharacter.clanMinJoinLevel = summary.clanMinJoinLevel;
     onlineCharacter.clanRole = summary.clanRole;
     onlineCharacter.seguroClanActivado = Boolean(summary.clanId);
+    require("./clanMeta").setReputation(summary.clanId, summary.clanPoints ?? undefined);
 
     if (onlineCharacter.privileges === 1 || onlineCharacter.privileges === 2) {
         onlineCharacter.clan = "<Woao Staff>";

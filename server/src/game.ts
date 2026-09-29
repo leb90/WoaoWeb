@@ -1494,7 +1494,7 @@ function getFriendlyFireBlockReason(
     victimId: EntityId,
     challengeRelation?: string | null,
 ): string | null {
-    if (isSameEntityId(attackerId, victimId) || challengeRelation === "enemy") {
+    if (isSameEntityId(attackerId, victimId)) {
         return null;
     }
 
@@ -1504,6 +1504,10 @@ function getFriendlyFireBlockReason(
 
     if (isSameClan(attackerId, victimId)) {
         return "No puedes atacar a un miembro de tu clan.";
+    }
+
+    if (challengeRelation === "enemy") {
+        return null;
     }
 
     if (isAlliedClan(attackerId, victimId)) {

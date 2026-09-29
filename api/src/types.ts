@@ -173,6 +173,7 @@ export type ClanRecord = {
     leader_character_id: string;
     alignment: ClanAlignment;
     min_join_level: number;
+    points: number;
     created_at: Date;
     updated_at: Date;
 };
@@ -182,6 +183,10 @@ export type ClanMemberRecord = {
     character_id: string;
     role: ClanRole;
     joined_at: Date;
+    season_points_won: number;
+    season_points_lost: number;
+    lifetime_points_won: number;
+    lifetime_points_lost: number;
     name: string;
     id_clase: number;
     level: number;
@@ -351,6 +356,7 @@ export type ClanSummaryResponse = {
     name: string;
     alignment: ClanAlignment;
     minJoinLevel: number;
+    points: number;
     memberCount: number;
     leaderName: string;
 };
@@ -363,6 +369,10 @@ export type ClanMemberResponse = {
     criminal: boolean;
     online: boolean | null;
     role: ClanRole;
+    seasonPointsWon: number;
+    seasonPointsLost: number;
+    lifetimePointsWon: number;
+    lifetimePointsLost: number;
 };
 
 export type ClanRequestResponse = {
@@ -382,6 +392,7 @@ export type ClanDetailsResponse = {
     name: string;
     alignment: ClanAlignment;
     minJoinLevel: number;
+    points: number;
     leaderCharacterId: string;
     leaderName: string;
     memberCount: number;

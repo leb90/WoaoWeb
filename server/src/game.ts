@@ -1626,6 +1626,7 @@ function syncVisibleCharactersForViewer(idUser: EntityId) {
 
     handleProtocol.sendMyCharacter(user);
     socket.send(ws);
+    require("./mounts").sendMountState(String(idUser));
 
     game.loopArea(ws, function (target: AreaTarget) {
         if (target.isNpc || target.id === idUser) {
@@ -3565,6 +3566,8 @@ function broadcastNpcVitalsDelta(npc: RuntimeNpc | undefined): void {
     if (!npc) {
         return;
     }
+
+    require("./clanCastles").syncCastleNpcDamageState(npc);
 
     game.loopAreaPos(npc.map, npc.pos, function (target: GameCharacter) {
         withUserClient(target.id, (targetClient) => {
@@ -11081,6 +11084,7 @@ function Game(this: GameApi) {
             if (user.mounted) {
                 dismountMount(user);
                 broadcastAppearance(idUser);
+                require("./mounts").sendMountState(String(idUser));
                 return;
             }
 
@@ -11115,6 +11119,7 @@ function Game(this: GameApi) {
             user.mounted = 1;
             user.mountBodyId = mountBodyId;
             broadcastAppearance(idUser);
+            require("./mounts").sendMountState(String(idUser));
         } catch (err) {
             funct.dumpError(err);
         }

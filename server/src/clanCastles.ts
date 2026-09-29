@@ -27,10 +27,26 @@ type CastleUser = {
 };
 
 type CastleNpc = {
+    id?: string | number;
     nameCharacter?: string;
     npcType?: number;
     map?: number;
+    pos?: { x: number; y: number };
     templateNpcIndex?: number;
+    spawnMapNum?: number;
+    spawnOrigin?: { x: number; y: number };
+    hp?: number;
+    maxHp?: number;
+    deathProcessed?: boolean;
+    cooldownAtaque?: number;
+    cooldownParalizado?: number;
+    inmovilizado?: number | boolean;
+    paralizado?: number | boolean;
+    nextThinkAt?: number;
+    currentTargetId?: string | number;
+    currentTargetLockedUntil?: number;
+    lastAggressorId?: string | number;
+    lastAggressedAt?: number;
 };
 
 const DATA_PATH = path.resolve(__dirname, "../data/castleOwnership.json");
@@ -39,6 +55,17 @@ const SAFE_POS = { x: 50, y: 50 };
 const CASTLE_NPC_TYPES = new Set([33, 61, 77, 78]);
 const KING_NPC_TYPE = 33;
 const FORTRESS_DEFENDER_TYPE = 61;
+const CASTLE_DOOR_NPC_TYPE = 78;
+const CASTLE_DOOR_NPC_INDEX = 667;
+const CASTLE_KING_NPC_INDEX = 587;
+const FORTRESS_DEFENDER_NPC_INDEX = 621;
+
+type CastleFixedNpcConfig = {
+    mapNum: number;
+    x: number;
+    y: number;
+    npcIndex: number;
+};
 
 const CASTLES: Record<
     CastleId,
@@ -89,6 +116,35 @@ const CASTLES: Record<
 
 const CASTLE_IDS: CastleId[] = ["norte", "sur", "este", "oeste"];
 const owners = new Map<CastleId, CastleRecord>();
+const castleUnderAttack = new Map<CastleId, boolean>();
+
+const CASTLE_FIXED_NPCS: Record<
+    CastleId,
+    {
+        king: CastleFixedNpcConfig;
+        door?: CastleFixedNpcConfig;
+    }
+> = {
+    norte: {
+        king: { mapNum: 166, x: 45, y: 16, npcIndex: CASTLE_KING_NPC_INDEX },
+        door: { mapNum: 166, x: 45, y: 75, npcIndex: CASTLE_DOOR_NPC_INDEX },
+    },
+    sur: {
+        king: { mapNum: 167, x: 45, y: 16, npcIndex: CASTLE_KING_NPC_INDEX },
+        door: { mapNum: 167, x: 45, y: 75, npcIndex: CASTLE_DOOR_NPC_INDEX },
+    },
+    este: {
+        king: { mapNum: 168, x: 45, y: 16, npcIndex: CASTLE_KING_NPC_INDEX },
+        door: { mapNum: 168, x: 45, y: 75, npcIndex: CASTLE_DOOR_NPC_INDEX },
+    },
+    oeste: {
+        king: { mapNum: 169, x: 45, y: 16, npcIndex: CASTLE_KING_NPC_INDEX },
+        door: { mapNum: 169, x: 45, y: 75, npcIndex: CASTLE_DOOR_NPC_INDEX },
+    },
+    fortaleza: {
+        king: { mapNum: 185, x: 51, y: 20, npcIndex: FORTRESS_DEFENDER_NPC_INDEX },
+    },
+};
 
 function emptyCastle(): CastleRecord {
     return { clanName: "", clanId: "", conqueredAt: 0 };
@@ -149,6 +205,282 @@ function getCastle(id: CastleId): CastleRecord {
 
 function castleIdByMap(mapId: number): CastleId | undefined {
     return (Object.keys(CASTLES) as CastleId[]).find((id) => CASTLES[id].maps.includes(mapId));
+}
+
+function getCastleEntryByNpc(npc: CastleNpc | undefined): { id: CastleId; config: (typeof CASTLE_FIXED_NPCS)[CastleId] } | null {
+    if (!npc) {
+        return null;
+    }
+
+    const mapId = Number(npc.map ?? 0);
+    const templateNpcIndex = Number(npc.templateNpcIndex ?? 0);
+    const npcType = Number(npc.npcType ?? 0);
+
+    for (const id of Object.keys(CASTLE_FIXED_NPCS) as CastleId[]) {
+        const config = CASTLE_FIXED_NPCS[id];
+        const isKing =
+            mapId === config.king.mapNum &&
+            (templateNpcIndex === config.king.npcIndex ||
+                npcType === KING_NPC_TYPE ||
+                npcType === FORTRESS_DEFENDER_TYPE);
+        const isDoor =
+            Boolean(config.door) &&
+            mapId === config.door!.mapNum &&
+            (templateNpcIndex === config.door!.npcIndex || npcType === CASTLE_DOOR_NPC_TYPE);
+
+        if (isKing || isDoor) {
+            return { id, config };
+        }
+    }
+
+    return null;
+}
+
+function isCastleDoorNpc(npc: CastleNpc | undefined): boolean {
+    return Boolean(
+        npc &&
+            (Number(npc.npcType ?? 0) === CASTLE_DOOR_NPC_TYPE ||
+                Number(npc.templateNpcIndex ?? 0) === CASTLE_DOOR_NPC_INDEX ||
+                String(npc.nameCharacter ?? "").toLowerCase() === "puerta castillo"),
+    );
+}
+
+function isCastleKingNpc(npc: CastleNpc | undefined): boolean {
+    return Boolean(
+        npc &&
+            (Number(npc.npcType ?? 0) === KING_NPC_TYPE ||
+                Number(npc.npcType ?? 0) === FORTRESS_DEFENDER_TYPE ||
+                Number(npc.templateNpcIndex ?? 0) === CASTLE_KING_NPC_INDEX ||
+                Number(npc.templateNpcIndex ?? 0) === FORTRESS_DEFENDER_NPC_INDEX),
+    );
+}
+
+function doorFootTiles(door: CastleFixedNpcConfig): Array<{ x: number; y: number }> {
+    return [
+        { x: door.x - 2, y: door.y },
+        { x: door.x - 1, y: door.y },
+        { x: door.x, y: door.y },
+        { x: door.x + 1, y: door.y },
+    ].filter((tile) => tile.x >= 1 && tile.x <= 100 && tile.y >= 1 && tile.y <= 100);
+}
+
+function setDoorTilesBlocked(door: CastleFixedNpcConfig, blocked: boolean) {
+    const game = require("./game");
+
+    for (const tile of doorFootTiles(door)) {
+        if (!vars.mapa?.[door.mapNum]?.[tile.y]?.[tile.x]) {
+            continue;
+        }
+
+        game.blockMap(door.mapNum, tile, blocked ? 1 : 0);
+    }
+}
+
+function getRuntimeNpcs(): CastleNpc[] {
+    return Object.values(vars.npcs ?? {}).filter(Boolean) as CastleNpc[];
+}
+
+function findFixedNpc(config: CastleFixedNpcConfig, onlyAlive = true): CastleNpc | undefined {
+    return getRuntimeNpcs().find((npc) => {
+        if (Number(npc.map ?? 0) !== config.mapNum || Number(npc.templateNpcIndex ?? 0) !== config.npcIndex) {
+            return false;
+        }
+
+        if (Number(npc.pos?.x ?? 0) !== config.x || Number(npc.pos?.y ?? 0) !== config.y) {
+            return false;
+        }
+
+        return !onlyAlive || Number(npc.hp ?? 0) > 0;
+    });
+}
+
+function broadcastNpcSnapshot(npc: CastleNpc | undefined) {
+    if (!npc?.id || !npc.pos) {
+        return;
+    }
+
+    const game = require("./game");
+    const socket = require("./socket");
+    const { getClientById } = require("./runtimeRegistry");
+
+    game.loopAreaPos(Number(npc.map), npc.pos, (target: CastleUser) => {
+        const targetClient = getClientById(target.id);
+        if (!targetClient) {
+            return;
+        }
+
+        handleProtocol.sendNpc(npc);
+        socket.send(targetClient);
+    });
+}
+
+function deleteNpcFromVisibleClients(npc: CastleNpc | undefined) {
+    if (!npc?.id || !npc.pos) {
+        return;
+    }
+
+    const game = require("./game");
+    const { getClientById } = require("./runtimeRegistry");
+
+    game.loopAreaPos(Number(npc.map), npc.pos, (target: CastleUser) => {
+        const targetClient = getClientById(target.id);
+        if (targetClient) {
+            handleProtocol.deleteCharacter(npc.id, targetClient);
+        }
+    });
+}
+
+function removeRuntimeNpc(npc: CastleNpc | undefined) {
+    if (!npc?.id || !npc.pos) {
+        return;
+    }
+
+    const mapId = Number(npc.map);
+    const x = Number(npc.pos.x);
+    const y = Number(npc.pos.y);
+
+    if (vars.mapData?.[mapId]?.[y]?.[x]?.id === npc.id) {
+        vars.mapData[mapId][y][x].id = 0;
+    }
+
+    deleteNpcFromVisibleClients(npc);
+    delete vars.npcs[String(npc.id)];
+    delete vars.areaNpc[String(npc.id)];
+}
+
+function resetNpcAtFixedPosition(npc: CastleNpc, config: CastleFixedNpcConfig) {
+    const template = vars.datNpc?.[config.npcIndex] ?? {};
+    const maxHp = Number(template.maxHp ?? template.hp ?? npc.maxHp ?? npc.hp ?? 1);
+    const previousMap = Number(npc.map ?? 0);
+    const previousX = Number(npc.pos?.x ?? 0);
+    const previousY = Number(npc.pos?.y ?? 0);
+
+    if (vars.mapData?.[previousMap]?.[previousY]?.[previousX]?.id === npc.id) {
+        vars.mapData[previousMap][previousY][previousX].id = 0;
+    }
+
+    npc.templateNpcIndex = config.npcIndex;
+    npc.spawnMapNum = config.mapNum;
+    npc.spawnOrigin = { x: config.x, y: config.y };
+    npc.map = config.mapNum;
+    npc.pos = { x: config.x, y: config.y };
+    npc.nameCharacter = String(template.name ?? npc.nameCharacter ?? "");
+    npc.npcType = Number(template.npcType ?? npc.npcType ?? 0);
+    npc.hp = maxHp;
+    npc.maxHp = maxHp;
+    npc.deathProcessed = false;
+    npc.cooldownAtaque = Date.now() + 2000;
+    npc.cooldownParalizado = 0;
+    npc.inmovilizado = 0;
+    npc.paralizado = 0;
+    npc.nextThinkAt = Date.now() + Number(vars.timing?.npcThinkMs ?? 500);
+    npc.currentTargetId = 0;
+    npc.currentTargetLockedUntil = 0;
+    npc.lastAggressorId = 0;
+    npc.lastAggressedAt = 0;
+
+    if (vars.mapData?.[config.mapNum]?.[config.y]?.[config.x]) {
+        vars.mapData[config.mapNum][config.y][config.x].id = npc.id;
+    }
+
+    broadcastNpcSnapshot(npc);
+}
+
+function spawnFixedNpc(config: CastleFixedNpcConfig): CastleNpc | undefined {
+    const existing = findFixedNpc(config);
+    if (existing) {
+        resetNpcAtFixedPosition(existing, config);
+        return existing;
+    }
+
+    const LoadNpcs = require("./loadNpcs");
+    new LoadNpcs().createNpcInMap(config, true, false, true);
+    const created = findFixedNpc(config);
+
+    if (created) {
+        broadcastNpcSnapshot(created);
+    }
+
+    return created;
+}
+
+function resetDoorForCastle(castleId: CastleId) {
+    const door = CASTLE_FIXED_NPCS[castleId].door;
+    if (!door) {
+        return;
+    }
+
+    for (const npc of getRuntimeNpcs()) {
+        if (
+            isCastleDoorNpc(npc) &&
+            Number(npc.map ?? 0) === door.mapNum &&
+            (Number(npc.pos?.x ?? 0) !== door.x || Number(npc.pos?.y ?? 0) !== door.y)
+        ) {
+            removeRuntimeNpc(npc);
+        }
+    }
+
+    const fixedDoor = findFixedNpc(door, false);
+    if (fixedDoor && Number(fixedDoor.hp ?? 0) > 0) {
+        resetNpcAtFixedPosition(fixedDoor, door);
+    } else {
+        if (fixedDoor) {
+            removeRuntimeNpc(fixedDoor);
+        }
+        spawnFixedNpc(door);
+    }
+
+    setDoorTilesBlocked(door, true);
+}
+
+function castleHasDamagedNpc(castleId: CastleId): boolean {
+    const config = CASTLE_FIXED_NPCS[castleId];
+    const king = findFixedNpc(config.king);
+    if (king && Number(king.hp ?? 0) > 0 && Number(king.hp ?? 0) < Number(king.maxHp ?? 0)) {
+        return true;
+    }
+
+    if (config.door) {
+        const door = findFixedNpc(config.door);
+        if (door && Number(door.hp ?? 0) > 0 && Number(door.hp ?? 0) < Number(door.maxHp ?? 0)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function buildCastleStatePayload() {
+    const underAttack: Record<string, boolean> = {};
+
+    for (const id of Object.keys(CASTLES) as CastleId[]) {
+        underAttack[id] = Boolean(castleUnderAttack.get(id));
+    }
+
+    return { underAttack };
+}
+
+function broadcastCastleState() {
+    const payload = buildCastleStatePayload();
+
+    for (const client of Object.values(vars.clients ?? {}) as Array<{ readyState?: number; OPEN?: number }>) {
+        if (!client || client.readyState !== client.OPEN) {
+            continue;
+        }
+
+        handleProtocol.castleState(payload, client);
+    }
+}
+
+function syncCastleAttackState(castleId: CastleId, force = false) {
+    const nextState = castleHasDamagedNpc(castleId);
+    const previousState = Boolean(castleUnderAttack.get(castleId));
+
+    castleUnderAttack.set(castleId, nextState);
+
+    if (force || previousState !== nextState) {
+        broadcastCastleState();
+    }
 }
 
 function isCastleTerrainMap(mapId: number): boolean {
@@ -380,6 +712,43 @@ export function onCastleNpcKilled(user: CastleUser | undefined, npc: CastleNpc |
     );
 }
 
+export function syncCastleNpcDamageState(npc: CastleNpc | undefined): void {
+    const entry = getCastleEntryByNpc(npc);
+    if (!entry || (!isCastleDoorNpc(npc) && !isCastleKingNpc(npc))) {
+        return;
+    }
+
+    syncCastleAttackState(entry.id);
+}
+
+export function onCastleNpcRuntimeDeath(npc: CastleNpc | undefined): { handled: boolean; removeNpc: boolean } {
+    const entry = getCastleEntryByNpc(npc);
+    if (!entry || (!isCastleDoorNpc(npc) && !isCastleKingNpc(npc))) {
+        return { handled: false, removeNpc: false };
+    }
+
+    if (isCastleDoorNpc(npc)) {
+        if (entry.config.door) {
+            setDoorTilesBlocked(entry.config.door, false);
+        }
+
+        syncCastleAttackState(entry.id, true);
+        return { handled: true, removeNpc: true };
+    }
+
+    if (npc) {
+        resetNpcAtFixedPosition(npc, entry.config.king);
+    }
+
+    resetDoorForCastle(entry.id);
+    syncCastleAttackState(entry.id, true);
+    return { handled: true, removeNpc: false };
+}
+
+export function sendCastleState(client: any): void {
+    handleProtocol.castleState(buildCastleStatePayload(), client);
+}
+
 export function teleportToOwnedCastle(
     idUser: string,
     rawDestination: string,
@@ -453,5 +822,15 @@ export function relocateFromFortressIfNeeded(user: {
 
 export function initialize() {
     loadOwners();
+
+    for (const id of Object.keys(CASTLES) as CastleId[]) {
+        castleUnderAttack.set(id, castleHasDamagedNpc(id));
+
+        const door = CASTLE_FIXED_NPCS[id].door;
+        if (door && findFixedNpc(door)) {
+            setDoorTilesBlocked(door, true);
+        }
+    }
+
     console.log(`[Castillos] Dueños cargados: ${owners.size || "ninguno"}`);
 }

@@ -2,7 +2,6 @@
 
 "use client";
 
-import Image from "next/image";
 import React from "react";
 import { createPortal } from "react-dom";
 import { formatNumber } from "../lib/number-format";
@@ -15,6 +14,7 @@ import {
     Keyboard,
     X,
     Crown,
+    Flame,
     DoorOpen,
     Users,
     UserRoundX,
@@ -28,6 +28,7 @@ import {
 import type {
     CharacterStatsSnapshot,
     InventoryItem,
+    MountStateEntry,
     PlayerHudState,
     SpellEntry,
 } from "../lib/aowProtocol";
@@ -209,7 +210,7 @@ const classLabels: Record<number, string> = {
 
 const clanNamePattern = /^[A-Za-z ]+$/;
 const CLAN_CREATION_LEVEL_REQUIRED = 30;
-const CLAN_CREATION_COST = 1_500_000;
+const CLAN_CREATION_COST = 150_000;
 
 type HotkeySection = {
     title: string;
@@ -331,6 +332,13 @@ const DOUBLE_ACTIVATE_WINDOW_MS = 240;
 const MINIMAP_PREVIEW_SIZE = 100;
 const HUD_ACTION_BUTTON_CLASS =
     "inline-flex min-h-[24px] min-w-0 items-center justify-center gap-0.5 rounded-sm border border-[#6a5132] bg-[linear-gradient(180deg,#3a2a1c_0%,#1a120c_100%)] px-1.5 text-[9px] font-semibold uppercase tracking-[0.04em] text-[#f0e0c4] shadow-[inset_0_1px_0_rgba(255,220,180,0.12)] transition hover:border-[#c49a62] hover:text-amber-50";
+const CASTLE_HUD_ENTRIES = [
+    { id: "norte", short: "N", label: "Norte", command: "/castillo norte" },
+    { id: "sur", short: "S", label: "Sur", command: "/castillo sur" },
+    { id: "fortaleza", short: "F", label: "Fortaleza", command: "/castillos" },
+    { id: "este", short: "E", label: "Este", command: "/castillo este" },
+    { id: "oeste", short: "O", label: "Oeste", command: "/castillo oeste" },
+] as const;
 const DYNAMIC_INSTANCE_MAP_START = 30_000;
 const DYNAMIC_INSTANCE_MAP_STRIDE = 50;
 
@@ -649,6 +657,160 @@ function ItemGraphic({
     );
 }
 
+function MountHudIcon({
+    mount,
+    objectsDB,
+    graphicsDB,
+}: {
+    mount: MountStateEntry;
+    objectsDB: ObjectsDB | null;
+    graphicsDB: Record<string, GraphicData> | null;
+}) {
+    const objectData = objectsDB?.[mount.itemId.toString()];
+    const graphicData =
+        objectData?.grhIndex !== undefined
+            ? graphicsDB?.[objectData.grhIndex.toString()]
+            : undefined;
+
+    if (!graphicData?.numFile) {
+        return (
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-amber-200/15 bg-black/25">
+                <Crown className="h-5 w-5 text-amber-300/80" />
+            </div>
+        );
+    }
+
+    const scale = Math.min(
+        1,
+        34 / Math.max(graphicData.width, graphicData.height, 1),
+    );
+
+    return (
+        <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded border border-amber-200/15 bg-black/25">
+            <div
+                aria-label={mount.name}
+                className="absolute left-1/2 top-1/2 bg-no-repeat"
+                style={{
+                    width: graphicData.width,
+                    height: graphicData.height,
+                    backgroundImage: `url(${getTexturePath(graphicData)})`,
+                    backgroundPosition: `-${graphicData.sX}px -${graphicData.sY}px`,
+                    transform: `translate(-50%, -50%) scale(${scale})`,
+                    transformOrigin: "center",
+                }}
+            />
+        </div>
+    );
+}
+
+function ActiveMountHud({
+    mount,
+    objectsDB,
+    graphicsDB,
+}: {
+    mount: MountStateEntry | null;
+    objectsDB: ObjectsDB | null;
+    graphicsDB: Record<string, GraphicData> | null;
+}) {
+    if (!mount) {
+        return (
+            <div className="flex h-[42px] min-w-0 flex-1 items-center justify-center border-l border-amber-200/10 pl-2 text-[9px] font-semibold uppercase tracking-[0.08em] text-stone-500">
+                Sin montura
+            </div>
+        );
+    }
+
+    const expRequired = Math.max(0, mount.expRequired);
+    const exp = Math.max(0, mount.exp);
+    const expRatio =
+        expRequired > 0 ? Math.max(0, Math.min(1, exp / expRequired)) : 0;
+
+    return (
+        <div className="flex h-[42px] min-w-0 flex-1 items-center gap-2 border-l border-amber-200/10 pl-2">
+            <MountHudIcon
+                mount={mount}
+                objectsDB={objectsDB}
+                graphicsDB={graphicsDB}
+            />
+            <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-1">
+                    <p className="truncate text-[10px] font-semibold leading-tight text-amber-100">
+                        {mount.name}
+                    </p>
+                    <p className="shrink-0 text-[7px] font-semibold uppercase text-[#d7c4a4]">
+                        Nv {mount.level}
+                    </p>
+                </div>
+                <div className="mt-0.5 h-[6px] overflow-hidden rounded-[2px] border border-[#6d512a] bg-black/60">
+                    <div
+                        className="h-full bg-[linear-gradient(90deg,#2fb8ed,#f3c94b)]"
+                        style={{ width: `${expRatio * 100}%` }}
+                    />
+                </div>
+                <p className="mt-0.5 truncate text-[8px] font-semibold tabular-nums text-[#cbb18e]">
+                    EXP {formatNumber(exp)}/{formatNumber(expRequired)}
+                </p>
+            </div>
+        </div>
+    );
+}
+
+function CastleHud({
+    onSendCommand,
+    castleState,
+}: {
+    onSendCommand?: (message: string) => void;
+    castleState?: PlayerHudState["castleState"];
+}) {
+    return (
+        <div className="flex w-[104px] shrink-0 items-end justify-end gap-0.5">
+            {CASTLE_HUD_ENTRIES.map((entry) => {
+                const isFortress = entry.id === "fortaleza";
+                const underAttack = Boolean(
+                    castleState?.underAttack?.[entry.id],
+                );
+
+                return (
+                    <button
+                        key={entry.id}
+                        type="button"
+                        onClick={() => onSendCommand?.(entry.command)}
+                        className="group flex w-5 shrink-0 flex-col items-center gap-0.5 text-[8px] font-semibold text-[#d7c4a4] transition hover:text-amber-100"
+                        title={entry.label}
+                        aria-label={entry.label}
+                    >
+                        <span
+                            className={`relative flex h-[18px] w-[18px] items-center justify-center border ${
+                                isFortress
+                                    ? "border-amber-300/65 bg-amber-400/20 text-amber-100 shadow-[0_0_10px_rgba(251,191,36,0.28)]"
+                                    : "border-stone-500/35 bg-black/25 text-stone-400"
+                            } ${
+                                underAttack
+                                    ? "border-orange-300/80 text-orange-100 shadow-[0_0_12px_rgba(249,115,22,0.55)]"
+                                    : ""
+                            } group-hover:border-amber-300/70`}
+                        >
+                            {underAttack ? (
+                                <Flame
+                                    aria-hidden="true"
+                                    className="absolute -top-2.5 h-3.5 w-3.5 animate-pulse fill-orange-400/80 text-orange-300 drop-shadow-[0_0_5px_rgba(251,146,60,0.8)]"
+                                    strokeWidth={2.2}
+                                />
+                            ) : null}
+                            <Crown
+                                aria-hidden="true"
+                                className="h-3 w-3"
+                                strokeWidth={2.1}
+                            />
+                        </span>
+                        <span className="leading-none">{entry.short}</span>
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
+
 function VitalBar({
     label,
     value,
@@ -759,53 +921,6 @@ function VitalBars({
     );
 }
 
-function HudGlyph({ children }: { children: React.ReactNode }) {
-    return (
-        <span className="inline-flex h-4 w-4 items-center justify-center text-[#ccb08d]">
-            {children}
-        </span>
-    );
-}
-
-function StatLine({
-    icon,
-    value,
-    rightValue,
-    label,
-    accent = "text-stone-100",
-}: {
-    icon: React.ReactNode;
-    value: string | number;
-    rightValue?: string | number | null;
-    label: string;
-    accent?: string;
-}) {
-    const tooltip =
-        rightValue !== null && rightValue !== undefined
-            ? `${label}: ${value} ${rightValue}`
-            : `${label}: ${value}`;
-
-    return (
-        <div
-            className="flex min-w-0 flex-1 items-center justify-center gap-1 text-[11px] font-semibold leading-none text-stone-100"
-            title={tooltip}
-            aria-label={tooltip}
-        >
-            {icon}
-            <span className={accent}>{value}</span>
-            {rightValue !== null && rightValue !== undefined ? (
-                <span className="text-[11px] font-semibold leading-none text-amber-200/85">
-                    {rightValue}
-                </span>
-            ) : null}
-        </div>
-    );
-}
-
-function formatBuffSecondsLabel(seconds: number) {
-    return `(${seconds}s)`;
-}
-
 const SEASON_LABELS: Record<number, string> = {
     [SEASON.verano]: "Verano",
     [SEASON.otono]: "Otoño",
@@ -873,11 +988,6 @@ export default function InventoryFloatingPanel({
 }: InventoryFloatingPanelProps) {
     const items = React.useMemo(() => hud?.inventory ?? [], [hud?.inventory]);
     const spells = React.useMemo(() => hud?.spells ?? [], [hud?.spells]);
-    const [buffExpiryAt, setBuffExpiryAt] = React.useState({
-        fuerza: 0,
-        agilidad: 0,
-    });
-    const [buffNow, setBuffNow] = React.useState(0);
     const [graphicsDB, setGraphicsDB] = React.useState<Record<
         string,
         GraphicData
@@ -962,34 +1072,6 @@ export default function InventoryFloatingPanel({
             : 1;
     }, []);
 
-    React.useEffect(() => {
-        const now = Date.now();
-
-        setBuffExpiryAt({
-            fuerza:
-                (hud?.buffFuerzaSeconds ?? 0) > 0
-                    ? now + (hud?.buffFuerzaSeconds ?? 0) * 1000
-                    : 0,
-            agilidad:
-                (hud?.buffAgilidadSeconds ?? 0) > 0
-                    ? now + (hud?.buffAgilidadSeconds ?? 0) * 1000
-                    : 0,
-        });
-    }, [
-        hud?.buffAgilidadSeconds,
-        hud?.buffFuerzaSeconds,
-        hud?.buffAgilidadUpdatedAt,
-        hud?.buffFuerzaUpdatedAt,
-    ]);
-
-    React.useEffect(() => {
-        const tick = () => setBuffNow(Date.now());
-        tick();
-        const interval = window.setInterval(tick, 1000);
-
-        return () => window.clearInterval(interval);
-    }, []);
-
     const refreshClanOverview = React.useCallback(async () => {
         if (!selectedCharacterId) {
             setClanOverview(null);
@@ -1054,25 +1136,6 @@ export default function InventoryFloatingPanel({
         }, 700);
     }, [refreshClanOverview]);
 
-    const buffCountdown = React.useMemo(
-        () => ({
-            fuerza:
-                buffExpiryAt.fuerza > 0
-                    ? Math.max(
-                          0,
-                          Math.ceil((buffExpiryAt.fuerza - buffNow) / 1000),
-                      )
-                    : 0,
-            agilidad:
-                buffExpiryAt.agilidad > 0
-                    ? Math.max(
-                          0,
-                          Math.ceil((buffExpiryAt.agilidad - buffNow) / 1000),
-                      )
-                    : 0,
-        }),
-        [buffExpiryAt.agilidad, buffExpiryAt.fuerza, buffNow],
-    );
     const [selectedSlot, setSelectedSlot] = React.useState<number | null>(null);
     const [dropAmount, setDropAmount] = React.useState("1");
     const [dropSlot, setDropSlot] = React.useState<number | null>(null);
@@ -1479,7 +1542,7 @@ export default function InventoryFloatingPanel({
         }
 
         if (currentGold < CLAN_CREATION_COST) {
-            setClanError("Necesitas 1.500.000 de oro para crear un clan.");
+            setClanError("Necesitas 150.000 de oro para crear un clan.");
             return;
         }
 
@@ -1683,78 +1746,12 @@ export default function InventoryFloatingPanel({
 
         setClanView("detail");
     }
-    const equippedArmor = React.useMemo(() => {
-        if (!objectsDB) {
-            return null;
-        }
-
-        return items.reduce(
-            (total, item) => {
-                if (
-                    !item.equipped ||
-                    (item.objType !== OBJECT_TYPE.armaduras &&
-                        item.objType !== OBJECT_TYPE.escudos &&
-                        item.objType !== OBJECT_TYPE.cascos)
-                ) {
-                    return total;
-                }
-
-                const objectData = objectsDB[item.idItem.toString()];
-
-                if (!objectData) {
-                    return total;
-                }
-
-                total.min += objectData.minDef ?? 0;
-                total.max += objectData.maxDef ?? 0;
-                return total;
-            },
-            { min: 0, max: 0 },
-        );
-    }, [items, objectsDB]);
-    const equippedArmorLabel = equippedArmor
-        ? `${equippedArmor.min}/${equippedArmor.max}`
-        : "-";
-    const equippedDamage = React.useMemo(() => {
-        if (!objectsDB) {
-            return null;
-        }
-
-        const hasProjectileWeapon = items.some((item) => {
-            if (!item.equipped || item.objType !== OBJECT_TYPE.armas) {
-                return false;
-            }
-
-            return Boolean(objectsDB[item.idItem.toString()]?.proyectil);
-        });
-
-        return items.reduce(
-            (total, item) => {
-                if (
-                    !item.equipped ||
-                    (item.objType !== OBJECT_TYPE.armas &&
-                        (item.objType !== OBJECT_TYPE.flechas ||
-                            !hasProjectileWeapon))
-                ) {
-                    return total;
-                }
-
-                const objectData = objectsDB[item.idItem.toString()];
-
-                if (!objectData) {
-                    return total;
-                }
-
-                total.min += objectData.minHit ?? 0;
-                total.max += objectData.maxHit ?? 0;
-                return total;
-            },
-            { min: 0, max: 0 },
-        );
-    }, [items, objectsDB]);
-    const equippedDamageLabel = equippedDamage
-        ? `${equippedDamage.min}/${equippedDamage.max}`
-        : "-";
+    const activeMount = React.useMemo(
+        () =>
+            hud?.mountState?.mounts.find((mount) => mount.mounted || mount.active) ??
+            null,
+        [hud?.mountState?.mounts],
+    );
     const isChallengeInstanceMap = Boolean(
         hud?.map && hud.map >= 2000 && hud.map < DYNAMIC_INSTANCE_MAP_START,
     );
@@ -2591,6 +2588,9 @@ export default function InventoryFloatingPanel({
         };
     }, [draggedInventoryItem, finishInventoryDrag, getPanelScale]);
 
+    const overlayTarget =
+        typeof document !== "undefined" ? (portalTarget ?? document.body) : null;
+
     return (
         <>
             <div
@@ -2642,37 +2642,50 @@ export default function InventoryFloatingPanel({
                                         {formatNumber(hud?.gold ?? 0)} oro
                                     </p>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setIsSettingsOpen(true)}
-                                    className="group relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-amber-200/15 bg-black/20 text-amber-100/80 transition hover:border-amber-300/45 hover:bg-black/35 hover:text-amber-50"
-                                    aria-label={
-                                        hardwareAccelerationWarning
-                                            ? "Abrir ajustes. Revisar aceleración gráfica"
-                                            : "Abrir ajustes"
-                                    }
-                                    title={
-                                        hardwareAccelerationWarning
-                                            ? "Revisar aceleración gráfica"
-                                            : "Abrir ajustes"
-                                    }
-                                >
-                                    <span className="absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(251,191,36,0.16),transparent_62%)] opacity-0 transition group-hover:opacity-100" />
-                                    <Settings
-                                        aria-hidden="true"
-                                        className="relative h-[18px] w-[18px] transition duration-300 group-hover:rotate-90"
-                                        strokeWidth={1.8}
-                                    />
-                                    {hardwareAccelerationWarning ? (
-                                        <>
-                                            <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full bg-rose-500 ring-2 ring-[#1a120d]" />
-                                            <span className="sr-only">
-                                                Advertencia de aceleración
-                                                gráfica
-                                            </span>
-                                        </>
-                                    ) : null}
-                                </button>
+                                <div className="flex shrink-0 items-start gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setIsSettingsOpen(true)
+                                        }
+                                        className="group relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-amber-200/15 bg-black/20 text-amber-100/80 transition hover:border-amber-300/45 hover:bg-black/35 hover:text-amber-50"
+                                        aria-label={
+                                            hardwareAccelerationWarning
+                                                ? "Abrir ajustes. Revisar aceleración gráfica"
+                                                : "Abrir ajustes"
+                                        }
+                                        title={
+                                            hardwareAccelerationWarning
+                                                ? "Revisar aceleración gráfica"
+                                                : "Abrir ajustes"
+                                        }
+                                    >
+                                        <span className="absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(251,191,36,0.16),transparent_62%)] opacity-0 transition group-hover:opacity-100" />
+                                        <Settings
+                                            aria-hidden="true"
+                                            className="relative h-[18px] w-[18px] transition duration-300 group-hover:rotate-90"
+                                            strokeWidth={1.8}
+                                        />
+                                        {hardwareAccelerationWarning ? (
+                                            <>
+                                                <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full bg-rose-500 ring-2 ring-[#1a120d]" />
+                                                <span className="sr-only">
+                                                    Advertencia de aceleración
+                                                    gráfica
+                                                </span>
+                                            </>
+                                        ) : null}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            onSendCommand?.("/salir")
+                                        }
+                                        className="h-9 shrink-0 rounded-sm border border-amber-300/60 bg-[linear-gradient(180deg,#563616,#25150b)] px-4 text-[12px] font-semibold text-amber-50 shadow-[inset_0_1px_0_rgba(255,220,180,0.16)] transition hover:border-amber-200 hover:brightness-110"
+                                    >
+                                        Salir
+                                    </button>
+                                </div>
                             </div>
                         </section>
 
@@ -3275,89 +3288,17 @@ export default function InventoryFloatingPanel({
                                     </button>
                                 </div>
                             </div>
-                            <div className="mt-1.5 flex items-center gap-1 text-stone-100">
-                                <StatLine
-                                    label="Defensa"
-                                    icon={
-                                        <HudGlyph>
-                                            <svg
-                                                viewBox="0 0 16 16"
-                                                className="h-4 w-4 fill-none stroke-current stroke-[1.4]"
-                                            >
-                                                <path d="M8 2.2 12.6 4v3.2c0 3-1.9 5.2-4.6 6.6-2.7-1.4-4.6-3.6-4.6-6.6V4Z" />
-                                            </svg>
-                                        </HudGlyph>
-                                    }
-                                    value={equippedArmorLabel}
+                            <div className="mt-1.5 flex h-[46px] items-center gap-2 border-t border-amber-200/10 pt-1 text-stone-100">
+                                <CastleHud
+                                    onSendCommand={onSendCommand}
+                                    castleState={hud?.castleState}
                                 />
-                                <StatLine
-                                    label="Daño"
-                                    icon={
-                                        <HudGlyph>
-                                            <svg
-                                                viewBox="0 0 16 16"
-                                                className="h-4 w-4 fill-none stroke-current stroke-[1.4]"
-                                            >
-                                                <path d="M4 12 12 4" />
-                                                <path d="m9.7 3.7 2.6 2.6" />
-                                                <path d="M3.2 12.8 5.3 10.7" />
-                                            </svg>
-                                        </HudGlyph>
-                                    }
-                                    value={equippedDamageLabel}
-                                />
-                                <StatLine
-                                    label="Fuerza"
-                                    icon={
-                                        <span className="inline-flex h-4 w-4 items-center justify-center">
-                                            <Image
-                                                src="/graphics/23003.png"
-                                                alt="Fuerza"
-                                                title="Fuerza"
-                                                width={14}
-                                                height={14}
-                                                className="h-3.5 w-3.5 object-contain opacity-90"
-                                                unoptimized
-                                            />
-                                        </span>
-                                    }
-                                    value={hud?.attrFuerza ?? "-"}
-                                    rightValue={
-                                        buffCountdown.fuerza > 0
-                                            ? formatBuffSecondsLabel(
-                                                  buffCountdown.fuerza,
-                                              )
-                                            : null
-                                    }
-                                />
-                                <StatLine
-                                    label="Agilidad"
-                                    icon={
-                                        <span className="inline-flex h-4 w-4 items-center justify-center">
-                                            <Image
-                                                src="/graphics/23000.png"
-                                                alt="Agilidad"
-                                                title="Agilidad"
-                                                width={14}
-                                                height={14}
-                                                className="h-3.5 w-3.5 object-contain opacity-90"
-                                                unoptimized
-                                            />
-                                        </span>
-                                    }
-                                    value={hud?.attrAgilidad ?? "-"}
-                                    rightValue={
-                                        buffCountdown.agilidad > 0
-                                            ? formatBuffSecondsLabel(
-                                                  buffCountdown.agilidad,
-                                              )
-                                            : null
-                                    }
+                                <ActiveMountHud
+                                    mount={activeMount}
+                                    objectsDB={objectsDB}
+                                    graphicsDB={graphicsDB}
                                 />
                             </div>
-                                <div className="mt-1 pointer-events-none text-right text-[9px] uppercase tracking-[0.16em] text-stone-500">
-                                    v0.0.75
-                                </div>
                         </section>
                     </div>
                 </div>
@@ -3900,8 +3841,9 @@ export default function InventoryFloatingPanel({
                 onClose={() => setIsSkillsOpen(false)}
             />
 
-            {isSettingsOpen ? (
-                <div className="fixed inset-0 z-[84] flex items-center justify-center bg-black/45 px-4 backdrop-blur-[3px]">
+            {isSettingsOpen && overlayTarget
+                ? createPortal(
+                      <div className="fixed inset-0 z-[84] flex items-center justify-center bg-black/45 px-4 backdrop-blur-[3px]">
                     <div className="w-full max-w-md overflow-hidden rounded-[28px] border border-amber-200/20 bg-[#120c08]/95 text-stone-100 shadow-[0_28px_90px_rgba(0,0,0,0.55)]">
                         <div className="flex items-start justify-between gap-4 border-b border-amber-200/10 bg-[linear-gradient(180deg,rgba(127,78,35,0.28),rgba(18,12,8,0))] px-5 py-4">
                             <div>
@@ -4102,8 +4044,10 @@ export default function InventoryFloatingPanel({
                             </button>
                         </div>
                     </div>
-                </div>
-            ) : null}
+                      </div>,
+                      overlayTarget,
+                  )
+                : null}
 
             {woaoHubTab && typeof document !== "undefined"
                 ? createPortal(
@@ -4129,11 +4073,12 @@ export default function InventoryFloatingPanel({
                   )
                 : null}
 
-            {isPartyModalOpen ? (
-                <div
-                    className="fixed inset-0 z-[83] flex items-center justify-center bg-black/45 px-4 backdrop-blur-[3px]"
-                    onClick={() => setIsPartyModalOpen(false)}
-                >
+            {isPartyModalOpen && overlayTarget
+                ? createPortal(
+                      <div
+                          className="fixed inset-0 z-[83] flex items-center justify-center bg-black/45 px-4 backdrop-blur-[3px]"
+                          onClick={() => setIsPartyModalOpen(false)}
+                      >
                     <div
                         className="w-full max-w-sm overflow-hidden rounded-[24px] border border-amber-200/20 bg-[#120c08]/96 text-stone-100 shadow-[0_28px_90px_rgba(0,0,0,0.6)]"
                         onClick={(event) => event.stopPropagation()}
@@ -4259,14 +4204,17 @@ export default function InventoryFloatingPanel({
                             )}
                         </div>
                     </div>
-                </div>
-            ) : null}
+                      </div>,
+                      overlayTarget,
+                  )
+                : null}
 
-            {isClanModalOpen ? (
-                <div
-                    className="fixed inset-0 z-[84] flex items-center justify-center bg-black/45 px-4 backdrop-blur-[3px]"
-                    onClick={closeClanModal}
-                >
+            {isClanModalOpen && overlayTarget
+                ? createPortal(
+                      <div
+                          className="fixed inset-0 z-[84] flex items-center justify-center bg-black/45 px-4 backdrop-blur-[3px]"
+                          onClick={closeClanModal}
+                      >
                     <div
                         className="w-full max-w-3xl overflow-hidden rounded-[24px] border border-amber-200/20 bg-[#120c08]/96 text-stone-100 shadow-[0_28px_90px_rgba(0,0,0,0.6)]"
                         onClick={(event) => event.stopPropagation()}
@@ -4468,7 +4416,7 @@ export default function InventoryFloatingPanel({
                                     </div>
                                     <p className="mt-3 text-xs text-stone-400">
                                         Para crear un clan debes ser nivel 30 y
-                                        pagar 1.500.000 de oro.
+                                        pagar 150.000 de oro.
                                     </p>
                                     <button
                                         type="button"
@@ -5028,11 +4976,14 @@ export default function InventoryFloatingPanel({
                             </div>
                         ) : null}
                     </div>
-                </div>
-            ) : null}
+                      </div>,
+                      overlayTarget,
+                  )
+                : null}
 
-            {isHotkeySettingsOpen ? (
-                <div className="fixed inset-0 z-[85] flex items-center justify-center bg-black/45 px-4 backdrop-blur-[3px]">
+            {isHotkeySettingsOpen && overlayTarget
+                ? createPortal(
+                      <div className="fixed inset-0 z-[85] flex items-center justify-center bg-black/45 px-4 backdrop-blur-[3px]">
                     <div className="w-full max-w-2xl overflow-hidden rounded-[28px] border border-amber-200/20 bg-[#120c08]/95 text-stone-100 shadow-[0_28px_90px_rgba(0,0,0,0.55)]">
                         <div className="flex items-start justify-between gap-4 border-b border-amber-200/10 bg-[linear-gradient(180deg,rgba(127,78,35,0.28),rgba(18,12,8,0))] px-5 py-4">
                             <div>
@@ -5170,8 +5121,10 @@ export default function InventoryFloatingPanel({
                             </button>
                         </div>
                     </div>
-                </div>
-            ) : null}
+                      </div>,
+                      overlayTarget,
+                  )
+                : null}
 
             {draggedInventoryItem ? (
                 <div

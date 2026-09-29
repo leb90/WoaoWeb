@@ -213,6 +213,10 @@ export async function handleIncomingUiPacket({
             ctx.mergeHud({ mountState: packet.payload });
             return true;
 
+        case "castleState":
+            ctx.mergeHud({ castleState: packet.payload });
+            return true;
+
         case "questProgressNotice":
             ctx.onQuestProgressNotice?.(packet.payload);
             return true;

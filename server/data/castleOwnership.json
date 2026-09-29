@@ -1,0 +1,27 @@
+{
+  "norte": {
+    "clanName": "",
+    "clanId": "",
+    "conqueredAt": 0
+  },
+  "sur": {
+    "clanName": "",
+    "clanId": "",
+    "conqueredAt": 0
+  },
+  "este": {
+    "clanName": "<Woao Staff>",
+    "clanId": "",
+    "conqueredAt": 1790683036207
+  },
+  "oeste": {
+    "clanName": "<Woao Staff>",
+    "clanId": "",
+    "conqueredAt": 1790683893588
+  },
+  "fortaleza": {
+    "clanName": "",
+    "clanId": "",
+    "conqueredAt": 0
+  }
+}

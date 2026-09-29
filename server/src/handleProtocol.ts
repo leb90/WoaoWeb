@@ -399,6 +399,7 @@ export type HandleProtocolApi = {
     questState: (payload: QuestStatePayload, client: RuntimeClient) => void;
     questProgressNotice: (payload: QuestProgressNoticePayload, client: RuntimeClient) => void;
     mountState: (payload: unknown, client: RuntimeClient) => void;
+    castleState: (payload: unknown, client: RuntimeClient) => void;
     selfFlagsDelta: (payload: SelfFlagsDeltaPayload, client: RuntimeClient) => void;
     selfVitalsDelta: (payload: SelfVitalsDeltaPayload, client: RuntimeClient) => void;
     selfMapMetaDelta: (payload: SelfMapMetaDeltaPayload, client: RuntimeClient) => void;
@@ -1359,6 +1360,12 @@ const handleServer: HandleProtocolApi = {
 
     mountState(payload, client) {
         pkg.setPackageID(pkg.clientPacketID.mountState);
+        pkg.writeString(JSON.stringify(payload));
+        socket.send(client);
+    },
+
+    castleState(payload, client) {
+        pkg.setPackageID(pkg.clientPacketID.castleState);
         pkg.writeString(JSON.stringify(payload));
         socket.send(client);
     },

@@ -19,7 +19,7 @@ import {
     sanitizeName,
 } from "../lib/text";
 
-const CLAN_CREATION_COST = 1_500_000;
+const CLAN_CREATION_COST = 150_000;
 const CLAN_CREATION_LEVEL_REQUIRED = 30;
 const CLAN_NAME_MAX_LENGTH = 18;
 const CLAN_MAX_MEMBERS = 50;

@@ -1,6 +1,5 @@
 ﻿"use client";
 
-import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Map, Maximize2, Minimize2 } from "lucide-react";
@@ -800,8 +799,6 @@ function HomeContent() {
     );
     const [macros, setMacros] =
         useState<Array<StoredMacro | null>>(createEmptyMacros());
-    const [isCharacterSettingsLoading, setIsCharacterSettingsLoading] =
-        useState(true);
     const tradeStateRef = useRef<TradeState | null>(null);
     const globalCanvasNoticeTimeoutRef = useRef<number | null>(null);
     const questProgressFadeTimeoutRef = useRef<number | null>(null);
@@ -891,7 +888,6 @@ function HomeContent() {
     const [characterStatsLoading, setCharacterStatsLoading] = useState(false);
     const [isHotkeyIntroOpen, setIsHotkeyIntroOpen] = useState(false);
     const [deathHomePromptOpen, setDeathHomePromptOpen] = useState(false);
-    const [arenaLeavePending, setArenaLeavePending] = useState(false);
     const [isMinimapVisible, setIsMinimapVisible] = useState(true);
     const [minimapHost, setMinimapHost] = useState<HTMLElement | null>(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
@@ -959,9 +955,6 @@ function HomeContent() {
             ? `/arenas?room=${encodeURIComponent(arenaRoomId)}`
             : "/arenas"
         : "/characters";
-    const switchCharacterLabel = arenaMode
-        ? "Cambiar clase"
-        : "Cambiar personaje";
     const deathHomeTitle = arenaMode
         ? "Volver al sacerdote"
         : "Volver a la ciudad";
@@ -1683,30 +1676,6 @@ function HomeContent() {
         [arenaMode, arenaRoomId, resetConnectionState, router],
     );
 
-    const leaveArenaRoom = useCallback(async () => {
-        if (arenaLeavePending) {
-            return;
-        }
-
-        resetConnectionState();
-
-        if (!arenaRoomId) {
-            router.replace("/arenas");
-            return;
-        }
-
-        setArenaLeavePending(true);
-
-        try {
-            await fetch(`/api/arenas/rooms/${arenaRoomId}/leave`, {
-                method: "POST",
-            });
-        } finally {
-            setArenaLeavePending(false);
-            router.replace("/arenas");
-        }
-    }, [arenaLeavePending, arenaRoomId, resetConnectionState, router]);
-
     const appendConsoleEntry = useCallback(
         (entry: Omit<ConsoleEntry, "id">) => {
             if (entry.source === "console") {
@@ -1943,31 +1912,6 @@ function HomeContent() {
         status.connecting,
         switchCharacterHref,
     ]);
-
-    const handleSwitchCharacterClick = useCallback(
-        (event: React.MouseEvent<HTMLAnchorElement>) => {
-            if (
-                arenaMode ||
-                !status.connected ||
-                hud?.dead ||
-                hud?.zonaSegura !== 0
-            ) {
-                return;
-            }
-
-            event.preventDefault();
-            setPendingExitHref(switchCharacterHref);
-            sendChatMessage("/salir");
-        },
-        [
-            arenaMode,
-            hud?.dead,
-            hud?.zonaSegura,
-            sendChatMessage,
-            status.connected,
-            switchCharacterHref,
-        ],
-    );
 
     const handleStatusChange = useCallback((nextStatus: RendererStatus) => {
         const nextWorldName =
@@ -2391,7 +2335,6 @@ function HomeContent() {
         if (arenaMode || !authSession?.selectedCharacterId) {
             loadedCharacterSettingsIdRef.current = null;
             lastSavedCharacterSettingsRef.current = null;
-            setIsCharacterSettingsLoading(false);
             setHotkeySettings(DEFAULT_HOTKEY_SETTINGS);
             setMacros(createEmptyMacros());
             return;
@@ -2402,8 +2345,6 @@ function HomeContent() {
 
         loadedCharacterSettingsIdRef.current = null;
         lastSavedCharacterSettingsRef.current = null;
-        setIsCharacterSettingsLoading(true);
-
         const loadCharacterSettings = async () => {
             for (let attempt = 0; attempt < 2; attempt += 1) {
                 try {
@@ -2438,7 +2379,6 @@ function HomeContent() {
                         hotkeys: normalized.hotkeys,
                         macros: normalized.macros,
                     });
-                    setIsCharacterSettingsLoading(false);
                     return;
                 } catch {
                     continue;
@@ -2448,7 +2388,6 @@ function HomeContent() {
             if (!cancelled) {
                 setHotkeySettings(DEFAULT_HOTKEY_SETTINGS);
                 setMacros(createEmptyMacros());
-                setIsCharacterSettingsLoading(false);
             }
         };
 

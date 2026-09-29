@@ -926,6 +926,7 @@ function Login(this: LoginApi) {
                 socket.withFlushGroup(ws, () => {
                     handleProtocol.sendMyCharacter(personajeWS);
                     socket.send(ws);
+                    require("./mounts").sendMountState(String(ws.id));
                     require("./quests").sendQuestState(String(ws.id), null);
                     sendWelcomeConsoleMessage(ws);
                     require("./skills").sendSkillsState(personajeWS);

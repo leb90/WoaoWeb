@@ -209,7 +209,7 @@ const classLabels: Record<number, string> = {
 
 const clanNamePattern = /^[A-Za-z ]+$/;
 const CLAN_CREATION_LEVEL_REQUIRED = 30;
-const CLAN_CREATION_COST = 1_500_000;
+const CLAN_CREATION_COST = 150_000;
 
 type HotkeySection = {
     title: string;
@@ -1525,7 +1525,7 @@ export default function InventoryFloatingPanel({
         }
 
         if (currentGold < CLAN_CREATION_COST) {
-            setClanError("Necesitas 1.500.000 de oro para crear un clan.");
+            setClanError("Necesitas 150.000 de oro para crear un clan.");
             return;
         }
 
@@ -4386,7 +4386,7 @@ export default function InventoryFloatingPanel({
                                     </div>
                                     <p className="mt-3 text-xs text-stone-400">
                                         Para crear un clan debes ser nivel 30 y
-                                        pagar 1.500.000 de oro.
+                                        pagar 150.000 de oro.
                                     </p>
                                     <button
                                         type="button"

@@ -1,0 +1,27 @@
+{
+  "norte": {
+    "clanName": "",
+    "clanId": "",
+    "conqueredAt": 0
+  },
+  "sur": {
+    "clanName": "",
+    "clanId": "",
+    "conqueredAt": 0
+  },
+  "este": {
+    "clanName": "<Testeando>",
+    "clanId": "e353af85-9ceb-49e3-9b0f-bf4b2112d62a",
+    "conqueredAt": 1790676116004
+  },
+  "oeste": {
+    "clanName": "",
+    "clanId": "",
+    "conqueredAt": 0
+  },
+  "fortaleza": {
+    "clanName": "",
+    "clanId": "",
+    "conqueredAt": 0
+  }
+}

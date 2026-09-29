@@ -20,6 +20,12 @@ import {
     updateDonationPaymentStatus,
 } from "./repositories/donations";
 import {
+    createGmTicket,
+    getGmTicket,
+    listGmTickets,
+    resolveGmTicket,
+} from "./repositories/gmTickets";
+import {
     confirmPasswordReset,
     consumeGameTicket,
     createCharacterForSession,
@@ -230,6 +236,37 @@ async function requireAdminEmailSession(
     }
 
     if (!isAuthorizedGameDataAdmin(authorized.session)) {
+        response.status(403).json({ error: "No autorizado." });
+        return null;
+    }
+
+    return authorized;
+}
+
+async function requireGmSession(
+    request: express.Request,
+    response: express.Response,
+): Promise<ReturnType<typeof getAuthorizedSession> | null> {
+    const authorized = await getAuthorizedSession(request);
+
+    if (!authorized) {
+        response.status(401).json({ error: "Unauthorized" });
+        return null;
+    }
+
+    // Se consulta fresco contra la DB en vez de confiar en el payload de sesion:
+    // privileges puede haber cambiado desde que se emitio el token.
+    const result = await pool.query<{ exists: boolean }>(
+        `
+            SELECT EXISTS (
+                SELECT 1 FROM characters
+                WHERE account_id = $1 AND privileges IN (1, 2) AND deleted_at IS NULL
+            ) AS exists
+        `,
+        [authorized.session.account._id],
+    );
+
+    if (!result.rows[0]?.exists) {
         response.status(403).json({ error: "No autorizado." });
         return null;
     }
@@ -2788,6 +2825,145 @@ app.post("/donations/mercadopago-webhook", async (request, response) => {
         });
 
         response.status(200).json({ ok: true });
+    } catch (error) {
+        response.status(500).json({
+            error: error instanceof Error ? error.message : "Unexpected error",
+        });
+    }
+});
+
+app.post("/internal/gm-tickets", requireAuth, async (request, response) => {
+    try {
+        const result = await createGmTicket(request.body);
+        response.status(201).json(result);
+    } catch (error) {
+        const status =
+            error instanceof Error && error.name === "ZodError" ? 400 : 500;
+        response.status(status).json({
+            error: error instanceof Error ? error.message : "Unexpected error",
+        });
+    }
+});
+
+app.get("/internal/gm-tickets", requireAuth, async (request, response) => {
+    try {
+        const status =
+            typeof request.query.status === "string"
+                ? request.query.status
+                : undefined;
+        response.json(await listGmTickets(status));
+    } catch (error) {
+        response.status(500).json({
+            error: error instanceof Error ? error.message : "Unexpected error",
+        });
+    }
+});
+
+app.get("/internal/gm-tickets/:id", requireAuth, async (request, response) => {
+    try {
+        const rawId = Array.isArray(request.params.id)
+            ? request.params.id[0]
+            : request.params.id;
+        const ticket = await getGmTicket(rawId);
+
+        if (!ticket) {
+            response.status(404).json({ error: "Ticket no encontrado" });
+            return;
+        }
+
+        response.json(ticket);
+    } catch (error) {
+        response.status(500).json({
+            error: error instanceof Error ? error.message : "Unexpected error",
+        });
+    }
+});
+
+app.patch(
+    "/internal/gm-tickets/:id/resolve",
+    requireAuth,
+    async (request, response) => {
+        try {
+            const resolvedBy = String(request.body?.resolvedBy ?? "").trim();
+            const note =
+                typeof request.body?.note === "string"
+                    ? request.body.note.trim()
+                    : null;
+
+            if (!resolvedBy) {
+                response.status(400).json({ error: "resolvedBy es requerido" });
+                return;
+            }
+
+            const rawId = Array.isArray(request.params.id)
+                ? request.params.id[0]
+                : request.params.id;
+            const ticket = await resolveGmTicket(rawId, resolvedBy, note);
+
+            if (!ticket) {
+                response
+                    .status(404)
+                    .json({ error: "Ticket no encontrado o ya resuelto" });
+                return;
+            }
+
+            response.json(ticket);
+        } catch (error) {
+            response.status(500).json({
+                error: error instanceof Error ? error.message : "Unexpected error",
+            });
+        }
+    },
+);
+
+app.get("/gm-tickets", async (request, response) => {
+    const authorized = await requireGmSession(request, response);
+    if (!authorized) {
+        return;
+    }
+
+    try {
+        const status =
+            typeof request.query.status === "string"
+                ? request.query.status
+                : undefined;
+        response.json(await listGmTickets(status));
+    } catch (error) {
+        response.status(500).json({
+            error: error instanceof Error ? error.message : "Unexpected error",
+        });
+    }
+});
+
+app.patch("/gm-tickets/:id/resolve", async (request, response) => {
+    const authorized = await requireGmSession(request, response);
+    if (!authorized) {
+        return;
+    }
+
+    try {
+        const note =
+            typeof request.body?.note === "string"
+                ? request.body.note.trim()
+                : null;
+        const resolvedByName =
+            authorized.session.characters.find(
+                (character) => character._id === authorized.session.selectedCharacterId,
+            )?.name ?? authorized.session.account.name;
+
+        const rawId = Array.isArray(request.params.id)
+            ? request.params.id[0]
+            : request.params.id;
+        const ticket = await resolveGmTicket(rawId, resolvedByName, note);
+
+        if (!ticket) {
+            response
+                .status(404)
+                .json({ error: "Ticket no encontrado o ya resuelto" });
+            return;
+        }
+
+        response.json(ticket);
     } catch (error) {
         response.status(500).json({
             error: error instanceof Error ? error.message : "Unexpected error",

@@ -20,7 +20,7 @@ import { getCharacterById, getClientById } from "./runtimeRegistry";
 
 export {};
 
-type ConsoleChannel = "console" | "global" | "party" | "clan" | "whisper";
+type ConsoleChannel = "console" | "global" | "party" | "clan" | "whisper" | "gmbot";
 
 const DRAGON_SLAYER_SWORD_ITEM_ID = 402;
 

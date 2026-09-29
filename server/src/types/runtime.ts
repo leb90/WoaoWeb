@@ -420,7 +420,23 @@ export type RuntimeCharacter = {
     challengeLockedUntil?: number;
     adminSummonedBot?: boolean;
     adminSummonedBotOwnerId?: EntityId;
+    gmBotState?: GmBotState | null;
+    gmBotNextSummonAt?: number;
+    gmBotStuckTeleportNextAt?: number;
+    gmBotReportCooldowns?: Record<string, number>;
     [key: string]: unknown;
+};
+
+export type GmBotState = {
+    step:
+        | "menu"
+        | "reportar_nombre"
+        | "reportar_motivo"
+        | "bug_texto"
+        | "faq_pregunta";
+    context?: {
+        reportedName?: string;
+    };
 };
 
 export type PartyRuntimeMember = {

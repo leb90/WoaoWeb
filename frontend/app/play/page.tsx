@@ -24,6 +24,10 @@ import MarketModal from "../../components/MarketModal";
 import RetosModal from "../../components/RetosModal";
 import TradeModal from "../../components/TradeModal";
 import {
+    GmBotCompanionBadge,
+    GmBotPanel,
+} from "../../components/game/overlays/GmBotPanel";
+import {
     createEmptyMacros,
     normalizeCharacterSettings,
     type CharacterSettingsResponse,
@@ -346,7 +350,7 @@ type QuestProgressCanvasNotice = QuestProgressNoticePayload & {
     visible: boolean;
 };
 
-type ChatTab = ChatChannel;
+type ChatTab = Exclude<ChatChannel, "gmbot">;
 type NotifiableChatTab = Extract<ChatTab, "party" | "clan" | "whisper">;
 type ChatEntriesByTab = Record<ChatTab, ConsoleEntry[]>;
 
@@ -792,6 +796,8 @@ function HomeContent() {
         createEmptyChatEntriesByTab,
     );
     const [activeChatTab, setActiveChatTab] = useState<ChatTab>("console");
+    const [gmBotMessages, setGmBotMessages] = useState<ConsoleEntry[]>([]);
+    const [gmBotOpen, setGmBotOpen] = useState(false);
     const [logoutPending, setLogoutPending] = useState(false);
     const [logoutDeadline, setLogoutDeadline] = useState<number | null>(null);
     const [logoutSecondsRemaining, setLogoutSecondsRemaining] = useState(0);
@@ -1710,6 +1716,19 @@ function HomeContent() {
 
     const appendConsoleEntry = useCallback(
         (entry: Omit<ConsoleEntry, "id">) => {
+            if (entry.channel === "gmbot") {
+                setGmBotOpen(true);
+                setGmBotMessages((current) => {
+                    const nextId = Math.max(
+                        Date.now(),
+                        lastConsoleEntryIdRef.current + 1,
+                    );
+                    lastConsoleEntryIdRef.current = nextId;
+                    return [...current.slice(-19), { id: nextId, ...entry }];
+                });
+                return;
+            }
+
             if (entry.source === "console") {
                 const challengeOverlayMatch = entry.text.match(
                     CHALLENGE_OVERLAY_PATTERN,
@@ -4023,6 +4042,14 @@ function HomeContent() {
                     onRefresh={refreshOverview}
                 />
             ) : null}
+
+            <GmBotCompanionBadge visible={gmBotOpen} />
+            <GmBotPanel
+                open={gmBotOpen}
+                messages={gmBotMessages}
+                onSendCommand={sendChatMessage}
+                onClose={() => setGmBotOpen(false)}
+            />
 
             {status.error || fullscreenError ? (
                 <div className="fixed left-4 top-24 z-50 max-w-sm rounded-2xl bg-stone-950/88 px-4 py-3 text-sm text-rose-300 shadow-2xl backdrop-blur-md">

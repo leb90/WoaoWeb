@@ -645,7 +645,8 @@ export type ChatChannel =
     | "global"
     | "party"
     | "clan"
-    | "whisper";
+    | "whisper"
+    | "gmbot";
 
 export const OBJECT_TYPE = {
     arboles: 4,

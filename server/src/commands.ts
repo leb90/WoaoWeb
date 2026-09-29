@@ -3214,6 +3214,111 @@ const command: CommandApi = {
                     break;
                 }
 
+                case "/gm": {
+                    require("./gmBot").handleCommand(String(clientId), nextText);
+                    break;
+                }
+
+                case "/gmtickets": {
+                    if (!hasStaffPrivileges(user)) {
+                        handleProtocol.console("No tenés permiso para esto.", "white", 0, 0, ws as CommandClient);
+                        break;
+                    }
+
+                    const statusFilter = nextText.trim() || "open";
+                    void funct
+                        .fetchUrl(`/internal/gm-tickets?status=${encodeURIComponent(statusFilter)}`, {
+                            headers: { Authorization: vars.tokenAuth },
+                        })
+                        .then((tickets: Array<{ id: string; type: string; reporterName: string; targetName: string | null; message: string }>) => {
+                            if (!tickets.length) {
+                                handleProtocol.console(`No hay tickets con estado "${statusFilter}".`, "white", 0, 0, ws as CommandClient);
+                                return;
+                            }
+
+                            handleProtocol.console(`Tickets (${statusFilter}):`, "white", 1, 0, ws as CommandClient);
+                            for (const ticket of tickets.slice(0, 20)) {
+                                const preview = ticket.message.length > 60 ? `${ticket.message.slice(0, 60)}...` : ticket.message;
+                                handleProtocol.console(
+                                    `[${ticket.id.slice(0, 8)}] ${ticket.type} - ${ticket.reporterName}${ticket.targetName ? ` -> ${ticket.targetName}` : ""}: ${preview}`,
+                                    "white",
+                                    0,
+                                    0,
+                                    ws as CommandClient,
+                                );
+                            }
+                        })
+                        .catch((error: unknown) => {
+                            funct.dumpError(error);
+                            handleProtocol.console("No se pudo consultar los tickets.", "white", 0, 0, ws as CommandClient);
+                        });
+                    break;
+                }
+
+                case "/gmticket": {
+                    if (!hasStaffPrivileges(user)) {
+                        handleProtocol.console("No tenés permiso para esto.", "white", 0, 0, ws as CommandClient);
+                        break;
+                    }
+
+                    const ticketId = nextText.trim();
+                    if (!ticketId) {
+                        handleProtocol.console("Usá /gmticket <id>.", "white", 0, 0, ws as CommandClient);
+                        break;
+                    }
+
+                    void funct
+                        .fetchUrl(`/internal/gm-tickets/${encodeURIComponent(ticketId)}`, {
+                            headers: { Authorization: vars.tokenAuth },
+                        })
+                        .then((ticket: { type: string; status: string; reporterName: string; targetName: string | null; message: string; createdAt: string }) => {
+                            handleProtocol.console(
+                                `[${ticket.type}] ${ticket.status} - de ${ticket.reporterName}${ticket.targetName ? ` sobre ${ticket.targetName}` : ""} (${ticket.createdAt})\n${ticket.message}`,
+                                "white",
+                                0,
+                                0,
+                                ws as CommandClient,
+                            );
+                        })
+                        .catch(() => {
+                            handleProtocol.console("No encontré ese ticket.", "white", 0, 0, ws as CommandClient);
+                        });
+                    break;
+                }
+
+                case "/gmresolver": {
+                    if (!hasStaffPrivileges(user)) {
+                        handleProtocol.console("No tenés permiso para esto.", "white", 0, 0, ws as CommandClient);
+                        break;
+                    }
+
+                    const searchSpaceResolver = nextText.indexOf(" ");
+                    const ticketId = searchSpaceResolver < 0 ? nextText.trim() : nextText.slice(0, searchSpaceResolver).trim();
+                    const note = searchSpaceResolver < 0 ? "" : nextText.slice(searchSpaceResolver + 1).trim();
+
+                    if (!ticketId) {
+                        handleProtocol.console("Usá /gmresolver <id> [nota].", "white", 0, 0, ws as CommandClient);
+                        break;
+                    }
+
+                    void funct
+                        .fetchUrl(`/internal/gm-tickets/${encodeURIComponent(ticketId)}/resolve`, {
+                            method: "PATCH",
+                            headers: {
+                                "Content-Type": "application/json",
+                                Authorization: vars.tokenAuth,
+                            },
+                            body: JSON.stringify({ resolvedBy: user.nameCharacter, note }),
+                        })
+                        .then(() => {
+                            handleProtocol.console("Ticket resuelto.", "white", 0, 0, ws as CommandClient);
+                        })
+                        .catch(() => {
+                            handleProtocol.console("No pude resolver ese ticket (¿ya estaba resuelto?).", "white", 0, 0, ws as CommandClient);
+                        });
+                    break;
+                }
+
                 case "/viaje": {
                     const result = require("./fastTravel").travel(String(clientId), nextText.trim());
                     handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);

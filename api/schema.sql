@@ -621,3 +621,24 @@ CREATE TABLE IF NOT EXISTS donation_payments (
 CREATE INDEX IF NOT EXISTS idx_donation_payments_character_id ON donation_payments(character_id);
 CREATE INDEX IF NOT EXISTS idx_donation_payments_order_id ON donation_payments(order_id);
 CREATE INDEX IF NOT EXISTS idx_donation_payments_provider_payment_id ON donation_payments(provider_payment_id);
+
+-- Tickets del bot de soporte GM. No confundir con game_tickets (eso es el
+-- handshake de login/conexion al juego, algo totalmente distinto).
+CREATE TABLE IF NOT EXISTS gm_tickets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    type TEXT NOT NULL,
+    reporter_character_id UUID NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+    reporter_name TEXT NOT NULL,
+    target_character_id UUID REFERENCES characters(id) ON DELETE SET NULL,
+    target_name TEXT,
+    message TEXT NOT NULL,
+    context JSONB,
+    status TEXT NOT NULL DEFAULT 'open',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    resolved_at TIMESTAMPTZ,
+    resolved_by TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_gm_tickets_status_created_at ON gm_tickets(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_gm_tickets_reporter_character_id ON gm_tickets(reporter_character_id);
+CREATE INDEX IF NOT EXISTS idx_gm_tickets_target_character_id ON gm_tickets(target_character_id);

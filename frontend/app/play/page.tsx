@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -95,7 +95,6 @@ const SHELL_HORIZONTAL_PADDING = 12;
 const SHELL_HORIZONTAL_PADDING_FULLSCREEN = 0;
 const COLUMN_SECTION_GAP = 6;
 const EXP_SECTION_GAP = 0;
-const SESSION_FOOTER_ESTIMATED_HEIGHT = 64;
 const MAX_HUD_SCALE = 2.5;
 const FULLSCREEN_HINT_DURATION_MS = 2600;
 const FULLSCREEN_PROMPT_MAX_WIDTH = 1200;
@@ -104,10 +103,10 @@ const PLAY_HOTKEYS_HINT_STORAGE_KEY = "ao-play-hotkeys-hint-dismissed";
 const PLAY_SOUND_VOLUME_STORAGE_KEY = "ao-play-sound-volume";
 const PLAY_MINIMAP_VISIBLE_STORAGE_KEY = "ao-play-minimap-visible";
 const LOGOUT_STARTED_MESSAGE =
-    "[Servidor] Debes permanecer quieto durante 10 segundos para salir. Si te mueves, la salida se cancelará.";
-const LOGOUT_CANCELLED_PATTERN = /^\[Servidor\] La salida se canceló porque /;
+    "[Servidor] Debes permanecer quieto durante 10 segundos para salir. Si te mueves, la salida se cancelarÃ¡.";
+const LOGOUT_CANCELLED_PATTERN = /^\[Servidor\] La salida se cancelÃ³ porque /;
 const LOGOUT_DENIED_PATTERN = /^\[Servidor\] No puedes salir /;
-const LOGOUT_CLOSING_MESSAGE = "[Servidor] Cerrando sesión...";
+const LOGOUT_CLOSING_MESSAGE = "[Servidor] Cerrando sesiÃ³n...";
 const LOGOUT_DELAY_MS = 10000;
 const CHALLENGE_INSTANCE_MAP_START = 2000;
 const RETOS_INFO_MESSAGES = new Set([
@@ -117,28 +116,28 @@ const RETOS_INFO_MESSAGES = new Set([
 ]);
 const RETOS_ERROR_MESSAGES = new Set([
     "Solo puedes usar retos en Mundo Abierto.",
-    "No puedes usar retos mientras estás muerto.",
+    "No puedes usar retos mientras estÃ¡s muerto.",
     "Solo puedes usar retos estando en zona segura.",
-    "Ese personaje ya está participando en otro reto.",
+    "Ese personaje ya estÃ¡ participando en otro reto.",
     "Para crear o unirte a un reto 2vs2 debes estar en una party de 2.",
-    "Solo el líder de la party puede crear o aceptar retos 2vs2.",
+    "Solo el lÃ­der de la party puede crear o aceptar retos 2vs2.",
     "El reto 2vs2 requiere una party exacta de 2 personajes.",
     "Todos los miembros de la party deben estar conectados para el reto 2vs2.",
     "Debes estar conectado para usar retos.",
-    "El modo de reto es inválido.",
-    "El reto ya no está disponible.",
+    "El modo de reto es invÃ¡lido.",
+    "El reto ya no estÃ¡ disponible.",
     "Solo puedes cancelar tu propio reto.",
-    "El retador ya no está disponible.",
+    "El retador ya no estÃ¡ disponible.",
     "No puedes aceptar tu propio reto.",
 ]);
 const CONSOLE_DISCORD_URL = "https://discord.gg/YpJ9XrMdg";
 const CONSOLE_FEEDBACK_FORM_URL = "https://forms.gle/Df2cmGExTBjjJhAR8";
 const WELCOME_CONSOLE_MESSAGES = {
     discord:
-        "Bienvenido a AOWeb. Si quieres enterarte de las últimas actualizaciones del juego, puedes ingresar a nuestro Discord.",
+        "Bienvenido a AOWeb. Si quieres enterarte de las Ãºltimas actualizaciones del juego, puedes ingresar a nuestro Discord.",
     feedback:
         "- Si quieres reportar erorres o sugerir cambios, puedes hacerlo en: https://forms.gle/Df2cmGExTBjjJhAR8",
-    rules: "- Está completamente prohibido el uso de personajes cámara, cheats o cualquier programa externo que modifique el juego, como auto tomar pociones o auto removerse. El uso de los mismos terminará en un ban permanente, sin previo aviso.",
+    rules: "- EstÃ¡ completamente prohibido el uso de personajes cÃ¡mara, cheats o cualquier programa externo que modifique el juego, como auto tomar pociones o auto removerse. El uso de los mismos terminarÃ¡ en un ban permanente, sin previo aviso.",
 } as const;
 const CHALLENGE_OVERLAY_PATTERN = /^\[Reto\]\s+(10|[0-9]|YA)$/;
 
@@ -967,8 +966,8 @@ function HomeContent() {
         ? "Volver al sacerdote"
         : "Volver a la ciudad";
     const deathHomeDescription = arenaMode
-        ? "También puedes volver al sacerdote con el comando /hogar"
-        : "También puedes volver con el comando /hogar";
+        ? "TambiÃ©n puedes volver al sacerdote con el comando /hogar"
+        : "TambiÃ©n puedes volver con el comando /hogar";
 
     useEffect(() => {
         activeChatTabRef.current = activeChatTab;
@@ -2757,71 +2756,11 @@ function HomeContent() {
             ) : (
                 <div className="text-stone-300/55">
                     No hay mensajes en {activeChatTabLabel.toLowerCase()}{" "}
-                    todavía.
+                    todavÃ­a.
                 </div>
             )}
         </>
     );
-
-    const sessionFooter = (
-        <div className="pointer-events-auto flex w-full flex-col gap-2 bg-[#120c09]/94 px-3 py-2.5 text-xs text-stone-100">
-            <div className="flex items-center justify-center gap-3 uppercase tracking-[0.18em]">
-                {authSession ? (
-                    <>
-                        <Link
-                            href="/arenas"
-                            prefetch={false}
-                            onClick={(event) => {
-                                if (!arenaMode) {
-                                    return;
-                                }
-
-                                event.preventDefault();
-                                void leaveArenaRoom();
-                            }}
-                            className="text-amber-300 transition hover:text-amber-200"
-                        >
-                            {arenaMode && arenaLeavePending
-                                ? "Saliendo..."
-                                : "Arenas"}
-                        </Link>
-                        <Link
-                            href={switchCharacterHref}
-                            prefetch={false}
-                            onClick={handleSwitchCharacterClick}
-                            className="text-cyan-300 transition hover:text-cyan-200"
-                        >
-                            {switchCharacterLabel}
-                        </Link>
-                    </>
-                ) : (
-                    <>
-                        <Link
-                            href="/login"
-                            prefetch={false}
-                            className="text-cyan-300 transition hover:text-cyan-200"
-                        >
-                            Login
-                        </Link>
-                        <Link
-                            href="/register"
-                            prefetch={false}
-                            className="text-stone-400 transition hover:text-stone-200"
-                        >
-                            Registro
-                        </Link>
-                    </>
-                )}
-            </div>
-            {authSession && !arenaMode ? (
-                <div className="text-center text-[10px] leading-4 tracking-[0.04em] text-stone-300/85">
-                    En zona insegura cerrá el personaje con{" "}
-                    <span className="text-amber-300">/salir</span>.
-                </div>
-            ) : null}
-        </div>
-    );
-
     return (
         <div
             ref={setGameShellNode}
@@ -3249,7 +3188,7 @@ function HomeContent() {
                                                     <div className="text-stone-300/55">
                                                         No hay mensajes en{" "}
                                                         {activeChatTabLabel.toLowerCase()}{" "}
-                                                        todavía.
+                                                        todavÃ­a.
                                                     </div>
                                                 )}
                                             </div>
@@ -3545,8 +3484,7 @@ function HomeContent() {
                                                 ? 0
                                                 : EXP_SECTION_GAP +
                                                   EXP_BAR_ESTIMATED_HEIGHT) -
-                                            COLUMN_SECTION_GAP -
-                                            SESSION_FOOTER_ESTIMATED_HEIGHT,
+                                            COLUMN_SECTION_GAP,
                                     )}px`}
                                     portalTarget={gameShellElement}
                                     minimapHost={minimapHost}
@@ -3689,8 +3627,6 @@ function HomeContent() {
                                         authSession?.selectedCharacterId ?? null
                                     }
                                 />
-
-                                {sessionFooter}
                             </div>
                         </ScaledHudFrame>
                     </div>

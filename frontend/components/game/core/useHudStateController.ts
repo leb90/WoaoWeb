@@ -153,18 +153,26 @@ export function useHudStateController({
 
     const emitHud = useCallback(
         (hud: PlayerHudState | null) => {
-            playerHudRef.current = hud;
-            setIsDeadWorldActive(Boolean(hud?.deadWorldActive));
+            const previousHud = playerHudRef.current;
+            const nextHud =
+                hud && !hud.mountState && previousHud?.mountState
+                    ? { ...hud, mountState: previousHud.mountState }
+                    : hud;
+
+            playerHudRef.current = nextHud;
+            setIsDeadWorldActive(Boolean(nextHud?.deadWorldActive));
             const nextPartyMemberIds = new Set(
-                (hud?.partyMembers ?? [])
+                (nextHud?.partyMembers ?? [])
                     .map((member) => String(member.id))
-                    .filter((memberId) => memberId !== String(hud?.id ?? "")),
+                    .filter(
+                        (memberId) => memberId !== String(nextHud?.id ?? ""),
+                    ),
             );
             partyMemberIdsRef.current = nextPartyMemberIds;
             if (engineRef.current) {
                 engineRef.current.partyMemberIds = nextPartyMemberIds;
                 engineRef.current.canAutoEmbark = Boolean(
-                    hud?.inventory?.some(
+                    nextHud?.inventory?.some(
                         (item) =>
                             item.objType === OBJECT_TYPE.barcos &&
                             item.amount > 0 &&
@@ -172,12 +180,12 @@ export function useHudStateController({
                     ),
                 );
                 if (engineRef.current.user) {
-                    engineRef.current.user.zonaSegura = hud?.zonaSegura;
+                    engineRef.current.user.zonaSegura = nextHud?.zonaSegura;
                 }
-                refreshVisibleClanTagStyles(engineRef.current, hud);
+                refreshVisibleClanTagStyles(engineRef.current, nextHud);
             }
-            updateSeguroIndicators(hud);
-            onHudChange?.(hud);
+            updateSeguroIndicators(nextHud);
+            onHudChange?.(nextHud);
         },
         [
             engineRef,

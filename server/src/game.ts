@@ -2737,7 +2737,7 @@ function applyUserSpellDamage(
         dmg = 1;
     }
 
-    return applyIncomingHit(userAttacked, dmg, "magic");
+    return applyIncomingHit(userAttacked, dmg, "magic", false, user.id);
 }
 
 function notifyNpcSpellDamage(user: GameCharacter, npc: GameNpc, dmg: number) {
@@ -9461,6 +9461,8 @@ function Game(this: GameApi) {
                     userAttacked,
                     dmg,
                     attackerWeapon?.proyectil ? "ranged" : "melee",
+                    false,
+                    idUser,
                 );
 
                 stabResult = {
@@ -10190,7 +10192,7 @@ function Game(this: GameApi) {
             const maxExpandedDropRadius = 5;
             let droppedItemsCount = 0;
 
-            if (!user) {
+            if (!user || user.populationBot) {
                 return;
             }
 

@@ -4120,6 +4120,47 @@ const command: CommandApi = {
                     }
                     break;
 
+                case "/bots": {
+                    if (!hasAdminPrivileges(user)) {
+                        break;
+                    }
+
+                    const populationBots = require("./populationBots") as typeof import("./populationBots");
+                    const subcommand = nextText.trim().toLowerCase();
+
+                    if (subcommand === "on") {
+                        populationBots.setPopulationBotsEnabled(true);
+                        if (!populationBots.hasSpawnedPopulationBots()) {
+                            void populationBots.spawnPopulationBots().then((count) => {
+                                handleProtocol.console(
+                                    `[INFO] Se crearon ${count} bots de poblacion.`,
+                                    "#86efac",
+                                    0,
+                                    0,
+                                    ws as CommandClient,
+                                );
+                            });
+                        }
+                        handleProtocol.console("[INFO] Bots de poblacion activados.", "#86efac", 0, 0, ws as CommandClient);
+                    } else if (subcommand === "off") {
+                        populationBots.setPopulationBotsEnabled(false);
+                        handleProtocol.console(
+                            "[INFO] Bots de poblacion pausados (siguen conectados, sin IA).",
+                            "#E69500",
+                            0,
+                            0,
+                            ws as CommandClient,
+                        );
+                    } else if (subcommand === "limpiar") {
+                        const removed = populationBots.despawnAllPopulationBots();
+                        populationBots.setPopulationBotsEnabled(false);
+                        handleProtocol.console(`[INFO] Se eliminaron ${removed} bots de poblacion.`, "#86efac", 0, 0, ws as CommandClient);
+                    } else {
+                        handleProtocol.console("[INFO] Uso: /bots on | /bots off | /bots limpiar.", "#E69500", 0, 0, ws as CommandClient);
+                    }
+                    break;
+                }
+
                 case "/bot": {
                     if (!hasAdminPrivileges(user)) {
                         break;

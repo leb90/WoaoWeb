@@ -415,6 +415,8 @@ export type RuntimeCharacter = {
     pendingReviveCast?: PendingReviveCast | null;
     lastMovementActivityAt?: number;
     lastCombatActivityAt?: number;
+    lastAttackerId?: EntityId;
+    lastAttackedAt?: number;
     challengeMatchId?: string | null;
     challengeTeam?: 1 | 2 | null;
     challengeLockedUntil?: number;
@@ -424,6 +426,11 @@ export type RuntimeCharacter = {
     gmBotNextSummonAt?: number;
     gmBotStuckTeleportNextAt?: number;
     gmBotReportCooldowns?: Record<string, number>;
+    populationBot?: boolean;
+    populationBotHomeMap?: number;
+    populationBotNextThinkAt?: number;
+    populationBotWaypoint?: Position | null;
+    populationBotNextChatAt?: number;
     [key: string]: unknown;
 };
 

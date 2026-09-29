@@ -22,6 +22,7 @@ import {
     Trash2,
     MoreHorizontal,
     Map as MapIcon,
+    Search,
     Plus,
 } from "lucide-react";
 import type {
@@ -351,21 +352,41 @@ const WORLD_MAP_MARKER_SIZE = 10;
 const SPELL_LIST_ROW_HEIGHT = 24;
 const SPELL_LIST_AUTOSCROLL_EDGE_PX = 22;
 const SPELL_LIST_AUTOSCROLL_STEP = 12;
-const WORLD_MAP_GRID_URL = "/init/world-map.json";
-const WORLD_MAP_GENERAL_GRID_URL = "/init/world-map-grid-general.json";
-const WORLD_MAP_SRC = "/imgs/world-map.png";
-const WORLD_MAP_GENERAL_SRC = "/imgs/world-map-general.png";
+const WORLD_MAP_GRID_URL = "/init/world-map-atlas.json";
+const WORLD_MAP_GENERAL_GRID_URL = "/init/world-map-atlas.json";
+const WORLD_MAP_SRC = "/imgs/world-map-old.jpg";
+const WORLD_MAP_GENERAL_SRC = "/imgs/world-map-old.jpg";
 
 type WorldMapLayoutEntry = {
     id: number;
-    gridX: number;
-    gridY: number;
+    gridX?: number;
+    gridY?: number;
+    leftPct?: number;
+    topPct?: number;
+    widthPct?: number;
+    heightPct?: number;
+    control?: number;
+    name?: string;
+    type?: string;
+    info?: string;
+    creatures?: string;
+    hasOldData?: boolean;
+    hasOldHotspot?: boolean;
+    hasPreview?: boolean;
+    layoutSource?: string;
 };
 
 type WorldMapGridData = {
     generatedAt?: string;
-    totalCols: number;
-    totalRows: number;
+    totalCols?: number;
+    totalRows?: number;
+    visibleMapCount?: number;
+    image?: {
+        src?: string;
+        width?: number;
+        height?: number;
+        originalWidth?: number;
+    };
     maps: WorldMapLayoutEntry[];
 };
 
@@ -376,7 +397,7 @@ type WorldMapConnectedPlayer = {
 };
 
 type WorldMapGrid = {
-    maps: Map<number, { gridX: number; gridY: number }>;
+    maps: Map<number, WorldMapLayoutEntry>;
     mapIdsByGrid: Map<string, number>;
     totalCols: number;
     totalRows: number;
@@ -406,19 +427,24 @@ function loadWorldMapGrid(url: string) {
 }
 
 function buildWorldMapGrid(worldMapGridData: WorldMapGridData): WorldMapGrid {
-    const maps = new Map<number, { gridX: number; gridY: number }>();
+    const maps = new Map<number, WorldMapLayoutEntry>();
     const mapIdsByGrid = new Map<string, number>();
 
     for (const map of worldMapGridData.maps) {
-        maps.set(map.id, { gridX: map.gridX, gridY: map.gridY });
-        mapIdsByGrid.set(`${map.gridX}:${map.gridY}`, map.id);
+        maps.set(map.id, map);
+        if (
+            typeof map.gridX === "number" &&
+            typeof map.gridY === "number"
+        ) {
+            mapIdsByGrid.set(`${map.gridX}:${map.gridY}`, map.id);
+        }
     }
 
     return {
         maps,
         mapIdsByGrid,
-        totalCols: worldMapGridData.totalCols,
-        totalRows: worldMapGridData.totalRows,
+        totalCols: worldMapGridData.totalCols ?? 1,
+        totalRows: worldMapGridData.totalRows ?? 1,
     };
 }
 
@@ -497,6 +523,25 @@ function getWorldMapMarkerStyle(
         0,
         Math.min(1, (pos.y - 0.5) / DEFAULT_MAP_GRID_SIZE),
     );
+    if (
+        typeof mapLayout.leftPct === "number" &&
+        typeof mapLayout.topPct === "number" &&
+        typeof mapLayout.widthPct === "number" &&
+        typeof mapLayout.heightPct === "number"
+    ) {
+        return {
+            left: `${mapLayout.leftPct + normalizedX * mapLayout.widthPct}%`,
+            top: `${mapLayout.topPct + normalizedY * mapLayout.heightPct}%`,
+        };
+    }
+
+    if (
+        typeof mapLayout.gridX !== "number" ||
+        typeof mapLayout.gridY !== "number"
+    ) {
+        return null;
+    }
+
     const left =
         ((mapLayout.gridX + normalizedX) / worldMapGrid.totalCols) * 100;
     const top =
@@ -506,6 +551,68 @@ function getWorldMapMarkerStyle(
         left: `${left}%`,
         top: `${top}%`,
     };
+}
+
+function getWorldMapCellStyle(
+    worldMapGrid: WorldMapGrid | null,
+    entry: WorldMapLayoutEntry,
+) {
+    if (
+        typeof entry.leftPct === "number" &&
+        typeof entry.topPct === "number" &&
+        typeof entry.widthPct === "number" &&
+        typeof entry.heightPct === "number"
+    ) {
+        return {
+            left: `${entry.leftPct}%`,
+            top: `${entry.topPct}%`,
+            width: `${entry.widthPct}%`,
+            height: `${entry.heightPct}%`,
+        };
+    }
+
+    if (
+        !worldMapGrid ||
+        typeof entry.gridX !== "number" ||
+        typeof entry.gridY !== "number"
+    ) {
+        return null;
+    }
+
+    return {
+        left: `${(entry.gridX / worldMapGrid.totalCols) * 100}%`,
+        top: `${(entry.gridY / worldMapGrid.totalRows) * 100}%`,
+        width: `${(1 / worldMapGrid.totalCols) * 100}%`,
+        height: `${(1 / worldMapGrid.totalRows) * 100}%`,
+    };
+}
+
+function normalizeWorldMapSearch(value: string) {
+    return value
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim();
+}
+
+function isWorldMapSearchMatch(entry: WorldMapLayoutEntry, search: string) {
+    if (!search) {
+        return true;
+    }
+
+    const haystack = normalizeWorldMapSearch(
+        [
+            entry.id,
+            entry.name,
+            entry.type,
+            entry.info,
+            entry.creatures,
+        ]
+            .filter(Boolean)
+            .join(" "),
+    );
+
+    return haystack.includes(search);
 }
 
 function ItemGraphic({
@@ -984,6 +1091,13 @@ export default function InventoryFloatingPanel({
         string | null
     >(null);
     const [isWorldMapOpen, setIsWorldMapOpen] = React.useState(false);
+    const [worldMapSearch, setWorldMapSearch] = React.useState("");
+    const [selectedWorldMapId, setSelectedWorldMapId] = React.useState<
+        number | null
+    >(null);
+    const [missingWorldMapId, setMissingWorldMapId] = React.useState<
+        number | null
+    >(null);
     const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
     const [isSkillsOpen, setIsSkillsOpen] = React.useState(false);
     const [hardwareAccelerationWarning, setHardwareAccelerationWarning] =
@@ -1671,14 +1785,52 @@ export default function InventoryFloatingPanel({
         () => (worldMapGridData ? buildWorldMapGrid(worldMapGridData) : null),
         [worldMapGridData],
     );
+    const worldMapEntries = React.useMemo(
+        () =>
+            worldMapGridData?.maps
+                ? [...worldMapGridData.maps].sort((a, b) => a.id - b.id)
+                : [],
+        [worldMapGridData],
+    );
+    const normalizedWorldMapSearch = React.useMemo(
+        () => normalizeWorldMapSearch(worldMapSearch),
+        [worldMapSearch],
+    );
+    const filteredWorldMapEntries = React.useMemo(
+        () =>
+            worldMapEntries.filter((entry) =>
+                isWorldMapSearchMatch(entry, normalizedWorldMapSearch),
+            ),
+        [normalizedWorldMapSearch, worldMapEntries],
+    );
+    const selectedWorldMapEntry = React.useMemo(() => {
+        if (missingWorldMapId !== null) {
+            return null;
+        }
+
+        const fallbackMapId = selectedWorldMapId ?? previewMapId;
+
+        return (
+            worldMapEntries.find((entry) => entry.id === fallbackMapId) ??
+            worldMapEntries[0] ??
+            null
+        );
+    }, [missingWorldMapId, previewMapId, selectedWorldMapId, worldMapEntries]);
     const mapPreviewSrc = previewMapId
         ? `/imgs_maps/${previewMapId}.png`
         : null;
+    const worldMapBaseSrc =
+        worldMapGridData?.image?.src ??
+        (isAdmin ? WORLD_MAP_GENERAL_SRC : WORLD_MAP_SRC);
     const worldMapAssetSrc = worldMapGridData?.generatedAt
-        ? `${isAdmin ? WORLD_MAP_GENERAL_SRC : WORLD_MAP_SRC}?v=${encodeURIComponent(worldMapGridData.generatedAt)}`
-        : isAdmin
-          ? WORLD_MAP_GENERAL_SRC
-          : WORLD_MAP_SRC;
+        ? `${worldMapBaseSrc}?v=${encodeURIComponent(worldMapGridData.generatedAt)}`
+        : worldMapBaseSrc;
+    const worldMapVisibleImageWidth = worldMapGridData?.image?.width ?? 912;
+    const worldMapImageHeight = worldMapGridData?.image?.height ?? 720;
+    const worldMapOriginalImageWidth =
+        worldMapGridData?.image?.originalWidth ?? worldMapVisibleImageWidth;
+    const worldMapImageRenderWidth =
+        (worldMapOriginalImageWidth / worldMapVisibleImageWidth) * 100;
     const adminWorldMapAlt = "Mapa del mundo completo";
     const minimapMarkerPosition = React.useMemo(() => {
         if (isChallengeInstanceMap) {
@@ -1778,6 +1930,31 @@ export default function InventoryFloatingPanel({
         setIsWorldMapOpen(false);
         worldMapTriggerRef.current?.blur();
     }, []);
+    const handleWorldMapSearchChange = React.useCallback(
+        (event: React.ChangeEvent<HTMLInputElement>) => {
+            const nextSearch = event.target.value;
+            setWorldMapSearch(nextSearch);
+
+            const trimmedSearch = nextSearch.trim();
+            const numericSearch = Number(trimmedSearch);
+            if (Number.isInteger(numericSearch) && trimmedSearch !== "") {
+                const exactEntry = worldMapEntries.find(
+                    (entry) => entry.id === numericSearch,
+                );
+
+                if (exactEntry) {
+                    setSelectedWorldMapId(exactEntry.id);
+                    setMissingWorldMapId(null);
+                } else {
+                    setSelectedWorldMapId(null);
+                    setMissingWorldMapId(numericSearch);
+                }
+            } else {
+                setMissingWorldMapId(null);
+            }
+        },
+        [worldMapEntries],
+    );
     const handleLoadWorldMapPlayers = React.useCallback(async () => {
         setWorldMapPlayers([]);
         setWorldMapPlayersSampledAt(null);
@@ -1812,6 +1989,20 @@ export default function InventoryFloatingPanel({
             cancelled = true;
         };
     }, [isAdmin]);
+
+    React.useEffect(() => {
+        if (!isWorldMapOpen || missingWorldMapId !== null) {
+            return;
+        }
+
+        setSelectedWorldMapId((current) => {
+            if (current && worldMapEntries.some((entry) => entry.id === current)) {
+                return current;
+            }
+
+            return previewMapId ?? worldMapEntries[0]?.id ?? null;
+        });
+    }, [isWorldMapOpen, missingWorldMapId, previewMapId, worldMapEntries]);
 
     React.useEffect(() => {
         if (!partyMembers.length) {
@@ -3330,7 +3521,7 @@ export default function InventoryFloatingPanel({
                           onClick={closeWorldMap}
                       >
                           <div
-                              className="relative w-full max-w-6xl overflow-hidden rounded-[24px] border border-amber-200/20 bg-[#120c08]/96 shadow-[0_28px_90px_rgba(0,0,0,0.6)]"
+                              className="relative w-full max-w-[1420px] overflow-hidden rounded-[24px] border border-amber-200/20 bg-[#120c08]/96 shadow-[0_28px_90px_rgba(0,0,0,0.6)]"
                               onClick={(event) => event.stopPropagation()}
                           >
                               <div className="flex items-center justify-between gap-4 border-b border-amber-200/10 bg-[linear-gradient(180deg,rgba(127,78,35,0.28),rgba(18,12,8,0))] px-4 py-3 sm:px-5">
@@ -3388,77 +3579,312 @@ export default function InventoryFloatingPanel({
                                   </button>
                               </div>
 
-                              <div className="flex h-[calc(100vh-7rem)] items-center justify-center bg-[#0b0705] p-2 sm:p-3">
-                                  <div
-                                      className="relative inline-block"
-                                      onContextMenu={handleWorldMapContextMenu}
-                                      title={
-                                          isAdmin
-                                              ? "Click derecho para teletransportarte"
-                                              : undefined
-                                      }
-                                  >
-                                      <img
-                                          src={worldMapAssetSrc}
-                                          alt={adminWorldMapAlt}
-                                          className="block max-h-[calc(100vh-8.5rem)] max-w-full object-contain"
-                                      />
-                                      {worldMapMarkerPosition ? (
-                                          <div className="pointer-events-none absolute inset-0">
-                                              {worldMapPlayerMarkers.map(
-                                                  (marker) => (
-                                                      <div
-                                                          key={marker.id}
-                                                          className="pointer-events-auto absolute h-[8px] w-[8px] rounded-full border border-white/70 bg-sky-400 shadow-[0_0_0_1px_rgba(8,47,73,0.9),0_0_6px_rgba(56,189,248,0.7)]"
-                                                          style={{
-                                                              left: marker.left,
-                                                              top: marker.top,
-                                                              transform:
-                                                                  "translate(-50%, -50%)",
-                                                          }}
-                                                          title={marker.title}
-                                                          aria-label={
-                                                              marker.title
-                                                          }
-                                                      />
-                                                  ),
+                              <div className="h-[calc(100vh-7rem)] overflow-hidden bg-[#0b0705] p-3">
+                                  <div className="grid h-full min-h-0 grid-cols-1 gap-3 lg:grid-cols-[250px_minmax(0,1fr)_280px]">
+                                      <aside className="min-h-0 overflow-hidden border border-amber-200/10 bg-black/22">
+                                          <div className="flex items-center justify-between gap-3 border-b border-amber-200/10 px-3 py-2">
+                                              <span className="text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-300">
+                                                  Atlas
+                                              </span>
+                                              <span className="text-xs font-semibold text-stone-300">
+                                                  {
+                                                      filteredWorldMapEntries.length
+                                                  }{" "}
+                                                  / {worldMapEntries.length}
+                                              </span>
+                                          </div>
+                                          <div className="border-b border-amber-200/10 p-2">
+                                              <div className="relative">
+                                                  <Search
+                                                      aria-hidden="true"
+                                                      className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-amber-200/60"
+                                                      strokeWidth={1.8}
+                                                  />
+                                                  <input
+                                                      value={worldMapSearch}
+                                                      onChange={
+                                                          handleWorldMapSearchChange
+                                                      }
+                                                      placeholder="Buscar mapa..."
+                                                      className="h-9 w-full border border-amber-200/18 bg-black/35 pl-9 pr-3 text-sm font-semibold text-[#f2e5ca] outline-none transition placeholder:text-stone-500 focus:border-amber-300/60"
+                                                  />
+                                              </div>
+                                          </div>
+                                          <div className="h-[calc(100%-5.65rem)] overflow-y-auto p-2">
+                                              {filteredWorldMapEntries.map(
+                                                  (entry) => {
+                                                      const isSelected =
+                                                          selectedWorldMapEntry?.id ===
+                                                          entry.id;
+                                                      const isCurrent =
+                                                          previewMapId ===
+                                                          entry.id;
+
+                                                      return (
+                                                          <button
+                                                              key={entry.id}
+                                                              type="button"
+                                                              onClick={() =>
+                                                                  {
+                                                                      setSelectedWorldMapId(
+                                                                          entry.id,
+                                                                      );
+                                                                      setMissingWorldMapId(
+                                                                          null,
+                                                                      );
+                                                                  }
+                                                              }
+                                                              className={`mb-2 w-full border px-3 py-2 text-left transition ${
+                                                                  isSelected
+                                                                      ? "border-amber-300 bg-amber-400/16 text-amber-50"
+                                                                      : "border-white/8 bg-white/[0.03] text-stone-200 hover:border-amber-300/50 hover:bg-amber-300/8"
+                                                              }`}
+                                                          >
+                                                              <div className="flex items-center justify-between gap-2">
+                                                                  <span className="truncate text-sm font-semibold">
+                                                                      {entry.name ||
+                                                                          `Mapa ${entry.id}`}
+                                                                  </span>
+                                                                  <span className="shrink-0 text-[11px] font-bold text-amber-200">
+                                                                      #{entry.id}
+                                                                  </span>
+                                                              </div>
+                                                              <div className="mt-1 flex items-center gap-2 text-[11px] text-stone-400">
+                                                                  <span className="truncate">
+                                                                      {entry.type ||
+                                                                          "Sin tipo"}
+                                                                  </span>
+                                                                  {isCurrent ? (
+                                                                      <span className="shrink-0 text-emerald-300">
+                                                                          Actual
+                                                                      </span>
+                                                                  ) : null}
+                                                              </div>
+                                                          </button>
+                                                      );
+                                                  },
                                               )}
-                                              <div
-                                                  data-testid="world-map-self-marker"
-                                                  aria-hidden="true"
-                                                  className="absolute rounded-full border border-white/90 bg-[#ff3b22] shadow-[0_0_0_1px_rgba(90,14,2,0.9),0_0_5px_rgba(255,88,42,0.9)] before:absolute before:left-1/2 before:top-1/2 before:h-6 before:w-6 before:-translate-x-1/2 before:-translate-y-1/2 before:rounded-full before:border before:border-[#ff6a54]/80 before:bg-[#ff6a54]/10 before:content-['']"
+                                              {!filteredWorldMapEntries.length ? (
+                                                  <div className="border border-dashed border-white/10 px-3 py-8 text-center text-sm text-stone-400">
+                                                      No hay mapas para esa
+                                                      busqueda.
+                                                  </div>
+                                              ) : null}
+                                          </div>
+                                      </aside>
+
+                                      <section className="flex min-h-0 items-center justify-center overflow-hidden rounded-sm border border-amber-400/50 bg-black/35 p-1 shadow-[0_0_0_1px_rgba(0,0,0,0.45)]">
+                                          <div
+                                              className="relative h-full max-h-full max-w-full overflow-hidden"
+                                              onContextMenu={
+                                                  handleWorldMapContextMenu
+                                              }
+                                              style={{
+                                                  aspectRatio: `${worldMapVisibleImageWidth} / ${worldMapImageHeight}`,
+                                              }}
+                                              title={
+                                                  isAdmin
+                                                      ? "Click derecho para teletransportarte"
+                                                      : undefined
+                                              }
+                                          >
+                                              <img
+                                                  src={worldMapAssetSrc}
+                                                  alt={adminWorldMapAlt}
+                                                  className="block h-full max-w-none object-fill"
                                                   style={{
-                                                      left: worldMapMarkerPosition.left,
-                                                      top: worldMapMarkerPosition.top,
-                                                      width: `${WORLD_MAP_MARKER_SIZE}px`,
-                                                      height: `${WORLD_MAP_MARKER_SIZE}px`,
-                                                      transform:
-                                                          "translate(-50%, -50%)",
+                                                      width: `${worldMapImageRenderWidth}%`,
                                                   }}
                                               />
-                                          </div>
-                                      ) : worldMapPlayerMarkers.length > 0 ? (
-                                          <div className="pointer-events-none absolute inset-0">
-                                              {worldMapPlayerMarkers.map(
-                                                  (marker) => (
-                                                      <div
-                                                          key={marker.id}
-                                                          className="pointer-events-auto absolute h-[8px] w-[8px] rounded-full border border-white/70 bg-sky-400 shadow-[0_0_0_1px_rgba(8,47,73,0.9),0_0_6px_rgba(56,189,248,0.7)]"
-                                                          style={{
-                                                              left: marker.left,
-                                                              top: marker.top,
-                                                              transform:
-                                                                  "translate(-50%, -50%)",
-                                                          }}
-                                                          title={marker.title}
-                                                          aria-label={
-                                                              marker.title
+                                              <div className="absolute inset-0">
+                                                  {worldMapEntries.map(
+                                                      (entry) => {
+                                                          const cellStyle =
+                                                              getWorldMapCellStyle(
+                                                                  worldMapGrid,
+                                                                  entry,
+                                                              );
+                                                          if (!cellStyle) {
+                                                              return null;
                                                           }
-                                                      />
-                                                  ),
-                                              )}
+
+                                                          const isSelected =
+                                                              selectedWorldMapEntry?.id ===
+                                                              entry.id;
+                                                          const isFiltered =
+                                                              normalizedWorldMapSearch.length >
+                                                                  0 &&
+                                                              filteredWorldMapEntries.some(
+                                                                  (filtered) =>
+                                                                      filtered.id ===
+                                                                      entry.id,
+                                                              );
+
+                                                          return (
+                                                              <button
+                                                                  key={entry.id}
+                                                                  type="button"
+                                                                  title={`Mapa ${entry.id}: ${
+                                                                      entry.name ||
+                                                                      "Sin nombre"
+                                                                  }`}
+                                                                  aria-label={`Seleccionar mapa ${entry.id}`}
+                                                                  onClick={() =>
+                                                                      {
+                                                                          setSelectedWorldMapId(
+                                                                              entry.id,
+                                                                          );
+                                                                          setMissingWorldMapId(
+                                                                              null,
+                                                                          );
+                                                                      }
+                                                                  }
+                                                                  className={`absolute border transition ${
+                                                                      isSelected
+                                                                          ? "z-20 border-amber-200 bg-amber-300/30 shadow-[0_0_10px_rgba(251,191,36,0.75)]"
+                                                                          : isFiltered
+                                                                            ? "border-amber-200/30 bg-amber-300/6 hover:border-amber-200/80 hover:bg-amber-300/18"
+                                                                            : "border-transparent bg-transparent hover:border-amber-200/55 hover:bg-amber-300/12"
+                                                                  }`}
+                                                                  style={
+                                                                      cellStyle
+                                                                  }
+                                                              />
+                                                          );
+                                                      },
+                                                  )}
+                                              </div>
+                                              {worldMapMarkerPosition ||
+                                              worldMapPlayerMarkers.length >
+                                                  0 ? (
+                                                  <div className="pointer-events-none absolute inset-0 z-30">
+                                                      {worldMapPlayerMarkers.map(
+                                                          (marker) => (
+                                                              <div
+                                                                  key={
+                                                                      marker.id
+                                                                  }
+                                                                  className="absolute h-[8px] w-[8px] rounded-full border border-white/70 bg-sky-400 shadow-[0_0_0_1px_rgba(8,47,73,0.9),0_0_6px_rgba(56,189,248,0.7)]"
+                                                                  style={{
+                                                                      left: marker.left,
+                                                                      top: marker.top,
+                                                                      transform:
+                                                                          "translate(-50%, -50%)",
+                                                                  }}
+                                                                  title={
+                                                                      marker.title
+                                                                  }
+                                                                  aria-label={
+                                                                      marker.title
+                                                                  }
+                                                              />
+                                                          ),
+                                                      )}
+                                                      {worldMapMarkerPosition ? (
+                                                          <div
+                                                              data-testid="world-map-self-marker"
+                                                              aria-hidden="true"
+                                                              className="absolute rounded-full border border-white/90 bg-[#ff3b22] shadow-[0_0_0_1px_rgba(90,14,2,0.9),0_0_5px_rgba(255,88,42,0.9)] before:absolute before:left-1/2 before:top-1/2 before:h-6 before:w-6 before:-translate-x-1/2 before:-translate-y-1/2 before:rounded-full before:border before:border-[#ff6a54]/80 before:bg-[#ff6a54]/10 before:content-['']"
+                                                              style={{
+                                                                  left: worldMapMarkerPosition.left,
+                                                                  top: worldMapMarkerPosition.top,
+                                                                  width: `${WORLD_MAP_MARKER_SIZE}px`,
+                                                                  height: `${WORLD_MAP_MARKER_SIZE}px`,
+                                                                  transform:
+                                                                      "translate(-50%, -50%)",
+                                                              }}
+                                                          />
+                                                      ) : null}
+                                                  </div>
+                                              ) : null}
                                           </div>
-                                      ) : null}
+                                      </section>
+
+                                      <aside className="min-h-0 overflow-hidden border border-amber-200/10 bg-black/22">
+                                          <div className="border-b border-amber-200/10 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-300">
+                                              Detalle
+                                          </div>
+                                          {selectedWorldMapEntry ? (
+                                              <div className="h-[calc(100%-2.25rem)] overflow-y-auto p-3">
+                                                  <div className="flex items-start justify-between gap-3">
+                                                      <div className="min-w-0">
+                                                          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-200/70">
+                                                              Mapa{" "}
+                                                              {
+                                                                  selectedWorldMapEntry.id
+                                                              }
+                                                          </p>
+                                                          <h4 className="mt-1 text-xl font-semibold text-[#f4ead8]">
+                                                              {selectedWorldMapEntry.name ||
+                                                                  `Mapa ${selectedWorldMapEntry.id}`}
+                                                          </h4>
+                                                      </div>
+                                                      {previewMapId ===
+                                                      selectedWorldMapEntry.id ? (
+                                                          <span className="shrink-0 border border-emerald-300/30 bg-emerald-400/12 px-2 py-1 text-xs font-semibold text-emerald-200">
+                                                              Actual
+                                                          </span>
+                                                      ) : null}
+                                                  </div>
+                                                  {selectedWorldMapEntry.hasPreview ? (
+                                                      <img
+                                                          src={`/imgs_maps/${selectedWorldMapEntry.id}.png`}
+                                                          alt={
+                                                              selectedWorldMapEntry.name ||
+                                                              `Mapa ${selectedWorldMapEntry.id}`
+                                                          }
+                                                          className="mt-3 h-32 w-full border border-amber-200/10 object-cover"
+                                                      />
+                                                  ) : null}
+                                                  <dl className="mt-3 space-y-2 text-sm">
+                                                      <div className="flex justify-between gap-3 border-b border-white/8 pb-2">
+                                                          <dt className="text-stone-400">
+                                                              Tipo
+                                                          </dt>
+                                                          <dd className="text-right font-semibold text-stone-100">
+                                                              {selectedWorldMapEntry.type ||
+                                                                  "-"}
+                                                          </dd>
+                                                      </div>
+                                                      <div className="border-b border-white/8 pb-2">
+                                                          <dt className="text-stone-400">
+                                                              Criaturas
+                                                          </dt>
+                                                          <dd className="mt-1 text-stone-100">
+                                                              {selectedWorldMapEntry.creatures ||
+                                                                  "-"}
+                                                          </dd>
+                                                      </div>
+                                                      <div>
+                                                          <dt className="text-stone-400">
+                                                              Info
+                                                          </dt>
+                                                          <dd className="mt-1 leading-relaxed text-stone-200">
+                                                              {selectedWorldMapEntry.info ||
+                                                                  "-"}
+                                                          </dd>
+                                                      </div>
+                                                  </dl>
+                                              </div>
+                                          ) : missingWorldMapId !== null ? (
+                                              <div className="p-4 text-sm text-stone-300">
+                                                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-200/70">
+                                                      Mapa {missingWorldMapId}
+                                                  </p>
+                                                  <h4 className="mt-1 text-xl font-semibold text-[#f4ead8]">
+                                                      Sin informacion
+                                                  </h4>
+                                                  <p className="mt-3 leading-relaxed text-stone-400">
+                                                      No hay informacion de ese
+                                                      mapa en el atlas antiguo.
+                                                  </p>
+                                              </div>
+                                          ) : (
+                                              <div className="p-4 text-sm text-stone-400">
+                                                  Selecciona un mapa.
+                                              </div>
+                                          )}
+                                      </aside>
                                   </div>
                               </div>
                           </div>

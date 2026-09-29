@@ -926,6 +926,7 @@ function Login(this: LoginApi) {
                 socket.withFlushGroup(ws, () => {
                     handleProtocol.sendMyCharacter(personajeWS);
                     socket.send(ws);
+                    require("./clanCastles").sendCastleState(ws);
                     require("./mounts").sendMountState(String(ws.id));
                     require("./quests").sendQuestState(String(ws.id), null);
                     sendWelcomeConsoleMessage(ws);
@@ -1279,6 +1280,7 @@ function Login(this: LoginApi) {
         socket.withFlushGroup(ws, () => {
             handleProtocol.sendMyCharacter(newCharacter);
             socket.send(ws);
+            require("./clanCastles").sendCastleState(ws);
             require("./quests").sendQuestState(String(ws.id), null);
             sendWelcomeConsoleMessage(ws);
             handleProtocol.console(

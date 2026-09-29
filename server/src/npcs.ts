@@ -2343,6 +2343,17 @@ function Npcs(this: NpcsApi) {
                 return;
             }
 
+            const castleDeath = require("./clanCastles").onCastleNpcRuntimeDeath(npc);
+            if (castleDeath?.handled) {
+                if (castleDeath.removeNpc) {
+                    delete vars.npcs[idNpc];
+                    delete vars.areaNpc[idNpc];
+                } else {
+                    vars.areaNpc[idNpc] = [];
+                }
+                return;
+            }
+
             const respawnCooldownMs = getNpcRespawnCooldownMs(npc);
             const respawnEntry = getNpcRespawnEntry(npc);
 

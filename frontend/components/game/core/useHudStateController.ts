@@ -154,10 +154,17 @@ export function useHudStateController({
     const emitHud = useCallback(
         (hud: PlayerHudState | null) => {
             const previousHud = playerHudRef.current;
-            const nextHud =
-                hud && !hud.mountState && previousHud?.mountState
-                    ? { ...hud, mountState: previousHud.mountState }
-                    : hud;
+            const nextHud = hud
+                ? {
+                      ...hud,
+                      ...(!hud.mountState && previousHud?.mountState
+                          ? { mountState: previousHud.mountState }
+                          : {}),
+                      ...(!hud.castleState && previousHud?.castleState
+                          ? { castleState: previousHud.castleState }
+                          : {}),
+                  }
+                : hud;
 
             playerHudRef.current = nextHud;
             setIsDeadWorldActive(Boolean(nextHud?.deadWorldActive));

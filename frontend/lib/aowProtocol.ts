@@ -83,6 +83,7 @@ export const CLIENT_PACKET_ID = {
     questState: 85,
     questProgressNotice: 86,
     mountState: 87,
+    castleState: 88,
 } as const;
 
 export const CHARACTER_SWING_WEAPON = 1;
@@ -635,6 +636,7 @@ export interface PlayerHudState {
     spells: SpellEntry[];
     questState?: QuestStatePayload;
     mountState?: MountStatePayload;
+    castleState?: CastleStatePayload;
     partyMembers: PartyHudMember[];
     clanMembers: ClanHudMember[];
 }
@@ -738,6 +740,10 @@ export interface AreaMetaSnapshot {
     map: number;
     name: string;
     blockedTiles: AreaBlockedTileSnapshot[];
+}
+
+export interface CastleStatePayload {
+    underAttack: Record<string, boolean>;
 }
 
 export interface SelfFlagsDelta {
@@ -957,6 +963,7 @@ export type ParsedServerPacket =
     | { type: "questState"; payload: QuestStatePayload }
     | { type: "questProgressNotice"; payload: QuestProgressNoticePayload }
     | { type: "mountState"; payload: MountStatePayload }
+    | { type: "castleState"; payload: CastleStatePayload }
     | { type: "partyState"; payload: PartyHudStateDelta }
     | { type: "clanState"; payload: ClanHudStateDelta }
     | { type: "startCastBar"; payload: { id: number; durationMs: number } }
@@ -2108,6 +2115,22 @@ function parseServerPacketById(
                 return {
                     type: "mountState",
                     payload: { maxOwned: null, mounts: [], hatchPool: [] },
+                };
+            }
+        }
+
+        case CLIENT_PACKET_ID.castleState: {
+            const rawPayload = reader.getString();
+
+            try {
+                return {
+                    type: "castleState",
+                    payload: JSON.parse(rawPayload) as CastleStatePayload,
+                };
+            } catch {
+                return {
+                    type: "castleState",
+                    payload: { underAttack: {} },
                 };
             }
         }

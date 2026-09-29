@@ -3567,6 +3567,8 @@ function broadcastNpcVitalsDelta(npc: RuntimeNpc | undefined): void {
         return;
     }
 
+    require("./clanCastles").syncCastleNpcDamageState(npc);
+
     game.loopAreaPos(npc.map, npc.pos, function (target: GameCharacter) {
         withUserClient(target.id, (targetClient) => {
             handleProtocol.entityVitalsDelta(npc.id, npc.hp, npc.maxHp, 0, 0, targetClient);

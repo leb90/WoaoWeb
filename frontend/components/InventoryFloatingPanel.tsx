@@ -14,6 +14,7 @@ import {
     Keyboard,
     X,
     Crown,
+    Flame,
     DoorOpen,
     Users,
     UserRoundX,
@@ -756,13 +757,18 @@ function ActiveMountHud({
 
 function CastleHud({
     onSendCommand,
+    castleState,
 }: {
     onSendCommand?: (message: string) => void;
+    castleState?: PlayerHudState["castleState"];
 }) {
     return (
         <div className="flex w-[104px] shrink-0 items-end justify-end gap-0.5">
             {CASTLE_HUD_ENTRIES.map((entry) => {
                 const isFortress = entry.id === "fortaleza";
+                const underAttack = Boolean(
+                    castleState?.underAttack?.[entry.id],
+                );
 
                 return (
                     <button
@@ -774,12 +780,23 @@ function CastleHud({
                         aria-label={entry.label}
                     >
                         <span
-                            className={`flex h-[18px] w-[18px] items-center justify-center border ${
+                            className={`relative flex h-[18px] w-[18px] items-center justify-center border ${
                                 isFortress
                                     ? "border-amber-300/65 bg-amber-400/20 text-amber-100 shadow-[0_0_10px_rgba(251,191,36,0.28)]"
                                     : "border-stone-500/35 bg-black/25 text-stone-400"
+                            } ${
+                                underAttack
+                                    ? "border-orange-300/80 text-orange-100 shadow-[0_0_12px_rgba(249,115,22,0.55)]"
+                                    : ""
                             } group-hover:border-amber-300/70`}
                         >
+                            {underAttack ? (
+                                <Flame
+                                    aria-hidden="true"
+                                    className="absolute -top-2.5 h-3.5 w-3.5 animate-pulse fill-orange-400/80 text-orange-300 drop-shadow-[0_0_5px_rgba(251,146,60,0.8)]"
+                                    strokeWidth={2.2}
+                                />
+                            ) : null}
                             <Crown
                                 aria-hidden="true"
                                 className="h-3 w-3"
@@ -2571,6 +2588,9 @@ export default function InventoryFloatingPanel({
         };
     }, [draggedInventoryItem, finishInventoryDrag, getPanelScale]);
 
+    const overlayTarget =
+        typeof document !== "undefined" ? (portalTarget ?? document.body) : null;
+
     return (
         <>
             <div
@@ -3269,7 +3289,10 @@ export default function InventoryFloatingPanel({
                                 </div>
                             </div>
                             <div className="mt-1.5 flex h-[46px] items-center gap-2 border-t border-amber-200/10 pt-1 text-stone-100">
-                                <CastleHud onSendCommand={onSendCommand} />
+                                <CastleHud
+                                    onSendCommand={onSendCommand}
+                                    castleState={hud?.castleState}
+                                />
                                 <ActiveMountHud
                                     mount={activeMount}
                                     objectsDB={objectsDB}
@@ -3818,8 +3841,9 @@ export default function InventoryFloatingPanel({
                 onClose={() => setIsSkillsOpen(false)}
             />
 
-            {isSettingsOpen ? (
-                <div className="fixed inset-0 z-[84] flex items-center justify-center bg-black/45 px-4 backdrop-blur-[3px]">
+            {isSettingsOpen && overlayTarget
+                ? createPortal(
+                      <div className="fixed inset-0 z-[84] flex items-center justify-center bg-black/45 px-4 backdrop-blur-[3px]">
                     <div className="w-full max-w-md overflow-hidden rounded-[28px] border border-amber-200/20 bg-[#120c08]/95 text-stone-100 shadow-[0_28px_90px_rgba(0,0,0,0.55)]">
                         <div className="flex items-start justify-between gap-4 border-b border-amber-200/10 bg-[linear-gradient(180deg,rgba(127,78,35,0.28),rgba(18,12,8,0))] px-5 py-4">
                             <div>
@@ -4020,8 +4044,10 @@ export default function InventoryFloatingPanel({
                             </button>
                         </div>
                     </div>
-                </div>
-            ) : null}
+                      </div>,
+                      overlayTarget,
+                  )
+                : null}
 
             {woaoHubTab && typeof document !== "undefined"
                 ? createPortal(
@@ -4047,11 +4073,12 @@ export default function InventoryFloatingPanel({
                   )
                 : null}
 
-            {isPartyModalOpen ? (
-                <div
-                    className="fixed inset-0 z-[83] flex items-center justify-center bg-black/45 px-4 backdrop-blur-[3px]"
-                    onClick={() => setIsPartyModalOpen(false)}
-                >
+            {isPartyModalOpen && overlayTarget
+                ? createPortal(
+                      <div
+                          className="fixed inset-0 z-[83] flex items-center justify-center bg-black/45 px-4 backdrop-blur-[3px]"
+                          onClick={() => setIsPartyModalOpen(false)}
+                      >
                     <div
                         className="w-full max-w-sm overflow-hidden rounded-[24px] border border-amber-200/20 bg-[#120c08]/96 text-stone-100 shadow-[0_28px_90px_rgba(0,0,0,0.6)]"
                         onClick={(event) => event.stopPropagation()}
@@ -4177,14 +4204,17 @@ export default function InventoryFloatingPanel({
                             )}
                         </div>
                     </div>
-                </div>
-            ) : null}
+                      </div>,
+                      overlayTarget,
+                  )
+                : null}
 
-            {isClanModalOpen ? (
-                <div
-                    className="fixed inset-0 z-[84] flex items-center justify-center bg-black/45 px-4 backdrop-blur-[3px]"
-                    onClick={closeClanModal}
-                >
+            {isClanModalOpen && overlayTarget
+                ? createPortal(
+                      <div
+                          className="fixed inset-0 z-[84] flex items-center justify-center bg-black/45 px-4 backdrop-blur-[3px]"
+                          onClick={closeClanModal}
+                      >
                     <div
                         className="w-full max-w-3xl overflow-hidden rounded-[24px] border border-amber-200/20 bg-[#120c08]/96 text-stone-100 shadow-[0_28px_90px_rgba(0,0,0,0.6)]"
                         onClick={(event) => event.stopPropagation()}
@@ -4946,11 +4976,14 @@ export default function InventoryFloatingPanel({
                             </div>
                         ) : null}
                     </div>
-                </div>
-            ) : null}
+                      </div>,
+                      overlayTarget,
+                  )
+                : null}
 
-            {isHotkeySettingsOpen ? (
-                <div className="fixed inset-0 z-[85] flex items-center justify-center bg-black/45 px-4 backdrop-blur-[3px]">
+            {isHotkeySettingsOpen && overlayTarget
+                ? createPortal(
+                      <div className="fixed inset-0 z-[85] flex items-center justify-center bg-black/45 px-4 backdrop-blur-[3px]">
                     <div className="w-full max-w-2xl overflow-hidden rounded-[28px] border border-amber-200/20 bg-[#120c08]/95 text-stone-100 shadow-[0_28px_90px_rgba(0,0,0,0.55)]">
                         <div className="flex items-start justify-between gap-4 border-b border-amber-200/10 bg-[linear-gradient(180deg,rgba(127,78,35,0.28),rgba(18,12,8,0))] px-5 py-4">
                             <div>
@@ -5088,8 +5121,10 @@ export default function InventoryFloatingPanel({
                             </button>
                         </div>
                     </div>
-                </div>
-            ) : null}
+                      </div>,
+                      overlayTarget,
+                  )
+                : null}
 
             {draggedInventoryItem ? (
                 <div

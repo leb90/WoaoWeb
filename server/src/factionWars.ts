@@ -17,7 +17,7 @@ const TEMPLE = { map: 210, x: 59, y: 24 };
 const WAR_DURATION_MS = 5 * 60_000;
 const INTERVAL_MS = 90 * 60_000;
 const REVIVE_INTERVAL_MS = 10_000;
-const AFK_LIMIT_MS = 30_000;
+const AFK_LIMIT_MS = 60_000;
 const TEAM_IMBALANCE_LIMIT = 2;
 const SAFE_AREA_RADIUS = 8;
 

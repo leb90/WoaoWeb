@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 
-const MOBILE_WIDTH_BREAKPOINT = 820;
+// Lado corto máximo de la pantalla física para considerarla un teléfono.
+// Los teléfonos rondan 320-480px; las tablets arrancan en ~744px.
+const PHONE_SHORT_SIDE_MAX = 600;
 
 function detectTouchCapable(): boolean {
     if (typeof window === "undefined") {
@@ -16,6 +18,23 @@ function detectTouchCapable(): boolean {
     );
 }
 
+// Se usa la pantalla física (screen.*) y no el viewport: el viewport cambia
+// al girar, al abrir el teclado o con viewport-fit=cover (un iPhone en
+// horizontal pasa de ~750px a 844px), y antes eso hacía que el juego
+// alternara entre layout mobile y desktop.
+function detectPhoneScreen(): boolean {
+    if (typeof window === "undefined") {
+        return false;
+    }
+
+    const shortSide = Math.min(
+        window.screen?.width || window.innerWidth,
+        window.screen?.height || window.innerHeight,
+    );
+
+    return shortSide > 0 && shortSide <= PHONE_SHORT_SIDE_MAX;
+}
+
 function readViewport(): { width: number; height: number } {
     if (typeof window === "undefined") {
         return { width: 0, height: 0 };
@@ -27,14 +46,15 @@ function readViewport(): { width: number; height: number } {
 export function useIsMobile(): { isMobile: boolean; isPortrait: boolean } {
     // Inicializadores perezosos: se resuelven en el primer render del
     // cliente, no en un efecto posterior. Si no, hay una ventana donde
-    // isMobile vale "false" (el default previo) antes de que el efecto
-    // corra - suficiente para que un dialogo que decide "mostrarme o no"
-    // en base a isMobile tome la decision equivocada en un celular real.
-    const [isTouchCapable, setIsTouchCapable] = useState(detectTouchCapable);
+    // isMobile vale "false" antes de que el efecto corra - suficiente para
+    // que un dialogo que decide "mostrarme o no" tome la decision equivocada.
+    const [isMobile, setIsMobile] = useState(
+        () => detectTouchCapable() && detectPhoneScreen(),
+    );
     const [viewport, setViewport] = useState(readViewport);
 
     useEffect(() => {
-        setIsTouchCapable(detectTouchCapable());
+        setIsMobile(detectTouchCapable() && detectPhoneScreen());
 
         const updateViewport = () => {
             setViewport(readViewport());
@@ -50,13 +70,6 @@ export function useIsMobile(): { isMobile: boolean; isPortrait: boolean } {
         };
     }, []);
 
-    // Se usa el lado mas grande (no solo el ancho) para que un telefono en
-    // horizontal no deje de contarse como mobile - la orientacion se maneja
-    // aparte con isPortrait.
-    const isPhoneSized =
-        viewport.width > 0 &&
-        Math.max(viewport.width, viewport.height) <= MOBILE_WIDTH_BREAKPOINT;
-    const isMobile = isTouchCapable && isPhoneSized;
     const isPortrait = viewport.height >= viewport.width;
 
     return { isMobile, isPortrait };

@@ -824,6 +824,10 @@ function HomeContent() {
     const [targetingHint, setTargetingHint] = useState<TargetingMode | null>(
         null,
     );
+    const [cancelTargetingRequest, setCancelTargetingRequest] = useState<{
+        token: number;
+    } | null>(null);
+    const [isQuickSlotEditMode, setIsQuickSlotEditMode] = useState(false);
 
     // Hacia qué lado estaba girado el teléfono la última vez que estuvo en
     // horizontal: si se bloquea la orientación y después queda en vertical,
@@ -3346,6 +3350,9 @@ function HomeContent() {
                                     onHudChange={setHud}
                                     onConsoleMessage={appendConsoleEntry}
                                     onTargetingModeChange={setTargetingHint}
+                                    cancelTargetingRequest={
+                                        cancelTargetingRequest
+                                    }
                                     onGlobalNotice={handleGlobalNotice}
                                     onQuestProgressNotice={
                                         handleQuestProgressNotice
@@ -3899,6 +3906,12 @@ function HomeContent() {
                                             token: (current?.token ?? 0) + 1,
                                         }))
                                     }
+                                    isQuickSlotEditMode={isQuickSlotEditMode}
+                                    onToggleQuickSlotEditMode={() =>
+                                        setIsQuickSlotEditMode(
+                                            (current) => !current,
+                                        )
+                                    }
                                     isOrientationLocked={isOrientationLocked}
                                     onToggleOrientationLock={() =>
                                         setIsOrientationLocked(
@@ -3991,7 +4004,17 @@ function HomeContent() {
                             {isMobile &&
                             (targetingHint?.type === "spell" ||
                                 targetingHint?.type === "range") ? (
-                                <MobileTargetHint label="Toca al objetivo" />
+                                <MobileTargetHint
+                                    label="Toca al objetivo"
+                                    onCancel={() =>
+                                        setCancelTargetingRequest(
+                                            (current) => ({
+                                                token:
+                                                    (current?.token ?? 0) + 1,
+                                            }),
+                                        )
+                                    }
+                                />
                             ) : null}
                         </div>
 

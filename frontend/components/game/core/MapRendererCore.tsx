@@ -141,6 +141,7 @@ interface MapRendererProps {
     isMobile?: boolean;
     touchMovementDirection?: "up" | "down" | "left" | "right" | null;
     meleeAttackRequest?: { token: number } | null;
+    cancelTargetingRequest?: { token: number } | null;
     equipRequest?: { slot: number; token: number } | null;
     useItemClickRequest?: { slot: number; token: number } | null;
     useItemURequest?: { slot: number; token: number } | null;
@@ -640,6 +641,7 @@ export default function MapRenderer({
     isMobile = false,
     touchMovementDirection = null,
     meleeAttackRequest,
+    cancelTargetingRequest,
     equipRequest,
     useItemClickRequest,
     useItemURequest,
@@ -1435,6 +1437,19 @@ export default function MapRenderer({
         spellTargetRequest,
         meleeAttackRequest,
     });
+
+    const lastCancelTargetingTokenRef = useRef<number | null>(null);
+    useEffect(() => {
+        if (
+            !cancelTargetingRequest ||
+            cancelTargetingRequest.token === lastCancelTargetingTokenRef.current
+        ) {
+            return;
+        }
+
+        lastCancelTargetingTokenRef.current = cancelTargetingRequest.token;
+        clearTargetingMode();
+    }, [cancelTargetingRequest, clearTargetingMode]);
 
     useEffect(() => {
         setIsMounted(true);

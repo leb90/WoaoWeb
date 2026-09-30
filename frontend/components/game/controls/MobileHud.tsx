@@ -1,6 +1,14 @@
 "use client";
 
-import { Backpack, Lock, LockOpen, MessageCircle, Settings } from "lucide-react";
+import {
+    Backpack,
+    Check,
+    Lock,
+    LockOpen,
+    MessageCircle,
+    Pencil,
+    Settings,
+} from "lucide-react";
 import type { PlayerHudState, SpellEntry } from "../../../lib/aowProtocol";
 import type { HotkeySettings } from "../../../lib/hotkeys";
 import type { StoredMacro } from "../../../lib/character-settings";
@@ -55,6 +63,8 @@ type MobileHudProps = {
     onOpenInventory: () => void;
     onToggleChat: () => void;
     onOpenSettings: () => void;
+    isQuickSlotEditMode: boolean;
+    onToggleQuickSlotEditMode: () => void;
     isOrientationLocked: boolean;
     onToggleOrientationLock: () => void;
 };
@@ -75,6 +85,8 @@ export function MobileHud({
     onOpenInventory,
     onToggleChat,
     onOpenSettings,
+    isQuickSlotEditMode,
+    onToggleQuickSlotEditMode,
     isOrientationLocked,
     onToggleOrientationLock,
 }: MobileHudProps) {
@@ -91,6 +103,7 @@ export function MobileHud({
         onSendCommand,
         touchMode: true,
         requireHotkey: false,
+        editMode: isQuickSlotEditMode,
     };
 
     return (
@@ -193,6 +206,33 @@ export function MobileHud({
                     allowedTargetTypes={["spell"]}
                     editorTitle="Hechizo rapido"
                 />
+                <button
+                    type="button"
+                    onClick={onToggleQuickSlotEditMode}
+                    className={`pointer-events-auto absolute left-0 top-0 flex h-9 items-center gap-1 rounded-full border px-2.5 text-[11px] font-semibold ${
+                        isQuickSlotEditMode
+                            ? "border-amber-300 bg-amber-300 text-stone-950"
+                            : "border-amber-200/25 bg-black/55 text-amber-100"
+                    }`}
+                    aria-pressed={isQuickSlotEditMode}
+                    aria-label={
+                        isQuickSlotEditMode
+                            ? "Terminar de editar accesos rapidos"
+                            : "Editar accesos rapidos"
+                    }
+                >
+                    {isQuickSlotEditMode ? (
+                        <>
+                            <Check className="h-3.5 w-3.5" />
+                            Listo
+                        </>
+                    ) : (
+                        <>
+                            <Pencil className="h-3.5 w-3.5" />
+                            Editar
+                        </>
+                    )}
+                </button>
                 <div className="absolute bottom-1 right-1">
                     <MobileAttackButton
                         onAttack={onAttack}

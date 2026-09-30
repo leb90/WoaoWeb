@@ -62,6 +62,8 @@ type MacroBarProps = {
     // items en los slots de pociones) y oculta el selector de tipo.
     allowedTargetTypes?: MacroTargetType[];
     editorTitle?: string;
+    // Con editMode activo, tocar un slot abre el editor en vez de usarlo.
+    editMode?: boolean;
     // En mobile no hay teclado - pedir una tecla para activar el boton
     // (como en desktop) no tiene sentido. Cuando es false se oculta la
     // seccion de "Tecla" del editor y se autogenera una keyCode sintetica
@@ -197,6 +199,7 @@ export default function MacroBar({
     containerSize,
     allowedTargetTypes,
     editorTitle,
+    editMode = false,
     requireHotkey = true,
 }: MacroBarProps) {
     const items = React.useMemo(
@@ -858,7 +861,7 @@ export default function MacroBar({
                                         return;
                                     }
 
-                                    if (macro) {
+                                    if (macro && !editMode) {
                                         activateMacro(index);
                                         return;
                                     }
@@ -897,7 +900,11 @@ export default function MacroBar({
                                         : isPositioned
                                           ? "border-amber-200/25 bg-black/45"
                                           : "border-[#5a422b] bg-[linear-gradient(180deg,#120d0a,#050404)] hover:border-[#9b744c]"
-                                } ${isEditing ? "ring-2 ring-amber-300/65" : ""}`}
+                                } ${isEditing ? "ring-2 ring-amber-300/65" : ""} ${
+                                    editMode
+                                        ? "border-dashed border-amber-300/80"
+                                        : ""
+                                }`}
                                 title={displayLabel || `Macro ${index + 1}`}
                             >
                                 {isPositioned ? null : (
@@ -954,6 +961,15 @@ export default function MacroBar({
                                 {requireHotkey && macro?.keyCode ? (
                                     <span className="pointer-events-none absolute bottom-1.5 right-1.5 rounded bg-black/75 px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none text-amber-100 shadow-lg">
                                         {formatHotkeyCode(macro.keyCode)}
+                                    </span>
+                                ) : null}
+
+                                {editMode && isPositioned ? (
+                                    <span
+                                        className="pointer-events-none absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-amber-300 text-stone-950"
+                                        aria-hidden="true"
+                                    >
+                                        <Pencil className="h-2.5 w-2.5" />
                                     </span>
                                 ) : null}
 

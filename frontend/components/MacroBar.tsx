@@ -40,6 +40,11 @@ type MacroBarProps = {
     onSendCommand: (command: string) => void;
     compact?: boolean;
     hidden?: boolean;
+    // Modo mobile: solo muestra estos indices del array de macros (en vez de
+    // los 8), con botones mas grandes para el dedo. El resto de la logica
+    // (activar, editar, persistir) es exactamente la misma que en desktop.
+    visibleSlotIndices?: number[];
+    touchMode?: boolean;
 };
 
 function ItemGraphic({
@@ -158,6 +163,8 @@ export default function MacroBar({
     onSendCommand,
     compact = false,
     hidden = false,
+    visibleSlotIndices,
+    touchMode = false,
 }: MacroBarProps) {
     const items = React.useMemo(
         () => (hud?.inventory ?? []).slice().sort((a, b) => a.slot - b.slot),
@@ -676,8 +683,16 @@ export default function MacroBar({
                     : "relative pointer-events-auto mx-auto w-full rounded-md border border-[#6d5336] bg-[linear-gradient(180deg,rgba(45,30,20,0.96),rgba(19,13,10,0.98))] px-2 py-1.5 shadow-[0_20px_45px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,220,180,0.08)]"
             }
         >
-            <div className="grid grid-cols-8 gap-1">
-                {macros.map((macro, index) => {
+            <div
+                className={
+                    touchMode
+                        ? "grid grid-cols-4 gap-2"
+                        : "grid grid-cols-8 gap-1"
+                }
+            >
+                {(visibleSlotIndices ?? macros.map((_, i) => i)).map(
+                    (index) => {
+                    const macro = macros[index];
                     const resolved = resolvedTargets[index];
                     const isEditing = editingIndex === index;
                     const resolvedItem = resolved?.item ?? null;
@@ -740,20 +755,28 @@ export default function MacroBar({
                                         <ItemGraphic
                                             graphicData={displayGraphic}
                                             name={displayLabel}
-                                            size={40}
+                                            size={touchMode ? 56 : 40}
                                         />
                                     ) : macro.targetType === "command" ? (
                                         <img
                                             src={SPELL_MACRO_ICON_URL}
                                             alt={displayLabel || "Comando"}
-                                            className="h-8 w-8 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.7)]"
+                                            className={
+                                                touchMode
+                                                    ? "h-11 w-11 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.7)]"
+                                                    : "h-8 w-8 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.7)]"
+                                            }
                                             draggable={false}
                                         />
                                     ) : (
                                         <img
                                             src={SPELL_MACRO_ICON_URL}
                                             alt={displayLabel || "Hechizo"}
-                                            className="h-8 w-8 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.7)]"
+                                            className={
+                                                touchMode
+                                                    ? "h-11 w-11 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.7)]"
+                                                    : "h-8 w-8 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.7)]"
+                                            }
                                             draggable={false}
                                         />
                                     )

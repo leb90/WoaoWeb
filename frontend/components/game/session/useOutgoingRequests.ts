@@ -89,6 +89,7 @@ type OutgoingRequestProps = {
         token: number;
     } | null;
     rangeAttackRequest?: { token: number } | null;
+    meleeAttackRequest?: { token: number } | null;
     spellTargetRequest?: {
         slot: number;
         manaRequired: number;
@@ -233,6 +234,7 @@ export function useOutgoingRequests({
     reorderBankRequest,
     rangeAttackRequest,
     spellTargetRequest,
+    meleeAttackRequest,
 }: UseOutgoingRequestsOptions) {
     const useItemClickQueueRef = useRef<number[]>([]);
     const useItemUQueueRef = useRef<number[]>([]);
@@ -623,6 +625,25 @@ export function useOutgoingRequests({
         pushSystemMessage,
         rangeAttackRequest,
         setTargetingMode,
+    ]);
+
+    useEffect(() => {
+        const request = meleeAttackRequest;
+        if (!request) {
+            return;
+        }
+
+        if (hasProcessedRequestToken("meleeAttack", request.token)) {
+            return;
+        }
+
+        engineRef.current?.sendMeleeAttackPacket?.();
+        markRequestTokenProcessed("meleeAttack", request.token);
+    }, [
+        engineRef,
+        hasProcessedRequestToken,
+        markRequestTokenProcessed,
+        meleeAttackRequest,
     ]);
 
     useEffect(() => {

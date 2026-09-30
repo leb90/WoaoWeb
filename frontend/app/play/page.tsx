@@ -26,6 +26,9 @@ import {
     GmBotCompanionBadge,
     GmBotPanel,
 } from "../../components/game/overlays/GmBotPanel";
+import { MobileHud } from "../../components/game/controls/MobileHud";
+import type { JoystickDirection } from "../../components/game/controls/TouchJoystick";
+import { useIsMobile } from "../../hooks/useIsMobile";
 import {
     createEmptyMacros,
     normalizeCharacterSettings,
@@ -221,6 +224,7 @@ type ScaledHudFrameProps = {
     baseWidth?: number;
     onMeasure?: (size: MeasuredHudSize) => void;
     children: React.ReactNode;
+    hidden?: boolean;
 };
 
 function hudSizesMatch(left: MeasuredHudSize, right: MeasuredHudSize) {
@@ -311,6 +315,10 @@ type ReorderBankRequest = {
 };
 
 type RangeAttackRequest = {
+    token: number;
+};
+
+type MeleeAttackRequest = {
     token: number;
 };
 
@@ -605,6 +613,7 @@ function ScaledHudFrame({
     baseWidth,
     onMeasure,
     children,
+    hidden = false,
 }: ScaledHudFrameProps) {
     const innerRef = useRef<HTMLDivElement | null>(null);
     const lastReportedSizeRef = useRef<MeasuredHudSize | null>(null);
@@ -662,6 +671,7 @@ function ScaledHudFrame({
                 width: frameWidth || undefined,
                 height: frameHeight || undefined,
                 flexShrink: 0,
+                display: hidden ? "none" : undefined,
             }}
         >
             <div
@@ -745,8 +755,14 @@ function HomeContent() {
         useState<ReorderSpellRequest | null>(null);
     const [reorderBankRequest, setReorderBankRequest] =
         useState<ReorderBankRequest | null>(null);
+    const { isMobile, isPortrait } = useIsMobile();
     const [rangeAttackRequest, setRangeAttackRequest] =
         useState<RangeAttackRequest | null>(null);
+    const [meleeAttackRequest, setMeleeAttackRequest] =
+        useState<MeleeAttackRequest | null>(null);
+    const [touchMovementDirection, setTouchMovementDirection] =
+        useState<JoystickDirection | null>(null);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [selectedSpellSlot, setSelectedSpellSlot] = useState<number | null>(
         null,
     );
@@ -1022,6 +1038,12 @@ function HomeContent() {
             idChar: activeConnection.idChar ?? 0,
         };
     }, [activeConnection, connectionSeed]);
+
+    const handleMobileAttack = useCallback(() => {
+        setMeleeAttackRequest((current) => ({
+            token: (current?.token ?? 0) + 1,
+        }));
+    }, []);
 
     const sendChatMessage = useCallback(
         (message: string) => {
@@ -2867,6 +2889,11 @@ function HomeContent() {
                                     width={hudLayout.canvasWidth}
                                     height={hudLayout.canvasHeight}
                                     connection={connection}
+                                    isMobile={isMobile}
+                                    touchMovementDirection={
+                                        touchMovementDirection
+                                    }
+                                    meleeAttackRequest={meleeAttackRequest}
                                     equipRequest={equipRequest}
                                     useItemClickRequest={useItemClickRequest}
                                     useItemURequest={useItemURequest}
@@ -3406,12 +3433,52 @@ function HomeContent() {
                                 }
                                 onSendCommand={sendChatMessage}
                             />
+
+                            {isMobile ? (
+                                <MobileHud
+                                    isPortrait={isPortrait}
+                                    hud={hud}
+                                    connected={status.connected}
+                                    hotkeySettings={hotkeySettings}
+                                    macros={macros}
+                                    useItemRepeatMs={useItemRepeatMs}
+                                    onMacrosChange={setMacros}
+                                    onUseItem={(slot) =>
+                                        setUseItemURequest((current) => ({
+                                            slot,
+                                            token: (current?.token ?? 0) + 1,
+                                        }))
+                                    }
+                                    onRangeAttackRequest={() =>
+                                        setRangeAttackRequest((current) => ({
+                                            token: (current?.token ?? 0) + 1,
+                                        }))
+                                    }
+                                    onCastSpell={(spell) =>
+                                        setSpellTargetRequest((current) => ({
+                                            slot: spell.slot,
+                                            manaRequired: spell.manaRequired,
+                                            name: spell.name,
+                                            token: (current?.token ?? 0) + 1,
+                                        }))
+                                    }
+                                    onSendCommand={sendChatMessage}
+                                    onDirectionChange={
+                                        setTouchMovementDirection
+                                    }
+                                    onAttack={handleMobileAttack}
+                                    onOpenMenu={() =>
+                                        setIsMobileMenuOpen((current) => !current)
+                                    }
+                                />
+                            ) : null}
                         </div>
 
                         <ScaledHudFrame
                             scale={hudScale}
                             baseWidth={RIGHT_PANEL_WIDTH}
                             onMeasure={handleRightColumnMeasure}
+                            hidden={isMobile && !isMobileMenuOpen}
                         >
                             <div
                                 className="relative flex w-[320px] flex-col"

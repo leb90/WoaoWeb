@@ -8,6 +8,7 @@ import { formatNumber } from "../lib/number-format";
 import {
     ChevronDown,
     ChevronUp,
+    LogOut,
     Settings,
     Settings2,
     Volume2,
@@ -100,6 +101,8 @@ type InventoryFloatingPanelProps = {
     // accesos del menú (Party, Clanes, Misiones...) que en mobile no tienen
     // otro lugar donde vivir.
     compactSettings?: boolean;
+    // Salir del juego (desconecta con la espera de /salir y vuelve al home).
+    onLogoutRequest?: () => void;
 };
 
 type HardwareAccelerationWarning = {
@@ -1015,6 +1018,7 @@ export default function InventoryFloatingPanel({
     selectedCharacterId,
     openSettingsRequest,
     compactSettings = false,
+    onLogoutRequest,
 }: InventoryFloatingPanelProps) {
     const items = React.useMemo(() => hud?.inventory ?? [], [hud?.inventory]);
     const spells = React.useMemo(() => hud?.spells ?? [], [hud?.spells]);
@@ -2849,7 +2853,9 @@ export default function InventoryFloatingPanel({
                                     <button
                                         type="button"
                                         onClick={() =>
-                                            onSendCommand?.("/salir")
+                                            onLogoutRequest
+                                                ? onLogoutRequest()
+                                                : onSendCommand?.("/salir")
                                         }
                                         className="h-9 shrink-0 rounded-sm border border-amber-300/60 bg-[linear-gradient(180deg,#563616,#25150b)] px-4 text-[12px] font-semibold text-amber-50 shadow-[inset_0_1px_0_rgba(255,220,180,0.16)] transition hover:border-amber-200 hover:brightness-110"
                                     >
@@ -4045,6 +4051,21 @@ export default function InventoryFloatingPanel({
                                             </button>
                                         ))}
                                     </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setIsSettingsOpen(false);
+                                            if (onLogoutRequest) {
+                                                onLogoutRequest();
+                                            } else {
+                                                onSendCommand?.("/salir");
+                                            }
+                                        }}
+                                        className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-rose-400/60 bg-[linear-gradient(180deg,#7f1d1d,#450a0a)] text-sm font-bold uppercase tracking-[0.12em] text-rose-50 shadow-[0_6px_18px_rgba(0,0,0,0.45)]"
+                                    >
+                                        <LogOut className="h-4 w-4" />
+                                        Salir del juego
+                                    </button>
                                 </section>
                             ) : null}
 

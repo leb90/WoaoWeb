@@ -158,10 +158,10 @@ function readStoredOrientationLock(): boolean {
     );
 }
 const LOGOUT_STARTED_MESSAGE =
-    "[Servidor] Debes permanecer quieto durante 10 segundos para salir. Si te mueves, la salida se cancelarÃ¡.";
-const LOGOUT_CANCELLED_PATTERN = /^\[Servidor\] La salida se cancelÃ³ porque /;
+    "[Servidor] Debes permanecer quieto durante 10 segundos para salir. Si te mueves, la salida se cancelará.";
+const LOGOUT_CANCELLED_PATTERN = /^\[Servidor\] La salida se canceló porque /;
 const LOGOUT_DENIED_PATTERN = /^\[Servidor\] No puedes salir /;
-const LOGOUT_CLOSING_MESSAGE = "[Servidor] Cerrando sesiÃ³n...";
+const LOGOUT_CLOSING_MESSAGE = "[Servidor] Cerrando sesión...";
 const LOGOUT_DELAY_MS = 10000;
 const CHALLENGE_INSTANCE_MAP_START = 2000;
 const RETOS_INFO_MESSAGES = new Set([
@@ -171,28 +171,28 @@ const RETOS_INFO_MESSAGES = new Set([
 ]);
 const RETOS_ERROR_MESSAGES = new Set([
     "Solo puedes usar retos en Mundo Abierto.",
-    "No puedes usar retos mientras estÃ¡s muerto.",
+    "No puedes usar retos mientras estás muerto.",
     "Solo puedes usar retos estando en zona segura.",
-    "Ese personaje ya estÃ¡ participando en otro reto.",
+    "Ese personaje ya está participando en otro reto.",
     "Para crear o unirte a un reto 2vs2 debes estar en una party de 2.",
-    "Solo el lÃ­der de la party puede crear o aceptar retos 2vs2.",
+    "Solo el líder de la party puede crear o aceptar retos 2vs2.",
     "El reto 2vs2 requiere una party exacta de 2 personajes.",
     "Todos los miembros de la party deben estar conectados para el reto 2vs2.",
     "Debes estar conectado para usar retos.",
-    "El modo de reto es invÃ¡lido.",
-    "El reto ya no estÃ¡ disponible.",
+    "El modo de reto es inválido.",
+    "El reto ya no está disponible.",
     "Solo puedes cancelar tu propio reto.",
-    "El retador ya no estÃ¡ disponible.",
+    "El retador ya no está disponible.",
     "No puedes aceptar tu propio reto.",
 ]);
 const CONSOLE_DISCORD_URL = "https://discord.gg/YpJ9XrMdg";
 const CONSOLE_FEEDBACK_FORM_URL = "https://forms.gle/Df2cmGExTBjjJhAR8";
 const WELCOME_CONSOLE_MESSAGES = {
     discord:
-        "Bienvenido a AOWeb. Si quieres enterarte de las Ãºltimas actualizaciones del juego, puedes ingresar a nuestro Discord.",
+        "Bienvenido a AOWeb. Si quieres enterarte de las últimas actualizaciones del juego, puedes ingresar a nuestro Discord.",
     feedback:
         "- Si quieres reportar erorres o sugerir cambios, puedes hacerlo en: https://forms.gle/Df2cmGExTBjjJhAR8",
-    rules: "- EstÃ¡ completamente prohibido el uso de personajes cÃ¡mara, cheats o cualquier programa externo que modifique el juego, como auto tomar pociones o auto removerse. El uso de los mismos terminarÃ¡ en un ban permanente, sin previo aviso.",
+    rules: "- Está completamente prohibido el uso de personajes cámara, cheats o cualquier programa externo que modifique el juego, como auto tomar pociones o auto removerse. El uso de los mismos terminará en un ban permanente, sin previo aviso.",
 } as const;
 const CHALLENGE_OVERLAY_PATTERN = /^\[Reto\]\s+(10|[0-9]|YA)$/;
 
@@ -832,6 +832,10 @@ function HomeContent() {
     const [isQuickSlotEditMode, setIsQuickSlotEditMode] = useState(false);
     const [isMobileSpellsOpen, setIsMobileSpellsOpen] = useState(false);
     const [isMobileSkillsOpen, setIsMobileSkillsOpen] = useState(false);
+    // El jugador pidió salir: el cierre del socket que sigue no es un corte
+    // a recuperar. Se marca al pedir /salir (el servidor puede cerrar antes
+    // de que se procese su mensaje "Cerrando sesión...").
+    const exitRequestedRef = useRef(false);
     const closeMobileSkills = useCallback(
         () => setIsMobileSkillsOpen(false),
         [],
@@ -1108,8 +1112,8 @@ function HomeContent() {
         ? "Volver al sacerdote"
         : "Volver a la ciudad";
     const deathHomeDescription = arenaMode
-        ? "TambiÃ©n puedes volver al sacerdote con el comando /hogar"
-        : "TambiÃ©n puedes volver con el comando /hogar";
+        ? "También puedes volver al sacerdote con el comando /hogar"
+        : "También puedes volver con el comando /hogar";
 
     useEffect(() => {
         activeChatTabRef.current = activeChatTab;
@@ -1960,11 +1964,13 @@ function HomeContent() {
                     setLogoutPending(true);
                     setLogoutDeadline(Date.now() + LOGOUT_DELAY_MS);
                 } else if (LOGOUT_CANCELLED_PATTERN.test(entry.text)) {
+                    exitRequestedRef.current = false;
                     setLogoutPending(false);
                     setLogoutDeadline(null);
                     setLogoutSecondsRemaining(0);
                     setPendingExitHref(null);
                 } else if (LOGOUT_DENIED_PATTERN.test(entry.text)) {
+                    exitRequestedRef.current = false;
                     setLogoutPending(false);
                     setLogoutDeadline(null);
                     setLogoutSecondsRemaining(0);
@@ -2201,7 +2207,8 @@ function HomeContent() {
             !isMobile ||
             !wasConnectedRef.current ||
             status.connecting ||
-            logoutPending
+            logoutPending ||
+            exitRequestedRef.current
         ) {
             return;
         }
@@ -2248,7 +2255,7 @@ function HomeContent() {
             // Se da un momento para que el socket reporte su estado real.
             resumeTimer = window.setTimeout(() => {
                 resumeTimer = null;
-                if (logoutPendingRef.current) {
+                if (logoutPendingRef.current || exitRequestedRef.current) {
                     return;
                 }
 
@@ -2282,10 +2289,20 @@ function HomeContent() {
     }, [isMobile, recoverMobileSession]);
 
     useEffect(() => {
-        if (!logoutPending || status.connected || status.connecting) {
+        if (
+            (!logoutPending && !exitRequestedRef.current) ||
+            status.connected ||
+            status.connecting ||
+            !wasConnectedRef.current
+        ) {
             return;
         }
 
+        // disconnect() reinicia el estado de salida; sin esto el efecto de
+        // reconexión mobile vería "estaba conectado y se cortó" y recargaría
+        // /play antes de que termine la navegación.
+        wasConnectedRef.current = false;
+        exitRequestedRef.current = true;
         disconnect();
         router.replace(
             pendingExitHref ??
@@ -2600,6 +2617,17 @@ function HomeContent() {
         lastWhisperTarget,
         sendChatMessage,
     ]);
+
+    // Botón "Salir": misma desconexión que /salir (con la espera en zona
+    // insegura), pero al terminar vuelve al home en vez de a personajes.
+    // En arena se respeta el destino propio de ese modo.
+    const handleLogoutRequest = useCallback(() => {
+        exitRequestedRef.current = true;
+        if (!arenaMode) {
+            setPendingExitHref("/");
+        }
+        sendChatMessage("/salir");
+    }, [arenaMode, sendChatMessage]);
 
     const handlePayBail = useCallback(() => {
         sendChatMessage("/fianza pagar");
@@ -3146,7 +3174,7 @@ function HomeContent() {
             ) : (
                 <div className="text-stone-300/55">
                     No hay mensajes en {activeChatTabLabel.toLowerCase()}{" "}
-                    todavÃ­a.
+                    todavía.
                 </div>
             )}
         </>
@@ -3618,7 +3646,7 @@ function HomeContent() {
                                                     <div className="text-stone-300/55">
                                                         No hay mensajes en{" "}
                                                         {activeChatTabLabel.toLowerCase()}{" "}
-                                                        todavÃ­a.
+                                                        todavía.
                                                     </div>
                                                 )}
                                             </div>
@@ -4191,6 +4219,7 @@ function HomeContent() {
                                     }
                                     openSettingsRequest={openSettingsRequest}
                                     compactSettings={isMobile}
+                                    onLogoutRequest={handleLogoutRequest}
                                 />
                             </div>
                         </ScaledHudFrame>

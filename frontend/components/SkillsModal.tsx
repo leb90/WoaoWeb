@@ -13,6 +13,8 @@ type SkillsModalProps = {
     skillsState?: SkillsState | null;
     onAssignSkill?: (skillId: number) => void;
     onClose: () => void;
+    // Mobile: header compacto, dos columnas y botones grandes para el dedo.
+    compact?: boolean;
 };
 
 const SKILL_NAMES = [
@@ -62,6 +64,7 @@ export default function SkillsModal({
     skillsState,
     onAssignSkill,
     onClose,
+    compact = false,
 }: SkillsModalProps) {
     React.useEffect(() => {
         if (!isOpen) {
@@ -86,20 +89,48 @@ export default function SkillsModal({
     const remainingPoints = Math.max(0, Math.floor(Number(skillsState?.skillPts) || 0));
 
     return (
-        <div className="fixed inset-0 z-[84] flex items-center justify-center bg-black/45 px-4 backdrop-blur-[3px]">
-            <div className="flex max-h-[min(86vh,640px)] w-full max-w-lg flex-col overflow-hidden border border-amber-200/20 bg-[#120c08]/95 text-stone-100 shadow-[0_28px_90px_rgba(0,0,0,0.55)]">
-                <div className="flex items-start justify-between gap-4 border-b border-amber-200/10 bg-[linear-gradient(180deg,rgba(127,78,35,0.28),rgba(18,12,8,0))] px-5 py-4">
-                    <div>
-                        <p className="text-[11px] uppercase tracking-[0.28em] text-amber-300/72">
-                            Habilidades
+        <div
+            className={`fixed inset-0 z-[84] flex items-center justify-center bg-black/45 backdrop-blur-[3px] ${
+                compact ? "p-3" : "px-4"
+            }`}
+            onClick={(event) => {
+                if (compact && event.target === event.currentTarget) {
+                    onClose();
+                }
+            }}
+        >
+            <div
+                className={`flex w-full flex-col overflow-hidden border border-amber-200/20 bg-[#120c08]/95 text-stone-100 shadow-[0_28px_90px_rgba(0,0,0,0.55)] ${
+                    compact
+                        ? "max-h-full max-w-2xl rounded-2xl"
+                        : "max-h-[min(86vh,640px)] max-w-lg"
+                }`}
+            >
+                <div
+                    className={`flex shrink-0 items-start justify-between gap-4 border-b border-amber-200/10 bg-[linear-gradient(180deg,rgba(127,78,35,0.28),rgba(18,12,8,0))] ${
+                        compact ? "items-center px-4 py-2" : "px-5 py-4"
+                    }`}
+                >
+                    {compact ? (
+                        <p className="text-sm font-semibold text-[#f2e5ca]">
+                            Skills{" "}
+                            <span className="ml-2 text-amber-200">
+                                Puntos libres: {remainingPoints}
+                            </span>
                         </p>
-                        <h3 className="mt-1 text-xl font-semibold text-[#f2e5ca]">
-                            Skills
-                        </h3>
-                        <p className="mt-1 text-sm font-semibold text-amber-200">
-                            Puntos: {remainingPoints}
-                        </p>
-                    </div>
+                    ) : (
+                        <div>
+                            <p className="text-[11px] uppercase tracking-[0.28em] text-amber-300/72">
+                                Habilidades
+                            </p>
+                            <h3 className="mt-1 text-xl font-semibold text-[#f2e5ca]">
+                                Skills
+                            </h3>
+                            <p className="mt-1 text-sm font-semibold text-amber-200">
+                                Puntos: {remainingPoints}
+                            </p>
+                        </div>
+                    )}
                     <button
                         type="button"
                         onClick={onClose}
@@ -113,8 +144,19 @@ export default function SkillsModal({
                         />
                     </button>
                 </div>
-                <div className="min-h-0 flex-1 overflow-y-auto px-5 py-3">
-                    <div className="divide-y divide-white/6">
+                <div
+                    className={`min-h-0 flex-1 overflow-y-auto overscroll-contain ${
+                        compact ? "px-3 py-2" : "px-5 py-3"
+                    }`}
+                    style={compact ? { touchAction: "pan-y" } : undefined}
+                >
+                    <div
+                        className={
+                            compact
+                                ? "grid grid-cols-2 gap-x-4"
+                                : "divide-y divide-white/6"
+                        }
+                    >
                         {SKILL_NAMES.map((name, index) => {
                             const skillId = index + 1;
                             const skillValue = values[index] ?? 0;
@@ -124,9 +166,19 @@ export default function SkillsModal({
                             return (
                                 <div
                                     key={name}
-                                    className="flex items-center justify-between gap-3 py-1.5"
+                                    className={`flex items-center justify-between gap-3 ${
+                                        compact
+                                            ? "border-b border-white/6 py-1"
+                                            : "py-1.5"
+                                    }`}
                                 >
-                                    <span className="text-sm text-stone-300">
+                                    <span
+                                        className={`min-w-0 text-stone-300 ${
+                                            compact
+                                                ? "truncate text-xs"
+                                                : "text-sm"
+                                        }`}
+                                    >
                                         {name}
                                     </span>
                                     <div className="flex items-center gap-2">
@@ -137,7 +189,11 @@ export default function SkillsModal({
                                             type="button"
                                             disabled={!canAssign}
                                             onClick={() => onAssignSkill?.(skillId)}
-                                            className="flex h-6 w-6 items-center justify-center border border-amber-200/20 bg-black/25 text-amber-100 disabled:text-amber-100/40"
+                                            className={`flex items-center justify-center border border-amber-200/20 bg-black/25 text-amber-100 disabled:text-amber-100/40 ${
+                                                compact
+                                                    ? "h-8 w-8 rounded-lg"
+                                                    : "h-6 w-6"
+                                            }`}
                                             aria-label={`Sumar ${name}`}
                                             title={
                                                 canAssign

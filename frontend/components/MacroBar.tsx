@@ -3,6 +3,7 @@
 "use client";
 
 import React from "react";
+import { Pencil } from "lucide-react";
 import {
     OBJECT_TYPE,
     type InventoryItem,
@@ -45,7 +46,20 @@ type MacroBarProps = {
     // (activar, editar, persistir) es exactamente la misma que en desktop.
     visibleSlotIndices?: number[];
     touchMode?: boolean;
+    // Cantidad de columnas de la grilla en touchMode (4 = una fila, 2 = dos
+    // filas de a 2 - usado para armar el cluster de hechizos 2x2 del HUD
+    // mobile sin tocar el layout de 8 columnas de desktop).
+    columns?: 2 | 4;
+    // En mobile no hay teclado - pedir una tecla para activar el boton
+    // (como en desktop) no tiene sentido. Cuando es false se oculta la
+    // seccion de "Tecla" del editor y se autogenera una keyCode sintetica
+    // por slot en vez de exigir que el usuario asigne una.
+    requireHotkey?: boolean;
 };
+
+function getTouchSlotKeyCode(index: number) {
+    return `TouchSlot${index}`;
+}
 
 function ItemGraphic({
     graphicData,
@@ -165,6 +179,8 @@ export default function MacroBar({
     hidden = false,
     visibleSlotIndices,
     touchMode = false,
+    columns = 4,
+    requireHotkey = true,
 }: MacroBarProps) {
     const items = React.useMemo(
         () => (hud?.inventory ?? []).slice().sort((a, b) => a.slot - b.slot),
@@ -531,15 +547,21 @@ export default function MacroBar({
             return;
         }
 
-        if (!draftKeyCode) {
-            setError("Tenes que asignar una tecla al macro.");
-            return;
-        }
+        let effectiveKeyCode = draftKeyCode;
 
-        const conflict = hasKeyConflict(draftKeyCode);
-        if (conflict) {
-            setError(conflict);
-            return;
+        if (requireHotkey) {
+            if (!draftKeyCode) {
+                setError("Tenes que asignar una tecla al macro.");
+                return;
+            }
+
+            const conflict = hasKeyConflict(draftKeyCode);
+            if (conflict) {
+                setError(conflict);
+                return;
+            }
+        } else {
+            effectiveKeyCode = getTouchSlotKeyCode(editingIndex);
         }
 
         if (draftTargetType === "item") {
@@ -551,7 +573,7 @@ export default function MacroBar({
             onMacrosChange((current) => {
                 const next = [...current];
                 next[editingIndex] = {
-                    keyCode: draftKeyCode,
+                    keyCode: effectiveKeyCode,
                     targetType: "item",
                     targetSlot: draftItem.slot,
                     targetId: draftItem.idItem,
@@ -584,7 +606,7 @@ export default function MacroBar({
             onMacrosChange((current) => {
                 const next = [...current];
                 next[editingIndex] = {
-                    keyCode: draftKeyCode,
+                    keyCode: effectiveKeyCode,
                     targetType: "command",
                     label: normalizedCommand,
                     command: normalizedCommand,
@@ -600,7 +622,7 @@ export default function MacroBar({
             onMacrosChange((current) => {
                 const next = [...current];
                 next[editingIndex] = {
-                    keyCode: draftKeyCode,
+                    keyCode: effectiveKeyCode,
                     targetType: "spell",
                     targetSlot: draftSpell.slot,
                     targetId: draftSpell.idSpell,
@@ -620,6 +642,7 @@ export default function MacroBar({
         editingIndex,
         hasKeyConflict,
         onMacrosChange,
+        requireHotkey,
     ]);
 
     const deleteMacro = React.useCallback(() => {
@@ -686,7 +709,9 @@ export default function MacroBar({
             <div
                 className={
                     touchMode
-                        ? "grid grid-cols-4 gap-2"
+                        ? columns === 2
+                            ? "grid grid-cols-2 gap-2"
+                            : "grid grid-cols-4 gap-2"
                         : "grid grid-cols-8 gap-1"
                 }
             >
@@ -786,9 +811,18 @@ export default function MacroBar({
                                     </span>
                                 )}
 
-                                {macro?.keyCode ? (
+                                {requireHotkey && macro?.keyCode ? (
                                     <span className="pointer-events-none absolute bottom-1.5 right-1.5 rounded bg-black/75 px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none text-amber-100 shadow-lg">
                                         {formatHotkeyCode(macro.keyCode)}
+                                    </span>
+                                ) : null}
+
+                                {!requireHotkey && touchMode && macro ? (
+                                    <span
+                                        className="pointer-events-none absolute bottom-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-black/75 text-amber-100"
+                                        aria-hidden="true"
+                                    >
+                                        <Pencil className="h-2.5 w-2.5" />
                                     </span>
                                 ) : null}
                             </button>
@@ -811,34 +845,38 @@ export default function MacroBar({
                                     </div>
 
                                     <div className="space-y-3">
-                                        <div>
-                                            <p className="mb-1 text-[10px] uppercase tracking-[0.18em] text-stone-400">
-                                                Tecla
-                                            </p>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setListeningForKey(true);
-                                                    setError(null);
-                                                }}
-                                                className="flex w-full items-center justify-between rounded-xl border border-[#765838] bg-black/25 px-3 py-2 text-left text-sm text-stone-100 transition hover:border-amber-300/60"
-                                            >
-                                                <span>
-                                                    {listeningForKey
-                                                        ? "Presiona una tecla"
-                                                        : draftKeyCode
-                                                          ? formatHotkeyCode(
-                                                                draftKeyCode,
-                                                            )
-                                                          : "Sin asignar"}
-                                                </span>
-                                                <span className="text-[10px] uppercase tracking-[0.16em] text-stone-400">
-                                                    {listeningForKey
-                                                        ? "Esc cancela"
-                                                        : "Cambiar"}
-                                                </span>
-                                            </button>
-                                        </div>
+                                        {requireHotkey ? (
+                                            <div>
+                                                <p className="mb-1 text-[10px] uppercase tracking-[0.18em] text-stone-400">
+                                                    Tecla
+                                                </p>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setListeningForKey(
+                                                            true,
+                                                        );
+                                                        setError(null);
+                                                    }}
+                                                    className="flex w-full items-center justify-between rounded-xl border border-[#765838] bg-black/25 px-3 py-2 text-left text-sm text-stone-100 transition hover:border-amber-300/60"
+                                                >
+                                                    <span>
+                                                        {listeningForKey
+                                                            ? "Presiona una tecla"
+                                                            : draftKeyCode
+                                                              ? formatHotkeyCode(
+                                                                    draftKeyCode,
+                                                                )
+                                                              : "Sin asignar"}
+                                                    </span>
+                                                    <span className="text-[10px] uppercase tracking-[0.16em] text-stone-400">
+                                                        {listeningForKey
+                                                            ? "Esc cancela"
+                                                            : "Cambiar"}
+                                                    </span>
+                                                </button>
+                                            </div>
+                                        ) : null}
 
                                         <div>
                                             <p className="mb-1 text-[10px] uppercase tracking-[0.18em] text-stone-400">

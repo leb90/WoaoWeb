@@ -107,6 +107,7 @@ type UseCombatControllerOptions = {
     setDebugCombatOverlayText: (text: string) => void;
     isDebugMode: boolean;
     onConsoleMessage?: ((message: any) => void) | undefined;
+    onTargetingModeChange?: (mode: TargetingMode | null) => void;
     recordClientGameAction: (
         action: string,
         details?: Record<string, unknown>,
@@ -133,6 +134,7 @@ export function useCombatController(options: UseCombatControllerOptions) {
         lastUntrustedInputAtRef,
         nextUseItemAtRef,
         onConsoleMessage,
+        onTargetingModeChange,
         playerHudRef,
         resourceReactionSamplesRef,
         runtimeTimingRef,
@@ -507,12 +509,14 @@ export function useCombatController(options: UseCombatControllerOptions) {
     const clearTargetingMode = useCallback(() => {
         targetingModeRef.current = null;
         updateCanvasCursor();
-    }, [targetingModeRef, updateCanvasCursor]);
+        onTargetingModeChange?.(null);
+    }, [targetingModeRef, updateCanvasCursor, onTargetingModeChange]);
 
     const setTargetingMode = useCallback(
         (mode: TargetingMode) => {
             targetingModeRef.current = mode;
             updateCanvasCursor();
+            onTargetingModeChange?.(mode);
 
             if (mode.type === "fishing") {
                 pushSystemMessage(
@@ -544,7 +548,12 @@ export function useCombatController(options: UseCombatControllerOptions) {
                 );
             }
         },
-        [targetingModeRef, pushSystemMessage, updateCanvasCursor],
+        [
+            targetingModeRef,
+            pushSystemMessage,
+            updateCanvasCursor,
+            onTargetingModeChange,
+        ],
     );
 
     const isFishingRodItem = useCallback((item: InventoryItem | null) => {

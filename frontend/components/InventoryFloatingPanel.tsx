@@ -90,6 +90,11 @@ type InventoryFloatingPanelProps = {
     onDropRequest?: (slot: number, amount: number) => void;
     onSendCommand?: (message: string) => void;
     selectedCharacterId?: string | null;
+    // Permite abrir el modal de ajustes desde afuera (ej. un botón dedicado
+    // en el HUD mobile) sin depender de que el panel completo esté visible -
+    // el modal se renderiza en un portal, así que no necesita que el panel
+    // que lo contiene deje de estar oculto.
+    openSettingsRequest?: { token: number } | null;
 };
 
 type HardwareAccelerationWarning = {
@@ -829,7 +834,7 @@ function CastleHud({
     );
 }
 
-function VitalBar({
+export function VitalBar({
     label,
     value,
     max,
@@ -866,7 +871,7 @@ function VitalBar({
     );
 }
 
-function VitalBars({
+export function VitalBars({
     hp,
     maxHp,
     mana,
@@ -1003,6 +1008,7 @@ export default function InventoryFloatingPanel({
     onDropRequest,
     onSendCommand,
     selectedCharacterId,
+    openSettingsRequest,
 }: InventoryFloatingPanelProps) {
     const items = React.useMemo(() => hud?.inventory ?? [], [hud?.inventory]);
     const spells = React.useMemo(() => hud?.spells ?? [], [hud?.spells]);
@@ -1186,6 +1192,18 @@ export default function InventoryFloatingPanel({
         number | null
     >(null);
     const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
+    const lastOpenSettingsTokenRef = React.useRef<number | null>(null);
+    React.useEffect(() => {
+        if (
+            !openSettingsRequest ||
+            openSettingsRequest.token === lastOpenSettingsTokenRef.current
+        ) {
+            return;
+        }
+
+        lastOpenSettingsTokenRef.current = openSettingsRequest.token;
+        setIsSettingsOpen(true);
+    }, [openSettingsRequest]);
     const [isSkillsOpen, setIsSkillsOpen] = React.useState(false);
     const [hardwareAccelerationWarning, setHardwareAccelerationWarning] =
         React.useState<HardwareAccelerationWarning | null>(null);

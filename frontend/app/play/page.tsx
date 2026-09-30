@@ -28,6 +28,9 @@ import {
 } from "../../components/game/overlays/GmBotPanel";
 import { MobileHud } from "../../components/game/controls/MobileHud";
 import type { JoystickDirection } from "../../components/game/controls/TouchJoystick";
+import { MobileStatusPanel } from "../../components/game/controls/MobileStatusPanel";
+import { MobileTargetHint } from "../../components/game/controls/MobileTargetHint";
+import type { TargetingMode } from "../../components/game/core/useCombatController";
 import { MobileInstallGate } from "../../components/game/overlays/MobileInstallGate";
 import { RotateDeviceOverlay } from "../../components/game/overlays/RotateDeviceOverlay";
 import { useIsMobile } from "../../hooks/useIsMobile";
@@ -111,6 +114,17 @@ const FULLSCREEN_PROMPT_MAX_HEIGHT = 900;
 const PLAY_HOTKEYS_HINT_STORAGE_KEY = "ao-play-hotkeys-hint-dismissed";
 const PLAY_SOUND_VOLUME_STORAGE_KEY = "ao-play-sound-volume";
 const PLAY_MINIMAP_VISIBLE_STORAGE_KEY = "ao-play-minimap-visible";
+const PLAY_ORIENTATION_LOCK_STORAGE_KEY = "ao-play-orientation-locked";
+
+function readStoredOrientationLock(): boolean {
+    if (typeof window === "undefined") {
+        return false;
+    }
+
+    return (
+        window.localStorage.getItem(PLAY_ORIENTATION_LOCK_STORAGE_KEY) === "1"
+    );
+}
 const LOGOUT_STARTED_MESSAGE =
     "[Servidor] Debes permanecer quieto durante 10 segundos para salir. Si te mueves, la salida se cancelarÃ¡.";
 const LOGOUT_CANCELLED_PATTERN = /^\[Servidor\] La salida se cancelÃ³ porque /;
@@ -769,6 +783,28 @@ function HomeContent() {
     const [touchMovementDirection, setTouchMovementDirection] =
         useState<JoystickDirection | null>(null);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [openSettingsRequest, setOpenSettingsRequest] = useState<{
+        token: number;
+    } | null>(null);
+    // Lazy init desde localStorage (mismo patrón que isStandalonePwa) para
+    // que el primer render mobile ya respete la preferencia guardada.
+    const [isOrientationLocked, setIsOrientationLocked] = useState(
+        readStoredOrientationLock,
+    );
+    const [targetingHint, setTargetingHint] = useState<TargetingMode | null>(
+        null,
+    );
+
+    useEffect(() => {
+        try {
+            window.localStorage.setItem(
+                PLAY_ORIENTATION_LOCK_STORAGE_KEY,
+                isOrientationLocked ? "1" : "0",
+            );
+        } catch {
+            // Ignore storage failures in restricted/browser test contexts.
+        }
+    }, [isOrientationLocked]);
     const [selectedSpellSlot, setSelectedSpellSlot] = useState<number | null>(
         null,
     );
@@ -1563,15 +1599,23 @@ function HomeContent() {
     // al mismo tiempo que el HUD táctil, generando íconos duplicados.
     const isDesktopConsoleLayout = !isMobile && viewport.width > 768;
 
-    const shellTopPadding = isFullscreen
-        ? SHELL_TOP_PADDING_FULLSCREEN
-        : SHELL_TOP_PADDING;
-    const shellBottomPadding = isFullscreen
-        ? SHELL_BOTTOM_PADDING_FULLSCREEN
-        : SHELL_VERTICAL_PADDING;
-    const shellHorizontalPadding = isFullscreen
-        ? SHELL_HORIZONTAL_PADDING_FULLSCREEN
-        : SHELL_HORIZONTAL_PADDING;
+    // En mobile el canvas tiene que llenar toda la pantalla sin bordes -
+    // nada de padding fijo pensado para el shell de escritorio.
+    const shellTopPadding = isMobile
+        ? 0
+        : isFullscreen
+          ? SHELL_TOP_PADDING_FULLSCREEN
+          : SHELL_TOP_PADDING;
+    const shellBottomPadding = isMobile
+        ? 0
+        : isFullscreen
+          ? SHELL_BOTTOM_PADDING_FULLSCREEN
+          : SHELL_VERTICAL_PADDING;
+    const shellHorizontalPadding = isMobile
+        ? 0
+        : isFullscreen
+          ? SHELL_HORIZONTAL_PADDING_FULLSCREEN
+          : SHELL_HORIZONTAL_PADDING;
 
     const handleTopHudSectionMeasure = useCallback((size: MeasuredHudSize) => {
         setTopHudSectionSize((current) =>
@@ -1608,7 +1652,13 @@ function HomeContent() {
             (isFullscreen ? 2 : 0);
         const widthScale = availableWidth / totalBaseWidth;
         const heightScale = availableHeight / totalBaseHeight;
-        const nextScale = Math.min(widthScale, heightScale);
+        // En mobile se usa "cover" (llenar toda la pantalla, recortando lo
+        // que sobre) en vez de "contain" (ajustar sin recortar, que es lo
+        // que deja franjas negras a los costados en un celular en
+        // horizontal, más ancho en proporción que el canvas base).
+        const nextScale = isMobile
+            ? Math.max(widthScale, heightScale)
+            : Math.min(widthScale, heightScale);
 
         if (!Number.isFinite(nextScale) || nextScale <= 0) {
             return 1;
@@ -2793,7 +2843,9 @@ function HomeContent() {
             }}
         >
             <div
-                className="pointer-events-none fixed inset-0 z-20 flex items-start justify-center overflow-hidden"
+                className={`pointer-events-none fixed inset-0 z-20 flex justify-center overflow-hidden ${
+                    isMobile ? "items-center" : "items-start"
+                }`}
                 style={{
                     padding: `${shellTopPadding}px ${shellHorizontalPadding}px ${shellBottomPadding}px`,
                 }}
@@ -2968,6 +3020,7 @@ function HomeContent() {
                                     onStatusChange={handleStatusChange}
                                     onHudChange={setHud}
                                     onConsoleMessage={appendConsoleEntry}
+                                    onTargetingModeChange={setTargetingHint}
                                     onGlobalNotice={handleGlobalNotice}
                                     onQuestProgressNotice={
                                         handleQuestProgressNotice
@@ -3130,7 +3183,9 @@ function HomeContent() {
                                               : "16px",
                                     }}
                                 >
-                                    {!isDesktopConsoleLayout && !isFullscreen
+                                    {!isDesktopConsoleLayout &&
+                                    !isFullscreen &&
+                                    !isMobile
                                         ? fullscreenToggleControl
                                         : null}
                                 </div>
@@ -3221,25 +3276,10 @@ function HomeContent() {
                                     ) : null}
                                 </div>
 
-                                {!isDesktopConsoleLayout ? (
-                                    <div
-                                        className={
-                                            isMobile
-                                                ? // En mobile el rincón inferior derecho ya lo usa
-                                                  // el HUD táctil (ataque + hechizos) - este cluster
-                                                  // se corre arriba, debajo del botón de menú.
-                                                  "pointer-events-none absolute right-3 top-16 z-40"
-                                                : "pointer-events-none absolute bottom-3 right-3 z-40"
-                                        }
-                                    >
+                                {!isDesktopConsoleLayout && !isMobile ? (
+                                    <div className="pointer-events-none absolute bottom-3 right-3 z-40">
                                         {isChatMenuOpen ? (
-                                            <div
-                                                className={
-                                                    isMobile
-                                                        ? "pointer-events-auto absolute right-0 top-28 w-[156px]"
-                                                        : "pointer-events-auto absolute bottom-28 right-0 w-[156px]"
-                                                }
-                                            >
+                                            <div className="pointer-events-auto absolute bottom-28 right-0 w-[156px]">
                                                 {chatTabsMenu}
                                             </div>
                                         ) : null}
@@ -3521,10 +3561,37 @@ function HomeContent() {
                                         setTouchMovementDirection
                                     }
                                     onAttack={handleMobileAttack}
-                                    onOpenMenu={() =>
+                                    onOpenInventory={() =>
                                         setIsMobileMenuOpen((current) => !current)
                                     }
+                                    onToggleChat={() =>
+                                        setIsChatOpen((current) => !current)
+                                    }
+                                    onOpenSettings={() =>
+                                        setOpenSettingsRequest((current) => ({
+                                            token: (current?.token ?? 0) + 1,
+                                        }))
+                                    }
+                                    isOrientationLocked={isOrientationLocked}
+                                    onToggleOrientationLock={() =>
+                                        setIsOrientationLocked(
+                                            (current) => !current,
+                                        )
+                                    }
                                 />
+                            ) : null}
+
+                            {isMobile ? (
+                                <MobileStatusPanel
+                                    hud={hud}
+                                    consoleLog={consoleMessages}
+                                />
+                            ) : null}
+
+                            {isMobile &&
+                            (targetingHint?.type === "spell" ||
+                                targetingHint?.type === "range") ? (
+                                <MobileTargetHint label="Toca al objetivo" />
                             ) : null}
                         </div>
 
@@ -3705,6 +3772,7 @@ function HomeContent() {
                                     selectedCharacterId={
                                         authSession?.selectedCharacterId ?? null
                                     }
+                                    openSettingsRequest={openSettingsRequest}
                                 />
                             </div>
                         </ScaledHudFrame>
@@ -3967,7 +4035,7 @@ function HomeContent() {
                 </div>
             ) : null}
 
-            {isMobile && isPortrait ? (
+            {isMobile && isPortrait && !isOrientationLocked ? (
                 <RotateDeviceOverlay
                     onBack={() => router.push("/characters")}
                 />

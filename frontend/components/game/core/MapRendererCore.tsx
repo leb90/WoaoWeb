@@ -206,6 +206,7 @@ interface MapRendererProps {
     onStatusChange?: (status: RendererStatus) => void;
     onHudChange?: (hud: PlayerHudState | null) => void;
     onConsoleMessage?: (message: ConsoleMessage) => void;
+    onTargetingModeChange?: (mode: TargetingMode | null) => void;
     onGlobalNotice?: (notice: { text: string; durationMs: number }) => void;
     onQuestProgressNotice?: (notice: QuestProgressNoticePayload) => void;
     onTradeStateChange?: (tradeState: TradeState | null) => void;
@@ -667,6 +668,7 @@ export default function MapRenderer({
     onStatusChange,
     onHudChange,
     onConsoleMessage,
+    onTargetingModeChange,
     onGlobalNotice,
     onQuestProgressNotice,
     onTradeStateChange,
@@ -1265,6 +1267,7 @@ export default function MapRenderer({
         setDebugCombatOverlayText,
         isDebugMode,
         onConsoleMessage,
+        onTargetingModeChange,
         recordClientGameAction,
         setTextIfChanged,
         setVisibilityIfChanged,

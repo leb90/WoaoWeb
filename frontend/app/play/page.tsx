@@ -28,7 +28,10 @@ import {
 } from "../../components/game/overlays/GmBotPanel";
 import { MobileHud } from "../../components/game/controls/MobileHud";
 import type { JoystickDirection } from "../../components/game/controls/TouchJoystick";
+import { MobileInstallGate } from "../../components/game/overlays/MobileInstallGate";
+import { RotateDeviceOverlay } from "../../components/game/overlays/RotateDeviceOverlay";
 import { useIsMobile } from "../../hooks/useIsMobile";
+import { isStandaloneDisplayMode } from "../../lib/pwa";
 import {
     createEmptyMacros,
     normalizeCharacterSettings,
@@ -756,6 +759,9 @@ function HomeContent() {
     const [reorderBankRequest, setReorderBankRequest] =
         useState<ReorderBankRequest | null>(null);
     const { isMobile, isPortrait } = useIsMobile();
+    // Inicializador perezoso (mismo patrón que useIsMobile) para no mostrar
+    // el juego sin instalar durante un instante antes de que un efecto corra.
+    const [isStandalonePwa] = useState(isStandaloneDisplayMode);
     const [rangeAttackRequest, setRangeAttackRequest] =
         useState<RangeAttackRequest | null>(null);
     const [meleeAttackRequest, setMeleeAttackRequest] =
@@ -1551,7 +1557,11 @@ function HomeContent() {
         status.connecting,
     ]);
 
-    const isDesktopConsoleLayout = viewport.width > 768;
+    // En mobile nunca se usa el layout de escritorio, sin importar el ancho
+    // real del viewport - un celular en horizontal físico puede medir más de
+    // 768px y antes activaba por error la barra de consola/HUD de escritorio
+    // al mismo tiempo que el HUD táctil, generando íconos duplicados.
+    const isDesktopConsoleLayout = !isMobile && viewport.width > 768;
 
     const shellTopPadding = isFullscreen
         ? SHELL_TOP_PADDING_FULLSCREEN
@@ -1580,19 +1590,6 @@ function HomeContent() {
             return 1;
         }
 
-        // En mobile vertical el game-shell se rota 90° por CSS (ver el div
-        // raíz más abajo) - lo que visualmente queda disponible como ancho
-        // es el alto real del dispositivo, y viceversa. Si no se invierte
-        // acá, el canvas se sigue calculando contra el ancho angosto real
-        // y queda diminuto aunque ya esté rotado en pantalla.
-        const isRotatedForMobile = isMobile && isPortrait;
-        const effectiveViewportWidth = isRotatedForMobile
-            ? viewport.height
-            : viewport.width;
-        const effectiveViewportHeight = isRotatedForMobile
-            ? viewport.width
-            : viewport.height;
-
         const centerColumnBaseHeight =
             (isDesktopConsoleLayout ? topHudSectionSize.height : 0) +
             CANVAS_BASE_HEIGHT +
@@ -1603,10 +1600,9 @@ function HomeContent() {
         const totalBaseWidth =
             CANVAS_BASE_WIDTH +
             (isMobile ? 0 : HUD_GAP + rightColumnSize.width);
-        const availableWidth =
-            effectiveViewportWidth - shellHorizontalPadding * 2;
+        const availableWidth = viewport.width - shellHorizontalPadding * 2;
         const availableHeight =
-            effectiveViewportHeight -
+            viewport.height -
             shellTopPadding -
             shellBottomPadding -
             (isFullscreen ? 2 : 0);
@@ -1624,7 +1620,6 @@ function HomeContent() {
         isDesktopConsoleLayout,
         isFullscreen,
         isMobile,
-        isPortrait,
         rightColumnSize.width,
         shellHorizontalPadding,
         shellBottomPadding,
@@ -2777,22 +2772,19 @@ function HomeContent() {
             )}
         </>
     );
+
+    if (isMobile && !isStandalonePwa) {
+        return (
+            <MobileInstallGate
+                onCancel={() => router.push("/characters")}
+            />
+        );
+    }
+
     return (
         <div
             ref={setGameShellNode}
             className="game-shell"
-            style={
-                isMobile && isPortrait
-                    ? {
-                          position: "fixed",
-                          top: "50%",
-                          left: "50%",
-                          width: "100vh",
-                          height: "100vw",
-                          transform: "translate(-50%, -50%) rotate(90deg)",
-                      }
-                    : undefined
-            }
             onContextMenu={(event) => {
                 event.preventDefault();
             }}
@@ -3973,6 +3965,12 @@ function HomeContent() {
                         </div>
                     </div>
                 </div>
+            ) : null}
+
+            {isMobile && isPortrait ? (
+                <RotateDeviceOverlay
+                    onBack={() => router.push("/characters")}
+                />
             ) : null}
 
             {showFullscreenPrompt ? (

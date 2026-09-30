@@ -1214,6 +1214,16 @@ function HomeContent() {
             return;
         }
 
+        // El landscape ya se resuelve solo por CSS en mobile, y la API de
+        // pantalla completa no funciona sobre un <div> en varios navegadores
+        // mobile (Safari de iPhone entre ellos) - el cartel no aporta nada
+        // ahí y solo muestra un error confuso.
+        if (isMobile) {
+            fullscreenPromptWasEvaluatedRef.current = true;
+            setShowFullscreenPrompt(false);
+            return;
+        }
+
         if (isFullscreen) {
             fullscreenPromptWasEvaluatedRef.current = true;
             setShowFullscreenPrompt(false);
@@ -1237,7 +1247,7 @@ function HomeContent() {
         if (shouldSuggestFullscreen) {
             setShowFullscreenPrompt(true);
         }
-    }, [isFullscreen, status.connected, viewport.height, viewport.width]);
+    }, [isFullscreen, isMobile, status.connected, viewport.height, viewport.width]);
 
     useEffect(() => {
         setForm((current) => {
@@ -1570,16 +1580,33 @@ function HomeContent() {
             return 1;
         }
 
+        // En mobile vertical el game-shell se rota 90° por CSS (ver el div
+        // raíz más abajo) - lo que visualmente queda disponible como ancho
+        // es el alto real del dispositivo, y viceversa. Si no se invierte
+        // acá, el canvas se sigue calculando contra el ancho angosto real
+        // y queda diminuto aunque ya esté rotado en pantalla.
+        const isRotatedForMobile = isMobile && isPortrait;
+        const effectiveViewportWidth = isRotatedForMobile
+            ? viewport.height
+            : viewport.width;
+        const effectiveViewportHeight = isRotatedForMobile
+            ? viewport.width
+            : viewport.height;
+
         const centerColumnBaseHeight =
             (isDesktopConsoleLayout ? topHudSectionSize.height : 0) +
             CANVAS_BASE_HEIGHT +
             (isFullscreen ? 0 : EXP_SECTION_GAP + EXP_BAR_ESTIMATED_HEIGHT);
         const totalBaseHeight = centerColumnBaseHeight;
+        // La columna derecha (inventario) está oculta en mobile salvo que
+        // se abra a pedido - no le tiene que seguir robando ancho al canvas.
         const totalBaseWidth =
-            CANVAS_BASE_WIDTH + HUD_GAP + rightColumnSize.width;
-        const availableWidth = viewport.width - shellHorizontalPadding * 2;
+            CANVAS_BASE_WIDTH +
+            (isMobile ? 0 : HUD_GAP + rightColumnSize.width);
+        const availableWidth =
+            effectiveViewportWidth - shellHorizontalPadding * 2;
         const availableHeight =
-            viewport.height -
+            effectiveViewportHeight -
             shellTopPadding -
             shellBottomPadding -
             (isFullscreen ? 2 : 0);
@@ -1596,6 +1623,8 @@ function HomeContent() {
     }, [
         isDesktopConsoleLayout,
         isFullscreen,
+        isMobile,
+        isPortrait,
         rightColumnSize.width,
         shellHorizontalPadding,
         shellBottomPadding,
@@ -2752,6 +2781,18 @@ function HomeContent() {
         <div
             ref={setGameShellNode}
             className="game-shell"
+            style={
+                isMobile && isPortrait
+                    ? {
+                          position: "fixed",
+                          top: "50%",
+                          left: "50%",
+                          width: "100vh",
+                          height: "100vw",
+                          transform: "translate(-50%, -50%) rotate(90deg)",
+                      }
+                    : undefined
+            }
             onContextMenu={(event) => {
                 event.preventDefault();
             }}
@@ -3189,9 +3230,24 @@ function HomeContent() {
                                 </div>
 
                                 {!isDesktopConsoleLayout ? (
-                                    <div className="pointer-events-none absolute bottom-3 right-3 z-40">
+                                    <div
+                                        className={
+                                            isMobile
+                                                ? // En mobile el rincón inferior derecho ya lo usa
+                                                  // el HUD táctil (ataque + hechizos) - este cluster
+                                                  // se corre arriba, debajo del botón de menú.
+                                                  "pointer-events-none absolute right-3 top-16 z-40"
+                                                : "pointer-events-none absolute bottom-3 right-3 z-40"
+                                        }
+                                    >
                                         {isChatMenuOpen ? (
-                                            <div className="pointer-events-auto absolute bottom-28 right-0 w-[156px]">
+                                            <div
+                                                className={
+                                                    isMobile
+                                                        ? "pointer-events-auto absolute right-0 top-28 w-[156px]"
+                                                        : "pointer-events-auto absolute bottom-28 right-0 w-[156px]"
+                                                }
+                                            >
                                                 {chatTabsMenu}
                                             </div>
                                         ) : null}
@@ -3443,7 +3499,6 @@ function HomeContent() {
 
                             {isMobile ? (
                                 <MobileHud
-                                    isPortrait={isPortrait}
                                     hud={hud}
                                     connected={status.connected}
                                     hotkeySettings={hotkeySettings}

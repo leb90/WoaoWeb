@@ -95,6 +95,11 @@ type InventoryFloatingPanelProps = {
     // el modal se renderiza en un portal, así que no necesita que el panel
     // que lo contiene deje de estar oculto.
     openSettingsRequest?: { token: number } | null;
+    // Versión mobile del modal de ajustes: scrolleable, sin opciones que
+    // solo aplican a desktop (teclas, minimapa junto al chat) y con los
+    // accesos del menú (Party, Clanes, Misiones...) que en mobile no tienen
+    // otro lugar donde vivir.
+    compactSettings?: boolean;
 };
 
 type HardwareAccelerationWarning = {
@@ -1009,6 +1014,7 @@ export default function InventoryFloatingPanel({
     onSendCommand,
     selectedCharacterId,
     openSettingsRequest,
+    compactSettings = false,
 }: InventoryFloatingPanelProps) {
     const items = React.useMemo(() => hud?.inventory ?? [], [hud?.inventory]);
     const spells = React.useMemo(() => hud?.spells ?? [], [hud?.spells]);
@@ -2719,6 +2725,42 @@ export default function InventoryFloatingPanel({
     const overlayTarget =
         typeof document !== "undefined" ? (portalTarget ?? document.body) : null;
 
+    const hubActions: Array<{
+        label: string;
+        icon?: React.ReactNode;
+        onClick: () => void;
+    }> = [
+        {
+            label: "Party",
+            icon: <Users className="h-3 w-3 text-cyan-300" />,
+            onClick: () => setIsPartyModalOpen(true),
+        },
+        {
+            label: "Clanes",
+            icon: <Shield className="h-3 w-3 text-amber-300" />,
+            onClick: () => setIsClanModalOpen(true),
+        },
+        {
+            label: "Misiones",
+            onClick: () => {
+                setIsQuestNpcDialogOpen(false);
+                setWoaoHubTab("misiones");
+                onSendCommand?.("/quests");
+            },
+        },
+        {
+            label: "Montura",
+            onClick: () => {
+                setWoaoHubTab("montura");
+                onSendCommand?.("/montura");
+            },
+        },
+        { label: "Premios", onClick: () => setWoaoHubTab("premios") },
+        { label: "Ranked", onClick: () => setWoaoHubTab("ranked") },
+        { label: "Viajes", onClick: () => setWoaoHubTab("viajes") },
+        { label: "WOAO", onClick: () => setWoaoHubTab("guerra") },
+    ];
+
     return (
         <>
             <div
@@ -3345,75 +3387,17 @@ export default function InventoryFloatingPanel({
                                     />
                                 </div>
                                 <div className="grid w-[118px] shrink-0 grid-cols-2 gap-1">
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setIsPartyModalOpen(true)
-                                        }
-                                        className={HUD_ACTION_BUTTON_CLASS}
-                                    >
-                                        <Users className="h-3 w-3 text-cyan-300" />
-                                        Party
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setIsClanModalOpen(true)
-                                        }
-                                        className={HUD_ACTION_BUTTON_CLASS}
-                                    >
-                                        <Shield className="h-3 w-3 text-amber-300" />
-                                        Clanes
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setIsQuestNpcDialogOpen(false);
-                                            setWoaoHubTab("misiones");
-                                            onSendCommand?.("/quests");
-                                        }}
-                                        className={HUD_ACTION_BUTTON_CLASS}
-                                    >
-                                        Misiones
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setWoaoHubTab("montura");
-                                            onSendCommand?.("/montura");
-                                        }}
-                                        className={HUD_ACTION_BUTTON_CLASS}
-                                    >
-                                        Montura
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setWoaoHubTab("premios")}
-                                        className={HUD_ACTION_BUTTON_CLASS}
-                                    >
-                                        Premios
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setWoaoHubTab("ranked")}
-                                        className={HUD_ACTION_BUTTON_CLASS}
-                                    >
-                                        Ranked
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setWoaoHubTab("viajes")}
-                                        className={HUD_ACTION_BUTTON_CLASS}
-                                    >
-                                        Viajes
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setWoaoHubTab("guerra")}
-                                        className={HUD_ACTION_BUTTON_CLASS}
-                                    >
-                                        WOAO
-                                    </button>
+                                    {hubActions.map((action) => (
+                                        <button
+                                            key={action.label}
+                                            type="button"
+                                            onClick={action.onClick}
+                                            className={HUD_ACTION_BUTTON_CLASS}
+                                        >
+                                            {action.icon}
+                                            {action.label}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
                             <div className="mt-1.5 flex h-[46px] items-center gap-2 border-t border-amber-200/10 pt-1 text-stone-100">
@@ -3971,9 +3955,31 @@ export default function InventoryFloatingPanel({
 
             {isSettingsOpen && overlayTarget
                 ? createPortal(
-                      <div className="fixed inset-0 z-[84] flex items-center justify-center bg-black/45 px-4 backdrop-blur-[3px]">
-                    <div className="w-full max-w-md overflow-hidden rounded-[28px] border border-amber-200/20 bg-[#120c08]/95 text-stone-100 shadow-[0_28px_90px_rgba(0,0,0,0.55)]">
-                        <div className="flex items-start justify-between gap-4 border-b border-amber-200/10 bg-[linear-gradient(180deg,rgba(127,78,35,0.28),rgba(18,12,8,0))] px-5 py-4">
+                      <div
+                          className={`fixed inset-0 z-[84] flex items-center justify-center bg-black/45 backdrop-blur-[3px] ${
+                              compactSettings ? "p-3" : "px-4 py-4"
+                          }`}
+                          onClick={(event) => {
+                              if (
+                                  compactSettings &&
+                                  event.target === event.currentTarget
+                              ) {
+                                  setIsSettingsOpen(false);
+                              }
+                          }}
+                      >
+                    <div
+                        className={`flex max-h-full w-full flex-col overflow-hidden border border-amber-200/20 bg-[#120c08]/95 text-stone-100 shadow-[0_28px_90px_rgba(0,0,0,0.55)] ${
+                            compactSettings
+                                ? "max-w-lg rounded-2xl"
+                                : "max-w-md rounded-[28px]"
+                        }`}
+                    >
+                        <div
+                            className={`flex shrink-0 items-start justify-between gap-4 border-b border-amber-200/10 bg-[linear-gradient(180deg,rgba(127,78,35,0.28),rgba(18,12,8,0))] ${
+                                compactSettings ? "px-4 py-2" : "px-5 py-4"
+                            }`}
+                        >
                             <div>
                                 <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.28em] text-amber-300/72">
                                     <Settings
@@ -4001,7 +4007,47 @@ export default function InventoryFloatingPanel({
                             </button>
                         </div>
 
-                        <div className="space-y-4 px-5 py-5">
+                        <div
+                            className={`min-h-0 flex-1 overflow-y-auto overscroll-contain ${
+                                compactSettings
+                                    ? "space-y-3 px-4 py-3"
+                                    : "space-y-4 px-5 py-5"
+                            }`}
+                        >
+                            {compactSettings ? (
+                                <section className="rounded-2xl border border-[#4f3926] bg-[#19110d]/92 p-3">
+                                    <p className="mb-2 text-[11px] uppercase tracking-[0.26em] text-amber-200/78">
+                                        Menú
+                                    </p>
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {[
+                                            ...hubActions,
+                                            {
+                                                label: "Mapa",
+                                                icon: (
+                                                    <MapIcon className="h-3 w-3 text-emerald-300" />
+                                                ),
+                                                onClick: () =>
+                                                    setIsWorldMapOpen(true),
+                                            },
+                                        ].map((action) => (
+                                            <button
+                                                key={action.label}
+                                                type="button"
+                                                onClick={() => {
+                                                    setIsSettingsOpen(false);
+                                                    action.onClick();
+                                                }}
+                                                className="flex h-10 items-center justify-center gap-1 rounded-xl border border-amber-300/20 bg-black/30 px-1 text-[11px] font-semibold text-amber-50"
+                                            >
+                                                {action.icon}
+                                                {action.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </section>
+                            ) : null}
+
                             {hardwareAccelerationWarning ? (
                                 <section className="rounded-[22px] border border-rose-400/28 bg-[linear-gradient(180deg,rgba(127,29,29,0.28),rgba(40,10,10,0.96))] p-4">
                                     <div className="flex items-start gap-3">
@@ -4091,7 +4137,7 @@ export default function InventoryFloatingPanel({
                                 </div>
                             </section>
 
-                            {onMinimapVisibleChange ? (
+                            {onMinimapVisibleChange && !compactSettings ? (
                                 <section className="rounded-[22px] border border-[#4f3926] bg-[#19110d]/92 p-4">
                                     <div className="flex items-center gap-3">
                                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-amber-300/15 bg-black/25 text-amber-100">
@@ -4143,6 +4189,7 @@ export default function InventoryFloatingPanel({
 
                             <button
                                 type="button"
+                                hidden={compactSettings}
                                 onClick={() => {
                                     setIsSettingsOpen(false);
                                     setIsHotkeySettingsOpen(true);

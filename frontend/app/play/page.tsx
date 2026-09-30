@@ -29,12 +29,17 @@ import {
 import { MobileHud } from "../../components/game/controls/MobileHud";
 import type { JoystickDirection } from "../../components/game/controls/TouchJoystick";
 import { MobileStatusPanel } from "../../components/game/controls/MobileStatusPanel";
+import { MobileInventoryModal } from "../../components/game/controls/MobileInventoryModal";
 import { MobileTargetHint } from "../../components/game/controls/MobileTargetHint";
 import type { TargetingMode } from "../../components/game/core/useCombatController";
 import { MobileInstallGate } from "../../components/game/overlays/MobileInstallGate";
 import { RotateDeviceOverlay } from "../../components/game/overlays/RotateDeviceOverlay";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import { isStandaloneDisplayMode } from "../../lib/pwa";
+import {
+    setViewportRotation,
+    type ViewportRotation,
+} from "../../lib/viewportRotation";
 import {
     createEmptyMacros,
     normalizeCharacterSettings,
@@ -115,6 +120,31 @@ const PLAY_HOTKEYS_HINT_STORAGE_KEY = "ao-play-hotkeys-hint-dismissed";
 const PLAY_SOUND_VOLUME_STORAGE_KEY = "ao-play-sound-volume";
 const PLAY_MINIMAP_VISIBLE_STORAGE_KEY = "ao-play-minimap-visible";
 const PLAY_ORIENTATION_LOCK_STORAGE_KEY = "ao-play-orientation-locked";
+const MOBILE_RECOVERY_STORAGE_KEY = "ao-play-mobile-recovery-at";
+const MOBILE_RECOVERY_COOLDOWN_MS = 30_000;
+
+function readLandscapeRotation(): 90 | -90 | null {
+    if (typeof window === "undefined") {
+        return null;
+    }
+
+    const legacyAngle = (window as unknown as { orientation?: number })
+        .orientation;
+    const angle =
+        typeof legacyAngle === "number"
+            ? legacyAngle
+            : window.screen?.orientation?.angle;
+
+    if (angle === 90) {
+        return 90;
+    }
+
+    if (angle === -90 || angle === 270) {
+        return -90;
+    }
+
+    return null;
+}
 
 function readStoredOrientationLock(): boolean {
     if (typeof window === "undefined") {
@@ -795,6 +825,30 @@ function HomeContent() {
         null,
     );
 
+    // Hacia qué lado estaba girado el teléfono la última vez que estuvo en
+    // horizontal: si se bloquea la orientación y después queda en vertical,
+    // la vista se rota para seguir "pegada" a ese horizontal.
+    const [lastLandscapeRotation, setLastLandscapeRotation] = useState<
+        90 | -90
+    >(() => readLandscapeRotation() ?? 90);
+
+    useEffect(() => {
+        const update = () => {
+            const rotation = readLandscapeRotation();
+            if (rotation !== null) {
+                setLastLandscapeRotation(rotation);
+            }
+        };
+
+        update();
+        window.addEventListener("orientationchange", update);
+        window.addEventListener("resize", update);
+        return () => {
+            window.removeEventListener("orientationchange", update);
+            window.removeEventListener("resize", update);
+        };
+    }, []);
+
     useEffect(() => {
         try {
             window.localStorage.setItem(
@@ -804,7 +858,25 @@ function HomeContent() {
         } catch {
             // Ignore storage failures in restricted/browser test contexts.
         }
-    }, [isOrientationLocked]);
+
+        if (!isMobile) {
+            return;
+        }
+
+        // Android (PWA instalada) soporta el bloqueo nativo; iOS no, y ahí
+        // actúa la rotación por CSS de más abajo.
+        const orientation = window.screen?.orientation as
+            | (ScreenOrientation & {
+                  lock?: (orientation: string) => Promise<void>;
+              })
+            | undefined;
+
+        if (isOrientationLocked) {
+            orientation?.lock?.("landscape").catch(() => {});
+        } else {
+            orientation?.unlock?.();
+        }
+    }, [isMobile, isOrientationLocked]);
     const [selectedSpellSlot, setSelectedSpellSlot] = useState<number | null>(
         null,
     );
@@ -1187,16 +1259,47 @@ function HomeContent() {
     }, []);
 
     useEffect(() => {
+        const isTypingOnTouchDevice = () => {
+            const active = document.activeElement;
+            return (
+                (active instanceof HTMLInputElement ||
+                    active instanceof HTMLTextAreaElement) &&
+                window.matchMedia?.("(pointer: coarse)").matches
+            );
+        };
+
         const updateViewport = () => {
+            // El teclado virtual achica el viewport: si se recalculara la
+            // escala del canvas con eso, todo el HUD se reacomoda mientras se
+            // escribe. Se congela hasta que el input pierde el foco.
+            if (isTypingOnTouchDevice()) {
+                return;
+            }
+
             setViewport({
                 width: window.innerWidth,
                 height: window.innerHeight,
             });
         };
 
+        let focusOutTimer: number | null = null;
+        const handleFocusOut = () => {
+            if (focusOutTimer !== null) {
+                window.clearTimeout(focusOutTimer);
+            }
+            focusOutTimer = window.setTimeout(updateViewport, 350);
+        };
+
         updateViewport();
         window.addEventListener("resize", updateViewport);
-        return () => window.removeEventListener("resize", updateViewport);
+        document.addEventListener("focusout", handleFocusOut);
+        return () => {
+            window.removeEventListener("resize", updateViewport);
+            document.removeEventListener("focusout", handleFocusOut);
+            if (focusOutTimer !== null) {
+                window.clearTimeout(focusOutTimer);
+            }
+        };
     }, []);
 
     useEffect(() => {
@@ -1629,8 +1732,26 @@ function HomeContent() {
         );
     }, []);
 
+    const lockedRotation: ViewportRotation =
+        isMobile && isPortrait && isOrientationLocked
+            ? lastLandscapeRotation
+            : 0;
+
+    useEffect(() => {
+        setViewportRotation(lockedRotation);
+        return () => setViewportRotation(0);
+    }, [lockedRotation]);
+
+    // Con la vista rotada, lo que el jugador ve como ancho es el alto real.
+    const effectiveViewportWidth = lockedRotation
+        ? viewport.height
+        : viewport.width;
+    const effectiveViewportHeight = lockedRotation
+        ? viewport.width
+        : viewport.height;
+
     const hudScale = useMemo(() => {
-        if (!viewport.width || !viewport.height) {
+        if (!effectiveViewportWidth || !effectiveViewportHeight) {
             return 1;
         }
 
@@ -1644,9 +1765,10 @@ function HomeContent() {
         const totalBaseWidth =
             CANVAS_BASE_WIDTH +
             (isMobile ? 0 : HUD_GAP + rightColumnSize.width);
-        const availableWidth = viewport.width - shellHorizontalPadding * 2;
+        const availableWidth =
+            effectiveViewportWidth - shellHorizontalPadding * 2;
         const availableHeight =
-            viewport.height -
+            effectiveViewportHeight -
             shellTopPadding -
             shellBottomPadding -
             (isFullscreen ? 2 : 0);
@@ -1675,8 +1797,8 @@ function HomeContent() {
         shellBottomPadding,
         shellTopPadding,
         topHudSectionSize.height,
-        viewport.height,
-        viewport.width,
+        effectiveViewportHeight,
+        effectiveViewportWidth,
     ]);
 
     const hudLayout = useMemo<HudLayout>(() => {
@@ -2007,6 +2129,138 @@ function HomeContent() {
         status.connected,
     ]);
 
+    // Mobile: al bloquear la pantalla, iOS suele cortar el websocket y/o
+    // descartar el contexto WebGL, dejando el canvas en negro. Se recarga
+    // /play una vez (reconecta solo con el personaje ya seleccionado); si
+    // eso vuelve a fallar enseguida, se vuelve a la selección de personajes.
+    const wasConnectedRef = useRef(false);
+    const webglContextLostRef = useRef(false);
+    const statusConnectedRef = useRef(status.connected);
+    const logoutPendingRef = useRef(logoutPending);
+
+    useEffect(() => {
+        statusConnectedRef.current = status.connected;
+        logoutPendingRef.current = logoutPending;
+    }, [logoutPending, status.connected]);
+
+    const recoverMobileSession = useCallback(() => {
+        let lastAttemptAt = 0;
+        try {
+            lastAttemptAt = Number(
+                window.sessionStorage.getItem(MOBILE_RECOVERY_STORAGE_KEY) ??
+                    0,
+            );
+        } catch {
+            // sessionStorage bloqueado: se intenta la recarga igual.
+        }
+
+        if (Date.now() - lastAttemptAt < MOBILE_RECOVERY_COOLDOWN_MS) {
+            disconnect();
+            router.replace("/characters");
+            return;
+        }
+
+        try {
+            window.sessionStorage.setItem(
+                MOBILE_RECOVERY_STORAGE_KEY,
+                String(Date.now()),
+            );
+        } catch {
+            // Ignorado: solo evita reintentos en loop.
+        }
+        window.location.reload();
+    }, [disconnect, router]);
+
+    useEffect(() => {
+        if (status.connected) {
+            wasConnectedRef.current = true;
+            return;
+        }
+
+        if (
+            !isMobile ||
+            !wasConnectedRef.current ||
+            status.connecting ||
+            logoutPending
+        ) {
+            return;
+        }
+
+        // Si la pestaña está oculta se espera al visibilitychange (que
+        // revisa este mismo flag) para no recargar en segundo plano.
+        if (document.visibilityState === "visible") {
+            wasConnectedRef.current = false;
+            recoverMobileSession();
+        }
+    }, [
+        isMobile,
+        logoutPending,
+        recoverMobileSession,
+        status.connected,
+        status.connecting,
+    ]);
+
+    useEffect(() => {
+        if (!isMobile) {
+            return;
+        }
+
+        const handleContextLost = (event: Event) => {
+            // Solo importa el canvas del juego, no otros (ej. el retrato).
+            if (
+                event.target instanceof HTMLElement &&
+                event.target.closest(".map-renderer")
+            ) {
+                webglContextLostRef.current = true;
+            }
+        };
+
+        let resumeTimer: number | null = null;
+        const handleVisibilityChange = () => {
+            if (document.visibilityState !== "visible") {
+                return;
+            }
+
+            if (resumeTimer !== null) {
+                window.clearTimeout(resumeTimer);
+            }
+
+            // Se da un momento para que el socket reporte su estado real.
+            resumeTimer = window.setTimeout(() => {
+                resumeTimer = null;
+                if (logoutPendingRef.current) {
+                    return;
+                }
+
+                if (
+                    webglContextLostRef.current ||
+                    (wasConnectedRef.current && !statusConnectedRef.current)
+                ) {
+                    wasConnectedRef.current = false;
+                    recoverMobileSession();
+                }
+            }, 1500);
+        };
+
+        // webglcontextlost no burbujea; se captura en fase de captura.
+        window.addEventListener("webglcontextlost", handleContextLost, true);
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        return () => {
+            window.removeEventListener(
+                "webglcontextlost",
+                handleContextLost,
+                true,
+            );
+            document.removeEventListener(
+                "visibilitychange",
+                handleVisibilityChange,
+            );
+            if (resumeTimer !== null) {
+                window.clearTimeout(resumeTimer);
+            }
+        };
+    }, [isMobile, recoverMobileSession]);
+
     useEffect(() => {
         if (!logoutPending || status.connected || status.connecting) {
             return;
@@ -2205,7 +2459,9 @@ function HomeContent() {
     }, [isChatOpen]);
 
     useEffect(() => {
-        if (!isChatOpen) {
+        // En mobile no se re-enfoca el input al tocar la pantalla: dejaría el
+        // teclado abierto tapando el juego mientras se usa el joystick.
+        if (!isChatOpen || isMobile) {
             return;
         }
 
@@ -2245,7 +2501,17 @@ function HomeContent() {
                 true,
             );
         };
-    }, [isChatOpen]);
+    }, [isChatOpen, isMobile]);
+
+    // Al cerrarse el teclado de iOS la página puede quedar desplazada; se
+    // vuelve al origen para que el HUD fijo quede donde corresponde.
+    useEffect(() => {
+        if (!isMobile || isChatOpen) {
+            return;
+        }
+
+        window.scrollTo(0, 0);
+    }, [isChatOpen, isMobile]);
 
     useEffect(() => {
         if (!status.connected && isChatOpen) {
@@ -2318,6 +2584,49 @@ function HomeContent() {
     const handlePayBail = useCallback(() => {
         sendChatMessage("/fianza pagar");
     }, [sendChatMessage]);
+
+    const handleMoveInventoryItem = useCallback(
+        (sourceSlot: number, targetSlot: number) => {
+            setHud((currentHud) => {
+                if (!currentHud) {
+                    return currentHud;
+                }
+
+                const sourceItem =
+                    currentHud.inventory.find(
+                        (item) => item.slot === sourceSlot,
+                    ) ?? null;
+
+                if (!sourceItem) {
+                    return currentHud;
+                }
+
+                const nextInventory = currentHud.inventory.flatMap((item) => {
+                    if (item.slot === sourceSlot) {
+                        return [{ ...item, slot: targetSlot }];
+                    }
+
+                    if (item.slot === targetSlot) {
+                        return [{ ...item, slot: sourceSlot }];
+                    }
+
+                    return [item];
+                });
+
+                setReorderInventoryRequest((current) => ({
+                    sourceSlot,
+                    targetSlot,
+                    token: (current?.token ?? 0) + 1,
+                }));
+
+                return {
+                    ...currentHud,
+                    inventory: nextInventory,
+                };
+            });
+        },
+        [],
+    );
 
     const handleDeathHomeConfirm = useCallback(() => {
         setDeathHomePromptOpen(false);
@@ -2835,6 +3144,22 @@ function HomeContent() {
         <div
             ref={setGameShellNode}
             className="game-shell"
+            style={
+                lockedRotation
+                    ? {
+                          // Orientación bloqueada con el teléfono en vertical:
+                          // la vista sigue en horizontal respecto al teléfono,
+                          // como una app nativa bloqueada en landscape. Todo el
+                          // HUD fijo vive adentro, así que rota junto con ella.
+                          position: "fixed",
+                          top: "50%",
+                          left: "50%",
+                          width: `${viewport.height}px`,
+                          height: `${viewport.width}px`,
+                          transform: `translate(-50%, -50%) rotate(${lockedRotation}deg)`,
+                      }
+                    : undefined
+            }
             onContextMenu={(event) => {
                 event.preventDefault();
             }}
@@ -3191,7 +3516,9 @@ function HomeContent() {
                                 </div>
 
                                 <div className="pointer-events-none absolute bottom-3 right-16 z-30 flex w-[594px] max-w-[calc(100vw-9rem)] flex-col items-center gap-3">
-                                    {!isDesktopConsoleLayout && isChatOpen ? (
+                                    {!isDesktopConsoleLayout &&
+                                    !isMobile &&
+                                    isChatOpen ? (
                                         <form
                                             ref={chatFormRef}
                                             className="pointer-events-auto flex w-full items-center gap-3 rounded-2xl border border-amber-300/35 bg-stone-950/88 px-4 py-3 shadow-2xl backdrop-blur-md"
@@ -3588,6 +3915,79 @@ function HomeContent() {
                                 />
                             ) : null}
 
+                            {isMobile && isMobileMenuOpen ? (
+                                <MobileInventoryModal
+                                    hud={hud}
+                                    onClose={() => setIsMobileMenuOpen(false)}
+                                    onUse={(slot) =>
+                                        setUseItemClickRequest((current) => ({
+                                            slot,
+                                            token: (current?.token ?? 0) + 1,
+                                        }))
+                                    }
+                                    onEquip={(slot) =>
+                                        setEquipRequest((current) => ({
+                                            slot,
+                                            token: (current?.token ?? 0) + 1,
+                                        }))
+                                    }
+                                    onRangeAttack={() => {
+                                        setIsMobileMenuOpen(false);
+                                        setRangeAttackRequest((current) => ({
+                                            token: (current?.token ?? 0) + 1,
+                                        }));
+                                    }}
+                                    onMove={handleMoveInventoryItem}
+                                />
+                            ) : null}
+
+                            {isMobile && isChatOpen ? (
+                                <form
+                                    ref={chatFormRef}
+                                    className="pointer-events-auto fixed left-1/2 top-2 z-50 flex w-[min(460px,60%)] -translate-x-1/2 items-center gap-2 rounded-xl border border-amber-300/35 bg-stone-950/92 px-2 py-1.5 shadow-2xl"
+                                    onSubmit={(event) => {
+                                        event.preventDefault();
+                                        submitChatMessage();
+                                    }}
+                                >
+                                    <input
+                                        ref={chatInputRef}
+                                        type="text"
+                                        autoComplete="off"
+                                        enterKeyHint="send"
+                                        value={chatMessage}
+                                        maxLength={120}
+                                        onChange={(event) =>
+                                            setChatMessage(event.target.value)
+                                        }
+                                        placeholder={
+                                            activeChatTab === "global"
+                                                ? "/global para mensaje global"
+                                                : "Escribí tu mensaje"
+                                        }
+                                        // 16px evita el zoom automático de Safari de iOS al enfocar.
+                                        className="min-w-0 flex-1 bg-transparent px-1 text-base text-stone-100 outline-none placeholder:text-stone-500"
+                                    />
+                                    <button
+                                        type="submit"
+                                        className="shrink-0 rounded-lg bg-amber-300 px-3 py-1 text-sm font-semibold text-stone-950"
+                                    >
+                                        Enviar
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setIsChatOpen(false);
+                                            setChatMessage("");
+                                        }}
+                                        className="shrink-0 rounded-lg border border-stone-700 px-2 py-1 text-sm text-stone-300"
+                                        aria-label="Cerrar chat"
+                                    >
+                                        ✕
+                                    </button>
+                                </form>
+                            ) : null}
+
                             {isMobile &&
                             (targetingHint?.type === "spell" ||
                                 targetingHint?.type === "range") ? (
@@ -3599,7 +3999,7 @@ function HomeContent() {
                             scale={hudScale}
                             baseWidth={RIGHT_PANEL_WIDTH}
                             onMeasure={handleRightColumnMeasure}
-                            hidden={isMobile && !isMobileMenuOpen}
+                            hidden={isMobile}
                         >
                             <div
                                 className="relative flex w-[320px] flex-col"
@@ -3671,73 +4071,7 @@ function HomeContent() {
                                             token: (current?.token ?? 0) + 1,
                                         }))
                                     }
-                                    onMoveInventoryItem={(
-                                        sourceSlot,
-                                        targetSlot,
-                                    ) => {
-                                        setHud((currentHud) => {
-                                            if (!currentHud) {
-                                                return currentHud;
-                                            }
-
-                                            const sourceItem =
-                                                currentHud.inventory.find(
-                                                    (item) =>
-                                                        item.slot ===
-                                                        sourceSlot,
-                                                ) ?? null;
-
-                                            if (!sourceItem) {
-                                                return currentHud;
-                                            }
-
-                                            const nextInventory =
-                                                currentHud.inventory.flatMap(
-                                                    (item) => {
-                                                        if (
-                                                            item.slot ===
-                                                            sourceSlot
-                                                        ) {
-                                                            return [
-                                                                {
-                                                                    ...item,
-                                                                    slot: targetSlot,
-                                                                },
-                                                            ];
-                                                        }
-
-                                                        if (
-                                                            item.slot ===
-                                                            targetSlot
-                                                        ) {
-                                                            return [
-                                                                {
-                                                                    ...item,
-                                                                    slot: sourceSlot,
-                                                                },
-                                                            ];
-                                                        }
-
-                                                        return [item];
-                                                    },
-                                                );
-
-                                            setReorderInventoryRequest(
-                                                (current) => ({
-                                                    sourceSlot,
-                                                    targetSlot,
-                                                    token:
-                                                        (current?.token ?? 0) +
-                                                        1,
-                                                }),
-                                            );
-
-                                            return {
-                                                ...currentHud,
-                                                inventory: nextInventory,
-                                            };
-                                        });
-                                    }}
+                                    onMoveInventoryItem={handleMoveInventoryItem}
                                     onRangeAttackRequest={() =>
                                         setRangeAttackRequest((current) => ({
                                             token: (current?.token ?? 0) + 1,
@@ -3773,6 +4107,7 @@ function HomeContent() {
                                         authSession?.selectedCharacterId ?? null
                                     }
                                     openSettingsRequest={openSettingsRequest}
+                                    compactSettings={isMobile}
                                 />
                             </div>
                         </ScaledHudFrame>

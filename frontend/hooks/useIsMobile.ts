@@ -16,18 +16,28 @@ function detectTouchCapable(): boolean {
     );
 }
 
+function readViewport(): { width: number; height: number } {
+    if (typeof window === "undefined") {
+        return { width: 0, height: 0 };
+    }
+
+    return { width: window.innerWidth, height: window.innerHeight };
+}
+
 export function useIsMobile(): { isMobile: boolean; isPortrait: boolean } {
-    const [isTouchCapable, setIsTouchCapable] = useState(false);
-    const [viewport, setViewport] = useState({ width: 0, height: 0 });
+    // Inicializadores perezosos: se resuelven en el primer render del
+    // cliente, no en un efecto posterior. Si no, hay una ventana donde
+    // isMobile vale "false" (el default previo) antes de que el efecto
+    // corra - suficiente para que un dialogo que decide "mostrarme o no"
+    // en base a isMobile tome la decision equivocada en un celular real.
+    const [isTouchCapable, setIsTouchCapable] = useState(detectTouchCapable);
+    const [viewport, setViewport] = useState(readViewport);
 
     useEffect(() => {
         setIsTouchCapable(detectTouchCapable());
 
         const updateViewport = () => {
-            setViewport({
-                width: window.innerWidth,
-                height: window.innerHeight,
-            });
+            setViewport(readViewport());
         };
 
         updateViewport();

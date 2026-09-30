@@ -2081,6 +2081,13 @@ function HomeContent() {
     }, []);
 
     useEffect(() => {
+        // En mobile se juega con el HUD tactil, no con teclado - este aviso
+        // de hotkeys de escritorio no aplica y no tiene sentido mostrarlo.
+        if (isMobile) {
+            setIsHotkeyIntroOpen(false);
+            return;
+        }
+
         try {
             const hasSeenIntro = window.localStorage.getItem(
                 PLAY_HOTKEYS_HINT_STORAGE_KEY,
@@ -2092,7 +2099,7 @@ function HomeContent() {
         } catch {
             setIsHotkeyIntroOpen(true);
         }
-    }, []);
+    }, [isMobile]);
 
     useEffect(() => {
         if (!hasInitializedSoundVolumeRef.current) {
@@ -4001,7 +4008,7 @@ function HomeContent() {
 
             {isHotkeyIntroOpen ? (
                 <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 px-4 py-6 backdrop-blur-sm">
-                    <div className="w-full max-w-2xl rounded-[28px] border border-amber-200/20 bg-[linear-gradient(180deg,rgba(28,18,12,0.98),rgba(14,10,8,0.98))] p-6 text-stone-100 shadow-[0_30px_120px_rgba(0,0,0,0.6)]">
+                    <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-[28px] border border-amber-200/20 bg-[linear-gradient(180deg,rgba(28,18,12,0.98),rgba(14,10,8,0.98))] p-6 text-stone-100 shadow-[0_30px_120px_rgba(0,0,0,0.6)]">
                         <div className="flex items-start justify-between gap-4">
                             <div>
                                 <p className="text-[11px] uppercase tracking-[0.28em] text-amber-200/75">

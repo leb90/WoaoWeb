@@ -194,6 +194,23 @@ const runtimeTiming = require("./runtimeTiming");
 const handleProtocol = require("./handleProtocol") as HandleProtocolApi;
 const environment = require("./environment");
 const summonRoom = require("./summonRoom");
+const populationBots = require("./populationBots");
+// Costo real medido en el tick del loop principal, para saber si hace falta
+// bajar la cantidad de bots en vez de asumirlo a ciegas (ver plan de bots de poblacion).
+const populationBotsTickSamplesMs: number[] = [];
+setInterval(() => {
+    if (populationBotsTickSamplesMs.length === 0 || !populationBots.isPopulationBotsEnabled()) {
+        return;
+    }
+    const sorted = [...populationBotsTickSamplesMs].sort((a, b) => a - b);
+    const avg = sorted.reduce((a, b) => a + b, 0) / sorted.length;
+    const max = sorted[sorted.length - 1];
+    const p95 = sorted[Math.floor(sorted.length * 0.95)];
+    console.log(
+        `[PERF population-bots] samples=${sorted.length} avgMs=${avg.toFixed(3)} p95Ms=${p95.toFixed(3)} maxMs=${max.toFixed(3)}`,
+    );
+    populationBotsTickSamplesMs.length = 0;
+}, 60000);
 const bossEvents = require("./bossEvents");
 const woaoProgress = require("./woaoProgress");
 
@@ -289,6 +306,105 @@ function handleHttpRequest(request: any, response: any) {
         response.setHeader("Access-Control-Allow-Origin", "*");
         response.setHeader("Content-Type", "application/json; charset=utf-8");
         response.end(JSON.stringify(summonRoom.getDebugSnapshot()));
+        return;
+    }
+
+    if (config.isTestDeployment && request.url?.startsWith("/debug/population-bots")) {
+        const url = new URL(request.url, "http://localhost");
+        const action = url.searchParams.get("action");
+
+        void (async () => {
+            if (action === "spawn") {
+                const count = Number(url.searchParams.get("count") ?? "0") || undefined;
+                const spawned = await populationBots.spawnPopulationBots(count);
+                populationBots.setPopulationBotsEnabled(true);
+                response.statusCode = 200;
+                response.setHeader("Content-Type", "application/json; charset=utf-8");
+                response.end(JSON.stringify({ spawned }));
+                return;
+            }
+
+            if (action === "attack") {
+                const idParam = url.searchParams.get("id");
+                const bot = idParam
+                    ? (vars.personajes as Record<string, any>)[idParam]
+                    : (Object.values(vars.personajes) as any[]).find((c) => c?.populationBot);
+
+                if (!bot) {
+                    response.statusCode = 404;
+                    response.end(JSON.stringify({ error: "bot not found" }));
+                    return;
+                }
+
+                const attackerNpc = (Object.values(vars.npcs) as any[]).find(
+                    (npc) => npc?.map === bot.map && Number(npc?.hp ?? 0) > 0,
+                );
+
+                // Para probar de verdad la defensa hace falta que el "atacante"
+                // este en rango - lo acercamos artificialmente solo para este test.
+                const savedPos = attackerNpc ? { ...attackerNpc.pos } : null;
+                if (attackerNpc) {
+                    attackerNpc.pos = { x: bot.pos.x, y: bot.pos.y };
+                }
+
+                const before = { hp: bot.hp, mana: bot.mana, attackerNpcHp: attackerNpc?.hp };
+                const racialPassives = require("./racialPassives") as typeof import("./racialPassives");
+                racialPassives.applyIncomingHit(bot, 15, "melee", true, attackerNpc?.id);
+
+                setTimeout(() => {
+                    if (attackerNpc && savedPos) {
+                        attackerNpc.pos = savedPos;
+                    }
+                }, 3000);
+
+                response.statusCode = 200;
+                response.setHeader("Content-Type", "application/json; charset=utf-8");
+                response.end(
+                    JSON.stringify({
+                        botId: bot.id,
+                        botName: bot.nameCharacter,
+                        attackerNpcId: attackerNpc?.id ?? null,
+                        attackerNpcName: attackerNpc?.nameCharacter ?? null,
+                        before,
+                        after: { hp: bot.hp, mana: bot.mana, attackerNpcHp: attackerNpc?.hp },
+                    }),
+                );
+                return;
+            }
+
+            if (action === "off") {
+                populationBots.setPopulationBotsEnabled(false);
+            } else if (action === "on") {
+                populationBots.setPopulationBotsEnabled(true);
+            } else if (action === "clear") {
+                populationBots.despawnAllPopulationBots();
+                populationBots.setPopulationBotsEnabled(false);
+            }
+
+            const bots = (Object.values(vars.personajes) as any[])
+                .filter((character) => character?.populationBot)
+                .map((character) => ({
+                    id: character.id,
+                    name: character.nameCharacter,
+                    map: character.map,
+                    pos: character.pos,
+                    hp: character.hp,
+                    maxHp: character.maxHp,
+                    dead: Boolean(character.dead),
+                    waypoint: character.populationBotWaypoint,
+                    lastAttackerId: character.lastAttackerId,
+                }));
+
+            response.statusCode = 200;
+            response.setHeader("Content-Type", "application/json; charset=utf-8");
+            response.end(
+                JSON.stringify({
+                    enabled: populationBots.isPopulationBotsEnabled(),
+                    count: bots.length,
+                    bots: action === "status" ? bots : undefined,
+                }),
+            );
+        })();
         return;
     }
 
@@ -1110,6 +1226,9 @@ createDynamicScheduler(
         processCrowdControlTick(now);
         processActionCooldownTick(now);
         game.processAdminSummonedBotTick(now);
+        const populationBotsTickStart = process.hrtime.bigint();
+        populationBots.processPopulationBotTick(now);
+        populationBotsTickSamplesMs.push(Number(process.hrtime.bigint() - populationBotsTickStart) / 1e6);
 
         if (now >= nextPlayerStatusTickAt) {
             processPlayerStatusTick(now);

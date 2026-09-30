@@ -682,7 +682,7 @@ function tryNpcCastSpell(
                 damage = 1;
             }
 
-            damage = applyIncomingHit(target, damage, "magic", true);
+            damage = applyIncomingHit(target, damage, "magic", true, npc.id);
             withUserClient(target.id, (targetClient) => {
                 handleProtocol.updateHP(target.hp, targetClient);
                 handleProtocol.console(
@@ -2626,7 +2626,7 @@ function Npcs(this: NpcsApi) {
                         dmg = 1;
                     }
 
-                    dmg = applyIncomingHit(user, dmg, "melee", true);
+                    dmg = applyIncomingHit(user, dmg, "melee", true, idNpc);
                     user.lastCombatActivityAt = Date.now();
                     emitCharacterFxToUserArea(idUser, COMBAT_HIT_FX_ID);
                     withUserClient(idUser, (userClient) => {

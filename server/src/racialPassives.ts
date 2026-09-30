@@ -19,6 +19,8 @@ type Combatant = {
     maxHp?: number;
     mana?: number;
     maxMana?: number;
+    lastAttackerId?: string | number;
+    lastAttackedAt?: number;
 };
 
 type SpellLike = {
@@ -232,6 +234,7 @@ export function applyIncomingHit(
     damage: number,
     kind: "melee" | "ranged" | "magic",
     fromNpc = false,
+    attackerId?: string | number,
 ): number {
     let next = kind === "magic" ? damage : modifyIncomingPhysicalDamage(user, damage, kind);
     try {
@@ -244,6 +247,10 @@ export function applyIncomingHit(
     if (user) {
         user.hp = Number(user.hp ?? 0) - next;
         applyVampireOnHit(user);
+        if (typeof attackerId !== "undefined") {
+            user.lastAttackerId = attackerId;
+            user.lastAttackedAt = Date.now();
+        }
     }
     return next;
 }

@@ -30,6 +30,8 @@ import { MobileHud } from "../../components/game/controls/MobileHud";
 import type { JoystickDirection } from "../../components/game/controls/TouchJoystick";
 import { MobileStatusPanel } from "../../components/game/controls/MobileStatusPanel";
 import { MobileInventoryModal } from "../../components/game/controls/MobileInventoryModal";
+import { MobileSpellsModal } from "../../components/game/controls/MobileSpellsModal";
+import SkillsModal from "../../components/SkillsModal";
 import { MobileTargetHint } from "../../components/game/controls/MobileTargetHint";
 import type { TargetingMode } from "../../components/game/core/useCombatController";
 import { MobileInstallGate } from "../../components/game/overlays/MobileInstallGate";
@@ -828,6 +830,13 @@ function HomeContent() {
         token: number;
     } | null>(null);
     const [isQuickSlotEditMode, setIsQuickSlotEditMode] = useState(false);
+    const [isMobileSpellsOpen, setIsMobileSpellsOpen] = useState(false);
+    const [isMobileSkillsOpen, setIsMobileSkillsOpen] = useState(false);
+    const closeMobileSkills = useCallback(
+        () => setIsMobileSkillsOpen(false),
+        [],
+    );
+    const isMobileTargeting = isMobile && targetingHint !== null;
 
     // Hacia qué lado estaba girado el teléfono la última vez que estuvo en
     // horizontal: si se bloquea la orientación y después queda en vertical,
@@ -1284,6 +1293,13 @@ function HomeContent() {
                 width: window.innerWidth,
                 height: window.innerHeight,
             });
+
+            // Tras girar, iOS puede dejar la página desplazada unos px; con
+            // el HUD en position:fixed eso corre la zona táctil respecto de
+            // lo que se ve y algunos botones parecen no responder.
+            if (window.scrollX || window.scrollY) {
+                window.scrollTo(0, 0);
+            }
         };
 
         let focusOutTimer: number | null = null;
@@ -3898,6 +3914,10 @@ function HomeContent() {
                                     onOpenInventory={() =>
                                         setIsMobileMenuOpen((current) => !current)
                                     }
+                                    onOpenSpellList={() =>
+                                        setIsMobileSpellsOpen(true)
+                                    }
+                                    isTargeting={isMobileTargeting}
                                     onToggleChat={() =>
                                         setIsChatOpen((current) => !current)
                                     }
@@ -3925,6 +3945,46 @@ function HomeContent() {
                                 <MobileStatusPanel
                                     hud={hud}
                                     consoleLog={consoleMessages}
+                                    skillPoints={Math.max(
+                                        0,
+                                        Math.floor(
+                                            Number(skillsState?.skillPts) || 0,
+                                        ),
+                                    )}
+                                    isTargeting={isMobileTargeting}
+                                    onOpenSkills={() =>
+                                        setIsMobileSkillsOpen(true)
+                                    }
+                                />
+                            ) : null}
+
+                            {isMobile ? (
+                                <SkillsModal
+                                    compact
+                                    isOpen={isMobileSkillsOpen}
+                                    skillsState={skillsState}
+                                    onAssignSkill={(skillId) =>
+                                        setAssignSkillRequest((current) => ({
+                                            skillId,
+                                            token: (current?.token ?? 0) + 1,
+                                        }))
+                                    }
+                                    onClose={closeMobileSkills}
+                                />
+                            ) : null}
+
+                            {isMobile && isMobileSpellsOpen ? (
+                                <MobileSpellsModal
+                                    hud={hud}
+                                    onClose={() => setIsMobileSpellsOpen(false)}
+                                    onCast={(spell) =>
+                                        setSpellTargetRequest((current) => ({
+                                            slot: spell.slot,
+                                            manaRequired: spell.manaRequired,
+                                            name: spell.name,
+                                            token: (current?.token ?? 0) + 1,
+                                        }))
+                                    }
                                 />
                             ) : null}
 

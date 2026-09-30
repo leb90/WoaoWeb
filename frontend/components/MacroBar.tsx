@@ -21,11 +21,18 @@ import {
     getTexturePath,
     loadGraphicsDB,
     loadObjectsDB,
+    loadSpellsDB,
 } from "../utils/gameLoader";
-import type { GraphicData, ObjectsDB } from "../types/game";
+import type {
+    GraphicData,
+    ObjectsDB,
+    SpellData,
+    SpellsDB,
+} from "../types/game";
+import { getSpellVisual } from "../lib/spellVisual";
 
 const SPELL_MACRO_ICON_URL = "/graphics/22031.png";
-const LONG_PRESS_MS = 500;
+const LONG_PRESS_MS = 650;
 
 type MacroBarProps = {
     hud: PlayerHudState | null;
@@ -73,6 +80,38 @@ type MacroBarProps = {
 
 function getTouchSlotKeyCode(index: number) {
     return `TouchSlot${index}`;
+}
+
+// Se comparte entre instancias: el loader vuelve a bajar y parsear el JSON en
+// cada llamada.
+let spellsDBPromise: Promise<SpellsDB> | null = null;
+
+function TouchSpellFace({
+    name,
+    spellData,
+}: {
+    name: string;
+    spellData?: SpellData;
+}) {
+    const { Icon, color } = getSpellVisual(spellData, name);
+
+    return (
+        <span
+            className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5 rounded-full px-1"
+            style={{
+                background: `radial-gradient(circle at 50% 35%, ${color}40, rgba(0,0,0,0.75) 70%)`,
+            }}
+        >
+            <Icon
+                className="h-5 w-5 shrink-0 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
+                style={{ color }}
+                strokeWidth={2.2}
+            />
+            <span className="line-clamp-2 max-w-full break-words text-center text-[9px] font-bold leading-[10px] text-white [text-shadow:0_1px_2px_rgba(0,0,0,1)]">
+                {name}
+            </span>
+        </span>
+    );
 }
 
 export function ItemGraphic({
@@ -215,6 +254,29 @@ export default function MacroBar({
         GraphicData
     > | null>(null);
     const [objectsDB, setObjectsDB] = React.useState<ObjectsDB | null>(null);
+    const [spellsDB, setSpellsDB] = React.useState<SpellsDB | null>(null);
+
+    React.useEffect(() => {
+        if (!slotPositions) {
+            return;
+        }
+
+        let isActive = true;
+        spellsDBPromise ??= loadSpellsDB();
+        spellsDBPromise
+            .then((data) => {
+                if (isActive) {
+                    setSpellsDB(data);
+                }
+            })
+            .catch(() => {
+                spellsDBPromise = null;
+            });
+
+        return () => {
+            isActive = false;
+        };
+    }, [slotPositions]);
     const [rangedWeaponIds, setRangedWeaponIds] = React.useState<Set<number>>(
         new Set(),
     );
@@ -611,6 +673,23 @@ export default function MacroBar({
 
     React.useEffect(() => cancelLongPress, [cancelLongPress]);
 
+    const activeSlotPointerRef = React.useRef<{
+        pointerId: number;
+        index: number;
+    } | null>(null);
+
+    const handleSlotTap = React.useCallback(
+        (index: number) => {
+            if (macros[index] && !editMode) {
+                activateMacro(index);
+                return;
+            }
+
+            openEditor(index);
+        },
+        [activateMacro, editMode, macros, openEditor],
+    );
+
     const saveMacro = React.useCallback(() => {
         if (editingIndex === null) {
             return;
@@ -855,18 +934,16 @@ export default function MacroBar({
                         >
                             <button
                                 type="button"
-                                onClick={() => {
-                                    if (longPressTriggeredRef.current) {
-                                        longPressTriggeredRef.current = false;
+                                onClick={(event) => {
+                                    // En touch la acción va en pointerup (iOS
+                                    // no manda click si hay otro dedo apoyado,
+                                    // ej. en el joystick); acá solo entra el
+                                    // click de teclado (detail 0).
+                                    if (touchMode && event.detail !== 0) {
                                         return;
                                     }
 
-                                    if (macro && !editMode) {
-                                        activateMacro(index);
-                                        return;
-                                    }
-
-                                    openEditor(index);
+                                    handleSlotTap(index);
                                 }}
                                 onContextMenu={(event) => {
                                     event.preventDefault();
@@ -876,17 +953,68 @@ export default function MacroBar({
                                 }}
                                 onPointerDown={
                                     touchMode
-                                        ? () => startLongPress(index)
+                                        ? (event) => {
+                                              activeSlotPointerRef.current = {
+                                                  pointerId: event.pointerId,
+                                                  index,
+                                              };
+                                              startLongPress(index);
+                                          }
                                         : undefined
                                 }
                                 onPointerUp={
-                                    touchMode ? cancelLongPress : undefined
-                                }
-                                onPointerLeave={
-                                    touchMode ? cancelLongPress : undefined
+                                    touchMode
+                                        ? (event) => {
+                                              cancelLongPress();
+                                              const active =
+                                                  activeSlotPointerRef.current;
+                                              activeSlotPointerRef.current =
+                                                  null;
+
+                                              if (
+                                                  !active ||
+                                                  active.pointerId !==
+                                                      event.pointerId ||
+                                                  active.index !== index
+                                              ) {
+                                                  return;
+                                              }
+
+                                              if (
+                                                  longPressTriggeredRef.current
+                                              ) {
+                                                  longPressTriggeredRef.current =
+                                                      false;
+                                                  return;
+                                              }
+
+                                              const rect =
+                                                  event.currentTarget.getBoundingClientRect();
+                                              if (
+                                                  event.clientX <
+                                                      rect.left - 12 ||
+                                                  event.clientX >
+                                                      rect.right + 12 ||
+                                                  event.clientY <
+                                                      rect.top - 12 ||
+                                                  event.clientY >
+                                                      rect.bottom + 12
+                                              ) {
+                                                  return;
+                                              }
+
+                                              handleSlotTap(index);
+                                          }
+                                        : undefined
                                 }
                                 onPointerCancel={
-                                    touchMode ? cancelLongPress : undefined
+                                    touchMode
+                                        ? () => {
+                                              cancelLongPress();
+                                              activeSlotPointerRef.current =
+                                                  null;
+                                          }
+                                        : undefined
                                 }
                                 className={`group relative mx-auto flex items-center justify-center overflow-hidden border transition select-none focus:outline-none focus-visible:outline-none [-webkit-touch-callout:none] ${
                                     isPositioned
@@ -923,6 +1051,18 @@ export default function MacroBar({
                                                       : 40
                                             }
                                         />
+                                    ) : isPositioned &&
+                                      macro.targetType === "spell" ? (
+                                        <TouchSpellFace
+                                            name={displayLabel}
+                                            spellData={
+                                                resolvedSpell
+                                                    ? spellsDB?.[
+                                                          resolvedSpell.idSpell.toString()
+                                                      ]
+                                                    : undefined
+                                            }
+                                        />
                                     ) : (
                                         <img
                                             src={SPELL_MACRO_ICON_URL}
@@ -948,13 +1088,12 @@ export default function MacroBar({
                                     </span>
                                 )}
 
-                                {isPositioned && macro && displayLabel ? (
-                                    <span className="pointer-events-none absolute inset-x-0 bottom-0.5 truncate px-1 text-center text-[8px] font-semibold leading-none text-amber-50 drop-shadow-[0_1px_1px_rgba(0,0,0,1)]">
-                                        {macro.targetType === "item" &&
-                                        resolvedItem &&
-                                        resolvedItem.amount > 1
-                                            ? resolvedItem.amount
-                                            : displayLabel}
+                                {isPositioned &&
+                                macro?.targetType === "item" &&
+                                resolvedItem &&
+                                resolvedItem.amount > 1 ? (
+                                    <span className="pointer-events-none absolute inset-x-0 bottom-0.5 text-center text-[9px] font-bold leading-none text-amber-50 drop-shadow-[0_1px_1px_rgba(0,0,0,1)]">
+                                        {resolvedItem.amount}
                                     </span>
                                 ) : null}
 

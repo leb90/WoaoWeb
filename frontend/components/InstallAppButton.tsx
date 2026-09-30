@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { MonitorDown } from "lucide-react";
+import { isStandaloneDisplayMode } from "../lib/pwa";
 
 type BeforeInstallPromptEvent = Event & {
     prompt: () => Promise<void>;
@@ -14,25 +15,13 @@ declare global {
     }
 }
 
-function isStandalone() {
-    if (typeof window === "undefined") {
-        return false;
-    }
-
-    return (
-        window.matchMedia?.("(display-mode: standalone)").matches ||
-        // iOS Safari
-        (window.navigator as unknown as { standalone?: boolean }).standalone === true
-    );
-}
-
 export default function InstallAppButton() {
     const [deferredPrompt, setDeferredPrompt] =
         useState<BeforeInstallPromptEvent | null>(null);
     const [installed, setInstalled] = useState(false);
 
     useEffect(() => {
-        setInstalled(isStandalone());
+        setInstalled(isStandaloneDisplayMode());
 
         // El evento puede haberse disparado y quedado guardado antes de que
         // este componente llegara a montar (ver el script en layout.tsx).

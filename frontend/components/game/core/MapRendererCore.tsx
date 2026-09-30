@@ -138,6 +138,9 @@ interface MapRendererProps {
     height?: number;
     embedded?: boolean;
     connection?: ManualConnectionConfig | null;
+    isMobile?: boolean;
+    touchMovementDirection?: "up" | "down" | "left" | "right" | null;
+    meleeAttackRequest?: { token: number } | null;
     equipRequest?: { slot: number; token: number } | null;
     useItemClickRequest?: { slot: number; token: number } | null;
     useItemURequest?: { slot: number; token: number } | null;
@@ -633,6 +636,9 @@ export default function MapRenderer({
     height,
     embedded = false,
     connection,
+    isMobile = false,
+    touchMovementDirection = null,
+    meleeAttackRequest,
     equipRequest,
     useItemClickRequest,
     useItemURequest,
@@ -1237,6 +1243,7 @@ export default function MapRenderer({
     } = useCombatController({
         engineRef,
         websocketRef,
+        isTouchTolerant: isMobile,
         connectionSessionKey: connection?.sessionKey,
         playerHudRef,
         runtimeTimingRef,
@@ -1313,6 +1320,75 @@ export default function MapRenderer({
         setIsDebugMode,
     });
 
+    // Joystick tactil: alimenta el mismo estado que ya arma el teclado
+    // (movementKeyMapRef/movementPressCountsRef/movementKeyPriorityRef) con
+    // una "tecla" sintetica, asi useMovementSync lo procesa identico a una
+    // tecla apretada - cero logica de movimiento duplicada.
+    const TOUCH_MOVEMENT_KEY = "__touch_joystick__";
+    useEffect(() => {
+        const engine = engineRef.current;
+        if (!engine) {
+            return;
+        }
+
+        const movementKeyMap = movementKeyMapRef.current;
+        const movementPressCounts = movementPressCountsRef.current;
+        const previousKeyCode = movementKeyMap.get(TOUCH_MOVEMENT_KEY);
+
+        if (previousKeyCode !== undefined) {
+            const nextCount = Math.max(
+                0,
+                (movementPressCounts.get(previousKeyCode) ?? 1) - 1,
+            );
+
+            if (nextCount === 0) {
+                movementPressCounts.delete(previousKeyCode);
+                movementKeyPriorityRef.current =
+                    movementKeyPriorityRef.current.filter(
+                        (code) => code !== previousKeyCode,
+                    );
+            } else {
+                movementPressCounts.set(previousKeyCode, nextCount);
+            }
+
+            movementKeyMap.delete(TOUCH_MOVEMENT_KEY);
+        }
+
+        if (touchMovementDirection) {
+            const keyCode =
+                touchMovementDirection === "up"
+                    ? engine.KEY_CODES.W
+                    : touchMovementDirection === "left"
+                      ? engine.KEY_CODES.A
+                      : touchMovementDirection === "down"
+                        ? engine.KEY_CODES.S
+                        : engine.KEY_CODES.D;
+
+            movementKeyMap.set(TOUCH_MOVEMENT_KEY, keyCode);
+            movementPressCounts.set(
+                keyCode,
+                (movementPressCounts.get(keyCode) ?? 0) + 1,
+            );
+            movementKeyPriorityRef.current =
+                movementKeyPriorityRef.current.filter(
+                    (code) => code !== keyCode,
+                );
+            movementKeyPriorityRef.current.unshift(keyCode);
+        }
+
+        if (canProcessMovementInput()) {
+            syncMovementState(engine);
+        }
+    }, [
+        touchMovementDirection,
+        engineRef,
+        movementKeyMapRef,
+        movementPressCountsRef,
+        movementKeyPriorityRef,
+        canProcessMovementInput,
+        syncMovementState,
+    ]);
+
     const { clearUseItemQueues } = useOutgoingRequests({
         websocketRef,
         engineRef,
@@ -1354,6 +1430,7 @@ export default function MapRenderer({
         reorderBankRequest,
         rangeAttackRequest,
         spellTargetRequest,
+        meleeAttackRequest,
     });
 
     useEffect(() => {

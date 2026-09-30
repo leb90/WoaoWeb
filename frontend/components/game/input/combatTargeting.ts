@@ -79,10 +79,14 @@ export function isPointerInsideCombatHitbox(
     bounds: { x: number; y: number; width: number; height: number },
     pointerX: number,
     pointerY: number,
+    // En mobile el dedo es menos preciso que el mouse - se reduce el inset
+    // (hitbox mas grande/permisiva) en vez de tocar cooldowns del servidor.
+    wide = false,
 ) {
-    const insetX = Math.min(bounds.width * 0.18, 12);
-    const insetTop = Math.min(bounds.height * 0.12, 14);
-    const insetBottom = Math.min(bounds.height * 0.06, 8);
+    const insetScale = wide ? 0.4 : 1;
+    const insetX = Math.min(bounds.width * 0.18, 12) * insetScale;
+    const insetTop = Math.min(bounds.height * 0.12, 14) * insetScale;
+    const insetBottom = Math.min(bounds.height * 0.06, 8) * insetScale;
     const hitboxX = bounds.x + insetX;
     const hitboxY = bounds.y + insetTop;
     const hitboxWidth = Math.max(8, bounds.width - insetX * 2);
@@ -108,6 +112,7 @@ export function isPointerOverMarkedSprite(
     >,
     pointerX: number,
     pointerY: number,
+    wide = false,
 ): boolean {
     if (!container || container.destroyed) {
         return false;
@@ -137,6 +142,6 @@ export function isPointerOverMarkedSprite(
 
         const bounds = displayObject.getBounds();
 
-        return isPointerInsideCombatHitbox(bounds, pointerX, pointerY);
+        return isPointerInsideCombatHitbox(bounds, pointerX, pointerY, wide);
     });
 }

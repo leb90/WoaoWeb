@@ -81,6 +81,7 @@ const CLIENT_RESOURCE_REACTION_MIN_SAMPLES = 6;
 type UseCombatControllerOptions = {
     engineRef: RefObject<Engine | null>;
     websocketRef: RefObject<WebSocket | null>;
+    isTouchTolerant?: boolean;
     connectionSessionKey?: string;
     playerHudRef: RefObject<any>;
     runtimeTimingRef: RefObject<any>;
@@ -123,6 +124,7 @@ export function useCombatController(options: UseCombatControllerOptions) {
         debugCombatTextRef,
         engineRef,
         isDebugMode,
+        isTouchTolerant,
         lastResourceDropRef,
         lastServerConfirmedSelfPositionRef,
         lastSpellAttemptAtRef,
@@ -619,6 +621,7 @@ export function useCombatController(options: UseCombatControllerOptions) {
                     hitMarkers,
                     pointerX,
                     pointerY,
+                    isTouchTolerant,
                 );
 
                 if (!isPointerOverSprite) {
@@ -695,7 +698,7 @@ export function useCombatController(options: UseCombatControllerOptions) {
 
             return matchedTarget;
         },
-        [],
+        [isTouchTolerant],
     );
 
     const resolveCombatReleaseTarget = useCallback(
@@ -814,6 +817,7 @@ export function useCombatController(options: UseCombatControllerOptions) {
                     ["isPlayerBody", "isPlayerHead", "isPlayerHelmet"],
                     event.global.x,
                     event.global.y,
+                    isTouchTolerant,
                 )
             ) {
                 const confirmedPosition =
@@ -848,6 +852,7 @@ export function useCombatController(options: UseCombatControllerOptions) {
             playerHudRef,
             targetingModeRef,
             resolveEntityTargetFromPointer,
+            isTouchTolerant,
         ],
     );
 

@@ -25,6 +25,7 @@ import {
 import type { GraphicData, ObjectsDB } from "../types/game";
 
 const SPELL_MACRO_ICON_URL = "/graphics/22031.png";
+const LONG_PRESS_MS = 500;
 
 type MacroBarProps = {
     hud: PlayerHudState | null;
@@ -50,6 +51,17 @@ type MacroBarProps = {
     // filas de a 2 - usado para armar el cluster de hechizos 2x2 del HUD
     // mobile sin tocar el layout de 8 columnas de desktop).
     columns?: 2 | 4;
+    // Posiciona cada slot visible (mismo orden que visibleSlotIndices) de
+    // forma absoluta dentro de un contenedor de containerSize, como botones
+    // redondos de slotSize px - usado para el arco de hechizos alrededor del
+    // botón de ataque en mobile.
+    slotPositions?: Array<{ left: number; top: number }>;
+    slotSize?: number;
+    containerSize?: { width: number; height: number };
+    // Restringe qué se puede asignar (ej. solo hechizos en el arco, solo
+    // items en los slots de pociones) y oculta el selector de tipo.
+    allowedTargetTypes?: MacroTargetType[];
+    editorTitle?: string;
     // En mobile no hay teclado - pedir una tecla para activar el boton
     // (como en desktop) no tiene sentido. Cuando es false se oculta la
     // seccion de "Tecla" del editor y se autogenera una keyCode sintetica
@@ -61,7 +73,7 @@ function getTouchSlotKeyCode(index: number) {
     return `TouchSlot${index}`;
 }
 
-function ItemGraphic({
+export function ItemGraphic({
     graphicData,
     name,
     size = 38,
@@ -180,6 +192,11 @@ export default function MacroBar({
     visibleSlotIndices,
     touchMode = false,
     columns = 4,
+    slotPositions,
+    slotSize = 52,
+    containerSize,
+    allowedTargetTypes,
+    editorTitle,
     requireHotkey = true,
 }: MacroBarProps) {
     const items = React.useMemo(
@@ -209,6 +226,7 @@ export default function MacroBar({
     const [draftCommand, setDraftCommand] = React.useState("");
     const [error, setError] = React.useState<string | null>(null);
     const rootRef = React.useRef<HTMLDivElement | null>(null);
+    const editorOpenedAtRef = React.useRef(0);
 
     React.useEffect(() => {
         let isActive = true;
@@ -446,6 +464,13 @@ export default function MacroBar({
     }, []);
 
     React.useEffect(() => {
+        // Las instancias táctiles no escuchan teclado: la barra de desktop
+        // (siempre montada) ya se ocupa de los atajos, y duplicar el listener
+        // dispararía cada macro más de una vez.
+        if (!requireHotkey) {
+            return;
+        }
+
         const handleKeyDown = (event: KeyboardEvent) => {
             if (!connected || editingIndex !== null) {
                 return;
@@ -509,26 +534,35 @@ export default function MacroBar({
             window.removeEventListener("blur", stopHeldMacro);
             stopHeldMacro();
         };
-    }, [connected, editingIndex, stopHeldMacro, useItemRepeatMs]);
+    }, [connected, editingIndex, requireHotkey, stopHeldMacro, useItemRepeatMs]);
 
     const openEditor = React.useCallback(
         (index: number) => {
             const macro = macros[index];
-            const fallbackType: MacroTargetType =
-                items.length > 0
-                    ? "item"
-                    : spells.length > 0
-                      ? "spell"
-                      : "command";
-            const nextType = macro?.targetType ?? fallbackType;
+            const fallbackType: MacroTargetType = allowedTargetTypes
+                ? allowedTargetTypes[0]
+                : items.length > 0
+                  ? "item"
+                  : spells.length > 0
+                    ? "spell"
+                    : "command";
+            const nextType =
+                macro?.targetType &&
+                (!allowedTargetTypes ||
+                    allowedTargetTypes.includes(macro.targetType))
+                    ? macro.targetType
+                    : fallbackType;
             const nextSlot =
-                macro?.targetSlot ??
+                (macro?.targetType === nextType
+                    ? macro.targetSlot
+                    : undefined) ??
                 (nextType === "item"
                     ? (items[0]?.slot ?? null)
                     : nextType === "spell"
                       ? (spells[0]?.slot ?? null)
                       : null);
 
+            editorOpenedAtRef.current = Date.now();
             setEditingIndex(index);
             setDraftKeyCode(macro?.keyCode ?? "");
             setDraftTargetType(nextType);
@@ -539,8 +573,40 @@ export default function MacroBar({
             setListeningForKey(false);
             setError(null);
         },
-        [items, macros, spells],
+        [allowedTargetTypes, items, macros, spells],
     );
+
+    // Safari de iOS no dispara `contextmenu` con un toque sostenido, así que
+    // en modo táctil el "mantener presionado para editar" se implementa a mano.
+    const longPressTimerRef = React.useRef<number | null>(null);
+    const longPressTriggeredRef = React.useRef(false);
+
+    const cancelLongPress = React.useCallback(() => {
+        if (longPressTimerRef.current !== null) {
+            window.clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+        }
+    }, []);
+
+    const startLongPress = React.useCallback(
+        (index: number) => {
+            cancelLongPress();
+            longPressTriggeredRef.current = false;
+
+            if (!macros[index]) {
+                return;
+            }
+
+            longPressTimerRef.current = window.setTimeout(() => {
+                longPressTimerRef.current = null;
+                longPressTriggeredRef.current = true;
+                openEditor(index);
+            }, LONG_PRESS_MS);
+        },
+        [cancelLongPress, macros, openEditor],
+    );
+
+    React.useEffect(() => cancelLongPress, [cancelLongPress]);
 
     const saveMacro = React.useCallback(() => {
         if (editingIndex === null) {
@@ -697,26 +763,41 @@ export default function MacroBar({
         return null;
     }
 
+    const isPositioned = Boolean(slotPositions);
+
     return (
         <div
             ref={rootRef}
             className={
-                compact
-                    ? "relative pointer-events-auto h-full w-full bg-transparent px-0 py-0"
-                    : "relative pointer-events-auto mx-auto w-full rounded-md border border-[#6d5336] bg-[linear-gradient(180deg,rgba(45,30,20,0.96),rgba(19,13,10,0.98))] px-2 py-1.5 shadow-[0_20px_45px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,220,180,0.08)]"
+                isPositioned
+                    ? "pointer-events-none relative"
+                    : compact
+                      ? "relative pointer-events-auto h-full w-full bg-transparent px-0 py-0"
+                      : "relative pointer-events-auto mx-auto w-full rounded-md border border-[#6d5336] bg-[linear-gradient(180deg,rgba(45,30,20,0.96),rgba(19,13,10,0.98))] px-2 py-1.5 shadow-[0_20px_45px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,220,180,0.08)]"
+            }
+            style={
+                isPositioned && containerSize
+                    ? {
+                          width: containerSize.width,
+                          height: containerSize.height,
+                      }
+                    : undefined
             }
         >
             <div
                 className={
-                    touchMode
-                        ? columns === 2
-                            ? "grid grid-cols-2 gap-2"
-                            : "grid grid-cols-4 gap-2"
-                        : "grid grid-cols-8 gap-1"
+                    isPositioned
+                        ? "relative h-full w-full"
+                        : touchMode
+                          ? columns === 2
+                              ? "grid grid-cols-2 gap-2"
+                              : "grid grid-cols-4 gap-2"
+                          : "grid grid-cols-8 gap-1"
                 }
             >
                 {(visibleSlotIndices ?? macros.map((_, i) => i)).map(
-                    (index) => {
+                    (index, position) => {
+                    const slotPosition = slotPositions?.[position];
                     const macro = macros[index];
                     const resolved = resolvedTargets[index];
                     const isEditing = editingIndex === index;
@@ -744,14 +825,39 @@ export default function MacroBar({
                             (macro.targetType === "spell" && !resolvedSpell)),
                     );
 
+                    const iconClass = isPositioned
+                        ? "h-8 w-8 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.7)]"
+                        : touchMode
+                          ? "h-11 w-11 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.7)]"
+                          : "h-8 w-8 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.7)]";
+
                     return (
                         <div
                             key={`macro-${index}`}
-                            className="relative min-w-0"
+                            className={
+                                isPositioned
+                                    ? "pointer-events-auto absolute"
+                                    : "relative min-w-0"
+                            }
+                            style={
+                                slotPosition
+                                    ? {
+                                          left: slotPosition.left,
+                                          top: slotPosition.top,
+                                          width: slotSize,
+                                          height: slotSize,
+                                      }
+                                    : undefined
+                            }
                         >
                             <button
                                 type="button"
                                 onClick={() => {
+                                    if (longPressTriggeredRef.current) {
+                                        longPressTriggeredRef.current = false;
+                                        return;
+                                    }
+
                                     if (macro) {
                                         activateMacro(index);
                                         return;
@@ -761,55 +867,89 @@ export default function MacroBar({
                                 }}
                                 onContextMenu={(event) => {
                                     event.preventDefault();
-                                    if (macro) {
+                                    if (macro && !touchMode) {
                                         openEditor(index);
                                     }
                                 }}
-                                className={`group relative mx-auto flex aspect-square w-[calc(100%-5px)] items-center justify-center overflow-hidden rounded-[10px] border transition focus:outline-none focus-visible:outline-none ${
+                                onPointerDown={
+                                    touchMode
+                                        ? () => startLongPress(index)
+                                        : undefined
+                                }
+                                onPointerUp={
+                                    touchMode ? cancelLongPress : undefined
+                                }
+                                onPointerLeave={
+                                    touchMode ? cancelLongPress : undefined
+                                }
+                                onPointerCancel={
+                                    touchMode ? cancelLongPress : undefined
+                                }
+                                className={`group relative mx-auto flex items-center justify-center overflow-hidden border transition select-none focus:outline-none focus-visible:outline-none [-webkit-touch-callout:none] ${
+                                    isPositioned
+                                        ? "h-full w-full rounded-full shadow-[0_8px_20px_rgba(0,0,0,0.55)]"
+                                        : "aspect-square w-[calc(100%-5px)] rounded-[10px]"
+                                } ${
                                     macro
                                         ? isMissingTarget
                                             ? "border-rose-500/50 bg-[#221112] hover:border-rose-400/70"
                                             : "border-[#816142] bg-[linear-gradient(180deg,#18100d,#070505)] hover:border-amber-300/70"
-                                        : "border-[#5a422b] bg-[linear-gradient(180deg,#120d0a,#050404)] hover:border-[#9b744c]"
+                                        : isPositioned
+                                          ? "border-amber-200/25 bg-black/45"
+                                          : "border-[#5a422b] bg-[linear-gradient(180deg,#120d0a,#050404)] hover:border-[#9b744c]"
                                 } ${isEditing ? "ring-2 ring-amber-300/65" : ""}`}
                                 title={displayLabel || `Macro ${index + 1}`}
                             >
-                                <span className="pointer-events-none absolute inset-[2px] rounded-[8px] border border-white/5" />
+                                {isPositioned ? null : (
+                                    <span className="pointer-events-none absolute inset-[2px] rounded-[8px] border border-white/5" />
+                                )}
                                 {macro ? (
                                     macro.targetType === "item" ? (
                                         <ItemGraphic
                                             graphicData={displayGraphic}
                                             name={displayLabel}
-                                            size={touchMode ? 56 : 40}
-                                        />
-                                    ) : macro.targetType === "command" ? (
-                                        <img
-                                            src={SPELL_MACRO_ICON_URL}
-                                            alt={displayLabel || "Comando"}
-                                            className={
-                                                touchMode
-                                                    ? "h-11 w-11 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.7)]"
-                                                    : "h-8 w-8 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.7)]"
+                                            size={
+                                                isPositioned
+                                                    ? slotSize - 12
+                                                    : touchMode
+                                                      ? 56
+                                                      : 40
                                             }
-                                            draggable={false}
                                         />
                                     ) : (
                                         <img
                                             src={SPELL_MACRO_ICON_URL}
-                                            alt={displayLabel || "Hechizo"}
-                                            className={
-                                                touchMode
-                                                    ? "h-11 w-11 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.7)]"
-                                                    : "h-8 w-8 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.7)]"
+                                            alt={
+                                                displayLabel ||
+                                                (macro.targetType === "command"
+                                                    ? "Comando"
+                                                    : "Hechizo")
                                             }
+                                            className={iconClass}
                                             draggable={false}
                                         />
                                     )
                                 ) : (
-                                    <span className="text-xl text-stone-700">
+                                    <span
+                                        className={
+                                            isPositioned
+                                                ? "text-lg text-amber-100/40"
+                                                : "text-xl text-stone-700"
+                                        }
+                                    >
                                         +
                                     </span>
                                 )}
+
+                                {isPositioned && macro && displayLabel ? (
+                                    <span className="pointer-events-none absolute inset-x-0 bottom-0.5 truncate px-1 text-center text-[8px] font-semibold leading-none text-amber-50 drop-shadow-[0_1px_1px_rgba(0,0,0,1)]">
+                                        {macro.targetType === "item" &&
+                                        resolvedItem &&
+                                        resolvedItem.amount > 1
+                                            ? resolvedItem.amount
+                                            : displayLabel}
+                                    </span>
+                                ) : null}
 
                                 {requireHotkey && macro?.keyCode ? (
                                     <span className="pointer-events-none absolute bottom-1.5 right-1.5 rounded bg-black/75 px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none text-amber-100 shadow-lg">
@@ -817,7 +957,10 @@ export default function MacroBar({
                                     </span>
                                 ) : null}
 
-                                {!requireHotkey && touchMode && macro ? (
+                                {!requireHotkey &&
+                                touchMode &&
+                                macro &&
+                                !isPositioned ? (
                                     <span
                                         className="pointer-events-none absolute bottom-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-black/75 text-amber-100"
                                         aria-hidden="true"
@@ -828,10 +971,38 @@ export default function MacroBar({
                             </button>
 
                             {isEditing ? (
-                                <div className="absolute bottom-full left-1/2 z-50 mb-3 w-[240px] -translate-x-1/2 rounded-[18px] border border-[#8a633d] bg-[linear-gradient(180deg,rgba(32,22,16,0.99),rgba(15,10,8,0.99))] p-3 shadow-[0_20px_40px_rgba(0,0,0,0.65)]">
+                                <div
+                                    className={
+                                        touchMode
+                                            ? "pointer-events-auto fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-3"
+                                            : "contents"
+                                    }
+                                    onClick={(event) => {
+                                        // El click emulado que sigue al toque
+                                        // sostenido cae sobre este fondo recién
+                                        // montado - se ignora para no cerrarlo.
+                                        if (
+                                            touchMode &&
+                                            event.target ===
+                                                event.currentTarget &&
+                                            Date.now() -
+                                                editorOpenedAtRef.current >
+                                                400
+                                        ) {
+                                            setEditingIndex(null);
+                                        }
+                                    }}
+                                >
+                                <div
+                                    className={
+                                        touchMode
+                                            ? "max-h-[92%] w-[300px] max-w-full overflow-y-auto rounded-[18px] border border-[#8a633d] bg-[linear-gradient(180deg,rgba(32,22,16,0.99),rgba(15,10,8,0.99))] p-3 shadow-[0_20px_40px_rgba(0,0,0,0.65)]"
+                                            : "absolute bottom-full left-1/2 z-50 mb-3 w-[240px] -translate-x-1/2 rounded-[18px] border border-[#8a633d] bg-[linear-gradient(180deg,rgba(32,22,16,0.99),rgba(15,10,8,0.99))] p-3 shadow-[0_20px_40px_rgba(0,0,0,0.65)]"
+                                    }
+                                >
                                     <div className="mb-3 flex items-center justify-between">
                                         <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-100/90">
-                                            Macro {index + 1}
+                                            {editorTitle ?? `Macro ${index + 1}`}
                                         </p>
                                         <button
                                             type="button"
@@ -878,7 +1049,14 @@ export default function MacroBar({
                                             </div>
                                         ) : null}
 
-                                        <div>
+                                        <div
+                                            className={
+                                                allowedTargetTypes &&
+                                                allowedTargetTypes.length === 1
+                                                    ? "hidden"
+                                                    : undefined
+                                            }
+                                        >
                                             <p className="mb-1 text-[10px] uppercase tracking-[0.18em] text-stone-400">
                                                 Tipo
                                             </p>
@@ -1186,6 +1364,7 @@ export default function MacroBar({
                                             </button>
                                         </div>
                                     </div>
+                                </div>
                                 </div>
                             ) : null}
                         </div>

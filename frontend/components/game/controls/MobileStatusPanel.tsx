@@ -11,7 +11,10 @@ type MobileStatusPanelProps = {
 
 export function MobileStatusPanel({ hud, consoleLog }: MobileStatusPanelProps) {
     return (
-        <div className="pointer-events-none fixed left-2 top-2 z-30 flex w-[220px] flex-col gap-1.5">
+        <div
+            className="pointer-events-none fixed top-2 z-30 flex w-[220px] flex-col gap-1.5"
+            style={{ left: "calc(env(safe-area-inset-left, 0px) + 8px)" }}
+        >
             <div className="flex items-center gap-2 rounded-xl border border-amber-200/15 bg-black/55 p-1.5 backdrop-blur-sm">
                 {hud?.idBody || hud?.idHead ? (
                     <div className="shrink-0 overflow-hidden rounded-lg bg-black/40">

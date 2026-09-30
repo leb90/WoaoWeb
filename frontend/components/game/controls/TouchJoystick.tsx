@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp } from "lucide-react";
+import { screenDeltaToLocal } from "../../../lib/viewportRotation";
 
 export type JoystickDirection = "up" | "down" | "left" | "right";
 
@@ -83,8 +84,10 @@ export function TouchJoystick({
             const bounds = base.getBoundingClientRect();
             const centerX = bounds.left + bounds.width / 2;
             const centerY = bounds.top + bounds.height / 2;
-            const dx = event.clientX - centerX;
-            const dy = event.clientY - centerY;
+            const { x: dx, y: dy } = screenDeltaToLocal(
+                event.clientX - centerX,
+                event.clientY - centerY,
+            );
             const distance = Math.hypot(dx, dy);
             const clampedDistance = Math.min(distance, knobMaxOffset);
             const angle = Math.atan2(dy, dx);

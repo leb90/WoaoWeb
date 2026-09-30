@@ -17,6 +17,10 @@ import {
     createPositionPacket,
 } from "../../../lib/aowProtocol";
 import { TILE_SIZE } from "../../../lib/viewport";
+import {
+    getViewportRotation,
+    screenDeltaToLocal,
+} from "../../../lib/viewportRotation";
 import { createDebugGrid } from "../rendering/debugGrid";
 import {
     createEntityFXRowContainers,
@@ -143,6 +147,44 @@ type UseRendererBootstrapOptions = {
     debugCombatOverlayTextRef: RefObject<string>;
     setInspectedNpc: (value: any) => void;
 };
+
+// Pixi mapea el toque usando getBoundingClientRect del canvas, que con la
+// vista rotada por CSS (bloqueo de orientación en mobile) devuelve la caja
+// ya rotada. Se deshace la rotación alrededor del centro del canvas antes
+// de escalar a coordenadas internas.
+function installRotationAwarePointerMapping(app: Application) {
+    const events = app.renderer.events;
+    const originalMap = events.mapPositionToPoint.bind(events);
+
+    events.mapPositionToPoint = (point, x, y) => {
+        const rotation = getViewportRotation();
+        const canvas = events.domElement as HTMLCanvasElement | null;
+
+        if (!rotation || !canvas || !canvas.isConnected) {
+            originalMap(point, x, y);
+            return;
+        }
+
+        const rect = canvas.getBoundingClientRect();
+        const layoutWidth = canvas.offsetWidth || rect.height;
+        const layoutHeight = canvas.offsetHeight || rect.width;
+        const local = screenDeltaToLocal(
+            x - (rect.left + rect.width / 2),
+            y - (rect.top + rect.height / 2),
+            rotation,
+        );
+        const resolutionMultiplier = 1 / events.resolution;
+
+        point.x =
+            (local.x + layoutWidth / 2) *
+            (canvas.width / layoutWidth) *
+            resolutionMultiplier;
+        point.y =
+            (local.y + layoutHeight / 2) *
+            (canvas.height / layoutHeight) *
+            resolutionMultiplier;
+    };
+}
 
 export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
     useEffect(() => {
@@ -376,6 +418,7 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
 
                 const app = await createPixiApp(0);
                 app.canvas.style.opacity = "0";
+                installRotationAwarePointerMapping(app);
 
                 if (isDisposed) {
                     app.destroy({ removeView: true }, { children: true });

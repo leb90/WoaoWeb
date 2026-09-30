@@ -875,25 +875,44 @@ function HomeContent() {
         } catch {
             // Ignore storage failures in restricted/browser test contexts.
         }
+    }, [isOrientationLocked]);
 
+    // Android (PWA instalada) soporta el bloqueo nativo de orientación: el
+    // juego se pide siempre en horizontal, así entra girado solo aunque el
+    // teléfono esté en vertical o tenga la auto-rotación apagada. Con el
+    // candado activo se fija además el lado actual. iOS no lo soporta (lock
+    // rechaza la promesa) y ahí siguen el cartel / la rotación por CSS.
+    // Nunca se llama unlock() mientras se juega: en Android eso vuelve a la
+    // orientación del manifest.
+    useEffect(() => {
         if (!isMobile) {
             return;
         }
 
-        // Android (PWA instalada) soporta el bloqueo nativo; iOS no, y ahí
-        // actúa la rotación por CSS de más abajo.
         const orientation = window.screen?.orientation as
             | (ScreenOrientation & {
                   lock?: (orientation: string) => Promise<void>;
               })
             | undefined;
 
-        if (isOrientationLocked) {
-            orientation?.lock?.("landscape").catch(() => {});
-        } else {
-            orientation?.unlock?.();
-        }
+        const currentType = orientation?.type ?? "";
+        const target =
+            isOrientationLocked && currentType.startsWith("landscape")
+                ? currentType
+                : "landscape";
+
+        orientation?.lock?.(target).catch(() => {});
     }, [isMobile, isOrientationLocked]);
+
+    useEffect(() => {
+        if (!isMobile) {
+            return;
+        }
+
+        return () => {
+            window.screen?.orientation?.unlock?.();
+        };
+    }, [isMobile]);
     const [selectedSpellSlot, setSelectedSpellSlot] = useState<number | null>(
         null,
     );

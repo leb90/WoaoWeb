@@ -3199,6 +3199,10 @@ function HomeContent() {
         </>
     );
 
+    const activeFactionWarState = hud?.factionWarState?.active
+        ? hud.factionWarState
+        : null;
+
     if (isMobile && !isStandalonePwa) {
         return (
             <MobileInstallGate
@@ -3442,6 +3446,41 @@ function HomeContent() {
                                     onEnvironmentUpdate={setEnvironmentState}
                                 />
 
+                                {activeFactionWarState ? (
+                                    <div className="pointer-events-none absolute left-1/2 top-3 z-30 -translate-x-1/2">
+                                        <div className="flex items-center overflow-hidden rounded-md border border-stone-200/15 bg-stone-950/80 font-serif shadow-2xl backdrop-blur-md">
+                                            <div className="min-w-[92px] px-3 py-1.5 text-right">
+                                                <div className="text-[10px] font-bold uppercase tracking-[0.24em] text-red-300/85">
+                                                    Hordas
+                                                </div>
+                                                <div className="text-2xl font-black leading-none text-red-400 tabular-nums">
+                                                    {formatNumber(
+                                                        activeFactionWarState.hordeKills,
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="border-x border-stone-200/12 px-3 py-1.5 text-center">
+                                                <div className="text-[10px] uppercase tracking-[0.22em] text-amber-200/80">
+                                                    Guerra
+                                                </div>
+                                                <div className="text-sm font-bold leading-none text-stone-100">
+                                                    Kills
+                                                </div>
+                                            </div>
+                                            <div className="min-w-[92px] px-3 py-1.5 text-left">
+                                                <div className="text-[10px] font-bold uppercase tracking-[0.24em] text-sky-300/85">
+                                                    Alianzas
+                                                </div>
+                                                <div className="text-2xl font-black leading-none text-sky-400 tabular-nums">
+                                                    {formatNumber(
+                                                        activeFactionWarState.allianceKills,
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : null}
+
                                 {!arenaMode &&
                                 logoutPending &&
                                 logoutSecondsRemaining > 0 &&
@@ -3481,9 +3520,11 @@ function HomeContent() {
                                                 : "-translate-y-2 opacity-0"
                                         }`}
                                         style={{
-                                            top: challengeOverlayText
-                                                ? "88px"
-                                                : "16px",
+                                            top: activeFactionWarState
+                                                ? "74px"
+                                                : challengeOverlayText
+                                                  ? "88px"
+                                                  : "16px",
                                         }}
                                     >
                                         <div className="rounded-md border border-amber-200/35 bg-stone-950/82 px-4 py-3 text-center shadow-2xl backdrop-blur-md">

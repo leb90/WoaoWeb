@@ -714,6 +714,14 @@ function blockFriendlyFire(ws: RuntimeClient, attackerId: EntityId, target: { is
         return false;
     }
 
+    const attacker = getCharacterById(attackerId);
+    const targetCharacter = getCharacterById(target.id);
+    const warDeniedReason = require("./factionWars").getAttackDeniedReason(attacker, targetCharacter);
+    if (warDeniedReason) {
+        handleProtocol.console(warDeniedReason, "white", 0, 0, ws);
+        return true;
+    }
+
     const reason = game.getFriendlyFireBlockReason(attackerId, target.id);
     if (!reason) {
         return false;
@@ -4279,6 +4287,14 @@ function attackSpell(ws: RuntimeClient) {
                 handleProtocol.console("Este hechizo solo afecta a los npcs.", "white", 0, 0, ws);
                 user.spellsErrados++;
                 return;
+            }
+
+            if (targetCharacter && isSupportSpell(datSpell)) {
+                const warSupportDeniedReason = require("./factionWars").getSupportDeniedReason(user, targetCharacter);
+                if (warSupportDeniedReason) {
+                    handleProtocol.console(warSupportDeniedReason, "white", 0, 0, ws);
+                    return;
+                }
             }
 
             if (

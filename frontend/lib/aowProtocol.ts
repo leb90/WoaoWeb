@@ -84,6 +84,7 @@ export const CLIENT_PACKET_ID = {
     questProgressNotice: 86,
     mountState: 87,
     castleState: 88,
+    factionWarState: 89,
 } as const;
 
 export const CHARACTER_SWING_WEAPON = 1;
@@ -638,6 +639,7 @@ export interface PlayerHudState {
     questState?: QuestStatePayload;
     mountState?: MountStatePayload;
     castleState?: CastleStatePayload;
+    factionWarState?: FactionWarStatePayload;
     partyMembers: PartyHudMember[];
     clanMembers: ClanHudMember[];
 }
@@ -746,6 +748,14 @@ export interface AreaMetaSnapshot {
 
 export interface CastleStatePayload {
     underAttack: Record<string, boolean>;
+}
+
+export interface FactionWarStatePayload {
+    active: boolean;
+    map: number;
+    remainingSeconds: number;
+    hordeKills: number;
+    allianceKills: number;
 }
 
 export interface SelfFlagsDelta {
@@ -966,6 +976,7 @@ export type ParsedServerPacket =
     | { type: "questProgressNotice"; payload: QuestProgressNoticePayload }
     | { type: "mountState"; payload: MountStatePayload }
     | { type: "castleState"; payload: CastleStatePayload }
+    | { type: "factionWarState"; payload: FactionWarStatePayload }
     | { type: "partyState"; payload: PartyHudStateDelta }
     | { type: "clanState"; payload: ClanHudStateDelta }
     | { type: "startCastBar"; payload: { id: number; durationMs: number } }
@@ -2138,6 +2149,28 @@ function parseServerPacketById(
                 return {
                     type: "castleState",
                     payload: { underAttack: {} },
+                };
+            }
+        }
+
+        case CLIENT_PACKET_ID.factionWarState: {
+            const rawPayload = reader.getString();
+
+            try {
+                return {
+                    type: "factionWarState",
+                    payload: JSON.parse(rawPayload) as FactionWarStatePayload,
+                };
+            } catch {
+                return {
+                    type: "factionWarState",
+                    payload: {
+                        active: false,
+                        map: 0,
+                        remainingSeconds: 0,
+                        hordeKills: 0,
+                        allianceKills: 0,
+                    },
                 };
             }
         }

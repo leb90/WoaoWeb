@@ -217,6 +217,10 @@ export async function handleIncomingUiPacket({
             ctx.mergeHud({ castleState: packet.payload });
             return true;
 
+        case "factionWarState":
+            ctx.mergeHud({ factionWarState: packet.payload });
+            return true;
+
         case "questProgressNotice":
             ctx.onQuestProgressNotice?.(packet.payload);
             return true;

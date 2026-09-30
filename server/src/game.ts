@@ -1303,6 +1303,10 @@ function getChallengeManager() {
     };
 }
 
+function getFactionWars() {
+    return require("./factionWars") as typeof import("./factionWars");
+}
+
 function isUnsafeArenaTile(character: Pick<GameCharacter, "map" | "pos">): boolean {
     return safeZone.isUnsafeArenaPosition(character.map, character.pos);
 }
@@ -1332,6 +1336,20 @@ function isBlockedBySafeZone(user: GameCharacter, userAttacked: GameCharacter): 
 }
 
 function applyOpenWorldAttackRules(user: GameCharacter, userAttacked: GameCharacter, arenaCombat: boolean): boolean {
+    const factionWars = getFactionWars();
+    const warDeniedReason = factionWars.getAttackDeniedReason(user, userAttacked);
+
+    if (warDeniedReason) {
+        withUserClient(user.id, (userClient) => {
+            handleProtocol.console(warDeniedReason, "white", 1, 0, userClient);
+        });
+        return false;
+    }
+
+    if (factionWars.isWarCombat(user.id, userAttacked.id)) {
+        return true;
+    }
+
     if (arenaCombat || !isBlockedBySafeZone(user, userAttacked)) {
         return true;
     }
@@ -2825,6 +2843,15 @@ function canAreaSpellUser(user: GameCharacter, target: GameCharacter): boolean {
         return false;
     }
 
+    const factionWars = getFactionWars();
+    if (factionWars.getAttackDeniedReason(user, target)) {
+        return false;
+    }
+
+    if (factionWars.isWarCombat(user.id, target.id)) {
+        return true;
+    }
+
     const arenaCombat = isArenaCombat(user, target);
     const challengeRelation = getChallengeManager().getCombatRelation(user, target);
 
@@ -2908,6 +2935,7 @@ function applyAreaSpellDamageToUsers(
             return;
         }
 
+        getFactionWars().onUserDamage(user.id, occupant.id, extraDmg);
         markUsersInPvpCombat(user, occupant.user);
         rememberSpellAreaTarget(occupant.id);
         notifyUserSpellDamage(user, occupant.user, extraDmg);
@@ -7569,6 +7597,7 @@ function Game(this: GameApi) {
             require("./hungerGames").onUserDied(String(idUser));
             require("./tournamentAuto").onUserDied(String(idUser));
             require("./rankedArena").onUserDied(String(idUser));
+            require("./factionWars").onUserDied(String(idUser));
             require("./playerTrade").onUserLeft(String(idUser));
             user.deadWorldActive = false;
             user.invisibleSpell = false;
@@ -8495,11 +8524,18 @@ function Game(this: GameApi) {
 
             const arenaCombat = isArenaCombat(user, userAttacked);
             const challengeCombatRelation = getChallengeManager().getCombatRelation(user, userAttacked);
+            const datSpell = vars.datSpell[idSpell];
+            const removesInvisibility = String(datSpell.name ?? "").toLowerCase() === "remover invisibilidad";
+            const isOffensiveSpell = idUser !== idUserAttacked && isOffensiveSpellData(datSpell);
+            const factionWars = getFactionWars();
+            const isSupportSpellCast = idUser !== idUserAttacked && isSupportSpell(datSpell);
 
             if (
                 vars.mapData[user.map].pk &&
                 !user.isNpc &&
                 idUser != idUserAttacked &&
+                isOffensiveSpell &&
+                !factionWars.isWarCombat(idUser, idUserAttacked) &&
                 isBlockedBySafeZone(user, userAttacked)
             ) {
                 withUserClient(idUser, (userClient) => {
@@ -8513,10 +8549,6 @@ function Game(this: GameApi) {
                 });
                 return 0;
             }
-
-            const datSpell = vars.datSpell[idSpell];
-            const removesInvisibility = String(datSpell.name ?? "").toLowerCase() === "remover invisibilidad";
-            const isOffensiveSpell = idUser !== idUserAttacked && isOffensiveSpellData(datSpell);
 
             if (datSpell.invisibilidad && getChallengeManager().isCharacterInActiveMatch(user)) {
                 withUserClient(idUser, (userClient) => {
@@ -8545,6 +8577,14 @@ function Game(this: GameApi) {
             }
 
             if (isOffensiveSpell) {
+                const warDeniedReason = factionWars.getAttackDeniedReason(user, userAttacked);
+                if (warDeniedReason) {
+                    withUserClient(idUser, (userClient) => {
+                        handleProtocol.console(warDeniedReason, "white", 0, 0, userClient);
+                    });
+                    return 0;
+                }
+
                 const friendlyFireReason = getFriendlyFireBlockReason(
                     idUser,
                     idUserAttacked,
@@ -8553,6 +8593,16 @@ function Game(this: GameApi) {
                 if (friendlyFireReason) {
                     withUserClient(idUser, (userClient) => {
                         handleProtocol.console(friendlyFireReason, "white", 0, 0, userClient);
+                    });
+                    return 0;
+                }
+            }
+
+            if (isSupportSpellCast) {
+                const warSupportDeniedReason = factionWars.getSupportDeniedReason(user, userAttacked);
+                if (warSupportDeniedReason) {
+                    withUserClient(idUser, (userClient) => {
+                        handleProtocol.console(warSupportDeniedReason, "white", 0, 0, userClient);
                     });
                     return 0;
                 }
@@ -9022,6 +9072,7 @@ function Game(this: GameApi) {
                 }
             }
 
+            getFactionWars().onUserSpellEffect(idUser, idUserAttacked, spellEffect, dmg);
             return spellEffect ?? dmg;
         } catch (err) {
             funct.dumpError(err);
@@ -9344,10 +9395,20 @@ function Game(this: GameApi) {
                 return 0;
             }
 
+            const factionWars = getFactionWars();
+            const warDeniedReason = factionWars.getAttackDeniedReason(user, userAttacked);
+            if (warDeniedReason) {
+                withUserClient(idUser, (userClient) => {
+                    handleProtocol.console(warDeniedReason, "white", 0, 0, userClient);
+                });
+                return 0;
+            }
+
             if (
                 vars.mapData[user.map].pk &&
                 !userAttacked.isNpc &&
                 idUser != idUserAttacked &&
+                !factionWars.isWarCombat(idUser, idUserAttacked) &&
                 isBlockedBySafeZone(user, userAttacked)
             ) {
                 withUserClient(idUser, (userClient) => {
@@ -9767,6 +9828,14 @@ function Game(this: GameApi) {
                 });
 
                 emitCharacterFxToUserArea(idUserAttacked, 0);
+            }
+
+            if (!attackMissed) {
+                getFactionWars().onUserDamage(
+                    idUser,
+                    idUserAttacked,
+                    stabResult.stabbed ? stabResult.totalDamage : dmg,
+                );
             }
 
             return attackMissed ? "¡Fallas!" : stabResult.stabbed ? `¡${stabResult.totalDamage}!` : dmg;
@@ -10193,6 +10262,10 @@ function Game(this: GameApi) {
             let droppedItemsCount = 0;
 
             if (!user || user.populationBot) {
+                return;
+            }
+
+            if (getFactionWars().shouldPreventItemDrop(idUser)) {
                 return;
             }
 
@@ -11468,7 +11541,7 @@ function Game(this: GameApi) {
             return 0;
         }
 
-        const nextScore = getFactionScoreValue(user, faction) + Math.max(0, Math.floor(amount));
+        const nextScore = Math.max(0, getFactionScoreValue(user, faction) + Math.floor(Number(amount) || 0));
         setFactionScoreValue(user, faction, nextScore);
         return getFactionScoreValue(user, faction);
     };

@@ -163,6 +163,9 @@ export function useHudStateController({
                       ...(!hud.castleState && previousHud?.castleState
                           ? { castleState: previousHud.castleState }
                           : {}),
+                      ...(!hud.factionWarState && previousHud?.factionWarState
+                          ? { factionWarState: previousHud.factionWarState }
+                          : {}),
                   }
                 : hud;
 

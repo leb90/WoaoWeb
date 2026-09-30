@@ -1467,7 +1467,7 @@ export default function WoaoHubModal({
                     {tab === "guerra" ? (
                         <div className="space-y-3">
                             <p className="text-sm text-stone-300">
-                                Guerras Alianza vs Horda en mapas 203/204. El ganador controla el templo (mapa 210).
+                                Guerra Alianza vs Horda cada 90 minutos. Dura 5 minutos y gana la faccion con mas kills.
                             </p>
                             <div className="flex flex-wrap gap-2">
                                 <button

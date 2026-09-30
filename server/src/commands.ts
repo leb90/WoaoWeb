@@ -3378,7 +3378,10 @@ const command: CommandApi = {
                 case "/guerra": {
                     const factionWars = require("./factionWars") as typeof import("./factionWars");
                     const action = nextText.trim().toLowerCase();
-                    if (action === "start" && hasAdminPrivileges(user)) {
+                    if (
+                        (action === "start" || action === "iniciar" || action === "empezar") &&
+                        hasAdminPrivileges(user)
+                    ) {
                         const result = factionWars.startWar();
                         handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
                         break;

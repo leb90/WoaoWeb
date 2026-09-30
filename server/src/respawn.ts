@@ -303,6 +303,7 @@ function Respawn(this: any) {
 
                 handleProtocol.console("¡Has matado a " + recibeName + "!", "red", 1, 0, ws);
 
+                require("./factionWars").onUserKilled(String(ws.id), String(idPersonaje));
                 require("./clanMeta").onPlayerKill(String(ws.id), String(idPersonaje));
                 require("./cityConquest").tryConquer(Number(user.map), user.faction);
                 challengeManager.onCharacterDeath(pjSelected);

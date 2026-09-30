@@ -119,6 +119,14 @@ type RetosOpenPayload = {
     }>;
 };
 
+type FactionWarStatePayload = {
+    active: boolean;
+    map: number;
+    remainingSeconds: number;
+    hordeKills: number;
+    allianceKills: number;
+};
+
 type AreaItemSnapshot = {
     idItem: number;
     map: number;
@@ -428,6 +436,7 @@ export type HandleProtocolApi = {
     questProgressNotice: (payload: QuestProgressNoticePayload, client: RuntimeClient) => void;
     mountState: (payload: unknown, client: RuntimeClient) => void;
     castleState: (payload: unknown, client: RuntimeClient) => void;
+    factionWarState: (payload: FactionWarStatePayload, client: RuntimeClient) => void;
     selfFlagsDelta: (payload: SelfFlagsDeltaPayload, client: RuntimeClient) => void;
     selfVitalsDelta: (payload: SelfVitalsDeltaPayload, client: RuntimeClient) => void;
     selfMapMetaDelta: (payload: SelfMapMetaDeltaPayload, client: RuntimeClient) => void;
@@ -1396,6 +1405,12 @@ const handleServer: HandleProtocolApi = {
 
     castleState(payload, client) {
         pkg.setPackageID(pkg.clientPacketID.castleState);
+        pkg.writeString(JSON.stringify(payload));
+        socket.send(client);
+    },
+
+    factionWarState(payload, client) {
+        pkg.setPackageID(pkg.clientPacketID.factionWarState);
         pkg.writeString(JSON.stringify(payload));
         socket.send(client);
     },

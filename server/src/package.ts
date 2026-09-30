@@ -121,6 +121,7 @@ const clientPacketID = {
     questProgressNotice: 86,
     mountState: 87,
     castleState: 88,
+    factionWarState: 89,
 } as const;
 
 const serverPacketID = {

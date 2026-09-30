@@ -29,6 +29,53 @@ const SOUND_EXTENSION_OVERRIDES = new Map<
     [24, "mp3"],
 ]);
 
+let mobileAudioPrepared = false;
+
+// iOS: (1) el interruptor de silencio apaga el Web Audio salvo que la sesión
+// de audio sea "playback" (navigator.audioSession, Safari 16.4+); (2) el
+// AudioContext arranca suspendido y solo se reanuda dentro de un gesto -
+// Howler escucha touchend/click, pero el HUD táctil trabaja con eventos de
+// puntero; (3) al bloquear la pantalla el contexto queda "interrupted" y no
+// vuelve solo. Se cubren los tres casos una sola vez por página.
+function prepareMobileAudio() {
+    if (mobileAudioPrepared || typeof window === "undefined") {
+        return;
+    }
+
+    mobileAudioPrepared = true;
+
+    const audioSession = (
+        navigator as Navigator & { audioSession?: { type: string } }
+    ).audioSession;
+    if (audioSession) {
+        try {
+            audioSession.type = "playback";
+        } catch {
+            // Navegadores sin soporte completo: se sigue con el default.
+        }
+    }
+
+    const resumeAudio = () => {
+        const context = Howler.ctx;
+        if (context && context.state !== "running") {
+            void context.resume().catch(() => {});
+        }
+    };
+
+    for (const eventName of ["pointerdown", "touchend", "keydown"]) {
+        window.addEventListener(eventName, resumeAudio, {
+            capture: true,
+            passive: true,
+        });
+    }
+
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+            resumeAudio();
+        }
+    });
+}
+
 export class GameSoundManager {
     private readonly basePath: string;
     private readonly unavailableSoundIds = new Set<number>();
@@ -42,6 +89,7 @@ export class GameSoundManager {
         this.basePath = basePath.replace(/\/$/, "");
         this.preferredExtension = this.resolvePreferredExtension();
         this.preferWebAudio = this.shouldUseWebAudio();
+        prepareMobileAudio();
     }
 
     play({

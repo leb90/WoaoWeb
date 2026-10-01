@@ -290,15 +290,19 @@ function Respawn(this: any) {
                     },
                 });
 
+                const useWarDeathFlow = require("./factionWars").shouldUseWarDeathFlow(String(idPersonaje));
+
                 if (clientPersonaje) {
                     handleProtocol.console(nameWs + " te ha matado!", "red", 1, 0, clientPersonaje);
-                    handleProtocol.console(
-                        "En 15 segundos entraras al mundo de los muertos.",
-                        "gray",
-                        1,
-                        0,
-                        clientPersonaje,
-                    );
+                    if (!useWarDeathFlow) {
+                        handleProtocol.console(
+                            "En 15 segundos entraras al mundo de los muertos.",
+                            "gray",
+                            1,
+                            0,
+                            clientPersonaje,
+                        );
+                    }
                 }
 
                 handleProtocol.console("¡Has matado a " + recibeName + "!", "red", 1, 0, ws);

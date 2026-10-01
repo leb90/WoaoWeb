@@ -2762,7 +2762,7 @@ export default function InventoryFloatingPanel({
         { label: "Premios", onClick: () => setWoaoHubTab("premios") },
         { label: "Ranked", onClick: () => setWoaoHubTab("ranked") },
         { label: "Viajes", onClick: () => setWoaoHubTab("viajes") },
-        { label: "WOAO", onClick: () => setWoaoHubTab("guerra") },
+        { label: "WOAO", onClick: () => setWoaoHubTab("eventos") },
     ];
 
     return (

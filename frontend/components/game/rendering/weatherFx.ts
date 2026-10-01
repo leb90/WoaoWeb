@@ -12,6 +12,7 @@ const RAIN_COUNT = 140;
 const RAIN_COUNT_STORM = 220;
 const SNOW_COUNT = 110;
 const CLOUD_COUNT = 10;
+const VISUAL_FOG_ENABLED = false;
 const LIGHTNING_MIN_INTERVAL_MS = 4000;
 const LIGHTNING_MAX_INTERVAL_MS = 12000;
 const LIGHTNING_FLASH_MS = 140;
@@ -147,9 +148,11 @@ export function createWeatherOverlay(engine: Engine): Container {
 
     stateByEngine.set(engine, state);
 
-    void loadCloudTextures().then((textures) => {
-        state.cloudTextures = textures;
-    });
+    if (VISUAL_FOG_ENABLED) {
+        void loadCloudTextures().then((textures) => {
+            state.cloudTextures = textures;
+        });
+    }
 
     return container;
 }
@@ -350,7 +353,7 @@ export function updateWeatherFx(engine: Engine, deltaMs: number): void {
         setSnowCount(state, 0, width, height);
     }
 
-    const isFoggy = weather === WEATHER.niebla;
+    const isFoggy = VISUAL_FOG_ENABLED && weather === WEATHER.niebla;
     state.fogLayer.visible = isFoggy;
     if (isFoggy) {
         updateFog(state, width, height, deltaMs);

@@ -3,9 +3,13 @@
 import React from "react";
 import {
     Activity,
+    CalendarDays,
     Check,
+    Clock3,
     Coins,
     Gift,
+    Info,
+    MapPin,
     Minus,
     Package,
     PawPrint,
@@ -28,7 +32,7 @@ import type {
 import type { GraphicData, ObjectsDB } from "../types/game";
 import { getTexturePath, loadGraphicsDB, loadObjectsDB } from "../utils/gameLoader";
 
-export type WoaoHubTab = "misiones" | "montura" | "premios" | "ranked" | "viajes" | "guerra" | "eventos";
+export type WoaoHubTab = "misiones" | "montura" | "premios" | "ranked" | "viajes" | "eventos";
 
 type PremioDef = {
     id: number;
@@ -65,14 +69,187 @@ const TABS: Array<{ id: WoaoHubTab; label: string }> = [
     { id: "premios", label: "Premios" },
     { id: "ranked", label: "Ranked" },
     { id: "viajes", label: "Viajes" },
-    { id: "guerra", label: "Guerra" },
     { id: "eventos", label: "Eventos" },
 ];
 
 type PremioCurrency = "quest" | "donation";
+type EventCategory = "pvp" | "pve" | "boss" | "special";
+type EventCategoryFilter = "all" | EventCategory;
+type EventStatus = "available" | "upcoming" | "closed" | "running";
+type EventActionType = "join" | "details" | "teleport" | "open_panel" | "track";
+
+type AutomaticEventActionData = {
+    command?: string;
+    details?: string[];
+    targetTab?: WoaoHubTab;
+};
+
+type AutomaticEvent = {
+    id: string;
+    name: string;
+    description: string;
+    category: EventCategory;
+    startsAt: number;
+    locationLabel?: string;
+    mapId?: number;
+    status: EventStatus;
+    actionLabel: string;
+    actionType: EventActionType;
+    actionData?: AutomaticEventActionData;
+    disabledReason?: string;
+};
+
+type AutomaticEventDefinition = Omit<AutomaticEvent, "startsAt"> & {
+    startsInMinutes: number;
+};
+
+const EVENT_CATEGORY_META: Record<EventCategory, { label: string; dotClass: string; badgeClass: string }> = {
+    pvp: {
+        label: "PvP",
+        dotClass: "bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.45)]",
+        badgeClass: "border-red-400/70 bg-red-950/35 text-red-200",
+    },
+    pve: {
+        label: "PvE",
+        dotClass: "bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.45)]",
+        badgeClass: "border-emerald-400/70 bg-emerald-950/35 text-emerald-200",
+    },
+    boss: {
+        label: "Boss",
+        dotClass: "bg-fuchsia-500 shadow-[0_0_12px_rgba(217,70,239,0.45)]",
+        badgeClass: "border-fuchsia-400/70 bg-fuchsia-950/35 text-fuchsia-200",
+    },
+    special: {
+        label: "Especial",
+        dotClass: "bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.45)]",
+        badgeClass: "border-amber-300/70 bg-amber-950/35 text-amber-200",
+    },
+};
+
+const EVENT_STATUS_META: Record<EventStatus, { label: string; dotClass: string; textClass: string }> = {
+    available: {
+        label: "Disponible",
+        dotClass: "bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.5)]",
+        textClass: "text-emerald-300",
+    },
+    upcoming: {
+        label: "Próximo",
+        dotClass: "bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.45)]",
+        textClass: "text-amber-300",
+    },
+    closed: {
+        label: "Cerrado",
+        dotClass: "bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.45)]",
+        textClass: "text-red-300",
+    },
+    running: {
+        label: "En curso",
+        dotClass: "bg-cyan-300 shadow-[0_0_12px_rgba(103,232,249,0.5)]",
+        textClass: "text-cyan-200",
+    },
+};
+
+const EVENT_FILTERS: Array<{ id: EventCategoryFilter; label: string; category?: EventCategory }> = [
+    { id: "all", label: "Todos" },
+    { id: "pvp", label: EVENT_CATEGORY_META.pvp.label, category: "pvp" },
+    { id: "pve", label: EVENT_CATEGORY_META.pve.label, category: "pve" },
+    { id: "boss", label: EVENT_CATEGORY_META.boss.label, category: "boss" },
+    { id: "special", label: EVENT_CATEGORY_META.special.label, category: "special" },
+];
+
+const AUTOMATIC_EVENT_DEFINITIONS: AutomaticEventDefinition[] = [
+    {
+        id: "faction_war",
+        name: "Guerra de facciones",
+        description: "Horda contra Alianza. Gana la facción con más kills.",
+        category: "pvp",
+        startsInMinutes: 90,
+        locationLabel: "Mapas 203/204",
+        status: "upcoming",
+        actionLabel: "Participar",
+        actionType: "join",
+        actionData: { command: "/guerra" },
+    },
+    {
+        id: "mummy_pharaoh",
+        name: "Momia Faraón",
+        description: "Boss automático de las pirámides.",
+        category: "boss",
+        startsInMinutes: 240,
+        locationLabel: "Mapa 182",
+        mapId: 182,
+        status: "upcoming",
+        actionLabel: "Detalles",
+        actionType: "details",
+        actionData: {
+            details: [
+                "Aparece automáticamente en la zona de pirámides cuando llega su contador.",
+                "Al activarse, el server anuncia la invasión por consola global.",
+            ],
+        },
+    },
+    {
+        id: "ice_knight",
+        name: "Caballero Helado",
+        description: "Boss automático de zona helada.",
+        category: "boss",
+        startsInMinutes: 300,
+        locationLabel: "Zona helada",
+        status: "upcoming",
+        actionLabel: "Detalles",
+        actionType: "details",
+        actionData: {
+            details: [
+                "Evento preparado para sumarse al calendario automático.",
+                "Cuando el sistema esté conectado al server, esta fila podrá mostrar su estado real.",
+            ],
+        },
+    },
+];
 
 function formatAmount(value: number): string {
     return new Intl.NumberFormat("es-AR").format(value);
+}
+
+function formatEventCountdown(startsAt: number, now: number): string {
+    const remainingMs = startsAt - now;
+
+    if (remainingMs <= 0) {
+        return "EN CURSO";
+    }
+
+    const totalMinutes = Math.max(1, Math.ceil(remainingMs / 60_000));
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    return `${String(hours).padStart(2, "0")}hs ${String(minutes).padStart(2, "0")}min`;
+}
+
+function buildAutomaticEvents(anchorTime: number): AutomaticEvent[] {
+    return AUTOMATIC_EVENT_DEFINITIONS.map(({ startsInMinutes, ...event }) => ({
+        ...event,
+        startsAt: anchorTime + startsInMinutes * 60_000,
+    }));
+}
+
+function resolveEventStatus(event: AutomaticEvent, now: number): EventStatus {
+    if (event.status === "closed") {
+        return "closed";
+    }
+
+    if (event.startsAt <= now) {
+        return "running";
+    }
+
+    return event.status;
+}
+
+function formatServerClock(now: number): string {
+    return new Intl.DateTimeFormat("es-AR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+    }).format(new Date(now));
 }
 
 function questStatusLabel(status: QuestEntryState["status"]): string {
@@ -393,29 +570,29 @@ function PremioGraphic({
         return (
             <div
                 className={`flex h-full w-full items-center justify-center rounded border border-amber-300/15 bg-black/30 text-amber-200/60 ${
-                    compact ? "min-h-0" : "min-h-[116px]"
+                    compact ? "min-h-0" : "min-h-[68px]"
                 }`}
             >
-                <Gift aria-hidden="true" className={compact ? "h-5 w-5" : "h-9 w-9"} strokeWidth={1.6} />
+                <Gift aria-hidden="true" className={compact ? "h-4 w-4" : "h-6 w-6"} strokeWidth={1.6} />
             </div>
         );
     }
 
-    const targetSize = compact ? 46 : 112;
+    const targetSize = compact ? 30 : 46;
     const scale = Math.min(
-        compact ? 1.35 : 2.5,
+        compact ? 1.1 : 1.55,
         targetSize / Math.max(graphicData.width, graphicData.height, 1),
     );
 
     return (
         <div
             className={`relative h-full w-full overflow-hidden rounded border border-amber-300/20 bg-[radial-gradient(circle_at_50%_42%,rgba(245,186,71,0.18),rgba(0,0,0,0.3)_58%)] ${
-                compact ? "min-h-0" : "min-h-[116px]"
+                compact ? "min-h-0" : "min-h-[68px]"
             }`}
         >
             <div
                 aria-label={name}
-                className="absolute left-1/2 top-1/2 bg-no-repeat drop-shadow-[0_12px_18px_rgba(0,0,0,0.55)]"
+                className="absolute left-1/2 top-1/2 bg-no-repeat drop-shadow-[0_8px_12px_rgba(0,0,0,0.5)]"
                 style={{
                     width: graphicData.width,
                     height: graphicData.height,
@@ -821,6 +998,10 @@ export default function WoaoHubModal({
     const [selectedPremioId, setSelectedPremioId] = React.useState<number | null>(null);
     const [premioQuantities, setPremioQuantities] = React.useState<Record<string, number>>({});
     const [selectedMountId, setSelectedMountId] = React.useState<string | null>(null);
+    const [eventCategoryFilter, setEventCategoryFilter] = React.useState<EventCategoryFilter>("all");
+    const [selectedEventDetail, setSelectedEventDetail] = React.useState<AutomaticEvent | null>(null);
+    const [eventScheduleAnchor] = React.useState(() => Date.now());
+    const [eventClockNow, setEventClockNow] = React.useState(() => Date.now());
 
     React.useEffect(() => {
         let cancelled = false;
@@ -873,6 +1054,19 @@ export default function WoaoHubModal({
         };
     }, []);
 
+    React.useEffect(() => {
+        if (tab !== "eventos") {
+            return;
+        }
+
+        setEventClockNow(Date.now());
+        const intervalId = window.setInterval(() => {
+            setEventClockNow(Date.now());
+        }, 30_000);
+
+        return () => window.clearInterval(intervalId);
+    }, [tab]);
+
     const availableRoutes = routes.filter((route) => route.fromMap === Number(mapId ?? 0));
     const activePremios = premioCurrency === "quest" ? premios : donacionPremios;
     const activePoints = premioCurrency === "quest" ? questPoints : donationPoints;
@@ -907,6 +1101,21 @@ export default function WoaoHubModal({
         : 0;
     const remainingPoints = activePoints - selectedPremioTotal;
     const canConfirmPremio = Boolean(selectedPremio) && selectedPremioTotal > 0 && remainingPoints >= 0;
+    const automaticEvents = React.useMemo(() => buildAutomaticEvents(eventScheduleAnchor), [eventScheduleAnchor]);
+    const visibleAutomaticEvents = React.useMemo(() => {
+        return automaticEvents
+            .filter((event) => eventCategoryFilter === "all" || event.category === eventCategoryFilter)
+            .sort((a, b) => {
+                const aClosed = resolveEventStatus(a, eventClockNow) === "closed" ? 1 : 0;
+                const bClosed = resolveEventStatus(b, eventClockNow) === "closed" ? 1 : 0;
+
+                if (aClosed !== bClosed) {
+                    return aClosed - bClosed;
+                }
+
+                return a.startsAt - b.startsAt;
+            });
+    }, [automaticEvents, eventCategoryFilter, eventClockNow]);
 
     const setPremioQuantity = React.useCallback(
         (currency: PremioCurrency, premioId: number, nextQuantity: number) => {
@@ -933,6 +1142,37 @@ export default function WoaoHubModal({
         selectedPremio,
         selectedPremioQuantity,
     ]);
+
+    const handleEventAction = React.useCallback(
+        (event: AutomaticEvent) => {
+            const command = event.actionData?.command;
+
+            switch (event.actionType) {
+                case "join":
+                case "teleport":
+                case "track":
+                    if (command) {
+                        onSendCommand?.(command);
+                    }
+                    break;
+                case "open_panel":
+                    if (event.actionData?.targetTab) {
+                        onTabChange(event.actionData.targetTab);
+                    }
+                    break;
+                case "details":
+                    if (command) {
+                        onSendCommand?.(command);
+                    }
+                    setSelectedEventDetail(event);
+                    break;
+                default:
+                    setSelectedEventDetail(event);
+                    break;
+            }
+        },
+        [onSendCommand, onTabChange],
+    );
 
     React.useEffect(() => {
         if (selectedPremioId && activePremios.some((premio) => premio.id === selectedPremioId)) {
@@ -972,6 +1212,27 @@ export default function WoaoHubModal({
         setSelectedMountId(ownedMounts.find((mount) => mount.active)?.id ?? ownedMounts[0]?.id ?? null);
     }, [ownedMounts, selectedMountId]);
 
+    const hubHeightClass =
+        tab === "eventos"
+            ? "h-[min(760px,calc(100vh-32px))]"
+            : tab === "premios"
+              ? "h-[min(820px,calc(100vh-24px))]"
+            : tab === "montura"
+              ? "h-[min(680px,calc(100vh-32px))]"
+              : "h-[min(620px,calc(100vh-32px))]";
+    const hubWidthClass =
+        tab === "eventos"
+            ? "md:w-[min(1140px,calc(100vw-32px))]"
+            : tab === "premios"
+              ? "md:w-[min(1320px,calc(100vw-28px))]"
+              : tab === "montura"
+                ? "md:w-[min(1220px,calc(100vw-32px))]"
+                : tab === "misiones"
+                  ? ""
+                  : "md:w-[min(620px,calc(100vw-32px))]";
+    const contentOverflowClass =
+        tab === "premios" || tab === "montura" || tab === "eventos" ? "overflow-hidden" : "overflow-y-auto";
+
     if (tab === "misiones" && questDialog) {
         return (
             <QuestNpcDialog
@@ -990,15 +1251,7 @@ export default function WoaoHubModal({
             onClick={onClose}
         >
             <div
-                className={`flex ${tab === "montura" ? "h-[min(680px,calc(100vh-32px))]" : "h-[min(620px,calc(100vh-32px))]"} w-[min(900px,calc(100vw-32px))] flex-col overflow-hidden rounded border border-amber-200/20 bg-[#120c08]/96 text-stone-100 shadow-[0_28px_90px_rgba(0,0,0,0.6)] ${
-                    tab === "premios"
-                        ? "md:w-[min(1120px,calc(100vw-32px))]"
-                        : tab === "montura"
-                          ? "md:w-[min(1220px,calc(100vw-32px))]"
-                          : tab === "misiones"
-                          ? ""
-                          : "md:w-[min(620px,calc(100vw-32px))]"
-                }`}
+                className={`flex ${hubHeightClass} w-[min(900px,calc(100vw-32px))] flex-col overflow-hidden rounded border border-amber-200/20 bg-[#120c08]/96 text-stone-100 shadow-[0_28px_90px_rgba(0,0,0,0.6)] ${hubWidthClass}`}
                 onClick={(event) => event.stopPropagation()}
             >
                 <div className="flex items-center justify-between gap-4 border-b border-amber-200/10 bg-[linear-gradient(180deg,rgba(127,78,35,0.28),rgba(18,12,8,0))] px-4 py-3">
@@ -1038,9 +1291,7 @@ export default function WoaoHubModal({
                 </div>
 
                 <div
-                    className={`min-h-0 flex-1 px-4 py-3 text-sm text-[#f2e5ca] ${
-                        tab === "premios" || tab === "montura" ? "overflow-hidden" : "overflow-y-auto"
-                    }`}
+                    className={`min-h-0 flex-1 px-4 py-3 text-sm text-[#f2e5ca] ${contentOverflowClass}`}
                 >
                     {tab === "misiones" ? (
                         <div className="grid h-full min-h-0 gap-3 md:grid-cols-[minmax(220px,0.85fr)_minmax(280px,1.15fr)]">
@@ -1176,7 +1427,7 @@ export default function WoaoHubModal({
                     ) : null}
 
                     {tab === "premios" ? (
-                        <div className="flex h-[min(66vh,690px)] min-h-[520px] flex-col gap-3">
+                        <div className="flex h-full min-h-0 flex-col gap-3">
                             <div className="flex flex-col gap-3 border-b border-amber-200/10 pb-3 lg:flex-row lg:items-center lg:justify-between">
                                 <div className="grid gap-2 sm:grid-cols-2">
                                     <button
@@ -1238,7 +1489,7 @@ export default function WoaoHubModal({
 
                             <div className="min-h-0 flex-1 overflow-y-auto pr-1">
                                 {visiblePremios.length ? (
-                                    <div className="grid gap-3 lg:grid-cols-2">
+                                    <div className="grid gap-2 lg:grid-cols-2">
                                         {visiblePremios.map((premio) => {
                                             const quantity = getPremioQuantity(premioCurrency, premio.id);
                                             const isSelected = selectedPremio?.id === premio.id;
@@ -1248,7 +1499,7 @@ export default function WoaoHubModal({
                                                 <div
                                                     key={`${premioCurrency}-${premio.id}`}
                                                     onClick={() => setSelectedPremioId(premio.id)}
-                                                    className={`grid cursor-pointer grid-cols-[116px_minmax(0,1fr)] gap-4 rounded border bg-[linear-gradient(135deg,rgba(28,21,12,0.9),rgba(8,6,4,0.92))] p-3 transition ${
+                                                    className={`grid cursor-pointer grid-cols-[74px_minmax(0,1fr)] gap-3 rounded border bg-[linear-gradient(135deg,rgba(28,21,12,0.9),rgba(8,6,4,0.92))] p-2 transition ${
                                                         isSelected
                                                             ? "border-amber-300/80 shadow-[0_0_0_1px_rgba(245,158,11,0.24),0_0_28px_rgba(245,158,11,0.14)]"
                                                             : "border-amber-200/14 hover:border-amber-300/45"
@@ -1256,21 +1507,21 @@ export default function WoaoHubModal({
                                                 >
                                                     <PremioGraphic graphicData={graphicData} name={premio.name} />
                                                     <div className="flex min-w-0 flex-col">
-                                                        <div className="min-h-[76px]">
-                                                            <p className="line-clamp-2 text-base font-semibold leading-snug text-[#f7edd2]">
+                                                        <div className="min-h-[42px]">
+                                                            <p className="line-clamp-1 text-sm font-semibold leading-snug text-[#f7edd2]">
                                                                 {premio.name}
                                                             </p>
                                                             {premio.desc ? (
-                                                                <p className="mt-1 line-clamp-2 text-sm leading-snug text-stone-300">
+                                                                <p className="mt-0.5 line-clamp-1 text-xs leading-snug text-stone-300">
                                                                     {premio.desc}
                                                                 </p>
                                                             ) : null}
                                                         </div>
-                                                        <p className="mt-1 text-lg font-bold text-amber-200">
+                                                        <p className="mt-0.5 text-base font-bold text-amber-200">
                                                             {formatAmount(premio.cost)} pts
                                                         </p>
-                                                        <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-3">
-                                                            <div className="grid h-9 grid-cols-[34px_42px_34px] overflow-hidden rounded border border-stone-500/50 bg-black/28">
+                                                        <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-2">
+                                                            <div className="grid h-8 grid-cols-[30px_36px_30px] overflow-hidden rounded border border-stone-500/50 bg-black/28">
                                                                 <button
                                                                     type="button"
                                                                     onClick={(event) => {
@@ -1281,9 +1532,9 @@ export default function WoaoHubModal({
                                                                     className="flex items-center justify-center text-stone-100 transition hover:bg-white/10"
                                                                     aria-label="Quitar unidad"
                                                                 >
-                                                                    <Minus aria-hidden="true" className="h-4 w-4" strokeWidth={1.8} />
+                                                                    <Minus aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={1.8} />
                                                                 </button>
-                                                                <span className="flex items-center justify-center border-x border-stone-500/45 text-sm font-semibold text-stone-100">
+                                                                <span className="flex items-center justify-center border-x border-stone-500/45 text-xs font-semibold text-stone-100">
                                                                     {quantity}
                                                                 </span>
                                                                 <button
@@ -1296,7 +1547,7 @@ export default function WoaoHubModal({
                                                                     className="flex items-center justify-center text-stone-100 transition hover:bg-white/10"
                                                                     aria-label="Agregar unidad"
                                                                 >
-                                                                    <Plus aria-hidden="true" className="h-4 w-4" strokeWidth={1.8} />
+                                                                    <Plus aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={1.8} />
                                                                 </button>
                                                             </div>
                                                             <button
@@ -1305,9 +1556,9 @@ export default function WoaoHubModal({
                                                                     event.stopPropagation();
                                                                     setSelectedPremioId(premio.id);
                                                                 }}
-                                                                className="flex h-9 items-center gap-2 rounded border border-amber-300/55 bg-amber-500/15 px-4 text-sm font-semibold text-amber-100 transition hover:bg-amber-500/24"
+                                                                className="flex h-8 items-center gap-2 rounded border border-amber-300/55 bg-amber-500/15 px-3 text-xs font-semibold text-amber-100 transition hover:bg-amber-500/24"
                                                             >
-                                                                <Gift aria-hidden="true" className="h-4 w-4" strokeWidth={1.7} />
+                                                                <Gift aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={1.7} />
                                                                 Canjear
                                                             </button>
                                                         </div>
@@ -1341,7 +1592,7 @@ export default function WoaoHubModal({
                                     <div className="flex min-w-0 items-center gap-3">
                                         {selectedPremio ? (
                                             <>
-                                                <div className="h-14 w-14 shrink-0">
+                                                <div className="h-10 w-10 shrink-0">
                                                     <PremioGraphic
                                                         graphicData={resolvePremioGraphic(selectedPremio, objectsDB, graphicsDB)}
                                                         name={selectedPremio.name}
@@ -1464,93 +1715,222 @@ export default function WoaoHubModal({
                         </div>
                     ) : null}
 
-                    {tab === "guerra" ? (
-                        <div className="space-y-3">
-                            <p className="text-sm text-stone-300">
-                                Guerra Alianza vs Horda cada 90 minutos. Dura 5 minutos y gana la faccion con mas kills.
-                            </p>
-                            <div className="flex flex-wrap gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => onSendCommand?.("/guerra")}
-                                    className="rounded-[10px] border border-[#4f3f2b] bg-[#2d2218] px-3 py-1.5 text-[11px] font-semibold"
-                                >
-                                    Entrar a guerra
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => onSendCommand?.("/templo")}
-                                    className="rounded-[10px] border border-[#4f3f2b] bg-[#2d2218] px-3 py-1.5 text-[11px] font-semibold"
-                                >
-                                    Templo
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => onSendCommand?.("/ciudades")}
-                                    className="rounded-[10px] border border-[#4f3f2b] bg-[#2d2218] px-3 py-1.5 text-[11px] font-semibold"
-                                >
-                                    Ciudades
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => onSendCommand?.("/dia")}
-                                    className="rounded-[10px] border border-[#4f3f2b] bg-[#2d2218] px-3 py-1.5 text-[11px] font-semibold"
-                                >
-                                    Evento del dia
-                                </button>
-                            </div>
-                        </div>
-                    ) : null}
-
                     {tab === "eventos" ? (
-                        <div className="space-y-3">
-                            <p className="text-sm text-stone-300">
-                                Blood Castle (mapa 205), Juegos del Hambre (268/269) y torneo automatico (208).
-                            </p>
-                            <div className="flex flex-wrap gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => onSendCommand?.("/bloodcastle")}
-                                    className="rounded-[10px] border border-[#4f3f2b] bg-[#2d2218] px-3 py-1.5 text-[11px] font-semibold"
-                                >
-                                    Blood Castle
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => onSendCommand?.("/hunger")}
-                                    className="rounded-[10px] border border-[#4f3f2b] bg-[#2d2218] px-3 py-1.5 text-[11px] font-semibold"
-                                >
-                                    Juegos del Hambre
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => onSendCommand?.("/participar")}
-                                    className="rounded-[10px] border border-[#4f3f2b] bg-[#2d2218] px-3 py-1.5 text-[11px] font-semibold"
-                                >
-                                    Torneo
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => onSendCommand?.("/dia")}
-                                    className="rounded-[10px] border border-[#4f3f2b] bg-[#2d2218] px-3 py-1.5 text-[11px] font-semibold"
-                                >
-                                    Bicho del dia
-                                </button>
+                        <div className="flex h-full min-h-0 flex-col gap-3">
+                            <div className="flex flex-wrap items-center gap-3">
+                                <div className="flex min-h-[46px] items-center gap-3 rounded border border-amber-400/45 bg-[linear-gradient(180deg,rgba(245,158,11,0.16),rgba(0,0,0,0.24))] px-4 text-sm font-bold text-amber-100 shadow-[0_0_18px_rgba(245,158,11,0.08)]">
+                                    <CalendarDays aria-hidden="true" className="h-5 w-5 text-amber-300" strokeWidth={1.8} />
+                                    Eventos automáticos
+                                </div>
+
+                                <div className="flex flex-1 flex-wrap items-center gap-2">
+                                    {EVENT_FILTERS.map((filter) => {
+                                        const selected = eventCategoryFilter === filter.id;
+                                        const categoryMeta = filter.category ? EVENT_CATEGORY_META[filter.category] : null;
+
+                                        return (
+                                            <button
+                                                key={filter.id}
+                                                type="button"
+                                                onClick={() => setEventCategoryFilter(filter.id)}
+                                                aria-pressed={selected}
+                                                className={`flex min-h-[46px] items-center gap-2 rounded border px-4 text-sm font-semibold transition ${
+                                                    selected
+                                                        ? "border-amber-400/80 bg-amber-500/15 text-amber-100 shadow-[0_0_18px_rgba(245,158,11,0.16)]"
+                                                        : "border-amber-200/12 bg-black/28 text-stone-300 hover:border-amber-300/40 hover:text-white"
+                                                }`}
+                                            >
+                                                {categoryMeta ? (
+                                                    <span aria-hidden="true" className={`h-3 w-3 rounded-full ${categoryMeta.dotClass}`} />
+                                                ) : null}
+                                                {filter.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className="flex min-h-[46px] items-center gap-3 rounded border border-amber-200/16 bg-black/26 px-4 text-sm text-stone-200">
+                                    <Clock3 aria-hidden="true" className="h-5 w-5 text-amber-200" strokeWidth={1.8} />
+                                    <span>Horario del servidor</span>
+                                    <span className="font-semibold text-amber-100">{formatServerClock(eventClockNow)}</span>
+                                </div>
+                            </div>
+
+                            <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+                                <div className="space-y-2.5">
+                                    {visibleAutomaticEvents.map((event) => {
+                                        const categoryMeta = EVENT_CATEGORY_META[event.category];
+                                        const status = resolveEventStatus(event, eventClockNow);
+                                        const statusMeta = EVENT_STATUS_META[status];
+                                        const registrationClosed =
+                                            event.actionType === "join" && status !== "available" && status !== "running";
+                                        const disabled = Boolean(event.disabledReason) || registrationClosed;
+                                        const disabledTitle =
+                                            event.disabledReason ??
+                                            (registrationClosed ? "El registro todavía no abrió." : undefined);
+                                        const countdown =
+                                            status === "running" ? "EN CURSO" : formatEventCountdown(event.startsAt, eventClockNow);
+
+                                        return (
+                                            <article
+                                                key={event.id}
+                                                className="grid min-h-[82px] grid-cols-[106px_minmax(0,1fr)_176px_142px] items-stretch overflow-hidden rounded border border-amber-500/35 bg-[linear-gradient(90deg,rgba(32,20,11,0.92),rgba(11,8,6,0.96))] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.025)] max-[820px]:grid-cols-1"
+                                            >
+                                                <div className="flex flex-col items-center justify-center border-r border-amber-200/10 px-3 text-center max-[820px]:min-h-[58px] max-[820px]:border-b max-[820px]:border-r-0">
+                                                    <div className="h-px w-full max-w-[70px] bg-[linear-gradient(90deg,transparent,rgba(245,158,11,0.5),transparent)]" />
+                                                    <p className="mt-1.5 text-lg font-bold leading-none text-amber-100">{countdown}</p>
+                                                    <p className="mt-1 text-xs text-stone-300">
+                                                        {status === "running" ? "Ahora" : "Comienza en"}
+                                                    </p>
+                                                    <div className="mt-1.5 h-px w-full max-w-[70px] bg-[linear-gradient(90deg,transparent,rgba(245,158,11,0.28),transparent)]" />
+                                                </div>
+
+                                                <div className="flex min-w-0 flex-col justify-center px-4 py-2 max-[820px]:border-b max-[820px]:border-amber-200/10">
+                                                    <div className="flex min-w-0 flex-wrap items-center gap-3">
+                                                        <h4 className="min-w-0 truncate text-lg font-bold leading-tight text-stone-50">
+                                                            {event.name}
+                                                        </h4>
+                                                        <span className={`shrink-0 rounded border px-2.5 py-0.5 text-xs font-bold ${categoryMeta.badgeClass}`}>
+                                                            {categoryMeta.label}
+                                                        </span>
+                                                    </div>
+                                                    <p className="mt-1 line-clamp-1 text-sm leading-5 text-stone-300">
+                                                        {event.description}
+                                                    </p>
+                                                </div>
+
+                                                <div className="flex flex-col justify-center gap-2 border-l border-amber-200/10 bg-black/18 px-4 py-2 max-[820px]:border-b max-[820px]:border-l-0 max-[820px]:border-amber-200/10">
+                                                    <div className="flex items-center gap-3 text-sm text-stone-200">
+                                                        <MapPin aria-hidden="true" className="h-4 w-4 shrink-0 text-amber-200" strokeWidth={1.8} />
+                                                        <span className="truncate">{event.locationLabel ?? "-"}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-3 text-sm font-bold">
+                                                        <span aria-hidden="true" className={`h-3 w-3 rounded-full ${statusMeta.dotClass}`} />
+                                                        <span className={statusMeta.textClass}>{statusMeta.label}</span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center justify-center border-l border-amber-200/10 px-3 py-2 max-[820px]:border-l-0">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleEventAction(event)}
+                                                        disabled={disabled}
+                                                        title={disabledTitle}
+                                                        className={`min-h-[42px] w-full rounded border px-4 text-sm font-bold transition ${
+                                                            disabled
+                                                                ? "cursor-not-allowed border-stone-700 bg-stone-900/80 text-stone-500"
+                                                                : "border-amber-300/70 bg-[linear-gradient(180deg,#f4c449,#986015)] text-stone-950 shadow-[0_0_22px_rgba(245,158,11,0.18)] hover:brightness-110"
+                                                        }`}
+                                                    >
+                                                        {event.actionLabel}
+                                                    </button>
+                                                </div>
+                                            </article>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         </div>
                     ) : null}
                 </div>
 
-                <div className="flex shrink-0 justify-end border-t border-amber-200/10 bg-black/20 px-4 py-3">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="min-h-[40px] min-w-[96px] rounded border border-stone-600/60 px-4 text-sm font-semibold text-stone-100 transition hover:border-stone-400 hover:text-white"
-                    >
-                        Cerrar
-                    </button>
-                </div>
+                {tab === "eventos" ? (
+                    <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_188px] items-center gap-4 border-t border-amber-200/10 bg-black/20 px-5 py-4 max-[720px]:grid-cols-1">
+                        <div className="flex min-h-[68px] items-center gap-4 rounded border border-amber-200/12 bg-black/28 px-4 text-sm text-stone-300">
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-amber-300/35 bg-amber-500/10">
+                                <Info aria-hidden="true" className="h-5 w-5 text-amber-200" strokeWidth={1.8} />
+                            </span>
+                            <div className="space-y-1">
+                                <p>
+                                    <span className="text-amber-300">•</span> Al participar recibirás un aviso cuando comience el evento.
+                                </p>
+                                <p>
+                                    <span className="text-amber-300">•</span> El texto y la acción del botón se definen por código.
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="min-h-[68px] rounded border border-stone-600/60 px-5 text-xl font-bold text-stone-100 transition hover:border-stone-400 hover:text-white"
+                        >
+                            Cerrar
+                        </button>
+                    </div>
+                ) : (
+                    <div className="flex shrink-0 justify-end border-t border-amber-200/10 bg-black/20 px-4 py-3">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="min-h-[40px] min-w-[96px] rounded border border-stone-600/60 px-4 text-sm font-semibold text-stone-100 transition hover:border-stone-400 hover:text-white"
+                        >
+                            Cerrar
+                        </button>
+                    </div>
+                )}
             </div>
+
+            {selectedEventDetail ? (
+                <div
+                    className="absolute inset-0 z-10 flex items-center justify-center bg-black/58 px-4"
+                    onClick={(event) => {
+                        event.stopPropagation();
+                        setSelectedEventDetail(null);
+                    }}
+                >
+                    <div
+                        className="w-[min(520px,calc(100vw-32px))] overflow-hidden rounded border border-amber-300/35 bg-[#130d08] text-stone-100 shadow-[0_24px_80px_rgba(0,0,0,0.68)]"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <div className="flex items-start justify-between gap-4 border-b border-amber-200/12 bg-[linear-gradient(180deg,rgba(127,78,35,0.32),rgba(18,12,8,0))] px-5 py-4">
+                            <div>
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-amber-300/80">
+                                    Evento
+                                </p>
+                                <h4 className="mt-1 text-2xl font-bold text-[#f2e5ca]">{selectedEventDetail.name}</h4>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedEventDetail(null)}
+                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-stone-700 bg-black/20 text-stone-300 transition hover:border-stone-500 hover:text-white"
+                                aria-label="Cerrar detalle"
+                            >
+                                <X aria-hidden="true" className="h-4 w-4" strokeWidth={1.8} />
+                            </button>
+                        </div>
+                        <div className="space-y-4 px-5 py-4">
+                            <p className="text-sm leading-6 text-stone-200">{selectedEventDetail.description}</p>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                <div className="rounded border border-amber-200/12 bg-black/26 p-3">
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-200">
+                                        Tipo
+                                    </p>
+                                    <p className="mt-1 text-sm font-bold text-stone-100">
+                                        {EVENT_CATEGORY_META[selectedEventDetail.category].label}
+                                    </p>
+                                </div>
+                                <div className="rounded border border-amber-200/12 bg-black/26 p-3">
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-200">
+                                        Ubicación
+                                    </p>
+                                    <p className="mt-1 text-sm font-bold text-stone-100">
+                                        {selectedEventDetail.locationLabel ?? "-"}
+                                    </p>
+                                </div>
+                            </div>
+                            {selectedEventDetail.actionData?.details?.length ? (
+                                <div className="rounded border border-amber-200/12 bg-black/26 p-4 text-sm leading-6 text-stone-300">
+                                    {selectedEventDetail.actionData.details.map((detail) => (
+                                        <p key={detail}>
+                                            <span className="text-amber-300">•</span> {detail}
+                                        </p>
+                                    ))}
+                                </div>
+                            ) : null}
+                        </div>
+                    </div>
+                </div>
+            ) : null}
         </div>
     );
 }

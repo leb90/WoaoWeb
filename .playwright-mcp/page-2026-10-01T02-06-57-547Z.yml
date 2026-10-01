@@ -1,0 +1,13 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - generic: "Map: 1 X: - Y: -"
+      - button "Entrar en pantalla completa" [ref=e9]
+      - generic:
+        - generic:
+          - button "Mostrar canales" [ref=e15]
+          - button "Mostrar chat" [ref=e20]
+    - generic [ref=e25]:
+      - generic [ref=e26]: Experiencia
+      - generic [ref=e27]: "-"
+  - alert [ref=e29]

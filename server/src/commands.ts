@@ -3524,6 +3524,17 @@ const command: CommandApi = {
                         break;
                     }
 
+                    if (require("./factionWars").isWarParticipant(String(clientId))) {
+                        handleProtocol.console(
+                            "No puedes usar /hogar mientras participas en la Guerra.",
+                            "white",
+                            0,
+                            0,
+                            ws as CommandClient,
+                        );
+                        break;
+                    }
+
                     if (user.pvpChar) {
                         if (user.dead && user.spawnMap && user.spawnPos) {
                             game.forceDismount(clientId);

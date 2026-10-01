@@ -683,6 +683,15 @@ export function isWarParticipant(idUser: EntityId | string | undefined): boolean
     return typeof idUser !== "undefined" && state.active && state.participants.has(String(idUser));
 }
 
+export function shouldUseWarDeathFlow(idUser: EntityId | string | undefined): boolean {
+    if (typeof idUser === "undefined" || !state.active || !state.participants.has(String(idUser))) {
+        return false;
+    }
+
+    const user = getUser(String(idUser));
+    return Boolean(user && Number(user.map) === state.map);
+}
+
 export function isWarCombat(leftId: EntityId | string | undefined, rightId: EntityId | string | undefined): boolean {
     if (typeof leftId === "undefined" || typeof rightId === "undefined") {
         return false;

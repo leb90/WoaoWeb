@@ -7592,6 +7592,7 @@ function Game(this: GameApi) {
             user.idShield = 0;
             resetFuerzaAgilidadBuffs(user, userClient ?? undefined);
             user.dead = 1;
+            const useWarDeathFlow = require("./factionWars").shouldUseWarDeathFlow(String(idUser));
             require("./summonRoom").scheduleDeadUserExit(idUser);
             require("./bloodCastle").onUserDied(String(idUser));
             require("./hungerGames").onUserDied(String(idUser));
@@ -7630,11 +7631,18 @@ function Game(this: GameApi) {
             }
 
             if (userClient) {
-                scheduleDeadWorldTransition(idUser);
+                if (useWarDeathFlow) {
+                    clearDeadWorldTransition(user);
+                    user.deadWorldTransitionEndsAt = 0;
+                } else {
+                    scheduleDeadWorldTransition(idUser);
+                }
                 handleProtocol.sendMyCharacter(user);
                 socket.send(userClient);
-            } else {
+            } else if (!useWarDeathFlow) {
                 user.deadWorldTransitionEndsAt = Date.now() + DEAD_WORLD_DELAY_MS;
+            } else {
+                user.deadWorldTransitionEndsAt = 0;
             }
 
             loopAreaByUserId(idUser, function (target: AreaTarget) {

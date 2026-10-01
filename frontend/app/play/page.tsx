@@ -2747,16 +2747,21 @@ function HomeContent() {
 
         const isDead = Boolean(hud.dead);
         const isInChallengeInstance = hud.map >= CHALLENGE_INSTANCE_MAP_START;
+        const isFactionWarDeath = Boolean(
+            hud.factionWarState?.active &&
+                Number(hud.map) === Number(hud.factionWarState.map),
+        );
 
         if (
             previousDeadRef.current !== true &&
             isDead &&
-            !isInChallengeInstance
+            !isInChallengeInstance &&
+            !isFactionWarDeath
         ) {
             setDeathHomePromptOpen(true);
         }
 
-        if (!isDead || isInChallengeInstance) {
+        if (!isDead || isInChallengeInstance || isFactionWarDeath) {
             setDeathHomePromptOpen(false);
         }
 

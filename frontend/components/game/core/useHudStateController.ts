@@ -166,6 +166,9 @@ export function useHudStateController({
                       ...(!hud.factionWarState && previousHud?.factionWarState
                           ? { factionWarState: previousHud.factionWarState }
                           : {}),
+                      ...(!hud.rankedState && previousHud?.rankedState
+                          ? { rankedState: previousHud.rankedState }
+                          : {}),
                   }
                 : hud;
 

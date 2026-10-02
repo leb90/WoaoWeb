@@ -194,6 +194,8 @@ const WELCOME_CONSOLE_MESSAGES = {
         "- Si quieres reportar erorres o sugerir cambios, puedes hacerlo en: https://forms.gle/Df2cmGExTBjjJhAR8",
     rules: "- Está completamente prohibido el uso de personajes cámara, cheats o cualquier programa externo que modifique el juego, como auto tomar pociones o auto removerse. El uso de los mismos terminará en un ban permanente, sin previo aviso.",
 } as const;
+const CONSOLE_COLOR_TAG_PATTERN =
+    /\[\[color=(#[0-9a-fA-F]{3,8})\]\]([\s\S]*?)\[\[\/color\]\]/g;
 const CHALLENGE_OVERLAY_PATTERN = /^\[Reto\]\s+(10|[0-9]|YA)$/;
 
 function isPrivateHostname(hostname: string): boolean {
@@ -616,7 +618,39 @@ function renderConsoleEntryText(text: string) {
         );
     }
 
-    return text;
+    if (!text.includes("[[color=")) {
+        return text;
+    }
+
+    const nodes: React.ReactNode[] = [];
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+
+    CONSOLE_COLOR_TAG_PATTERN.lastIndex = 0;
+    while ((match = CONSOLE_COLOR_TAG_PATTERN.exec(text)) !== null) {
+        const [fullMatch, color, content] = match;
+
+        if (match.index > lastIndex) {
+            nodes.push(text.slice(lastIndex, match.index));
+        }
+
+        nodes.push(
+            <span key={`console-color-${match.index}`} style={{ color }}>
+                {content}
+            </span>,
+        );
+        lastIndex = match.index + fullMatch.length;
+    }
+
+    if (lastIndex === 0) {
+        return text;
+    }
+
+    if (lastIndex < text.length) {
+        nodes.push(text.slice(lastIndex));
+    }
+
+    return <>{nodes}</>;
 }
 
 function createEmptyUnreadChatCounts(): Record<NotifiableChatTab, number> {

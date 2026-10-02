@@ -22,6 +22,7 @@ import type { PackageApi } from "./package";
 import type { SocketApi } from "./socket";
 import { getCharacterById, getClientById } from "./runtimeRegistry";
 import { applyElfManaRestore, getSpellManaCost } from "./racialPassives";
+import { getRankFromElo, type RankedTierId } from "./ranked";
 
 const game = require("./game");
 const itemKinds = require("./itemKinds") as {
@@ -55,6 +56,24 @@ const MARKET_NOTICE_COOLDOWN_MS = 3000;
 
 function normalizeFaction(value: unknown): CharacterFaction {
     return value === "armada" || value === "caos" ? value : "none";
+}
+
+const RANKED_CONSOLE_COLORS: Record<RankedTierId, string> = {
+    BRONCE: "#cd8a55",
+    PLATA: "#d6dbe5",
+    ORO: "#f3c04f",
+    PLATINO: "#7dd3fc",
+    DIAMANTE: "#8da2ff",
+    MAESTRO: "#c084fc",
+    GRAN_MAESTRO: "#fb7185",
+    KING: "#f59e0b",
+};
+
+function getRankedConsoleSuffix(character: RuntimeCharacter): string {
+    const rank = getRankFromElo(Number(character.elo ?? 0));
+    const color = RANKED_CONSOLE_COLORS[rank.tier] ?? RANKED_CONSOLE_COLORS.BRONCE;
+
+    return ` - [[color=${color}]]<${rank.label}>[[/color]]`;
 }
 
 function isActionRateLimited(
@@ -151,6 +170,10 @@ function shouldHideSpellProjectile(caster: RuntimeCharacter, target: RuntimeChar
 
 function isChallengeCombatLocked(user: RuntimeCharacter | undefined) {
     return Boolean(user && Number(user.challengeLockedUntil ?? 0) > Date.now());
+}
+
+function isRankedRoundLocked(user: RuntimeCharacter | undefined) {
+    return Boolean(user && Number(user.rankedLockedUntil ?? 0) > Date.now());
 }
 
 function getChallengeManager() {
@@ -2112,6 +2135,11 @@ function processUserMovement(ws: RuntimeClient, heading: number, moveId: number,
     user.lastProcessedMoveId = moveId;
     user.heading = heading;
 
+    if (isRankedRoundLocked(user)) {
+        sendOwnPositionUpdate(ws, user);
+        return;
+    }
+
     if (user.paralizado) {
         sendOwnPositionUpdate(ws, user);
         return;
@@ -2752,6 +2780,8 @@ function eventClick(ws: RuntimeClient) {
                     staffMsg += " - Ciudadano";
                 }
 
+                staffMsg += getRankedConsoleSuffix(selectedCharacter);
+
                 handleProtocol.console(staffMsg, "#419900", 1, 0, ws);
             } else {
                 if (selectedNpc) {
@@ -2862,6 +2892,8 @@ function eventClick(ws: RuntimeClient) {
                     } else {
                         msg += " - Ciudadano";
                     }
+
+                    msg += getRankedConsoleSuffix(selectedCharacter);
 
                     if (user.privileges == 1) {
                         msg +=
@@ -3628,6 +3660,11 @@ function attackMele(ws: RuntimeClient) {
             return;
         }
 
+        if (isRankedRoundLocked(user)) {
+            handleProtocol.console("[Ranked] Espera a que termine la cuenta regresiva.", "white", 0, 0, ws);
+            return;
+        }
+
         cancelPendingReviveCast(ws, user, "Se canceló el resucitar al atacar.");
 
         if (user.meditar) {
@@ -3836,6 +3873,11 @@ function attackRange(ws: RuntimeClient) {
 
         if (isChallengeCombatLocked(user)) {
             handleProtocol.console("[Retos] Espera a que termine la cuenta regresiva.", "white", 0, 0, ws);
+            return;
+        }
+
+        if (isRankedRoundLocked(user)) {
+            handleProtocol.console("[Ranked] Espera a que termine la cuenta regresiva.", "white", 0, 0, ws);
             return;
         }
 
@@ -4119,6 +4161,14 @@ function attackSpell(ws: RuntimeClient) {
         const isSummonSpell = Number(datSpell.type ?? 0) === 4 && Number(datSpell.numNpc ?? 0) > 0;
         const isPartialInvisibilityRemoval = isPartialInvisibilityRemovalSpell(datSpell);
         const reviveSpell = isReviveSpell(datSpell);
+
+        if (
+            isRankedRoundLocked(user) &&
+            (isHostileCombatSpell(datSpell) || isSummonSpell || isPartialInvisibilityRemoval)
+        ) {
+            handleProtocol.console("[Ranked] Espera a que termine la cuenta regresiva.", "white", 0, 0, ws);
+            return;
+        }
 
         if (Number(user.level ?? 0) < Number(datSpell.minNivel ?? 0)) {
             handleProtocol.console(

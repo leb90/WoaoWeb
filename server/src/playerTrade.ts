@@ -117,6 +117,11 @@ export function offerItem(idUser: string, slot: string, amount: number) {
         return { ok: false, message: "No puedes ofertar un item equipado." };
     }
 
+    const mounts = require("./mounts") as typeof import("./mounts");
+    if (mounts.isMountItem(Number(item.idItem))) {
+        return { ok: false, message: "Los items de montura no se pueden comerciar." };
+    }
+
     const safeAmount = Math.max(1, Math.min(Number(item.cant ?? item.amount ?? 0), Math.floor(amount)));
     const offer = session.offers[String(idUser)];
     offer.items = [{ slot: String(slot), idItem: Number(item.idItem), amount: safeAmount }];

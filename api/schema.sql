@@ -653,6 +653,68 @@ CREATE INDEX IF NOT EXISTS idx_game_balance_updated_at ON game_balance(updated_a
 CREATE INDEX IF NOT EXISTS idx_game_data_revisions_kind_id ON game_data_revisions(kind, id DESC);
 CREATE INDEX IF NOT EXISTS idx_challenge_history_finished_at ON challenge_history(finished_at DESC);
 
+CREATE TABLE IF NOT EXISTS ranked_ratings (
+    character_id UUID NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+    mode TEXT NOT NULL CHECK (mode IN ('RANKED_1V1', 'RANKED_2V2')),
+    elo INTEGER NOT NULL DEFAULT 0 CHECK (elo >= 0),
+    wins INTEGER NOT NULL DEFAULT 0 CHECK (wins >= 0),
+    losses INTEGER NOT NULL DEFAULT 0 CHECK (losses >= 0),
+    win_streak INTEGER NOT NULL DEFAULT 0 CHECK (win_streak >= 0),
+    best_win_streak INTEGER NOT NULL DEFAULT 0 CHECK (best_win_streak >= 0),
+    matches_played INTEGER NOT NULL DEFAULT 0 CHECK (matches_played >= 0),
+    highest_elo INTEGER NOT NULL DEFAULT 0 CHECK (highest_elo >= 0),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (character_id, mode)
+);
+
+CREATE TABLE IF NOT EXISTS ranked_matches (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    mode TEXT NOT NULL CHECK (mode IN ('RANKED_1V1', 'RANKED_2V2')),
+    arena_map_id INTEGER,
+    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    finished_at TIMESTAMPTZ,
+    team_a_elo_before INTEGER NOT NULL DEFAULT 0 CHECK (team_a_elo_before >= 0),
+    team_b_elo_before INTEGER NOT NULL DEFAULT 0 CHECK (team_b_elo_before >= 0),
+    team_a_elo_after INTEGER NOT NULL DEFAULT 0 CHECK (team_a_elo_after >= 0),
+    team_b_elo_after INTEGER NOT NULL DEFAULT 0 CHECK (team_b_elo_after >= 0),
+    winner_team TEXT CHECK (winner_team IN ('A', 'B')),
+    score_a INTEGER NOT NULL DEFAULT 0 CHECK (score_a >= 0),
+    score_b INTEGER NOT NULL DEFAULT 0 CHECK (score_b >= 0),
+    status TEXT NOT NULL DEFAULT 'CREATED' CHECK (
+        status IN (
+            'CREATED',
+            'RESERVING_ARENA',
+            'PREPARING',
+            'ROUND_COUNTDOWN',
+            'ROUND_ACTIVE',
+            'ROUND_END',
+            'MATCH_END',
+            'RETURNING_PLAYERS',
+            'COMPLETED',
+            'ABORTED'
+        )
+    ),
+    metadata JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+
+CREATE TABLE IF NOT EXISTS ranked_match_participants (
+    match_id UUID NOT NULL REFERENCES ranked_matches(id) ON DELETE CASCADE,
+    character_id UUID NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+    team TEXT NOT NULL CHECK (team IN ('A', 'B')),
+    elo_before INTEGER NOT NULL DEFAULT 0 CHECK (elo_before >= 0),
+    elo_after INTEGER NOT NULL DEFAULT 0 CHECK (elo_after >= 0),
+    elo_delta INTEGER NOT NULL DEFAULT 0,
+    result TEXT NOT NULL DEFAULT 'pending' CHECK (result IN ('win', 'loss', 'draw', 'abandoned', 'pending')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (match_id, character_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ranked_ratings_mode_elo ON ranked_ratings(mode, elo DESC, wins DESC, character_id);
+CREATE INDEX IF NOT EXISTS idx_ranked_matches_mode_started_at ON ranked_matches(mode, started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ranked_matches_status ON ranked_matches(status);
+CREATE INDEX IF NOT EXISTS idx_ranked_match_participants_character_id ON ranked_match_participants(character_id);
+
 CREATE TABLE IF NOT EXISTS donation_payments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     character_id UUID NOT NULL REFERENCES characters(id) ON DELETE CASCADE,

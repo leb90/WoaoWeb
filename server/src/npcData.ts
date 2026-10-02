@@ -19,6 +19,8 @@ type NpcSpellEntry = { idSpell: number; cooldownSeconds?: number };
 export type DataNpc = {
     name: string;
     npcType: number;
+    hostile?: number;
+    attackable?: number;
     idHead: number;
     idBody: number;
     movement: number;
@@ -57,6 +59,8 @@ const DEFAULT_NPCS_JSON_PATH = path.resolve(__dirname, "../jsons/npcs.json");
 const NPC_DEFAULTS: Record<string, unknown> = {
     name: "",
     npcType: 0,
+    hostile: 0,
+    attackable: 1,
     idHead: 0,
     idBody: 0,
     movement: 0,

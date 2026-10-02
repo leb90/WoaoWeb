@@ -26,6 +26,18 @@ const initialRegisterForm = {
     confirmPassword: "",
 };
 
+type AuthResponsePayload = AuthSession | AuthErrorResponse;
+
+async function readAuthResponse(response: Response): Promise<AuthResponsePayload> {
+    try {
+        return (await response.json()) as AuthResponsePayload;
+    } catch {
+        return {
+            error: "El servidor devolvio una respuesta invalida. Verifica que la API este iniciada.",
+        };
+    }
+}
+
 export default function AuthCard({ mode }: AuthCardProps) {
     const router = useRouter();
     const [loginForm, setLoginForm] = useState(initialLoginForm);
@@ -79,9 +91,7 @@ export default function AuthCard({ mode }: AuthCardProps) {
                 body: await encryptAuthPayload(payload),
             });
 
-            const result = (await response.json()) as
-                | AuthSession
-                | AuthErrorResponse;
+            const result = await readAuthResponse(response);
 
             if (!response.ok) {
                 throw new Error(

@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import type { InventoryRecord } from "./types/runtime";
 import { getCharacterKey, getProgress, saveProgress, type MountProgress } from "./woaoProgress";
 import {
     createMountInstance,
@@ -51,6 +52,7 @@ type MountType = {
 type MountUser = {
     _id?: unknown;
     id?: unknown;
+    inv?: unknown;
     mounted?: number | boolean;
     mountTypeId?: number;
     mountInstanceId?: string;
@@ -375,6 +377,101 @@ export function getMountTypeIdFromItem(itemId: number): number {
     return Number(obj?.subtipo ?? 0);
 }
 
+export function isMountItem(itemId: number): boolean {
+    const mountTypeId = getMountTypeIdFromItem(itemId);
+    const obj = vars.datObj?.[itemId];
+
+    return mountTypeId > 0 && Number(obj?.objType ?? 0) === vars.objType.mascotas && mountTypes.has(mountTypeId);
+}
+
+function hasInventoryItem(user: MountUser, itemId: number): boolean {
+    const inv = getInventoryRecord(user);
+
+    return Object.values(inv ?? {}).some((item) => Number(item?.idItem ?? 0) === itemId && Number(item?.cant ?? 0) > 0);
+}
+
+function getInventoryRecord(user: MountUser): InventoryRecord | null {
+    if (!user.inv || typeof user.inv !== "object" || Array.isArray(user.inv)) {
+        return null;
+    }
+
+    return user.inv as InventoryRecord;
+}
+
+function findFreeInventorySlot(record: InventoryRecord, maxSlots = 21): string | null {
+    for (let slot = 1; slot <= maxSlots; slot += 1) {
+        if (!record[String(slot)]) {
+            return String(slot);
+        }
+    }
+
+    return null;
+}
+
+function addSingleMountItemToInventory(user: MountUser, itemId: number): string | null {
+    const inv = getInventoryRecord(user);
+
+    if (!inv) {
+        return null;
+    }
+
+    // Los items de montura no stackean: siempre ocupan un slot libre.
+    const freeSlot = findFreeInventorySlot(inv);
+
+    if (!freeSlot) {
+        return null;
+    }
+
+    inv[freeSlot] = {
+        idItem: itemId,
+        cant: 1,
+        equipped: 0,
+    };
+
+    return freeSlot;
+}
+
+export function ensureMountItemInInventory(user: MountUser, mount: MountInstance | null | undefined) {
+    if (!mount) {
+        return { ok: false, added: false, message: "No se encontro esa mascota." };
+    }
+
+    const mountType = getType(mount.typeId);
+    const itemId = Number(mountType?.itemId ?? 0);
+
+    if (!mountType || !itemId || !isMountItem(itemId)) {
+        return { ok: false, added: false, message: "Esa mascota no tiene un item de montura configurado." };
+    }
+
+    if (hasInventoryItem(user, itemId)) {
+        return { ok: true, added: false, itemId, message: "" };
+    }
+
+    const slot = addSingleMountItemToInventory(user, itemId);
+
+    if (!slot) {
+        return {
+            ok: false,
+            added: false,
+            itemId,
+            message: "No tienes espacio en el inventario para recibir el item de montura.",
+        };
+    }
+
+    const client = vars.clients[String(user.id ?? "")];
+    if (client) {
+        handleProtocol.agregarUserInvItem(user.id, slot, client);
+    }
+
+    return {
+        ok: true,
+        added: true,
+        itemId,
+        slot,
+        message: `Recibiste el item de montura: ${vars.datObj?.[itemId]?.name ?? mountType.name}.`,
+    };
+}
+
 export function prepareMount(user: MountUser, itemId: number) {
     const mountTypeId = getMountTypeIdFromItem(itemId);
     if (mountTypeId <= 0) {
@@ -406,29 +503,69 @@ export function isMountEggItem(itemId: number) {
 
 export function hatchMountEgg(user: MountUser, itemId: number) {
     if (!isMountEggItem(itemId)) {
-        return { ok: false, message: "Ese item no es un huevo de montura." };
+        return { ok: false, message: "Ese item no es un huevo de montura.", mountItemAdded: false };
     }
 
     const ownerCharacterId = ownerKey(user);
     if (!ownerCharacterId) {
-        return { ok: false, message: "No se pudo identificar el personaje." };
+        return { ok: false, message: "No se pudo identificar el personaje.", mountItemAdded: false };
     }
 
     const mountTypeId = eggItemsToType.get(Number(itemId)) ?? 0;
     const mountType = getType(mountTypeId);
     if (!mountType) {
-        return { ok: false, message: "Ese huevo no tiene una especie configurada." };
+        return { ok: false, message: "Ese huevo no tiene una especie configurada.", mountItemAdded: false };
+    }
+
+    const mountItemId = Number(mountType.itemId ?? 0);
+    if (!mountItemId || !isMountItem(mountItemId)) {
+        return {
+            ok: false,
+            message: "Esa mascota no tiene un item de montura configurado.",
+            mountItemAdded: false,
+        };
     }
 
     if (ownsMountType(user, mountTypeId)) {
-        return { ok: false, message: `Ya tenes una mascota de especie ${mountType.name}.` };
+        return {
+            ok: false,
+            message: `Ya tenes una mascota de especie ${mountType.name}.`,
+            mountItemAdded: false,
+        };
+    }
+
+    if (!hasInventoryItem(user, mountItemId)) {
+        const inv = getInventoryRecord(user);
+        if (!inv || !findFreeInventorySlot(inv)) {
+            return {
+                ok: false,
+                message: "Necesitas un espacio libre en el inventario para recibir el item de montura.",
+                mountItemAdded: false,
+            };
+        }
     }
 
     const instance = createFreshMount(ownerCharacterId, mountType);
+    setActiveMount(user, instance);
+
+    const mountItemResult = ensureMountItemInInventory(user, instance);
+    if (!mountItemResult.ok) {
+        deleteMountInstance(instance.id, ownerCharacterId);
+        setActiveMount(user, null);
+        return {
+            ok: false,
+            message: mountItemResult.message || "No se pudo entregar el item de montura.",
+            mountItemAdded: false,
+        };
+    }
+
+    const itemName = vars.datObj?.[mountItemId]?.name ?? mountType.name;
     return {
         ok: true,
-        message: `El huevo eclosiono: obtuviste ${instance.name} #${instance.id.slice(0, 6)}.`,
+        message: `El huevo eclosiono: obtuviste ${instance.name} #${instance.id.slice(0, 6)} y el item ${itemName}.`,
         mount: instance,
+        mountItemAdded: Boolean(mountItemResult.added),
+        mountItemMessage: mountItemResult.message,
     };
 }
 
@@ -439,32 +576,7 @@ export function transferMountForItem(fromUser: MountUser, toUser: MountUser, ite
         return { ok: true, message: "" };
     }
 
-    const fromOwner = ownerKey(fromUser);
-    const toOwner = ownerKey(toUser);
-    if (!fromOwner || !toOwner) {
-        return { ok: false, message: "No se pudo identificar a los personajes del comercio." };
-    }
-
-    if (ownsMountType(toUser, mountTypeId)) {
-        return { ok: false, message: `El receptor ya tiene una mascota de especie ${mountType.name}.` };
-    }
-
-    let instance = listOwned(fromUser).find((candidate) => candidate.typeId === mountTypeId) ?? null;
-    if (!instance) {
-        instance = createFreshMount(fromOwner, mountType);
-    }
-
-    transferMountInstance(instance.id, fromOwner, toOwner);
-
-    const progress = getProgress(fromUser);
-    if (progress.activeMountInstanceId === instance.id || fromUser.mountInstanceId === instance.id) {
-        setActiveMount(fromUser, null);
-    }
-
-    return {
-        ok: true,
-        message: `Mascota transferida: ${instance.name} #${instance.id.slice(0, 6)}.`,
-    };
+    return { ok: false, message: "Las mascotas vinculadas no se pueden comerciar." };
 }
 
 export function validateMountTransferForItem(fromUser: MountUser, toUser: MountUser, itemId: number) {
@@ -473,16 +585,7 @@ export function validateMountTransferForItem(fromUser: MountUser, toUser: MountU
         return { ok: true, message: "" };
     }
 
-    if (!ownerKey(fromUser) || !ownerKey(toUser)) {
-        return { ok: false, message: "No se pudo identificar a los personajes del comercio." };
-    }
-
-    if (ownsMountType(toUser, mountTypeId)) {
-        const mountType = getType(mountTypeId);
-        return { ok: false, message: `El receptor ya tiene una mascota de especie ${mountType?.name ?? "igual"}.` };
-    }
-
-    return { ok: true, message: "" };
+    return { ok: false, message: "Los items de montura no se pueden comerciar." };
 }
 
 export function applyOutgoingDamage(
@@ -596,12 +699,16 @@ export function rideMountByRef(user: MountUser, ref: string) {
     setActiveMount(user, mount);
     const mountType = getType(mount.typeId);
     const bodyId = Number(mountType?.bodyId ?? 0);
+    const itemId = Number(mountType?.itemId ?? 0);
+    const hasItem = itemId > 0 && hasInventoryItem(user, itemId);
     return {
         ok: true,
-        message: `Mascota activa: ${mount.name} #${mount.id.slice(0, 6)}. Usa el item de montura o /montura para montarte.`,
+        message: hasItem
+            ? `Mascota activa: ${mount.name} #${mount.id.slice(0, 6)}. Usa el item de montura del inventario para montarte.`
+            : `Mascota activa: ${mount.name} #${mount.id.slice(0, 6)}. No tenes el item de montura en el inventario.`,
         mount,
         bodyId,
-        itemId: mountType?.itemId ?? 0,
+        itemId,
     };
 }
 
@@ -694,28 +801,7 @@ export function transferMountByInstanceId(
     toUser: MountUser,
     instanceId: string,
 ) {
-    const fromOwner = ownerKey(fromUser);
-    const toOwner = ownerKey(toUser);
-    if (!fromOwner || !toOwner) {
-        return { ok: false, message: "No se pudo identificar a los personajes del comercio." };
-    }
-    const instance = getMountInstance(instanceId);
-    if (!instance || instance.ownerCharacterId !== fromOwner) {
-        return { ok: false, message: "La mascota no pertenece al ofertante." };
-    }
-    if (ownsMountType(toUser, instance.typeId)) {
-        return { ok: false, message: `El receptor ya tiene una mascota de especie ${getType(instance.typeId)?.name ?? "igual"}.` };
-    }
-    transferMountInstance(instanceId, fromOwner, toOwner);
-    const progress = getProgress(fromUser);
-    if (progress.activeMountInstanceId === instanceId || fromUser.mountInstanceId === instanceId) {
-        setActiveMount(fromUser, null);
-    }
-    return {
-        ok: true,
-        message: `Mascota transferida: ${instance.name} #${instance.id.slice(0, 6)}.`,
-        mount: getMountInstance(instanceId),
-    };
+    return { ok: false, message: "Las mascotas vinculadas no se pueden comerciar." };
 }
 
 export function validateMountTransferByInstanceId(
@@ -723,22 +809,7 @@ export function validateMountTransferByInstanceId(
     toUser: MountUser,
     instanceId: string,
 ) {
-    const fromOwner = ownerKey(fromUser);
-    const toOwner = ownerKey(toUser);
-    if (!fromOwner || !toOwner) {
-        return { ok: false, message: "No se pudo identificar a los personajes del comercio." };
-    }
-    const instance = getMountInstance(instanceId);
-    if (!instance || instance.ownerCharacterId !== fromOwner) {
-        return { ok: false, message: "La mascota no pertenece al ofertante." };
-    }
-    if (ownsMountType(toUser, instance.typeId)) {
-        return { ok: false, message: `El receptor ya tiene una mascota de especie ${getType(instance.typeId)?.name ?? "igual"}.` };
-    }
-    if (fromUser.mounted && fromUser.mountInstanceId === instanceId) {
-        return { ok: false, message: "No podes comerciar una mascota mientras estas montado en ella." };
-    }
-    return { ok: true, message: "" };
+    return { ok: false, message: "Las mascotas vinculadas no se pueden comerciar." };
 }
 
 export type MountStateEntry = {

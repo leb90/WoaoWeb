@@ -420,6 +420,10 @@ export type RuntimeCharacter = {
     challengeMatchId?: string | null;
     challengeTeam?: 1 | 2 | null;
     challengeLockedUntil?: number;
+    rankedArena?: boolean;
+    rankedMatchId?: string | null;
+    rankedTeam?: "A" | "B" | null;
+    rankedLockedUntil?: number;
     adminSummonedBot?: boolean;
     adminSummonedBotOwnerId?: EntityId;
     gmBotState?: GmBotState | null;

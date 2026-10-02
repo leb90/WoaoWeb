@@ -147,6 +147,12 @@ import {
     listUserOnlineStats,
 } from "./repositories/userOnlineStats";
 import { createChallengeHistory } from "./repositories/challenges";
+import {
+    completeRankedMatch,
+    getOrCreateRankedRating,
+    getRankedLeaderboard,
+    listRankedRatings,
+} from "./repositories/ranked";
 
 const app = express();
 const SLOW_REQUEST_LOG_THRESHOLD_MS = 2000;
@@ -2671,6 +2677,86 @@ app.post(
             const status =
                 error instanceof Error && error.name === "ZodError" ? 400 : 500;
             response.status(status).json({
+                error:
+                    error instanceof Error ? error.message : "Unexpected error",
+            });
+        }
+    },
+);
+
+app.get(
+    "/internal/ranked/ratings/:characterId",
+    requireAuth,
+    async (request, response) => {
+        try {
+            const characterId = Array.isArray(request.params.characterId)
+                ? request.params.characterId[0]
+                : request.params.characterId;
+            const mode = String(request.query.mode ?? "RANKED_1V1");
+            response.json(await getOrCreateRankedRating(characterId, mode));
+        } catch (error) {
+            response.status(400).json({
+                error:
+                    error instanceof Error ? error.message : "Unexpected error",
+            });
+        }
+    },
+);
+
+app.post(
+    "/internal/ranked/ratings/batch",
+    requireAuth,
+    async (request, response) => {
+        try {
+            response.json(
+                await listRankedRatings(
+                    Array.isArray(request.body?.characterIds)
+                        ? request.body.characterIds
+                        : [],
+                    String(request.body?.mode ?? "RANKED_1V1"),
+                ),
+            );
+        } catch (error) {
+            response.status(400).json({
+                error:
+                    error instanceof Error ? error.message : "Unexpected error",
+            });
+        }
+    },
+);
+
+app.post(
+    "/internal/ranked/matches/complete",
+    requireAuth,
+    async (request, response) => {
+        try {
+            response.status(201).json(await completeRankedMatch(request.body));
+        } catch (error) {
+            const status =
+                error instanceof Error && error.name === "ZodError" ? 400 : 500;
+            response.status(status).json({
+                error:
+                    error instanceof Error ? error.message : "Unexpected error",
+            });
+        }
+    },
+);
+
+app.get(
+    "/internal/ranked/leaderboard",
+    requireAuth,
+    async (request, response) => {
+        try {
+            response.json(
+                await getRankedLeaderboard(
+                    String(request.query.mode ?? "RANKED_1V1"),
+                    Number(request.query.page ?? 1),
+                    Number(request.query.pageSize ?? 20),
+                    String(request.query.characterId ?? "").trim() || undefined,
+                ),
+            );
+        } catch (error) {
+            response.status(400).json({
                 error:
                     error instanceof Error ? error.message : "Unexpected error",
             });

@@ -7,6 +7,7 @@ import { getApiBaseUrl } from "../../../lib/api-base-url";
 
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 const API_REQUEST_TIMEOUT_MS = 8000;
+const NON_JSON_PREVIEW_LENGTH = 180;
 
 type ApiAuthResponse = AuthSession & {
     sessionToken: string;
@@ -23,9 +24,10 @@ export async function fetchApi(
         () => controller.abort(),
         API_REQUEST_TIMEOUT_MS,
     );
+    const targetUrl = `${getApiBaseUrl()}${path}`;
 
     try {
-        return await fetch(`${getApiBaseUrl()}${path}`, {
+        return await fetch(targetUrl, {
             ...init,
             signal: controller.signal,
         });
@@ -39,16 +41,45 @@ export async function fetchApi(
             );
         }
 
-        throw error;
+        return NextResponse.json(
+            {
+                error: `No se pudo conectar con la API (${targetUrl}). Verifica que el servicio API este iniciado.`,
+            },
+            { status: 502 },
+        );
     } finally {
         clearTimeout(timeoutId);
+    }
+}
+
+function getBodyPreview(body: string): string {
+    return body.replace(/\s+/g, " ").trim().slice(0, NON_JSON_PREVIEW_LENGTH);
+}
+
+async function readJsonPayload(response: Response): Promise<unknown> {
+    const body = await response.text();
+
+    if (!body.trim()) {
+        return {};
+    }
+
+    try {
+        return JSON.parse(body) as unknown;
+    } catch {
+        const preview = getBodyPreview(body);
+
+        return {
+            error: preview
+                ? `La API devolvio una respuesta no JSON (${response.status}): ${preview}`
+                : `La API devolvio una respuesta no JSON (${response.status}).`,
+        };
     }
 }
 
 export async function proxyJsonResponse(
     response: Response,
 ): Promise<NextResponse> {
-    const result = normalizeErrorPayload(await response.json());
+    const result = normalizeErrorPayload(await readJsonPayload(response));
     return NextResponse.json(result, { status: response.status });
 }
 
@@ -134,7 +165,7 @@ export async function forwardAuthRequest(
     });
 
     const result = normalizeErrorPayload(
-        (await response.json()) as ApiAuthResponse | AuthErrorResponse,
+        (await readJsonPayload(response)) as ApiAuthResponse | AuthErrorResponse,
     );
 
     if (!response.ok) {

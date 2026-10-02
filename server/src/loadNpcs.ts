@@ -88,6 +88,8 @@ class LoadNpcs {
         tmpNPC.idHead = datNpc.idHead;
         tmpNPC.movement = Number.isInteger(Number(npc.movement)) ? Number(npc.movement) : datNpc.movement;
         tmpNPC.npcType = parseInt(datNpc.npcType);
+        tmpNPC.hostile = Number(datNpc.hostile ?? 0);
+        tmpNPC.attackable = Number(datNpc.attackable ?? 1);
         tmpNPC.exp = datNpc.exp;
         if (datNpc.gold) tmpNPC.gold = datNpc.gold;
         tmpNPC.hp = datNpc.hp;

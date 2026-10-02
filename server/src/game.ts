@@ -348,6 +348,12 @@ const isOriginalNpcInteractionOutOfRange = (
     return Math.round(Math.hypot(user.pos.x - npc.pos.x, user.pos.y - npc.pos.y)) > maxDistance;
 };
 
+function isBoundMountItem(itemId: number): boolean {
+    const obj = vars.datObj[itemId] as DataObject | undefined;
+
+    return Boolean(obj && obj.objType === vars.objType.mascotas && require("./mounts").isMountItem(Number(itemId)));
+}
+
 function isMarketEnabled(): boolean {
     return vars.subastasHabilitadas !== false;
 }
@@ -5937,6 +5943,11 @@ function Game(this: GameApi) {
 
             const idItem = item.idItem;
 
+            if (isBoundMountItem(idItem)) {
+                handleProtocol.console("No puedes tirar items de montura.", "white", 0, 0, ws);
+                return;
+            }
+
             if (item.equipped) {
                 handleProtocol.console("Debes desequipar el item para poder tirarlo.", "white", 0, 0, ws);
                 return;
@@ -6463,6 +6474,10 @@ function Game(this: GameApi) {
 
         if (!objectData || objectData.objType === vars.objType.dinero) {
             return { ok: false, message: "Ese item no se puede publicar en el mercado." };
+        }
+
+        if (isBoundMountItem(sourceItem.idItem)) {
+            return { ok: false, message: "Los items de montura no se pueden publicar en el mercado." };
         }
 
         if (objectData.newbie) {
@@ -10774,6 +10789,21 @@ function Game(this: GameApi) {
                     return;
                 }
 
+                if (isBoundMountItem(itemUser.idItem)) {
+                    withUserClient(idUser, (userClient) => {
+                        handleProtocol.console(
+                            user.tradeMode === "bank"
+                                ? "No puedes guardar items de montura en la boveda."
+                                : "No puedes comerciar items de montura.",
+                            "white",
+                            0,
+                            0,
+                            userClient,
+                        );
+                    });
+                    return;
+                }
+
                 let cantSell = cant;
 
                 if (cantSell > itemUser.cant) {
@@ -11158,6 +11188,13 @@ function Game(this: GameApi) {
             const user = getCharacterById(idUser);
 
             if (!user) {
+                return;
+            }
+
+            if (user.rankedArena || user.rankedMatchId) {
+                withUserClient(idUser, (userClient) => {
+                    handleProtocol.console("No puedes usar monturas dentro de Ranked.", "white", 0, 0, userClient);
+                });
                 return;
             }
 

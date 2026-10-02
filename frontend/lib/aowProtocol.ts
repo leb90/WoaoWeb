@@ -85,6 +85,7 @@ export const CLIENT_PACKET_ID = {
     mountState: 87,
     castleState: 88,
     factionWarState: 89,
+    rankedState: 90,
 } as const;
 
 export const CHARACTER_SWING_WEAPON = 1;
@@ -640,6 +641,7 @@ export interface PlayerHudState {
     mountState?: MountStatePayload;
     castleState?: CastleStatePayload;
     factionWarState?: FactionWarStatePayload;
+    rankedState?: RankedStatePayload;
     partyMembers: PartyHudMember[];
     clanMembers: ClanHudMember[];
 }
@@ -749,6 +751,153 @@ export interface AreaMetaSnapshot {
 export interface CastleStatePayload {
     underAttack: Record<string, boolean>;
 }
+
+export type RankedMode = "RANKED_1V1" | "RANKED_2V2";
+
+export type RankedRankPayload = {
+    tier: string;
+    tierLabel: string;
+    division: number | null;
+    divisionLabel: string | null;
+    label: string;
+    minElo: number;
+    maxElo: number | null;
+    divisionMinElo: number;
+    divisionMaxElo: number | null;
+    nextDivisionMinElo: number | null;
+    progress: {
+        current: number;
+        required: number;
+        ratio: number;
+    };
+};
+
+export type RankedModeState = {
+    elo: number;
+    wins: number;
+    losses: number;
+    matchesPlayed: number;
+    winStreak: number;
+    bestWinStreak: number;
+    highestElo: number;
+    rank: RankedRankPayload;
+};
+
+export type RankedLeaderboardEntryPayload = {
+    position: number;
+    characterId: string;
+    characterName: string;
+    clanName: string | null;
+    elo: number;
+    wins: number;
+    losses: number;
+    matchesPlayed: number;
+    winStreak: number;
+    bestWinStreak: number;
+    highestElo: number;
+    winrate: number;
+    rank: RankedRankPayload;
+};
+
+export type RankedLeaderboardPayload = {
+    page: number;
+    pageSize: number;
+    total: number;
+    entries: RankedLeaderboardEntryPayload[];
+    selfEntry: RankedLeaderboardEntryPayload | null;
+};
+
+export type RankedStatePayload = {
+    modes: Record<RankedMode, RankedModeState>;
+    leaderboards?: Partial<Record<RankedMode, RankedLeaderboardPayload>>;
+    queue: {
+        status: "NONE" | "QUEUED" | "MATCH_FOUND" | "IN_MATCH";
+        mode: RankedMode | null;
+        enqueuedAt: number | null;
+        searchRange: {
+            minElo: number;
+            maxElo: number;
+            eloRange: number;
+        } | null;
+    };
+    match: {
+        id: string;
+        mode: RankedMode;
+        arenaMapId: number;
+        scoreA: number;
+        scoreB: number;
+        team: "A" | "B";
+        opponentName: string;
+        lockedUntil: number | null;
+    } | null;
+    confirmation: {
+        id: string;
+        kind: "PARTY_QUEUE" | "MATCH_FOUND";
+        mode: RankedMode;
+        title: string;
+        description: string;
+        expiresAt: number;
+        accepted: boolean;
+        acceptedCount: number;
+        requiredCount: number;
+        participants: Array<{
+            id: string;
+            name: string;
+            accepted: boolean;
+        }>;
+    } | null;
+};
+
+const DEFAULT_RANKED_RANK: RankedRankPayload = {
+    tier: "BRONCE",
+    tierLabel: "Bronce",
+    division: 5,
+    divisionLabel: "V",
+    label: "Bronce V",
+    minElo: 0,
+    maxElo: 499,
+    divisionMinElo: 0,
+    divisionMaxElo: 99,
+    nextDivisionMinElo: 100,
+    progress: {
+        current: 0,
+        required: 100,
+        ratio: 0,
+    },
+};
+
+const DEFAULT_RANKED_STATE: RankedStatePayload = {
+    modes: {
+        RANKED_1V1: {
+            elo: 0,
+            wins: 0,
+            losses: 0,
+            matchesPlayed: 0,
+            winStreak: 0,
+            bestWinStreak: 0,
+            highestElo: 0,
+            rank: DEFAULT_RANKED_RANK,
+        },
+        RANKED_2V2: {
+            elo: 0,
+            wins: 0,
+            losses: 0,
+            matchesPlayed: 0,
+            winStreak: 0,
+            bestWinStreak: 0,
+            highestElo: 0,
+            rank: DEFAULT_RANKED_RANK,
+        },
+    },
+    queue: {
+        status: "NONE",
+        mode: null,
+        enqueuedAt: null,
+        searchRange: null,
+    },
+    match: null,
+    confirmation: null,
+};
 
 export interface FactionWarStatePayload {
     active: boolean;
@@ -977,6 +1126,7 @@ export type ParsedServerPacket =
     | { type: "mountState"; payload: MountStatePayload }
     | { type: "castleState"; payload: CastleStatePayload }
     | { type: "factionWarState"; payload: FactionWarStatePayload }
+    | { type: "rankedState"; payload: RankedStatePayload }
     | { type: "partyState"; payload: PartyHudStateDelta }
     | { type: "clanState"; payload: ClanHudStateDelta }
     | { type: "startCastBar"; payload: { id: number; durationMs: number } }
@@ -2171,6 +2321,22 @@ function parseServerPacketById(
                         hordeKills: 0,
                         allianceKills: 0,
                     },
+                };
+            }
+        }
+
+        case CLIENT_PACKET_ID.rankedState: {
+            const rawPayload = reader.getString();
+
+            try {
+                return {
+                    type: "rankedState",
+                    payload: JSON.parse(rawPayload) as RankedStatePayload,
+                };
+            } catch {
+                return {
+                    type: "rankedState",
+                    payload: DEFAULT_RANKED_STATE,
                 };
             }
         }

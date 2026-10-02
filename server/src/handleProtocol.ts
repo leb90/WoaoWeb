@@ -437,6 +437,7 @@ export type HandleProtocolApi = {
     mountState: (payload: unknown, client: RuntimeClient) => void;
     castleState: (payload: unknown, client: RuntimeClient) => void;
     factionWarState: (payload: FactionWarStatePayload, client: RuntimeClient) => void;
+    rankedState: (payload: unknown, client: RuntimeClient) => void;
     selfFlagsDelta: (payload: SelfFlagsDeltaPayload, client: RuntimeClient) => void;
     selfVitalsDelta: (payload: SelfVitalsDeltaPayload, client: RuntimeClient) => void;
     selfMapMetaDelta: (payload: SelfMapMetaDeltaPayload, client: RuntimeClient) => void;
@@ -1411,6 +1412,12 @@ const handleServer: HandleProtocolApi = {
 
     factionWarState(payload, client) {
         pkg.setPackageID(pkg.clientPacketID.factionWarState);
+        pkg.writeString(JSON.stringify(payload));
+        socket.send(client);
+    },
+
+    rankedState(payload, client) {
+        pkg.setPackageID(pkg.clientPacketID.rankedState);
         pkg.writeString(JSON.stringify(payload));
         socket.send(client);
     },

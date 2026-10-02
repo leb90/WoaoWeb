@@ -1290,6 +1290,12 @@ function resetFuerzaAgilidadBuffs(user: GameCharacter, client?: RuntimeClient) {
 function isArenaCombat(user: GameCharacter | undefined, userAttacked: GameCharacter | undefined): boolean {
     return Boolean(
         (user?.pvpChar && userAttacked?.pvpChar && user.arenaRoomId && user.arenaRoomId === userAttacked.arenaRoomId) ||
+        (user?.rankedMatchId &&
+            userAttacked?.rankedMatchId &&
+            user.rankedMatchId === userAttacked.rankedMatchId &&
+            user.rankedTeam &&
+            userAttacked.rankedTeam &&
+            user.rankedTeam !== userAttacked.rankedTeam) ||
         (user?.challengeMatchId &&
             userAttacked?.challengeMatchId &&
             user.challengeMatchId === userAttacked.challengeMatchId &&
@@ -1342,6 +1348,10 @@ function isBlockedBySafeZone(user: GameCharacter, userAttacked: GameCharacter): 
 }
 
 function applyOpenWorldAttackRules(user: GameCharacter, userAttacked: GameCharacter, arenaCombat: boolean): boolean {
+    if (arenaCombat) {
+        return true;
+    }
+
     const factionWars = getFactionWars();
     const warDeniedReason = factionWars.getAttackDeniedReason(user, userAttacked);
 
@@ -1520,6 +1530,18 @@ function getFriendlyFireBlockReason(
 ): string | null {
     if (isSameEntityId(attackerId, victimId)) {
         return null;
+    }
+
+    const attacker = getCharacterById(attackerId);
+    const victim = getCharacterById(victimId);
+    if (
+        attacker?.rankedMatchId &&
+        victim?.rankedMatchId &&
+        attacker.rankedMatchId === victim.rankedMatchId
+    ) {
+        return attacker.rankedTeam && victim.rankedTeam && attacker.rankedTeam !== victim.rankedTeam
+            ? null
+            : "No puedes atacar a tu compañero de equipo.";
     }
 
     if (isSameParty(attackerId, victimId)) {
@@ -2849,6 +2871,13 @@ function canAreaSpellUser(user: GameCharacter, target: GameCharacter): boolean {
         return false;
     }
 
+    const arenaCombat = isArenaCombat(user, target);
+    const challengeRelation = getChallengeManager().getCombatRelation(user, target);
+
+    if (arenaCombat) {
+        return true;
+    }
+
     const factionWars = getFactionWars();
     if (factionWars.getAttackDeniedReason(user, target)) {
         return false;
@@ -2857,9 +2886,6 @@ function canAreaSpellUser(user: GameCharacter, target: GameCharacter): boolean {
     if (factionWars.isWarCombat(user.id, target.id)) {
         return true;
     }
-
-    const arenaCombat = isArenaCombat(user, target);
-    const challengeRelation = getChallengeManager().getCombatRelation(user, target);
 
     if (challengeRelation === "ally") {
         return false;
@@ -3414,6 +3440,7 @@ export type GameApi = {
         },
     ) => void;
     resetFuerzaAgilidadBuffs: (idUser: EntityId) => void;
+    refreshEquippedVisuals: (idUser: EntityId) => void;
     interruptPendingLogoutOnAttack: (idUser: EntityId, reason?: string) => void;
     getPvpMapChangeDeniedMessage: (
         user: Pick<GameCharacter, "pvpMapChangeBlockedUntil"> | undefined,
@@ -7683,6 +7710,17 @@ function Game(this: GameApi) {
         setSpellInvisibility(idUser, enabled);
     };
 
+    this.refreshEquippedVisuals = function (idUser: EntityId) {
+        const user = getCharacterById(idUser);
+
+        if (!user) {
+            return;
+        }
+
+        rebuildEquippedInventoryState(user);
+        broadcastAppearance(idUser);
+    };
+
     this.clearPartyInvitation = function (idUser: EntityId) {
         clearPartyInvitation(getCharacterById(idUser));
     };
@@ -8558,6 +8596,7 @@ function Game(this: GameApi) {
                 !user.isNpc &&
                 idUser != idUserAttacked &&
                 isOffensiveSpell &&
+                !arenaCombat &&
                 !factionWars.isWarCombat(idUser, idUserAttacked) &&
                 isBlockedBySafeZone(user, userAttacked)
             ) {
@@ -8599,7 +8638,7 @@ function Game(this: GameApi) {
                 return 0;
             }
 
-            if (isOffensiveSpell) {
+            if (isOffensiveSpell && !arenaCombat) {
                 const warDeniedReason = factionWars.getAttackDeniedReason(user, userAttacked);
                 if (warDeniedReason) {
                     withUserClient(idUser, (userClient) => {
@@ -9420,7 +9459,7 @@ function Game(this: GameApi) {
 
             const factionWars = getFactionWars();
             const warDeniedReason = factionWars.getAttackDeniedReason(user, userAttacked);
-            if (warDeniedReason) {
+            if (warDeniedReason && !arenaCombat) {
                 withUserClient(idUser, (userClient) => {
                     handleProtocol.console(warDeniedReason, "white", 0, 0, userClient);
                 });
@@ -9431,6 +9470,7 @@ function Game(this: GameApi) {
                 vars.mapData[user.map].pk &&
                 !userAttacked.isNpc &&
                 idUser != idUserAttacked &&
+                !arenaCombat &&
                 !factionWars.isWarCombat(idUser, idUserAttacked) &&
                 isBlockedBySafeZone(user, userAttacked)
             ) {

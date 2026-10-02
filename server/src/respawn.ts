@@ -74,6 +74,17 @@ function canCountFactionKill(attackerLevel: number, victimLevel: number, victimI
     return attackerLevel - victimLevel <= 10 || victimLevel >= 25;
 }
 
+function isRankedOpponentKill(attacker: any, victim: any): boolean {
+    return Boolean(
+        attacker?.rankedMatchId &&
+            victim?.rankedMatchId &&
+            attacker.rankedMatchId === victim.rankedMatchId &&
+            attacker.rankedTeam &&
+            victim.rankedTeam &&
+            attacker.rankedTeam !== victim.rankedTeam,
+    );
+}
+
 const respawn = new (Respawn as any)();
 const summonRoom = require("./summonRoom");
 
@@ -111,6 +122,8 @@ function Respawn(this: any) {
                 }
 
                 const challengeCombatDeath = Boolean(challengeManager.getBusyMatchByCharacter(pjSelected));
+                const rankedCombatDeath = !pjSelected.isNpc && isRankedOpponentKill(user, pjSelected);
+                const isolatedDuelDeath = challengeCombatDeath || rankedCombatDeath;
 
                 if (!pjSelected.isNpc) {
                     game.putBodyAndHeadDead(idPersonaje);
@@ -118,7 +131,7 @@ function Respawn(this: any) {
                     npcs.removeOwnerSummons(idPersonaje);
                     pjSelected.hp = 0;
                     if (
-                        !challengeCombatDeath &&
+                        !isolatedDuelDeath &&
                         vars.mapa[pjSelected.map][pjSelected.pos.y][pjSelected.pos.x].trigger != 6
                     ) {
                         void game.tirarItemsUser(idPersonaje);
@@ -132,7 +145,7 @@ function Respawn(this: any) {
                     goldGanado = pjSelected.gold * vars.multiplicadorGold;
                 } else {
                     if (
-                        !challengeCombatDeath &&
+                        !isolatedDuelDeath &&
                         vars.mapa[pjSelected.map][pjSelected.pos.y][pjSelected.pos.x].trigger != 6
                     ) {
                         const now = Date.now();

@@ -25,6 +25,9 @@ import {
     Map as MapIcon,
     Search,
     Plus,
+    Check,
+    Clock3,
+    Swords,
 } from "lucide-react";
 import type {
     CharacterStatsSnapshot,
@@ -949,6 +952,134 @@ export function VitalBars({
                 </p>
             ) : null}
         </div>
+    );
+}
+
+function RankedGameplayOverlay({
+    hud,
+    onSendCommand,
+}: {
+    hud: PlayerHudState | null;
+    onSendCommand?: (message: string) => void;
+}) {
+    const rankedState = hud?.rankedState ?? null;
+    const confirmation = rankedState?.confirmation ?? null;
+    const match = rankedState?.match ?? null;
+    const confirmationId = confirmation?.id ?? null;
+    const [now, setNow] = React.useState(() => Date.now());
+
+    React.useEffect(() => {
+        if (!confirmationId && !match?.lockedUntil) {
+            return;
+        }
+
+        const timer = window.setInterval(() => setNow(Date.now()), 120);
+        return () => window.clearInterval(timer);
+    }, [confirmationId, match?.id, match?.lockedUntil]);
+
+    if (!rankedState || (!confirmation && !match)) {
+        return null;
+    }
+
+    const ownScore = match ? (match.team === "A" ? match.scoreA : match.scoreB) : 0;
+    const enemyScore = match ? (match.team === "A" ? match.scoreB : match.scoreA) : 0;
+    const countdownMs = match?.lockedUntil ? Math.max(0, match.lockedUntil - now) : 0;
+    const countdownSeconds = Math.ceil(countdownMs / 1000);
+    const confirmationRemainingMs = confirmation ? Math.max(0, confirmation.expiresAt - now) : 0;
+    const confirmationRatio = confirmation ? Math.max(0, Math.min(1, confirmationRemainingMs / 20_000)) : 0;
+
+    return (
+        <>
+            {match ? (
+                <div className="pointer-events-none fixed left-1/2 top-[168px] z-[78] -translate-x-1/2 max-[900px]:top-16">
+                    <div className="min-w-[360px] rounded border border-amber-300/35 bg-[#100905]/92 px-5 py-2 text-center text-stone-100 shadow-[0_16px_40px_rgba(0,0,0,0.55)]">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-amber-200/80">
+                            Ranked {match.mode === "RANKED_2V2" ? "2 vs 2" : "1 vs 1"}
+                        </p>
+                        <div className="mt-1 grid grid-cols-[minmax(0,1fr)_92px_minmax(0,1fr)] items-center gap-3">
+                            <span className="truncate text-right text-sm font-bold text-stone-50">
+                                {hud?.nameCharacter || "Vos"}
+                            </span>
+                            <span className="rounded border border-amber-300/35 bg-black/45 px-3 py-1 text-xl font-black tabular-nums text-amber-100">
+                                {ownScore} vs {enemyScore}
+                            </span>
+                            <span className="truncate text-left text-sm font-bold text-stone-50">
+                                {match.opponentName || "Rival"}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
+
+            {match && countdownMs > 0 ? (
+                <div className="pointer-events-none fixed left-1/2 top-[252px] z-[79] -translate-x-1/2 text-center max-[900px]:top-[132px]">
+                    <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full border border-amber-300/70 bg-[radial-gradient(circle_at_50%_35%,rgba(250,204,21,0.32),rgba(27,12,4,0.96)_66%)] text-5xl font-black tabular-nums text-amber-100 shadow-[0_0_32px_rgba(245,158,11,0.42)]">
+                        {countdownSeconds}
+                    </div>
+                    <p className="mt-2 rounded border border-amber-300/25 bg-black/70 px-4 py-1 text-xs font-bold uppercase tracking-[0.22em] text-amber-100">
+                        Preparense
+                    </p>
+                </div>
+            ) : null}
+
+            {confirmation ? (
+                <div className="fixed left-1/2 top-[238px] z-[86] w-[min(520px,calc(100vw-28px))] -translate-x-1/2 rounded border border-amber-300/45 bg-[#130b06]/96 p-4 text-stone-100 shadow-[0_24px_70px_rgba(0,0,0,0.68)] max-[900px]:top-[118px]">
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                            <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-amber-200">
+                                Duelo Ranked
+                            </p>
+                            <h3 className="mt-1 text-xl font-black text-stone-50">{confirmation.title}</h3>
+                            <p className="mt-1 text-sm text-stone-300">{confirmation.description}</p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1 rounded border border-amber-300/25 bg-black/35 px-2 py-1 text-sm font-black tabular-nums text-amber-100">
+                            <Clock3 className="h-4 w-4" />
+                            {Math.ceil(confirmationRemainingMs / 1000)}s
+                        </div>
+                    </div>
+                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-stone-800">
+                        <div
+                            className="h-full rounded-full bg-amber-300 transition-[width]"
+                            style={{ width: `${Math.round(confirmationRatio * 100)}%` }}
+                        />
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                        {confirmation.participants.map((participant) => (
+                            <span
+                                key={participant.id}
+                                className={`rounded border px-2.5 py-1 text-xs font-bold ${
+                                    participant.accepted
+                                        ? "border-emerald-400/40 bg-emerald-950/35 text-emerald-200"
+                                        : "border-stone-600/45 bg-black/30 text-stone-300"
+                                }`}
+                            >
+                                {participant.accepted ? "OK " : ""}
+                                {participant.name}
+                            </span>
+                        ))}
+                    </div>
+                    <div className="mt-4 flex justify-end gap-2">
+                        <button
+                            type="button"
+                            onClick={() => onSendCommand?.("/rankedrechazar")}
+                            className="flex h-10 min-w-[120px] items-center justify-center gap-2 rounded border border-stone-600/80 bg-black/20 px-4 text-sm font-bold text-stone-100 transition hover:border-stone-400"
+                        >
+                            <X className="h-4 w-4" />
+                            Rechazar
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => onSendCommand?.("/rankedaceptar")}
+                            disabled={confirmation.accepted}
+                            className="flex h-10 min-w-[140px] items-center justify-center gap-2 rounded border border-amber-300/80 bg-[linear-gradient(180deg,#f7c84f,#9b5a0c)] px-4 text-sm font-black text-stone-950 transition hover:brightness-110 disabled:cursor-default disabled:border-emerald-400/35 disabled:bg-none disabled:bg-emerald-950/35 disabled:text-emerald-200 disabled:hover:brightness-100"
+                        >
+                            {confirmation.accepted ? <Check className="h-4 w-4" /> : <Swords className="h-4 w-4" />}
+                            {confirmation.accepted ? "Aceptado" : "Aceptar"}
+                        </button>
+                    </div>
+                </div>
+            ) : null}
+        </>
     );
 }
 
@@ -3949,6 +4080,13 @@ export default function InventoryFloatingPanel({
                           </div>
                       </div>,
                       portalTarget ?? document.body,
+                  )
+                : null}
+
+            {overlayTarget
+                ? createPortal(
+                      <RankedGameplayOverlay hud={hud} onSendCommand={onSendCommand} />,
+                      overlayTarget,
                   )
                 : null}
 

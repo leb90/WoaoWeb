@@ -38,6 +38,28 @@ const MATCH_CONFIRMATION_MS = 20_000;
 type RankedTeam = "A" | "B";
 type ConfirmationKind = "PARTY_QUEUE" | "MATCH_FOUND";
 
+type ParticipantEquipmentSnapshot = {
+    idHead: number;
+    idHelmet: number;
+    idWeapon: number;
+    idShield: number;
+    idBody: number;
+    navigatingBodyId: number;
+    navegando: number;
+    idLastHead: number;
+    idLastHelmet: number;
+    idLastWeapon: number;
+    idLastShield: number;
+    idLastBody: number;
+    idItemWeapon: number | string;
+    idItemBody: number | string;
+    idItemShield: number | string;
+    idItemHelmet: number | string;
+    idItemArrow: number | string;
+    idItemRing: number | string;
+    equippedSlots: string[];
+};
+
 type RankedMatchParticipant = {
     id: string;
     persistedId: string;
@@ -49,6 +71,7 @@ type RankedMatchParticipant = {
         x: number;
         y: number;
     };
+    equipment: ParticipantEquipmentSnapshot;
 };
 
 type RankedActiveMatch = {
@@ -234,6 +257,83 @@ function getAllParticipants(match: RankedActiveMatch) {
 
 function getTeamNames(participants: readonly RankedMatchParticipant[]) {
     return participants.map((participant) => participant.name).join(" + ");
+}
+
+function buildEquipmentSnapshot(user: RuntimeCharacter): ParticipantEquipmentSnapshot {
+    const inventory = (user.inv ?? {}) as Record<string, { equipped?: number | boolean }>;
+    const equippedSlots = Object.entries(inventory)
+        .filter(([, item]) => Boolean(item?.equipped))
+        .map(([slot]) => slot);
+    const isNavigating = Boolean(user.navegando);
+
+    return {
+        idHead: Number((isNavigating ? user.idLastHead : user.idHead) ?? 0),
+        idHelmet: Number((isNavigating ? user.idLastHelmet : user.idHelmet) ?? 0),
+        idWeapon: Number((isNavigating ? user.idLastWeapon : user.idWeapon) ?? 0),
+        idShield: Number((isNavigating ? user.idLastShield : user.idShield) ?? 0),
+        idBody: Number((isNavigating ? user.idLastBody : user.idBody) ?? 0),
+        navigatingBodyId: Number(user.idBody ?? 0),
+        navegando: Number(user.navegando ?? 0),
+        idLastHead: Number(user.idLastHead ?? 0),
+        idLastHelmet: Number(user.idLastHelmet ?? 0),
+        idLastWeapon: Number(user.idLastWeapon ?? 0),
+        idLastShield: Number(user.idLastShield ?? 0),
+        idLastBody: Number(user.idLastBody ?? 0),
+        idItemWeapon: (user.idItemWeapon ?? 0) as number | string,
+        idItemBody: (user.idItemBody ?? 0) as number | string,
+        idItemShield: (user.idItemShield ?? 0) as number | string,
+        idItemHelmet: (user.idItemHelmet ?? 0) as number | string,
+        idItemArrow: (user.idItemArrow ?? 0) as number | string,
+        idItemRing: (user.idItemRing ?? 0) as number | string,
+        equippedSlots,
+    };
+}
+
+function restoreEquipment(user: RuntimeCharacter, snapshot: ParticipantEquipmentSnapshot) {
+    const inventory = (user.inv ?? {}) as Record<string, { equipped?: number | boolean }>;
+
+    for (const item of Object.values(inventory)) {
+        if (item) {
+            item.equipped = 0;
+        }
+    }
+
+    for (const slot of snapshot.equippedSlots) {
+        if (inventory[slot]) {
+            inventory[slot].equipped = 1;
+        }
+    }
+
+    user.idHead = snapshot.idHead;
+    user.idHelmet = snapshot.idHelmet;
+    user.idWeapon = snapshot.idWeapon;
+    user.idShield = snapshot.idShield;
+    user.idBody = snapshot.idBody;
+    user.idLastHead = snapshot.idLastHead;
+    user.idLastHelmet = snapshot.idLastHelmet;
+    user.idLastWeapon = snapshot.idLastWeapon;
+    user.idLastShield = snapshot.idLastShield;
+    user.idLastBody = snapshot.idLastBody;
+    user.idItemWeapon = snapshot.idItemWeapon;
+    user.idItemBody = snapshot.idItemBody;
+    user.idItemShield = snapshot.idItemShield;
+    user.idItemHelmet = snapshot.idItemHelmet;
+    user.idItemArrow = snapshot.idItemArrow;
+    user.idItemRing = snapshot.idItemRing;
+}
+
+function restoreNavigatingState(user: RuntimeCharacter, snapshot: ParticipantEquipmentSnapshot) {
+    if (!snapshot.navegando) {
+        user.navegando = 0;
+        return;
+    }
+
+    user.navegando = 1;
+    user.idBody = Number(snapshot.navigatingBodyId || 84);
+    user.idHead = 0;
+    user.idWeapon = 0;
+    user.idHelmet = 0;
+    user.idShield = 0;
 }
 
 function clearTimers(match: RankedActiveMatch) {
@@ -605,6 +705,8 @@ function prepareUserForRound(participant: RankedMatchParticipant, arena: RankedA
         mana: Number(user.maxMana ?? user.mana ?? 0),
     });
     game.setSpellInvisibility(user.id, false);
+    restoreEquipment(user, participant.equipment);
+    user.navegando = 0;
     user.hiddenSkill = false;
     user.invisibleSpell = false;
     user.envenenado = 0;
@@ -617,6 +719,7 @@ function prepareUserForRound(participant: RankedMatchParticipant, arena: RankedA
     user.rankedTeam = participant.team;
     user.rankedLockedUntil = lockedUntil;
 
+    game.refreshEquippedVisuals(user.id);
     game.telep(client, arena.map, spawn?.x ?? 50, spawn?.y ?? 50, `ranked-round-${participant.team}`);
     syncClient(client);
 }
@@ -663,6 +766,11 @@ function restoreParticipant(match: RankedActiveMatch, participant: RankedMatchPa
         mana: Number(user.maxMana ?? user.mana ?? 0),
     });
     game.setSpellInvisibility(user.id, false);
+    restoreEquipment(user, participant.equipment);
+    restoreNavigatingState(user, participant.equipment);
+    if (!participant.equipment.navegando) {
+        game.refreshEquippedVisuals(user.id);
+    }
     game.telep(
         client,
         participant.originalMap,
@@ -670,6 +778,10 @@ function restoreParticipant(match: RankedActiveMatch, participant: RankedMatchPa
         participant.originalPos.y,
         `ranked-return-${match.id}`,
     );
+    if (!participant.equipment.navegando) {
+        game.refreshEquippedVisuals(user.id);
+    }
+    syncClient(client);
 }
 
 function unregisterMatch(match: RankedActiveMatch) {
@@ -804,6 +916,7 @@ function buildParticipant(id: string, team: RankedTeam, rating: RankedRating): R
             x: Number(user.pos?.x ?? 50),
             y: Number(user.pos?.y ?? 50),
         },
+        equipment: buildEquipmentSnapshot(user),
     };
 }
 

@@ -1165,7 +1165,6 @@ export default function WoaoHubModal({
     const rankedConfirmation = rankedState?.confirmation ?? null;
     const selectedRankedConfirmation =
         rankedConfirmation?.mode === selectedRankedModeKey ? rankedConfirmation : null;
-    const rankedConfirmationId = rankedConfirmation?.id ?? null;
     const selectedRankedProgress = selectedRankedRank?.progress ?? { current: 0, required: 100, ratio: 0 };
     const selectedRankedWinrate =
         selectedRankedState && selectedRankedState.matchesPlayed > 0
@@ -1209,23 +1208,6 @@ export default function WoaoHubModal({
                   rank: selectedRankedRank ?? getRankFromElo(selectedRankedState.elo),
               }
             : null);
-    const [rankedNow, setRankedNow] = React.useState(() => Date.now());
-    React.useEffect(() => {
-        if (!rankedConfirmationId) {
-            return;
-        }
-
-        const timer = window.setInterval(() => setRankedNow(Date.now()), 250);
-        return () => window.clearInterval(timer);
-    }, [rankedConfirmationId]);
-    const rankedConfirmationRemainingMs = selectedRankedConfirmation
-        ? Math.max(0, selectedRankedConfirmation.expiresAt - rankedNow)
-        : 0;
-    const rankedConfirmationDurationMs =
-        selectedRankedConfirmation?.kind === "PARTY_QUEUE" ? 20_000 : 20_000;
-    const rankedConfirmationRatio = selectedRankedConfirmation
-        ? Math.max(0, Math.min(1, rankedConfirmationRemainingMs / rankedConfirmationDurationMs))
-        : 0;
     const automaticEvents = React.useMemo(() => buildAutomaticEvents(eventScheduleAnchor), [eventScheduleAnchor]);
     const visibleAutomaticEvents = React.useMemo(() => {
         return automaticEvents
@@ -2084,67 +2066,6 @@ export default function WoaoHubModal({
                                 </section>
                             </div>
 
-                            {selectedRankedConfirmation ? (
-                                <div className="rounded border border-amber-300/35 bg-[#160f08]/95 p-4 shadow-[0_18px_44px_rgba(0,0,0,0.38)]">
-                                    <div className="flex flex-wrap items-start justify-between gap-3">
-                                        <div>
-                                            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-200">
-                                                Confirmacion
-                                            </p>
-                                            <h4 className="mt-1 text-lg font-bold text-stone-50">
-                                                {selectedRankedConfirmation.title}
-                                            </h4>
-                                            <p className="mt-1 text-sm text-stone-300">
-                                                {selectedRankedConfirmation.description}
-                                            </p>
-                                        </div>
-                                        <div className="flex items-center gap-2 text-sm font-bold text-amber-100">
-                                            <Clock3 aria-hidden="true" className="h-4 w-4" />
-                                            {Math.ceil(rankedConfirmationRemainingMs / 1000)}s
-                                        </div>
-                                    </div>
-                                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-stone-800">
-                                        <div
-                                            className="h-full rounded-full bg-amber-300 transition-[width]"
-                                            style={{ width: `${Math.round(rankedConfirmationRatio * 100)}%` }}
-                                        />
-                                    </div>
-                                    <div className="mt-3 flex flex-wrap gap-2">
-                                        {selectedRankedConfirmation.participants.map((participant) => (
-                                            <span
-                                                key={participant.id}
-                                                className={`rounded border px-2.5 py-1 text-xs font-semibold ${
-                                                    participant.accepted
-                                                        ? "border-emerald-400/40 bg-emerald-950/30 text-emerald-200"
-                                                        : "border-stone-600/45 bg-black/30 text-stone-300"
-                                                }`}
-                                            >
-                                                {participant.accepted ? "OK " : ""}
-                                                {participant.name}
-                                            </span>
-                                        ))}
-                                    </div>
-                                    <div className="mt-4 flex flex-wrap justify-end gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => onSendCommand?.("/rankedrechazar")}
-                                            className="flex h-10 min-w-[130px] items-center justify-center gap-2 rounded border border-stone-600/70 px-4 text-sm font-bold text-stone-100 transition hover:border-stone-400"
-                                        >
-                                            <X aria-hidden="true" className="h-4 w-4" />
-                                            Rechazar
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => onSendCommand?.("/rankedaceptar")}
-                                            disabled={selectedRankedConfirmation.accepted}
-                                            className="flex h-10 min-w-[150px] items-center justify-center gap-2 rounded border border-amber-300/70 bg-[linear-gradient(180deg,#f7c84f,#9b5a0c)] px-4 text-sm font-bold text-stone-950 transition hover:brightness-110 disabled:cursor-default disabled:border-emerald-400/35 disabled:bg-none disabled:bg-emerald-950/30 disabled:text-emerald-200 disabled:hover:brightness-100"
-                                        >
-                                            <Check aria-hidden="true" className="h-4 w-4" />
-                                            {selectedRankedConfirmation.accepted ? "Aceptado" : "Aceptar"}
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : null}
                         </div>
                     ) : null}
 

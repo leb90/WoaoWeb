@@ -113,16 +113,23 @@ export default function CharactersPage() {
         setError(null);
 
         try {
-            const response = await fetch(
-                `/api/auth/delete-character/${encodeURIComponent(characterId)}`,
-                {
-                    method: "DELETE",
+            const response = await fetch(`/api/auth/delete-character`, {
+                method: "DELETE",
+                headers: {
+                    "Content-Type": "application/json",
                 },
-            );
+                body: JSON.stringify({ characterId }),
+            });
 
-            const result = (await response.json()) as
-                | AuthSession
-                | AuthErrorResponse;
+            const rawBody = await response.text();
+            let result: AuthSession | AuthErrorResponse;
+            try {
+                result = JSON.parse(rawBody) as AuthSession | AuthErrorResponse;
+            } catch {
+                throw new Error(
+                    `No se pudo borrar el personaje (respuesta invalida ${response.status}).`,
+                );
+            }
 
             if (!response.ok || "error" in result) {
                 throw new Error(

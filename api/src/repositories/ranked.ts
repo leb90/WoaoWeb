@@ -236,7 +236,41 @@ export async function completeRankedMatch(payload: unknown) {
     });
 }
 
-export async function getRankedLeaderboard(mode: string, page = 1, pageSize = 20) {
+type LeaderboardRow = {
+    character_id: string;
+    character_name: string;
+    clan_name: string | null;
+    elo: number;
+    wins: number;
+    losses: number;
+    win_streak: number;
+    best_win_streak: number;
+    matches_played: number;
+    highest_elo: number;
+};
+
+function toLeaderboardEntry(row: LeaderboardRow, position: number) {
+    return {
+        position,
+        characterId: row.character_id,
+        characterName: row.character_name,
+        clanName: row.clan_name,
+        elo: row.elo,
+        wins: row.wins,
+        losses: row.losses,
+        matchesPlayed: row.matches_played,
+        winStreak: row.win_streak,
+        bestWinStreak: row.best_win_streak,
+        highestElo: row.highest_elo,
+    };
+}
+
+export async function getRankedLeaderboard(
+    mode: string,
+    page = 1,
+    pageSize = 20,
+    selfCharacterId?: string,
+) {
     const parsedMode = rankedModeSchema.parse(mode);
     const safePage = Math.max(1, Math.floor(page));
     const safePageSize = Math.max(1, Math.min(100, Math.floor(pageSize)));
@@ -264,23 +298,55 @@ export async function getRankedLeaderboard(mode: string, page = 1, pageSize = 20
         [parsedMode],
     );
 
+    let selfEntry = null;
+
+    if (selfCharacterId) {
+        const selfResult = await pool.query(
+            `
+                WITH self_rating AS (
+                    SELECT rr.*, c.name AS character_name, cl.name AS clan_name
+                    FROM ranked_ratings rr
+                    JOIN characters c ON c.id = rr.character_id
+                    LEFT JOIN clans cl ON cl.id = c.clan_id
+                    WHERE rr.mode = $1 AND rr.character_id = $2::uuid AND c.deleted_at IS NULL
+                    LIMIT 1
+                )
+                SELECT self_rating.*,
+                    (
+                        SELECT COUNT(*)::int + 1
+                        FROM ranked_ratings rr2
+                        JOIN characters c2 ON c2.id = rr2.character_id
+                        WHERE rr2.mode = $1
+                            AND c2.deleted_at IS NULL
+                            AND (
+                                rr2.elo > self_rating.elo
+                                OR (rr2.elo = self_rating.elo AND rr2.wins > self_rating.wins)
+                                OR (
+                                    rr2.elo = self_rating.elo
+                                    AND rr2.wins = self_rating.wins
+                                    AND rr2.character_id::text < self_rating.character_id::text
+                                )
+                            )
+                    ) AS position
+                FROM self_rating
+            `,
+            [parsedMode, selfCharacterId],
+        );
+
+        const row = selfResult.rows[0];
+        if (row) {
+            selfEntry = toLeaderboardEntry(row, Number(row.position ?? 0));
+        }
+    }
+
     return {
         mode: parsedMode,
         page: safePage,
         pageSize: safePageSize,
         total: Number(countResult.rows[0]?.total ?? 0),
-        entries: result.rows.map((row, index) => ({
-            position: offset + index + 1,
-            characterId: row.character_id,
-            characterName: row.character_name,
-            clanName: row.clan_name,
-            elo: row.elo,
-            wins: row.wins,
-            losses: row.losses,
-            matchesPlayed: row.matches_played,
-            winStreak: row.win_streak,
-            bestWinStreak: row.best_win_streak,
-            highestElo: row.highest_elo,
-        })),
+        entries: result.rows.map((row, index) =>
+            toLeaderboardEntry(row, offset + index + 1),
+        ),
+        selfEntry,
     };
 }

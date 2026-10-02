@@ -14,9 +14,11 @@ import {
     type RankedQueueEntry,
 } from "./ranked";
 import {
+    fetchRankedLeaderboard,
     fetchRankedRating,
     fetchRankedRatings,
     persistRankedMatch,
+    type RankedLeaderboardResponse,
     type RankedRating,
 } from "./ranked/rankedRepository";
 import type { RuntimeCharacter, PartyRuntimeState } from "./types/runtime";
@@ -96,6 +98,24 @@ type RankedStatePayload = {
             rank: ReturnType<typeof getRankFromElo>;
         }
     >;
+    leaderboards: Record<
+        RankedMode,
+        {
+            page: number;
+            pageSize: number;
+            total: number;
+            entries: Array<RankedLeaderboardResponse["entries"][number] & {
+                winrate: number;
+                rank: ReturnType<typeof getRankFromElo>;
+            }>;
+            selfEntry:
+                | (RankedLeaderboardResponse["entries"][number] & {
+                      winrate: number;
+                      rank: ReturnType<typeof getRankFromElo>;
+                  })
+                | null;
+        }
+    >;
     queue: {
         status: "NONE" | "QUEUED" | "MATCH_FOUND" | "IN_MATCH";
         mode: RankedMode | null;
@@ -165,6 +185,27 @@ function broadcast(message: string) {
 function formatRating(elo: number) {
     const rank = getRankFromElo(elo);
     return `${rank.label} - ${elo} ELO`;
+}
+
+function getWinrate(wins: number, losses: number): number {
+    const total = Math.max(0, Number(wins) + Number(losses));
+    return total > 0 ? Math.round((Number(wins) / total) * 100) : 0;
+}
+
+function decorateLeaderboard(leaderboard: RankedLeaderboardResponse) {
+    const decorate = (entry: RankedLeaderboardResponse["entries"][number]) => ({
+        ...entry,
+        winrate: getWinrate(entry.wins, entry.losses),
+        rank: getRankFromElo(entry.elo),
+    });
+
+    return {
+        page: leaderboard.page,
+        pageSize: leaderboard.pageSize,
+        total: leaderboard.total,
+        entries: leaderboard.entries.map(decorate),
+        selfEntry: leaderboard.selfEntry ? decorate(leaderboard.selfEntry) : null,
+    };
 }
 
 function formatMode(mode: RankedMode) {
@@ -260,10 +301,13 @@ async function buildRankedState(idUser: string): Promise<RankedStatePayload | nu
         return null;
     }
 
-    const [rating1v1, rating2v2] = await Promise.all([
+    const [rating1v1, rating2v2, leaderboard1v1, leaderboard2v2] = await Promise.all([
         fetchRankedRating(persistedId, MODE_1V1),
         fetchRankedRating(persistedId, MODE_2V2),
+        fetchRankedLeaderboard(MODE_1V1, 1, 10, persistedId),
+        fetchRankedLeaderboard(MODE_2V2, 1, 10, persistedId),
     ]);
+    user.elo = rating1v1.elo;
     const queued = queueService.getByCharacterId(idUser);
     const match = activeMatchesByCharacter.get(idUser) ?? null;
     const participant = match ? getParticipantFromMatch(match, idUser) : null;
@@ -291,6 +335,10 @@ async function buildRankedState(idUser: string): Promise<RankedStatePayload | nu
                 highestElo: rating2v2.highestElo,
                 rank: getRankFromElo(rating2v2.elo),
             },
+        },
+        leaderboards: {
+            RANKED_1V1: decorateLeaderboard(leaderboard1v1),
+            RANKED_2V2: decorateLeaderboard(leaderboard2v2),
         },
         queue: match
             ? {

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import React from "react";
 import {
     Activity,
@@ -27,10 +28,16 @@ import type {
     MountStateEntry,
     MountStatePayload,
     QuestEntryState,
+    RankedLeaderboardEntryPayload,
     QuestStatePayload,
     RankedMode,
     RankedStatePayload,
 } from "../lib/aowProtocol";
+import {
+    getRankFromElo,
+    getRankTierVisual,
+    RANKED_TIER_VISUALS,
+} from "../lib/rankedVisuals";
 import type { GraphicData, ObjectsDB } from "../types/game";
 import { getTexturePath, loadGraphicsDB, loadObjectsDB } from "../utils/gameLoader";
 
@@ -128,17 +135,6 @@ const EVENT_CATEGORY_META: Record<EventCategory, { label: string; dotClass: stri
         badgeClass: "border-amber-300/70 bg-amber-950/35 text-amber-200",
     },
 };
-
-const RANKED_TIERS_PREVIEW = [
-    "Bronce",
-    "Plata",
-    "Oro",
-    "Platino",
-    "Diamante",
-    "Maestro",
-    "Gran Maestro",
-    "King",
-];
 
 const EVENT_STATUS_META: Record<EventStatus, { label: string; dotClass: string; textClass: string }> = {
     available: {
@@ -620,6 +616,49 @@ function PremioGraphic({
     );
 }
 
+function RankedHelpButton({ label }: { label: string }) {
+    return (
+        <button
+            type="button"
+            title={label}
+            className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-300/45 bg-black/35 text-[12px] font-black leading-none text-amber-200 transition hover:border-amber-200 hover:bg-amber-300/12"
+            aria-label={label}
+        >
+            ?
+        </button>
+    );
+}
+
+function RankedRankBadge({
+    rank,
+    compact = false,
+}: {
+    rank: RankedLeaderboardEntryPayload["rank"];
+    compact?: boolean;
+}) {
+    const visual = getRankTierVisual(rank.tier);
+
+    return (
+        <span className="inline-flex min-w-0 items-center gap-2">
+            <Image
+                src={visual.asset}
+                alt=""
+                width={compact ? 24 : 32}
+                height={compact ? 24 : 32}
+                className={compact ? "h-6 w-6 object-contain" : "h-8 w-8 object-contain"}
+                draggable={false}
+                unoptimized
+            />
+            <span
+                className={compact ? "truncate text-xs font-semibold" : "truncate text-sm font-semibold"}
+                style={{ color: visual.textColor }}
+            >
+                {rank.label}
+            </span>
+        </span>
+    );
+}
+
 function MountGraphic({
     mount,
     objectsDB,
@@ -1014,6 +1053,7 @@ export default function WoaoHubModal({
     const [premioQuantities, setPremioQuantities] = React.useState<Record<string, number>>({});
     const [selectedMountId, setSelectedMountId] = React.useState<string | null>(null);
     const [rankedMode, setRankedMode] = React.useState<"1v1" | "2v2">("1v1");
+    const [rankedSearch, setRankedSearch] = React.useState("");
     const [eventCategoryFilter, setEventCategoryFilter] = React.useState<EventCategoryFilter>("all");
     const [selectedEventDetail, setSelectedEventDetail] = React.useState<AutomaticEvent | null>(null);
     const [eventScheduleAnchor] = React.useState(() => Date.now());
@@ -1131,6 +1171,44 @@ export default function WoaoHubModal({
         selectedRankedState && selectedRankedState.matchesPlayed > 0
             ? Math.round((selectedRankedState.wins / selectedRankedState.matchesPlayed) * 100)
             : 0;
+    const selectedRankedVisual = getRankTierVisual(selectedRankedRank?.tier);
+    const selectedRankedLeaderboard = rankedState?.leaderboards?.[selectedRankedModeKey] ?? null;
+    const selectedRankedEntries = React.useMemo(
+        () => selectedRankedLeaderboard?.entries ?? [],
+        [selectedRankedLeaderboard?.entries],
+    );
+    const normalizedRankedSearch = normalizeSearchText(rankedSearch.trim());
+    const visibleRankedEntries = React.useMemo(() => {
+        if (!normalizedRankedSearch) {
+            return selectedRankedEntries;
+        }
+
+        return selectedRankedEntries.filter((entry) => {
+            const haystack = normalizeSearchText(
+                `${entry.position} ${entry.characterName} ${entry.clanName ?? ""} ${entry.rank.label} ${entry.elo}`,
+            );
+            return haystack.includes(normalizedRankedSearch);
+        });
+    }, [normalizedRankedSearch, selectedRankedEntries]);
+    const ownRankedEntry: RankedLeaderboardEntryPayload | null =
+        selectedRankedLeaderboard?.selfEntry ??
+        (selectedRankedState
+            ? {
+                  position: 0,
+                  characterId: "",
+                  characterName: "Tu personaje",
+                  clanName: null,
+                  elo: selectedRankedState.elo,
+                  wins: selectedRankedState.wins,
+                  losses: selectedRankedState.losses,
+                  matchesPlayed: selectedRankedState.matchesPlayed,
+                  winStreak: selectedRankedState.winStreak,
+                  bestWinStreak: selectedRankedState.bestWinStreak,
+                  highestElo: selectedRankedState.highestElo,
+                  winrate: selectedRankedWinrate,
+                  rank: selectedRankedRank ?? getRankFromElo(selectedRankedState.elo),
+              }
+            : null);
     const [rankedNow, setRankedNow] = React.useState(() => Date.now());
     React.useEffect(() => {
         if (!rankedConfirmationId) {
@@ -1262,6 +1340,8 @@ export default function WoaoHubModal({
     const hubHeightClass =
         tab === "eventos"
             ? "h-[min(760px,calc(100vh-32px))]"
+            : tab === "ranked"
+              ? "h-[min(820px,calc(100vh-24px))]"
             : tab === "premios"
               ? "h-[min(820px,calc(100vh-24px))]"
             : tab === "montura"
@@ -1270,6 +1350,8 @@ export default function WoaoHubModal({
     const hubWidthClass =
         tab === "eventos"
             ? "md:w-[min(1140px,calc(100vw-32px))]"
+            : tab === "ranked"
+              ? "md:w-[min(1420px,calc(100vw-28px))]"
             : tab === "premios"
               ? "md:w-[min(1320px,calc(100vw-28px))]"
               : tab === "montura"
@@ -1278,7 +1360,7 @@ export default function WoaoHubModal({
                   ? ""
                   : "md:w-[min(620px,calc(100vw-32px))]";
     const contentOverflowClass =
-        tab === "premios" || tab === "montura" || tab === "eventos" ? "overflow-hidden" : "overflow-y-auto";
+        tab === "premios" || tab === "ranked" || tab === "montura" || tab === "eventos" ? "overflow-hidden" : "overflow-y-auto";
 
     if (tab === "misiones" && questDialog) {
         return (
@@ -1724,7 +1806,7 @@ export default function WoaoHubModal({
 
                     {tab === "ranked" ? (
                         <div className="flex h-full min-h-0 flex-col gap-3">
-                            <div className="flex gap-2">
+                            <div className="flex shrink-0 gap-2">
                                 {(["1v1", "2v2"] as const).map((mode) => {
                                     const selected = rankedMode === mode;
 
@@ -1745,128 +1827,259 @@ export default function WoaoHubModal({
                                 })}
                             </div>
 
-                            <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
-                                <section className="rounded border border-amber-200/12 bg-black/24 p-4">
-                                    <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-amber-200">
-                                        Tu rango actual
-                                    </p>
-                                    <div className="mt-4 flex items-center gap-4">
-                                        <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded border border-amber-300/25 bg-[radial-gradient(circle_at_50%_35%,rgba(245,158,11,0.22),rgba(0,0,0,0.28)_62%)]">
-                                            <Shield aria-hidden="true" className="h-14 w-14 text-amber-200" strokeWidth={1.4} />
+                            <div className="grid min-h-0 flex-1 gap-3 xl:grid-cols-[minmax(0,0.78fr)_minmax(0,1.02fr)]">
+                                <div className="flex min-h-0 flex-col gap-3">
+                                    <section className="rounded border border-amber-300/30 bg-black/24 p-4 shadow-[inset_0_0_36px_rgba(245,158,11,0.06)]">
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-amber-200">
+                                                Tu rango actual ({rankedMode === "1v1" ? "1 vs 1" : "2 vs 2"})
+                                            </p>
+                                            <RankedHelpButton label="El rango se calcula por ELO y sube por divisiones hasta King." />
                                         </div>
-                                        <div className="min-w-0 flex-1">
-                                            <p className="text-xs font-semibold text-amber-200">
-                                                {rankedMode === "1v1" ? "Ranked 1v1" : "Ranked 2v2"}
-                                            </p>
-                                            <h4 className="mt-1 text-2xl font-bold text-stone-50">
-                                                {selectedRankedRank?.label ?? "Bronce V"}
-                                            </h4>
-                                            <p className="mt-1 text-sm text-stone-300">
-                                                ELO: {selectedRankedState?.elo ?? 0}
-                                            </p>
-                                            <div className="mt-3 h-2 overflow-hidden rounded-full bg-stone-700/70">
-                                                <div
-                                                    className="h-full rounded-full bg-amber-300"
-                                                    style={{
-                                                        width: `${Math.round(Math.max(0, Math.min(1, selectedRankedProgress.ratio)) * 100)}%`,
-                                                    }}
+
+                                        <div className="mt-4 grid grid-cols-[164px_minmax(0,1fr)] gap-5">
+                                            <div
+                                                className="flex h-[154px] items-center justify-center rounded border bg-black/24"
+                                                style={{
+                                                    borderColor: selectedRankedVisual.textColor,
+                                                    boxShadow: `0 0 28px ${selectedRankedVisual.glow}`,
+                                                }}
+                                            >
+                                                <Image
+                                                    src={selectedRankedVisual.asset}
+                                                    alt=""
+                                                    width={132}
+                                                    height={132}
+                                                    className="h-[132px] w-[132px] object-contain"
+                                                    draggable={false}
+                                                    unoptimized
                                                 />
                                             </div>
-                                            <p className="mt-1 text-xs text-stone-400">
-                                                {selectedRankedRank?.tier === "KING"
-                                                    ? "Rango maximo"
-                                                    : `${selectedRankedProgress.current} / ${selectedRankedProgress.required} hacia la proxima division`}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
-                                        {[
-                                            ["Victorias", String(selectedRankedState?.wins ?? 0)],
-                                            ["Derrotas", String(selectedRankedState?.losses ?? 0)],
-                                            ["Winrate", `${selectedRankedWinrate}%`],
-                                            ["Partidas", String(selectedRankedState?.matchesPlayed ?? 0)],
-                                        ].map(([label, value]) => (
-                                            <div key={label} className="rounded border border-amber-200/10 bg-black/20 px-3 py-2">
-                                                <p className="text-xs text-stone-400">{label}</p>
-                                                <p className="text-base font-bold text-stone-100">{value}</p>
+                                            <div className="min-w-0 py-2">
+                                                <h4 className="truncate text-3xl font-black text-stone-50">
+                                                    {selectedRankedRank?.label ?? "Bronce V"}
+                                                </h4>
+                                                <p className="mt-3 text-xl font-semibold text-stone-200">
+                                                    ELO: {formatAmount(selectedRankedState?.elo ?? 0)}
+                                                </p>
+                                                <div className="mt-3 h-2.5 overflow-hidden rounded-full border border-white/15 bg-black/45">
+                                                    <div
+                                                        className="h-full rounded-full"
+                                                        style={{
+                                                            width: `${Math.round(Math.max(0, Math.min(1, selectedRankedProgress.ratio)) * 100)}%`,
+                                                            background: `linear-gradient(90deg, ${selectedRankedVisual.textColor}, #f8d47b)`,
+                                                        }}
+                                                    />
+                                                </div>
+                                                <p className="mt-2 text-sm text-stone-300">
+                                                    {selectedRankedRank?.tier === "KING"
+                                                        ? "Rango maximo"
+                                                        : `${selectedRankedProgress.current} / ${selectedRankedProgress.required} hacia la proxima division`}
+                                                </p>
                                             </div>
-                                        ))}
-                                    </div>
-                                </section>
-
-                                <section className="flex min-h-0 flex-col rounded border border-amber-200/12 bg-black/24 p-4">
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div>
-                                            <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-amber-200">
-                                                Matchmaking
-                                            </p>
-                                            <h4 className="mt-1 text-xl font-bold text-stone-50">
-                                                {rankedMode === "1v1" ? "Duelos Ranked 1 vs 1" : "Duelos Ranked 2 vs 2"}
-                                            </h4>
                                         </div>
-                                        <span className="rounded border border-emerald-400/35 bg-emerald-950/25 px-2 py-1 text-xs font-semibold text-emerald-200">
-                                            Server authoritative
-                                        </span>
-                                    </div>
 
-                                    <div className="mt-4 grid gap-2 text-sm text-stone-200 sm:grid-cols-2">
-                                        {[
-                                            ["Mejor de 3", Swords],
-                                            ["Sin mascotas ni monturas", PawPrint],
-                                            ["Solo desde ciudad segura", MapPin],
-                                            ["Busqueda progresiva por ELO", Target],
-                                            ["ELO separado por modo", Activity],
-                                            ["Ranking global persistente", Shield],
-                                        ].map(([label, Icon]) => (
-                                            <div key={String(label)} className="flex items-center gap-2 rounded border border-amber-200/10 bg-black/18 px-3 py-2">
-                                                <Icon aria-hidden="true" className="h-4 w-4 shrink-0 text-amber-200" strokeWidth={1.7} />
-                                                <span>{String(label)}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    <div className="mt-4 rounded border border-amber-200/10 bg-black/22 p-3">
-                                        <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-200">
-                                            Rangos
-                                        </p>
-                                        <div className="mt-2 flex flex-wrap gap-1.5">
-                                            {RANKED_TIERS_PREVIEW.map((tier) => (
-                                                <span key={tier} className="rounded border border-amber-200/12 bg-[#1c130d] px-2 py-1 text-[11px] font-semibold text-stone-200">
-                                                    {tier}
-                                                </span>
+                                        <div className="mt-3 grid grid-cols-5 gap-2 text-sm">
+                                            {[
+                                                ["Victorias", String(selectedRankedState?.wins ?? 0)],
+                                                ["Derrotas", String(selectedRankedState?.losses ?? 0)],
+                                                ["Winrate", `${selectedRankedWinrate}%`],
+                                                ["Partidas", String(selectedRankedState?.matchesPlayed ?? 0)],
+                                                ["Racha actual", String(selectedRankedState?.winStreak ?? 0)],
+                                            ].map(([label, value]) => (
+                                                <div key={label} className="rounded border border-amber-200/12 bg-black/22 px-3 py-2">
+                                                    <p className="truncate text-xs text-stone-400">{label}</p>
+                                                    <p className="mt-1 text-lg font-black text-stone-100">{value}</p>
+                                                </div>
                                             ))}
                                         </div>
+                                    </section>
+
+                                    <section className="rounded border border-amber-300/20 bg-black/24 p-4">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-amber-200">
+                                                        Estado de cola
+                                                    </p>
+                                                    <RankedHelpButton label="La busqueda abre desde zona segura. 2 vs 2 requiere party exacta de dos jugadores." />
+                                                </div>
+                                                <p className="mt-2 line-clamp-2 text-sm text-stone-300">
+                                                    {selectedRankedMatch
+                                                        ? `En combate contra ${selectedRankedMatch.opponentName}. Marcador ${selectedRankedMatch.scoreA}-${selectedRankedMatch.scoreB}, arena #${selectedRankedMatch.arenaMapId}.`
+                                                        : selectedRankedConfirmation
+                                                          ? `${selectedRankedConfirmation.title}: ${selectedRankedConfirmation.acceptedCount}/${selectedRankedConfirmation.requiredCount} aceptaron.`
+                                                        : selectedRankedQueue?.status === "QUEUED"
+                                                          ? selectedRankedQueue.searchRange
+                                                              ? `Buscando rival. Rango actual: ${selectedRankedQueue.searchRange.minElo}-${selectedRankedQueue.searchRange.maxElo} ELO.`
+                                                              : "Buscando rival Ranked."
+                                                          : rankedMode === "1v1"
+                                                            ? "Listo para buscar duelo individual."
+                                                            : "Listo para anotar party 2 vs 2."}
+                                                </p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    onSendCommand?.(rankedMode === "1v1" ? "/ranked" : "/ranked 2v2");
+                                                }}
+                                                className="flex h-14 min-w-[260px] items-center justify-center gap-3 rounded border border-amber-300/75 bg-[linear-gradient(180deg,#f7c84f,#9b5a0c)] px-5 text-lg font-black text-stone-950 shadow-[0_0_22px_rgba(245,158,11,0.24)] transition hover:brightness-110"
+                                            >
+                                                <Swords aria-hidden="true" className="h-6 w-6" strokeWidth={2} />
+                                                {selectedRankedQueue?.status === "QUEUED"
+                                                    ? "Cancelar busqueda"
+                                                    : rankedMode === "1v1"
+                                                      ? "Buscar rival 1 vs 1"
+                                                      : "Anotar party 2 vs 2"}
+                                            </button>
+                                        </div>
+                                    </section>
+
+                                    <section className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(210px,0.55fr)] gap-3">
+                                        <div className="rounded border border-amber-300/20 bg-black/24 p-4">
+                                            <div className="flex items-center gap-2">
+                                                <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-amber-200">
+                                                    Mapas de duelo
+                                                </p>
+                                                <RankedHelpButton label="El sistema puede reservar varias arenas para que haya duelos simultaneos." />
+                                            </div>
+                                            <div className="mt-3 grid grid-cols-3 gap-2 text-center text-sm text-stone-200">
+                                                {[
+                                                    "Arena Ulla (mapa 211)",
+                                                    "Coliseo (mapa 212)",
+                                                    "Isla del Caos (mapa 213)",
+                                                    "Templo Antiguo (mapa 214)",
+                                                    "Ruinas (mapa 215)",
+                                                ].map((mapName) => (
+                                                    <div key={mapName} className="rounded border border-amber-200/12 bg-black/22 px-2 py-2">
+                                                        {mapName}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="rounded border border-amber-300/20 bg-black/24 p-4">
+                                            <div className="flex items-center gap-2">
+                                                <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-amber-200">
+                                                    Rangos
+                                                </p>
+                                                <RankedHelpButton label="Cada rango tiene cinco divisiones. King no tiene division." />
+                                            </div>
+                                            <div className="mt-3 grid grid-cols-4 gap-2">
+                                                {RANKED_TIER_VISUALS.map((tier) => (
+                                                    <div key={tier.id} title={tier.label} className="flex h-10 items-center justify-center rounded border border-amber-200/10 bg-black/22">
+                                                        <Image
+                                                            src={tier.asset}
+                                                            alt={tier.label}
+                                                            width={32}
+                                                            height={32}
+                                                            className="h-8 w-8 object-contain"
+                                                            draggable={false}
+                                                            unoptimized
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </section>
+                                </div>
+
+                                <section className="flex min-h-0 flex-col rounded border border-amber-300/25 bg-black/24 p-4">
+                                    <div className="flex shrink-0 items-center justify-between gap-3">
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-amber-200">
+                                                Ranking global ({rankedMode === "1v1" ? "1 vs 1" : "2 vs 2"})
+                                            </p>
+                                            <RankedHelpButton label="Ranking persistente ordenado por ELO, victorias y posicion global." />
+                                        </div>
+                                        <label className="flex h-10 w-[260px] items-center gap-2 rounded border border-amber-200/20 bg-black/28 px-3 text-sm text-stone-300">
+                                            <Search aria-hidden="true" className="h-4 w-4 shrink-0 text-amber-200/80" strokeWidth={1.8} />
+                                            <input
+                                                value={rankedSearch}
+                                                onChange={(event) => setRankedSearch(event.target.value)}
+                                                placeholder="Buscar jugador..."
+                                                className="min-w-0 flex-1 bg-transparent text-sm text-stone-100 outline-none placeholder:text-stone-500"
+                                            />
+                                        </label>
                                     </div>
 
-                                    <div className="mt-auto flex flex-wrap items-end justify-between gap-3 border-t border-amber-200/10 pt-4">
-                                        <div className="max-w-[360px] text-sm text-stone-300">
-                                            {selectedRankedMatch
-                                                ? `En combate contra ${selectedRankedMatch.opponentName}. Marcador ${selectedRankedMatch.scoreA}-${selectedRankedMatch.scoreB}, arena #${selectedRankedMatch.arenaMapId}.`
-                                                : selectedRankedConfirmation
-                                                  ? `${selectedRankedConfirmation.title}: ${selectedRankedConfirmation.acceptedCount}/${selectedRankedConfirmation.requiredCount} aceptaron.`
-                                                : selectedRankedQueue?.status === "QUEUED"
-                                                  ? selectedRankedQueue.searchRange
-                                                      ? `Buscando rival. Rango actual: ${selectedRankedQueue.searchRange.minElo}-${selectedRankedQueue.searchRange.maxElo} ELO.`
-                                                      : "Buscando rival Ranked."
-                                                  : rankedMode === "1v1"
-                                                    ? "Entras a cola desde una ciudad o zona segura. Si salis de la zona o moris, se cancela."
-                                                    : "2v2 requiere party exacta de 2. Tu companero debe aceptar antes de entrar a cola."}
+                                    <div className="mt-3 min-h-0 flex-1 overflow-hidden rounded border border-amber-200/10">
+                                        <table className="h-full w-full table-fixed border-collapse text-sm">
+                                            <thead className="bg-[#20170f] text-left text-xs text-stone-300">
+                                                <tr>
+                                                    <th className="w-[54px] px-3 py-2">#</th>
+                                                    <th className="px-3 py-2">Jugador</th>
+                                                    <th className="w-[158px] px-3 py-2">Rango</th>
+                                                    <th className="w-[86px] px-3 py-2">ELO</th>
+                                                    <th className="w-[88px] px-3 py-2">Victorias</th>
+                                                    <th className="w-[88px] px-3 py-2">Derrotas</th>
+                                                    <th className="w-[82px] px-3 py-2">Winrate</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {visibleRankedEntries.length ? (
+                                                    visibleRankedEntries.slice(0, 10).map((entry) => (
+                                                        <tr key={entry.characterId} className="border-t border-amber-200/8 text-stone-200">
+                                                            <td className="px-3 py-2 font-black text-stone-100">{entry.position}</td>
+                                                            <td className="whitespace-normal break-words px-3 py-2 font-semibold leading-4">
+                                                                {entry.characterName}
+                                                            </td>
+                                                            <td className="px-3 py-2">
+                                                                <RankedRankBadge rank={entry.rank} compact />
+                                                            </td>
+                                                            <td className="px-3 py-2 font-semibold">{formatAmount(entry.elo)}</td>
+                                                            <td className="px-3 py-2">{formatAmount(entry.wins)}</td>
+                                                            <td className="px-3 py-2">{formatAmount(entry.losses)}</td>
+                                                            <td className="px-3 py-2 font-black text-emerald-400">{entry.winrate}%</td>
+                                                        </tr>
+                                                    ))
+                                                ) : (
+                                                    <tr>
+                                                        <td colSpan={7} className="px-3 py-10 text-center text-sm text-stone-400">
+                                                            No hay jugadores para mostrar.
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <div className="mt-3 flex shrink-0 items-center justify-between gap-3">
+                                        <div className="text-xs text-stone-400">
+                                            Top {selectedRankedLeaderboard?.entries.length ?? 0} de {formatAmount(selectedRankedLeaderboard?.total ?? 0)}
                                         </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                onSendCommand?.(rankedMode === "1v1" ? "/ranked" : "/ranked 2v2");
-                                            }}
-                                            className="flex h-12 min-w-[190px] items-center justify-center gap-2 rounded border border-amber-300/70 bg-[linear-gradient(180deg,#f7c84f,#9b5a0c)] px-5 text-sm font-bold text-stone-950 shadow-[0_0_18px_rgba(245,158,11,0.2)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:border-stone-600/50 disabled:bg-none disabled:bg-stone-800 disabled:text-stone-500 disabled:shadow-none disabled:hover:brightness-100"
-                                        >
-                                            <Swords aria-hidden="true" className="h-4 w-4" strokeWidth={2} />
-                                            {selectedRankedQueue?.status === "QUEUED"
-                                                ? "Cancelar busqueda"
-                                                : rankedMode === "1v1"
-                                                  ? "Buscar rival 1 vs 1"
-                                                  : "Anotar party 2 vs 2"}
-                                        </button>
+                                        <div className="flex items-center gap-2 text-sm text-stone-300">
+                                            <button type="button" className="h-8 w-8 rounded border border-amber-200/20 text-stone-300">‹</button>
+                                            <span className="flex h-8 w-8 items-center justify-center rounded border border-amber-300 text-amber-100">1</span>
+                                            <span>2</span>
+                                            <span>3</span>
+                                            <span>...</span>
+                                            <button type="button" className="h-8 w-8 rounded border border-amber-200/20 text-stone-300">›</button>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-3 shrink-0 rounded border border-amber-300/20 bg-black/24 p-3">
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-amber-200">
+                                                Tu posicion
+                                            </p>
+                                            <RankedHelpButton label="Tu posicion global dentro del modo seleccionado." />
+                                        </div>
+                                        {ownRankedEntry ? (
+                                            <div className="mt-2 grid grid-cols-[70px_minmax(180px,1fr)_160px_80px_72px_72px_76px] items-center gap-2 rounded border border-amber-200/12 bg-black/28 px-3 py-2 text-sm text-stone-200">
+                                                <span className="text-xl font-black text-stone-50">
+                                                    {ownRankedEntry.position > 0 ? ownRankedEntry.position : "-"}
+                                                </span>
+                                                <span className="whitespace-normal break-words font-semibold leading-4">{ownRankedEntry.characterName}</span>
+                                                <RankedRankBadge rank={ownRankedEntry.rank} compact />
+                                                <span>{formatAmount(ownRankedEntry.elo)}</span>
+                                                <span>{formatAmount(ownRankedEntry.wins)}</span>
+                                                <span>{formatAmount(ownRankedEntry.losses)}</span>
+                                                <span className="font-black text-stone-50">{ownRankedEntry.winrate}%</span>
+                                            </div>
+                                        ) : (
+                                            <p className="mt-2 text-sm text-stone-400">Sin posicion registrada todavia.</p>
+                                        )}
                                     </div>
                                 </section>
                             </div>

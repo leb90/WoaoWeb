@@ -1,12 +1,12 @@
 [
-  { "npcId": 616, "npcName": "Unicornio", "mountTypeId": 1, "eggItemId": 1529, "chancePercent": 5 },
-  { "npcId": 617, "npcName": "Caballo Negro", "mountTypeId": 2, "eggItemId": 1520, "chancePercent": 5 },
-  { "npcId": 618, "npcName": "Tigre Blanco", "mountTypeId": 3, "eggItemId": 1528, "chancePercent": 5 },
-  { "npcId": 619, "npcName": "Elefante", "mountTypeId": 4, "eggItemId": 1522, "chancePercent": 5 },
-  { "npcId": 620, "npcName": "Dragon Dorado", "mountTypeId": 5, "eggItemId": 1524, "chancePercent": 2 },
-  { "npcId": 669, "npcName": "Jabato", "mountTypeId": 6, "eggItemId": 1525, "chancePercent": 5 },
-  { "npcId": 672, "npcName": "Rinosaurio", "mountTypeId": 9, "eggItemId": 1527, "chancePercent": 5 },
-  { "npcId": 673, "npcName": "Cerbero", "mountTypeId": 10, "eggItemId": 1521, "chancePercent": 5 },
-  { "npcId": 674, "npcName": "Wyvern", "mountTypeId": 11, "eggItemId": 1530, "chancePercent": 5 },
-  { "npcId": 675, "npcName": "Avestruz", "mountTypeId": 12, "eggItemId": 1519, "chancePercent": 5 }
+  { "npcId": 616, "npcName": "Unicornio", "mountTypeId": 1, "eggItemId": 1529, "chancePercent": 10 },
+  { "npcId": 617, "npcName": "Caballo Negro", "mountTypeId": 2, "eggItemId": 1520, "chancePercent": 10 },
+  { "npcId": 618, "npcName": "Tigre Blanco", "mountTypeId": 3, "eggItemId": 1528, "chancePercent": 10 },
+  { "npcId": 619, "npcName": "Elefante", "mountTypeId": 4, "eggItemId": 1522, "chancePercent": 10 },
+  { "npcId": 620, "npcName": "Dragon Dorado", "mountTypeId": 5, "eggItemId": 1524, "chancePercent": 10 },
+  { "npcId": 669, "npcName": "Jabato", "mountTypeId": 6, "eggItemId": 1525, "chancePercent": 10 },
+  { "npcId": 672, "npcName": "Rinosaurio", "mountTypeId": 9, "eggItemId": 1527, "chancePercent": 10 },
+  { "npcId": 673, "npcName": "Cerbero", "mountTypeId": 10, "eggItemId": 1521, "chancePercent": 10 },
+  { "npcId": 674, "npcName": "Wyvern", "mountTypeId": 11, "eggItemId": 1530, "chancePercent": 10 },
+  { "npcId": 675, "npcName": "Avestruz", "mountTypeId": 12, "eggItemId": 1519, "chancePercent": 10 }
 ]

@@ -3037,7 +3037,8 @@ const command: CommandApi = {
                 case "/activarmontura": {
                     const mounts = require("./mounts") as typeof import("./mounts");
                     const result = mounts.rideMountByRef(user, nextText.trim());
-                    handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    handleProtocol.console(result.message, result.ok ? "#E69500" : "white", 1, 0, ws as CommandClient);
+                    // Montar solo activa la mascota; no regenera el item en inventario.
                     mounts.sendMountState(String(clientId));
                     break;
                 }

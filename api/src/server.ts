@@ -2752,6 +2752,7 @@ app.get(
                     String(request.query.mode ?? "RANKED_1V1"),
                     Number(request.query.page ?? 1),
                     Number(request.query.pageSize ?? 20),
+                    String(request.query.characterId ?? "").trim() || undefined,
                 ),
             );
         } catch (error) {

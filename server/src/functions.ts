@@ -109,30 +109,48 @@ function Funct(this: any) {
     this.fetchUrl = async <T>(url: string, options: RequestInit = {}): Promise<T> => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), API_REQUEST_TIMEOUT_MS);
+        const targetUrl = config.apiBaseUrl + url;
 
         let response: Response;
 
         try {
-            response = await fetch(config.apiBaseUrl + url, {
+            response = await fetch(targetUrl, {
                 ...options,
                 signal: controller.signal,
             });
         } catch (error) {
             if (error instanceof Error && error.name === "AbortError") {
-                throw new Error(`API request timed out after ${API_REQUEST_TIMEOUT_MS}ms`);
+                throw new Error(`API request timed out after ${API_REQUEST_TIMEOUT_MS}ms: ${targetUrl}`);
             }
 
-            throw error;
+            const message = error instanceof Error ? error.message : String(error);
+            throw new Error(`No se pudo conectar con la API en ${targetUrl}: ${message}`);
         } finally {
             clearTimeout(timeoutId);
         }
 
-        const result = await response.json();
+        const rawBody = await response.text();
+        let result: unknown = null;
+
+        if (rawBody.trim()) {
+            try {
+                result = JSON.parse(rawBody) as unknown;
+            } catch {
+                const preview = rawBody.replace(/\s+/g, " ").trim().slice(0, 180);
+                throw new Error(
+                    `La API devolvio una respuesta no JSON en ${targetUrl} (${response.status}): ${preview || "sin cuerpo"}`,
+                );
+            }
+        }
 
         if (!response.ok) {
+            const apiError =
+                result && typeof result === "object" && "error" in result
+                    ? (result as { error?: unknown }).error
+                    : null;
             const message =
-                typeof result === "object" && result && "error" in result && typeof result.error === "string"
-                    ? result.error
+                typeof apiError === "string"
+                    ? apiError
                     : `Request failed with status ${response.status}`;
 
             throw new Error(message);

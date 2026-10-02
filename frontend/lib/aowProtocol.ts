@@ -783,8 +783,33 @@ export type RankedModeState = {
     rank: RankedRankPayload;
 };
 
+export type RankedLeaderboardEntryPayload = {
+    position: number;
+    characterId: string;
+    characterName: string;
+    clanName: string | null;
+    elo: number;
+    wins: number;
+    losses: number;
+    matchesPlayed: number;
+    winStreak: number;
+    bestWinStreak: number;
+    highestElo: number;
+    winrate: number;
+    rank: RankedRankPayload;
+};
+
+export type RankedLeaderboardPayload = {
+    page: number;
+    pageSize: number;
+    total: number;
+    entries: RankedLeaderboardEntryPayload[];
+    selfEntry: RankedLeaderboardEntryPayload | null;
+};
+
 export type RankedStatePayload = {
     modes: Record<RankedMode, RankedModeState>;
+    leaderboards?: Partial<Record<RankedMode, RankedLeaderboardPayload>>;
     queue: {
         status: "NONE" | "QUEUED" | "MATCH_FOUND" | "IN_MATCH";
         mode: RankedMode | null;

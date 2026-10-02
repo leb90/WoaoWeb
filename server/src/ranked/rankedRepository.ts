@@ -15,6 +15,29 @@ export type RankedRating = {
     highestElo: number;
 };
 
+export type RankedLeaderboardEntry = {
+    position: number;
+    characterId: string;
+    characterName: string;
+    clanName: string | null;
+    elo: number;
+    wins: number;
+    losses: number;
+    matchesPlayed: number;
+    winStreak: number;
+    bestWinStreak: number;
+    highestElo: number;
+};
+
+export type RankedLeaderboardResponse = {
+    mode: RankedMode;
+    page: number;
+    pageSize: number;
+    total: number;
+    entries: RankedLeaderboardEntry[];
+    selfEntry: RankedLeaderboardEntry | null;
+};
+
 export type CompleteRankedMatchParticipant = {
     characterId: string;
     team: "A" | "B";
@@ -75,4 +98,25 @@ export async function persistRankedMatch(payload: CompleteRankedMatchPayload): P
             "Content-Type": "application/json",
         }),
     })) as { id: string; status: string };
+}
+
+export async function fetchRankedLeaderboard(
+    mode: RankedMode,
+    page = 1,
+    pageSize = 10,
+    characterId?: string,
+): Promise<RankedLeaderboardResponse> {
+    const query = new URLSearchParams({
+        mode,
+        page: String(page),
+        pageSize: String(pageSize),
+    });
+
+    if (characterId) {
+        query.set("characterId", characterId);
+    }
+
+    return (await funct.fetchUrl(`/internal/ranked/leaderboard?${query.toString()}`, {
+        headers: authHeaders(),
+    })) as RankedLeaderboardResponse;
 }

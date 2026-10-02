@@ -56,7 +56,7 @@ export function getRankedEligibility(
         return result("PARTY_REQUIRED", "Tu party debe tener exactamente 2 jugadores.");
     }
 
-    if (context.isQueued || context.isInMatch || user.rankedArena || user.rankedMatchId) {
+    if (context.isInMatch || user.rankedArena || user.rankedMatchId) {
         return result("IN_RANKED", "Ya estas participando en Ranked.");
     }
 

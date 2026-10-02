@@ -153,6 +153,10 @@ function isChallengeCombatLocked(user: RuntimeCharacter | undefined) {
     return Boolean(user && Number(user.challengeLockedUntil ?? 0) > Date.now());
 }
 
+function isRankedRoundLocked(user: RuntimeCharacter | undefined) {
+    return Boolean(user && Number(user.rankedLockedUntil ?? 0) > Date.now());
+}
+
 function getChallengeManager() {
     return require("./challengeManager") as {
         isCharacterInActiveMatch: (user: RuntimeCharacter | undefined) => boolean;
@@ -2112,6 +2116,11 @@ function processUserMovement(ws: RuntimeClient, heading: number, moveId: number,
     user.lastProcessedMoveId = moveId;
     user.heading = heading;
 
+    if (isRankedRoundLocked(user)) {
+        sendOwnPositionUpdate(ws, user);
+        return;
+    }
+
     if (user.paralizado) {
         sendOwnPositionUpdate(ws, user);
         return;
@@ -3628,6 +3637,11 @@ function attackMele(ws: RuntimeClient) {
             return;
         }
 
+        if (isRankedRoundLocked(user)) {
+            handleProtocol.console("[Ranked] Espera a que termine la cuenta regresiva.", "white", 0, 0, ws);
+            return;
+        }
+
         cancelPendingReviveCast(ws, user, "Se canceló el resucitar al atacar.");
 
         if (user.meditar) {
@@ -3836,6 +3850,11 @@ function attackRange(ws: RuntimeClient) {
 
         if (isChallengeCombatLocked(user)) {
             handleProtocol.console("[Retos] Espera a que termine la cuenta regresiva.", "white", 0, 0, ws);
+            return;
+        }
+
+        if (isRankedRoundLocked(user)) {
+            handleProtocol.console("[Ranked] Espera a que termine la cuenta regresiva.", "white", 0, 0, ws);
             return;
         }
 
@@ -4119,6 +4138,14 @@ function attackSpell(ws: RuntimeClient) {
         const isSummonSpell = Number(datSpell.type ?? 0) === 4 && Number(datSpell.numNpc ?? 0) > 0;
         const isPartialInvisibilityRemoval = isPartialInvisibilityRemovalSpell(datSpell);
         const reviveSpell = isReviveSpell(datSpell);
+
+        if (
+            isRankedRoundLocked(user) &&
+            (isHostileCombatSpell(datSpell) || isSummonSpell || isPartialInvisibilityRemoval)
+        ) {
+            handleProtocol.console("[Ranked] Espera a que termine la cuenta regresiva.", "white", 0, 0, ws);
+            return;
+        }
 
         if (Number(user.level ?? 0) < Number(datSpell.minNivel ?? 0)) {
             handleProtocol.console(

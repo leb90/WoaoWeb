@@ -3083,7 +3083,7 @@ const command: CommandApi = {
 
                 case "/woao": {
                     handleProtocol.console(
-                        "WOAO: /quest /quests /questaceptar /questabandonar /montura /activarmontura /renombrarmontura /liberarmontura /monturastat /ofertarmontura /premios /canjear /donaciones /canjeardonacion /viaje /comerciar /ranked /hunger /torneo /participar /atorneo /remort /ciudades /castillos /castillo /clanpuntos /bloodcastle /guerra /templo /domar /robar /critico /pagarmulta /casa /dia /party /aceptar /partyinfo /salirparty",
+                        "WOAO: /quest /quests /questaceptar /questabandonar /montura /activarmontura /renombrarmontura /liberarmontura /monturastat /ofertarmontura /premios /canjear /donaciones /canjeardonacion /viaje /comerciar /ranked /rankedaceptar /rankedrechazar /hunger /torneo /participar /atorneo /remort /ciudades /castillos /castillo /clanpuntos /bloodcastle /guerra /templo /domar /robar /critico /pagarmulta /casa /dia /party /aceptar /partyinfo /salirparty",
                         "#E69500",
                         1,
                         0,
@@ -3148,7 +3148,19 @@ const command: CommandApi = {
                 }
 
                 case "/ranked": {
-                    const result = require("./rankedArena").toggleQueue(String(clientId));
+                    const result = await require("./rankedArena").toggleQueue(String(clientId), nextText.trim());
+                    handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/rankedaceptar": {
+                    const result = await require("./rankedArena").acceptConfirmation(String(clientId));
+                    handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/rankedrechazar": {
+                    const result = require("./rankedArena").rejectConfirmation(String(clientId), "manual");
                     handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
                     break;
                 }

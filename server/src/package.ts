@@ -122,6 +122,7 @@ const clientPacketID = {
     mountState: 87,
     castleState: 88,
     factionWarState: 89,
+    rankedState: 90,
 } as const;
 
 const serverPacketID = {

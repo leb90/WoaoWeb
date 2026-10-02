@@ -28,6 +28,8 @@ import type {
     MountStatePayload,
     QuestEntryState,
     QuestStatePayload,
+    RankedMode,
+    RankedStatePayload,
 } from "../lib/aowProtocol";
 import type { GraphicData, ObjectsDB } from "../types/game";
 import { getTexturePath, loadGraphicsDB, loadObjectsDB } from "../utils/gameLoader";
@@ -55,6 +57,7 @@ type WoaoHubModalProps = {
     mapId?: number;
     questState?: QuestStatePayload | null;
     mountState?: MountStatePayload | null;
+    rankedState?: RankedStatePayload | null;
     questDialog?: QuestEntryState | null;
     questPoints?: number;
     donationPoints?: number;
@@ -125,6 +128,17 @@ const EVENT_CATEGORY_META: Record<EventCategory, { label: string; dotClass: stri
         badgeClass: "border-amber-300/70 bg-amber-950/35 text-amber-200",
     },
 };
+
+const RANKED_TIERS_PREVIEW = [
+    "Bronce",
+    "Plata",
+    "Oro",
+    "Platino",
+    "Diamante",
+    "Maestro",
+    "Gran Maestro",
+    "King",
+];
 
 const EVENT_STATUS_META: Record<EventStatus, { label: string; dotClass: string; textClass: string }> = {
     available: {
@@ -981,6 +995,7 @@ export default function WoaoHubModal({
     mapId,
     questState,
     mountState,
+    rankedState,
     questDialog,
     questPoints = 0,
     donationPoints = 0,
@@ -998,6 +1013,7 @@ export default function WoaoHubModal({
     const [selectedPremioId, setSelectedPremioId] = React.useState<number | null>(null);
     const [premioQuantities, setPremioQuantities] = React.useState<Record<string, number>>({});
     const [selectedMountId, setSelectedMountId] = React.useState<string | null>(null);
+    const [rankedMode, setRankedMode] = React.useState<"1v1" | "2v2">("1v1");
     const [eventCategoryFilter, setEventCategoryFilter] = React.useState<EventCategoryFilter>("all");
     const [selectedEventDetail, setSelectedEventDetail] = React.useState<AutomaticEvent | null>(null);
     const [eventScheduleAnchor] = React.useState(() => Date.now());
@@ -1101,6 +1117,37 @@ export default function WoaoHubModal({
         : 0;
     const remainingPoints = activePoints - selectedPremioTotal;
     const canConfirmPremio = Boolean(selectedPremio) && selectedPremioTotal > 0 && remainingPoints >= 0;
+    const selectedRankedModeKey: RankedMode = rankedMode === "1v1" ? "RANKED_1V1" : "RANKED_2V2";
+    const selectedRankedState = rankedState?.modes[selectedRankedModeKey] ?? null;
+    const selectedRankedRank = selectedRankedState?.rank ?? null;
+    const selectedRankedQueue = rankedState?.queue?.mode === selectedRankedModeKey ? rankedState.queue : null;
+    const selectedRankedMatch = rankedState?.match?.mode === selectedRankedModeKey ? rankedState.match : null;
+    const rankedConfirmation = rankedState?.confirmation ?? null;
+    const selectedRankedConfirmation =
+        rankedConfirmation?.mode === selectedRankedModeKey ? rankedConfirmation : null;
+    const rankedConfirmationId = rankedConfirmation?.id ?? null;
+    const selectedRankedProgress = selectedRankedRank?.progress ?? { current: 0, required: 100, ratio: 0 };
+    const selectedRankedWinrate =
+        selectedRankedState && selectedRankedState.matchesPlayed > 0
+            ? Math.round((selectedRankedState.wins / selectedRankedState.matchesPlayed) * 100)
+            : 0;
+    const [rankedNow, setRankedNow] = React.useState(() => Date.now());
+    React.useEffect(() => {
+        if (!rankedConfirmationId) {
+            return;
+        }
+
+        const timer = window.setInterval(() => setRankedNow(Date.now()), 250);
+        return () => window.clearInterval(timer);
+    }, [rankedConfirmationId]);
+    const rankedConfirmationRemainingMs = selectedRankedConfirmation
+        ? Math.max(0, selectedRankedConfirmation.expiresAt - rankedNow)
+        : 0;
+    const rankedConfirmationDurationMs =
+        selectedRankedConfirmation?.kind === "PARTY_QUEUE" ? 20_000 : 20_000;
+    const rankedConfirmationRatio = selectedRankedConfirmation
+        ? Math.max(0, Math.min(1, rankedConfirmationRemainingMs / rankedConfirmationDurationMs))
+        : 0;
     const automaticEvents = React.useMemo(() => buildAutomaticEvents(eventScheduleAnchor), [eventScheduleAnchor]);
     const visibleAutomaticEvents = React.useMemo(() => {
         return automaticEvents
@@ -1676,17 +1723,215 @@ export default function WoaoHubModal({
                     ) : null}
 
                     {tab === "ranked" ? (
-                        <div className="space-y-3">
-                            <p className="text-sm text-stone-300">
-                                Cola 1v1 Bo2 en mapas 211-215. El ELO arranca en 300 (Bronce).
-                            </p>
-                            <button
-                                type="button"
-                                onClick={() => onSendCommand?.("/ranked")}
-                                className="rounded-[10px] border border-[#4f3f2b] bg-[#2d2218] px-3 py-1.5 text-[11px] font-semibold"
-                            >
-                                Entrar / salir de cola
-                            </button>
+                        <div className="flex h-full min-h-0 flex-col gap-3">
+                            <div className="flex gap-2">
+                                {(["1v1", "2v2"] as const).map((mode) => {
+                                    const selected = rankedMode === mode;
+
+                                    return (
+                                        <button
+                                            key={mode}
+                                            type="button"
+                                            onClick={() => setRankedMode(mode)}
+                                            className={`h-10 min-w-[112px] rounded border px-4 text-sm font-bold transition ${
+                                                selected
+                                                    ? "border-amber-300 bg-[linear-gradient(180deg,#5b3d12,#21150a)] text-amber-100 shadow-[0_0_18px_rgba(245,158,11,0.22)]"
+                                                    : "border-amber-200/12 bg-black/24 text-stone-300 hover:border-amber-200/35 hover:text-stone-50"
+                                            }`}
+                                        >
+                                            {mode === "1v1" ? "1 vs 1" : "2 vs 2"}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+                                <section className="rounded border border-amber-200/12 bg-black/24 p-4">
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-amber-200">
+                                        Tu rango actual
+                                    </p>
+                                    <div className="mt-4 flex items-center gap-4">
+                                        <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded border border-amber-300/25 bg-[radial-gradient(circle_at_50%_35%,rgba(245,158,11,0.22),rgba(0,0,0,0.28)_62%)]">
+                                            <Shield aria-hidden="true" className="h-14 w-14 text-amber-200" strokeWidth={1.4} />
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-xs font-semibold text-amber-200">
+                                                {rankedMode === "1v1" ? "Ranked 1v1" : "Ranked 2v2"}
+                                            </p>
+                                            <h4 className="mt-1 text-2xl font-bold text-stone-50">
+                                                {selectedRankedRank?.label ?? "Bronce V"}
+                                            </h4>
+                                            <p className="mt-1 text-sm text-stone-300">
+                                                ELO: {selectedRankedState?.elo ?? 0}
+                                            </p>
+                                            <div className="mt-3 h-2 overflow-hidden rounded-full bg-stone-700/70">
+                                                <div
+                                                    className="h-full rounded-full bg-amber-300"
+                                                    style={{
+                                                        width: `${Math.round(Math.max(0, Math.min(1, selectedRankedProgress.ratio)) * 100)}%`,
+                                                    }}
+                                                />
+                                            </div>
+                                            <p className="mt-1 text-xs text-stone-400">
+                                                {selectedRankedRank?.tier === "KING"
+                                                    ? "Rango maximo"
+                                                    : `${selectedRankedProgress.current} / ${selectedRankedProgress.required} hacia la proxima division`}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                                        {[
+                                            ["Victorias", String(selectedRankedState?.wins ?? 0)],
+                                            ["Derrotas", String(selectedRankedState?.losses ?? 0)],
+                                            ["Winrate", `${selectedRankedWinrate}%`],
+                                            ["Partidas", String(selectedRankedState?.matchesPlayed ?? 0)],
+                                        ].map(([label, value]) => (
+                                            <div key={label} className="rounded border border-amber-200/10 bg-black/20 px-3 py-2">
+                                                <p className="text-xs text-stone-400">{label}</p>
+                                                <p className="text-base font-bold text-stone-100">{value}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </section>
+
+                                <section className="flex min-h-0 flex-col rounded border border-amber-200/12 bg-black/24 p-4">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-amber-200">
+                                                Matchmaking
+                                            </p>
+                                            <h4 className="mt-1 text-xl font-bold text-stone-50">
+                                                {rankedMode === "1v1" ? "Duelos Ranked 1 vs 1" : "Duelos Ranked 2 vs 2"}
+                                            </h4>
+                                        </div>
+                                        <span className="rounded border border-emerald-400/35 bg-emerald-950/25 px-2 py-1 text-xs font-semibold text-emerald-200">
+                                            Server authoritative
+                                        </span>
+                                    </div>
+
+                                    <div className="mt-4 grid gap-2 text-sm text-stone-200 sm:grid-cols-2">
+                                        {[
+                                            ["Mejor de 3", Swords],
+                                            ["Sin mascotas ni monturas", PawPrint],
+                                            ["Solo desde ciudad segura", MapPin],
+                                            ["Busqueda progresiva por ELO", Target],
+                                            ["ELO separado por modo", Activity],
+                                            ["Ranking global persistente", Shield],
+                                        ].map(([label, Icon]) => (
+                                            <div key={String(label)} className="flex items-center gap-2 rounded border border-amber-200/10 bg-black/18 px-3 py-2">
+                                                <Icon aria-hidden="true" className="h-4 w-4 shrink-0 text-amber-200" strokeWidth={1.7} />
+                                                <span>{String(label)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="mt-4 rounded border border-amber-200/10 bg-black/22 p-3">
+                                        <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-200">
+                                            Rangos
+                                        </p>
+                                        <div className="mt-2 flex flex-wrap gap-1.5">
+                                            {RANKED_TIERS_PREVIEW.map((tier) => (
+                                                <span key={tier} className="rounded border border-amber-200/12 bg-[#1c130d] px-2 py-1 text-[11px] font-semibold text-stone-200">
+                                                    {tier}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-auto flex flex-wrap items-end justify-between gap-3 border-t border-amber-200/10 pt-4">
+                                        <div className="max-w-[360px] text-sm text-stone-300">
+                                            {selectedRankedMatch
+                                                ? `En combate contra ${selectedRankedMatch.opponentName}. Marcador ${selectedRankedMatch.scoreA}-${selectedRankedMatch.scoreB}, arena #${selectedRankedMatch.arenaMapId}.`
+                                                : selectedRankedConfirmation
+                                                  ? `${selectedRankedConfirmation.title}: ${selectedRankedConfirmation.acceptedCount}/${selectedRankedConfirmation.requiredCount} aceptaron.`
+                                                : selectedRankedQueue?.status === "QUEUED"
+                                                  ? selectedRankedQueue.searchRange
+                                                      ? `Buscando rival. Rango actual: ${selectedRankedQueue.searchRange.minElo}-${selectedRankedQueue.searchRange.maxElo} ELO.`
+                                                      : "Buscando rival Ranked."
+                                                  : rankedMode === "1v1"
+                                                    ? "Entras a cola desde una ciudad o zona segura. Si salis de la zona o moris, se cancela."
+                                                    : "2v2 requiere party exacta de 2. Tu companero debe aceptar antes de entrar a cola."}
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                onSendCommand?.(rankedMode === "1v1" ? "/ranked" : "/ranked 2v2");
+                                            }}
+                                            className="flex h-12 min-w-[190px] items-center justify-center gap-2 rounded border border-amber-300/70 bg-[linear-gradient(180deg,#f7c84f,#9b5a0c)] px-5 text-sm font-bold text-stone-950 shadow-[0_0_18px_rgba(245,158,11,0.2)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:border-stone-600/50 disabled:bg-none disabled:bg-stone-800 disabled:text-stone-500 disabled:shadow-none disabled:hover:brightness-100"
+                                        >
+                                            <Swords aria-hidden="true" className="h-4 w-4" strokeWidth={2} />
+                                            {selectedRankedQueue?.status === "QUEUED"
+                                                ? "Cancelar busqueda"
+                                                : rankedMode === "1v1"
+                                                  ? "Buscar rival 1 vs 1"
+                                                  : "Anotar party 2 vs 2"}
+                                        </button>
+                                    </div>
+                                </section>
+                            </div>
+
+                            {selectedRankedConfirmation ? (
+                                <div className="rounded border border-amber-300/35 bg-[#160f08]/95 p-4 shadow-[0_18px_44px_rgba(0,0,0,0.38)]">
+                                    <div className="flex flex-wrap items-start justify-between gap-3">
+                                        <div>
+                                            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-200">
+                                                Confirmacion
+                                            </p>
+                                            <h4 className="mt-1 text-lg font-bold text-stone-50">
+                                                {selectedRankedConfirmation.title}
+                                            </h4>
+                                            <p className="mt-1 text-sm text-stone-300">
+                                                {selectedRankedConfirmation.description}
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-sm font-bold text-amber-100">
+                                            <Clock3 aria-hidden="true" className="h-4 w-4" />
+                                            {Math.ceil(rankedConfirmationRemainingMs / 1000)}s
+                                        </div>
+                                    </div>
+                                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-stone-800">
+                                        <div
+                                            className="h-full rounded-full bg-amber-300 transition-[width]"
+                                            style={{ width: `${Math.round(rankedConfirmationRatio * 100)}%` }}
+                                        />
+                                    </div>
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                        {selectedRankedConfirmation.participants.map((participant) => (
+                                            <span
+                                                key={participant.id}
+                                                className={`rounded border px-2.5 py-1 text-xs font-semibold ${
+                                                    participant.accepted
+                                                        ? "border-emerald-400/40 bg-emerald-950/30 text-emerald-200"
+                                                        : "border-stone-600/45 bg-black/30 text-stone-300"
+                                                }`}
+                                            >
+                                                {participant.accepted ? "OK " : ""}
+                                                {participant.name}
+                                            </span>
+                                        ))}
+                                    </div>
+                                    <div className="mt-4 flex flex-wrap justify-end gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => onSendCommand?.("/rankedrechazar")}
+                                            className="flex h-10 min-w-[130px] items-center justify-center gap-2 rounded border border-stone-600/70 px-4 text-sm font-bold text-stone-100 transition hover:border-stone-400"
+                                        >
+                                            <X aria-hidden="true" className="h-4 w-4" />
+                                            Rechazar
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => onSendCommand?.("/rankedaceptar")}
+                                            disabled={selectedRankedConfirmation.accepted}
+                                            className="flex h-10 min-w-[150px] items-center justify-center gap-2 rounded border border-amber-300/70 bg-[linear-gradient(180deg,#f7c84f,#9b5a0c)] px-4 text-sm font-bold text-stone-950 transition hover:brightness-110 disabled:cursor-default disabled:border-emerald-400/35 disabled:bg-none disabled:bg-emerald-950/30 disabled:text-emerald-200 disabled:hover:brightness-100"
+                                        >
+                                            <Check aria-hidden="true" className="h-4 w-4" />
+                                            {selectedRankedConfirmation.accepted ? "Aceptado" : "Aceptar"}
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : null}
                         </div>
                     ) : null}
 

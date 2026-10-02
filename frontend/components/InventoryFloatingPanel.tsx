@@ -4252,6 +4252,7 @@ export default function InventoryFloatingPanel({
                           mapId={hud?.map}
                           questState={hud?.questState}
                           mountState={hud?.mountState}
+                          rankedState={hud?.rankedState}
                           questDialog={isQuestNpcDialogOpen ? hud?.questState?.offer ?? null : null}
                           questPoints={hud?.puntosCanje ?? 0}
                           donationPoints={hud?.puntosDonacion ?? 0}

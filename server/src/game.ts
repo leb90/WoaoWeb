@@ -11161,6 +11161,13 @@ function Game(this: GameApi) {
                 return;
             }
 
+            if (user.rankedArena || user.rankedMatchId) {
+                withUserClient(idUser, (userClient) => {
+                    handleProtocol.console("No puedes usar monturas dentro de Ranked.", "white", 0, 0, userClient);
+                });
+                return;
+            }
+
             if (user.navegando) {
                 withUserClient(idUser, (userClient) => {
                     handleProtocol.console("No puedes usar mascotas mientras navegas.", "white", 0, 0, userClient);

@@ -21,7 +21,10 @@ import {
     screenDeltaToLocal,
 } from "../../../lib/viewportRotation";
 import { createDebugGrid } from "../rendering/debugGrid";
-import { markMapRendered } from "../world/worldStreaming";
+import {
+    BACKGROUND_RENDER_ROWS_PER_FRAME,
+    markMapRendered,
+} from "../world/worldStreaming";
 import {
     createEntityFXRowContainers,
     createMapRowLayerContainers,
@@ -1025,6 +1028,7 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                                 includeObjects: false,
                                 excludeBounds:
                                     initialVisibleBounds ?? undefined,
+                                yieldEveryRows: BACKGROUND_RENDER_ROWS_PER_FRAME,
                             })
                             .then(() =>
                                 options.renderMap(engine, {
@@ -1033,6 +1037,8 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                                     includeObjects: true,
                                     excludeBounds:
                                         initialVisibleBounds ?? undefined,
+                                    yieldEveryRows:
+                                        BACKGROUND_RENDER_ROWS_PER_FRAME,
                                 }),
                             )
                             .then(() => {

@@ -34,7 +34,20 @@ export type RenderMapOptions = {
     mapNumber?: number;
     // Permite saltear tiles (p.ej. el borde del mapa cubierto por un vecino).
     skipTile?: (x: number, y: number) => boolean;
+    // Cada cuántas filas se cede el hilo al navegador: evita que un mapa
+    // entero se instancie en un solo frame mientras el jugador camina.
+    yieldEveryRows?: number;
 };
+
+function waitForNextFrame(): Promise<void> {
+    return new Promise((resolve) => {
+        if (typeof window === "undefined") {
+            resolve();
+            return;
+        }
+        window.requestAnimationFrame(() => resolve());
+    });
+}
 
 // Con mundo continuo, el borde de un mapa que queda debajo del interior de un
 // vecino no se dibuja (ver isTileCoveredByOtherMap).
@@ -810,10 +823,20 @@ export async function renderMap(
     const minX = bounds?.minX ?? 1;
     const maxX = bounds?.maxX ?? mapDimensions.width;
 
+    const yieldEveryRows = options?.yieldEveryRows ?? 0;
+    let renderedRows = 0;
+
     for (let y = minY; y <= maxY; y++) {
         if (!params.canUseEngineContainer(engine, engine.mapContainer)) {
             return;
         }
+        if (yieldEveryRows > 0 && renderedRows > 0 && renderedRows % yieldEveryRows === 0) {
+            await waitForNextFrame();
+            if (!params.canUseEngineContainer(engine, engine.mapContainer)) {
+                return;
+            }
+        }
+        renderedRows++;
         for (let x = minX; x <= maxX; x++) {
             if (excludeBounds && isTileWithinBounds(x, y, excludeBounds)) {
                 continue;

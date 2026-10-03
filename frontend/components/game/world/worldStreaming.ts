@@ -20,6 +20,9 @@ import {
 // ve el final de la franja mientras el jugador está dentro del mapa actual.
 export const NEIGHBOR_RENDER_DEPTH = 18;
 
+// Filas por frame al dibujar en segundo plano (ver RenderMapOptions.yieldEveryRows).
+export const BACKGROUND_RENDER_ROWS_PER_FRAME = 3;
+
 type RenderMapFn = (engine: Engine, options?: RenderMapOptions) => Promise<void>;
 
 // Los exits de un mapa son estáticos: se calculan una vez por sesión.
@@ -238,6 +241,7 @@ export async function renderWorldNeighbors(
             bounds: needed,
             excludeBounds: rendered,
             skipTile: getCurrentMapSkipTile(engine, placement.map),
+            yieldEveryRows: clipToCurrentMapBounds ? 0 : BACKGROUND_RENDER_ROWS_PER_FRAME,
         });
 
         if (engine.isDestroyed || engine.worldStreamingVersion !== version) {
@@ -269,6 +273,7 @@ export async function renderCurrentMapRemainder(
         includeLayers: ["1", "2"],
         includeObjects: false,
         excludeBounds: rendered,
+        yieldEveryRows: BACKGROUND_RENDER_ROWS_PER_FRAME,
     });
 
     if (engine.isDestroyed || engine.worldStreamingVersion !== version) {
@@ -279,6 +284,7 @@ export async function renderCurrentMapRemainder(
         includeLayers: ["3", "4"],
         includeObjects: true,
         excludeBounds: rendered,
+        yieldEveryRows: BACKGROUND_RENDER_ROWS_PER_FRAME,
     });
 
     if (engine.isDestroyed || engine.worldStreamingVersion !== version) {

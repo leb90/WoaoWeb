@@ -1843,6 +1843,32 @@ function resolveClickedTarget(user: RuntimeCharacter, targetMap: number, x: numb
     return occupant ? resolveAreaTarget(occupant.map, occupant.x, occupant.y) : undefined;
 }
 
+/**
+ * Tras cruzar a un mapa vecino, las criaturas de ese mapa que ya estaban a la
+ * vista no tienen al jugador en su área (solo agreden dentro de su mapa, y
+ * cuando entraron a la vista el jugador estaba en el otro). Un teleport lo
+ * resolvía reenviando toda el área; el cruce continuo lo registra acá.
+ */
+function registerUserWithNearbyNpcs(ws: RuntimeClient, user: RuntimeCharacter) {
+    const clientId = ws.id!;
+
+    game.loopArea(ws, function (target: AreaTarget) {
+        if (!target.isNpc || target.map !== user.map || target.movement != 3 || !canNpcDetectCharacter(user)) {
+            return;
+        }
+
+        const npcArea = Array.isArray(vars.areaNpc[target.id]) ? vars.areaNpc[target.id] : [];
+
+        if (vars.areaNpc[target.id] !== npcArea) {
+            vars.areaNpc[target.id] = npcArea;
+        }
+
+        if (npcArea.indexOf(clientId) < 0) {
+            npcArea.push(clientId);
+        }
+    });
+}
+
 function processUserMovement(ws: RuntimeClient, heading: number, moveId: number, now = Date.now()) {
     const user = getCharacterById(ws.id!) as any;
 
@@ -2058,6 +2084,7 @@ function processUserMovement(ws: RuntimeClient, heading: number, moveId: number,
 
     if (targetMap !== previousMap) {
         handleProtocol.nameMap(ws.id);
+        registerUserWithNearbyNpcs(ws, user);
     }
 
     game.syncPartyStateForMember(ws.id);

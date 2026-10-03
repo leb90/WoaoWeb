@@ -250,27 +250,6 @@ export function collectSpellGraphicIds(
     return Array.from(uniqueGraphics);
 }
 
-export function collectAdjacentMapNumbers(
-    mapData: MapData,
-    targetMapNumber: number,
-): number[] {
-    const mapTiles = mapData[targetMapNumber];
-    if (!mapTiles) {
-        return [];
-    }
-
-    const adjacentMaps = new Set<number>();
-    for (const row of Object.values(mapTiles)) {
-        for (const tile of Object.values(row)) {
-            if (tile.tileExit?.map && tile.tileExit.map !== targetMapNumber) {
-                adjacentMaps.add(tile.tileExit.map);
-            }
-        }
-    }
-
-    return Array.from(adjacentMaps);
-}
-
 export function getInitialVisibleBounds(
     mapDimensions: { width: number; height: number },
     snapshot?: CharacterSnapshot | null,

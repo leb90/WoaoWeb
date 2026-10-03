@@ -76,11 +76,13 @@ export async function handleIncomingCharacterPacket({
 
             if (packet.payload.map !== renderedMapNumber) {
                 ctx.retainPendingRemoteSnapshotsForMap(packet.payload.map);
-                ctx.startMapChangeTransition(
-                    packet.payload.map,
-                    engine,
-                    `Cambiando al mapa ${packet.payload.map}...`,
-                );
+                if (!ctx.tryRebaseToMap(engine, packet.payload.map)) {
+                    ctx.startMapChangeTransition(
+                        packet.payload.map,
+                        engine,
+                        `Cambiando al mapa ${packet.payload.map}...`,
+                    );
+                }
             }
 
             if (engine && packet.payload.map === engine.mapNumber) {
@@ -627,7 +629,12 @@ export async function handleIncomingCharacterPacket({
                 y: packet.payload.y,
             };
 
-            if (packet.payload.map !== renderedMapNumber) {
+            // Si el destino es un vecino ya dibujado, el cruce es continuo:
+            // se mueve el origen y se aplica el snapshot como en el mismo mapa.
+            if (
+                packet.payload.map !== renderedMapNumber &&
+                !ctx.tryRebaseToMap(engine, packet.payload.map)
+            ) {
                 ctx.startMapChangeTransition(
                     packet.payload.map,
                     engine,

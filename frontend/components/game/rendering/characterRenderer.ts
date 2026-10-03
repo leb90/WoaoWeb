@@ -1142,10 +1142,10 @@ export async function renderRemoteCharacter(
         isAdminViewer: deps.playerHudRef.current?.privileges === 1,
     });
     container.x = Math.round(
-        (entity.pos.x - 1) * TILE_SIZE + entity.moveOffsetX,
+        engine.tileToWorldX(entity.pos.x) + entity.moveOffsetX,
     );
     container.y = Math.round(
-        (entity.pos.y - 1) * TILE_SIZE + entity.moveOffsetY,
+        engine.tileToWorldY(entity.pos.y) + entity.moveOffsetY,
     );
     container.zIndex = getRowZIndex(
         entity.pos.y - (entity.addtoUserPos?.y ?? 0),
@@ -1440,7 +1440,7 @@ export async function renderRemoteCharacter(
 
     const characterLayerContainer = getMapRowLayerContainer(
         engine,
-        entity.pos.y - (entity.addtoUserPos?.y ?? 0),
+        engine.getWorldRow(entity.pos.y - (entity.addtoUserPos?.y ?? 0)),
         "character",
     );
     if (!characterLayerContainer) {

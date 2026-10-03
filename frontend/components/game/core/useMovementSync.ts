@@ -26,6 +26,7 @@ type UseMovementSyncOptions = {
         engine: Engine | null,
         detail: string,
     ) => void;
+    tryRebaseToMap: (engine: Engine | null, targetMap: number) => boolean;
     mergeHud: (patch: any) => void;
 };
 
@@ -45,6 +46,7 @@ export function useMovementSync({
     lastServerConfirmedSelfPositionRef,
     runtimeTimingRef,
     startMapChangeTransition,
+    tryRebaseToMap,
     mergeHud,
 }: UseMovementSyncOptions) {
     const syncMovementState = useCallback(
@@ -322,7 +324,10 @@ export function useMovementSync({
                   }
                 : null;
 
-            if (predictedTarget.map !== engine.mapNumber) {
+            if (
+                predictedTarget.map !== engine.mapNumber &&
+                !tryRebaseToMap(engine, predictedTarget.map)
+            ) {
                 clearPendingLocalMoves();
                 lockMovementInput(engine);
                 mergeHud({
@@ -403,6 +408,7 @@ export function useMovementSync({
             pendingUserSnapshotRef,
             runtimeTimingRef,
             startMapChangeTransition,
+            tryRebaseToMap,
         ],
     );
 

@@ -16,12 +16,12 @@ import {
     createClickPacket,
     createPositionPacket,
 } from "../../../lib/aowProtocol";
-import { TILE_SIZE } from "../../../lib/viewport";
 import {
     getViewportRotation,
     screenDeltaToLocal,
 } from "../../../lib/viewportRotation";
 import { createDebugGrid } from "../rendering/debugGrid";
+import { markMapRendered } from "../world/worldStreaming";
 import {
     createEntityFXRowContainers,
     createMapRowLayerContainers,
@@ -42,6 +42,9 @@ import {
     findInspectableNpcAtTile,
     findRevivableCharacterAtTile,
 } from "../admin/npcInspector";
+
+// Medio lado, en píxeles, del área clickeable del mundo (sobra para 3x3 mapas).
+const WORLD_HIT_AREA_HALF_SIZE = 1_000_000;
 
 type ManualConnectionConfig = {
     wsUrl: string;
@@ -110,7 +113,8 @@ type UseRendererBootstrapOptions = {
     updateSeguroIndicators: (hud: any) => void;
     updateDebugCombatText: () => void;
     warmCommonCharacterAssets: (engine: any) => Promise<void>;
-    prefetchNearbyMaps: (engine: any) => Promise<void>;
+    prepareWorldLayout: (engine: any) => Promise<boolean>;
+    streamWorldNeighbors: (engine: any, clipBounds?: any) => Promise<void>;
     applyOwnCharacterSnapshot: (engine: any, snapshot: any) => Promise<void>;
     syncMovementState: (engine: any) => void;
     mergeHud: (patch: any) => void;
@@ -351,6 +355,12 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                         ? options.pendingUserSnapshotRef.current
                         : undefined,
                 );
+                // El vecindario se arma antes de dibujar: así el borde del
+                // mapa actual que queda debajo de un vecino no se dibuja nunca.
+                await options.prepareWorldLayout(engine);
+                if (isDisposed || engine.isDestroyed) {
+                    return;
+                }
                 const initialSnapshot =
                     options.pendingUserSnapshotRef.current?.map ===
                     options.mapNumber
@@ -439,11 +449,13 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
 
                 const mapContainer = new Container();
                 mapContainer.interactiveChildren = false;
+                // El mundo continuo dibuja vecinos alrededor del mapa actual, así
+                // que el área clickeable no puede limitarse a 100x100 tiles.
                 mapContainer.hitArea = new Rectangle(
-                    0,
-                    0,
-                    engine.mapDimensions.width * TILE_SIZE,
-                    engine.mapDimensions.height * TILE_SIZE,
+                    -WORLD_HIT_AREA_HALF_SIZE,
+                    -WORLD_HIT_AREA_HALF_SIZE,
+                    WORLD_HIT_AREA_HALF_SIZE * 2,
+                    WORLD_HIT_AREA_HALF_SIZE * 2,
                 );
                 app.stage.addChild(mapContainer);
                 engine.mapContainer = mapContainer;
@@ -463,13 +475,26 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                     }
 
                     const localPos = mapContainer.toLocal(event.global);
-                    const tileX = Math.floor(localPos.x / TILE_SIZE) + 1;
-                    const tileY = Math.floor(localPos.y / TILE_SIZE) + 1;
+                    const tile = engine.worldToCurrentMapTile(
+                        localPos.x,
+                        localPos.y,
+                    );
+
+                    // Los clicks sobre un mapa vecino no tienen destino en el
+                    // protocolo (x/y viajan relativos al mapa actual).
+                    if (
+                        tile.x < 1 ||
+                        tile.y < 1 ||
+                        tile.x > engine.mapDimensions.width ||
+                        tile.y > engine.mapDimensions.height
+                    ) {
+                        return null;
+                    }
 
                     return {
                         socket,
-                        targetTileX: Math.max(1, tileX),
-                        targetTileY: Math.max(1, tileY),
+                        targetTileX: tile.x,
+                        targetTileY: tile.y,
                     };
                 };
 
@@ -766,6 +791,19 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                     return;
                 }
 
+                // Si la ventana inicial toca un borde, el pedazo visible del
+                // vecino se dibuja antes de mostrar la escena para no arrancar
+                // con un hueco negro donde antes estaba el borde del mapa.
+                if (initialVisibleBounds) {
+                    await options.streamWorldNeighbors(
+                        engine,
+                        initialVisibleBounds,
+                    );
+                    if (isDisposed || engine.isDestroyed || !engine.app) {
+                        return;
+                    }
+                }
+
                 (engine as any).renderPlayerFn = options.renderPlayer;
 
                 if (engine.user) {
@@ -961,8 +999,14 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                             "Completando resto del mapa actual...",
                         );
 
+                        // Si el jugador cruza a un vecino mientras esto corre,
+                        // el mapa actual del motor cambia: el resto se dibuja
+                        // igual para el mapa con el que arrancó la escena.
+                        const bootstrapMapNumber = engine.mapNumber;
+
                         options
                             .renderMap(engine, {
+                                mapNumber: bootstrapMapNumber,
                                 includeLayers: ["1", "2"],
                                 includeObjects: false,
                                 excludeBounds:
@@ -970,16 +1014,20 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                             })
                             .then(() =>
                                 options.renderMap(engine, {
+                                    mapNumber: bootstrapMapNumber,
                                     includeLayers: ["3", "4"],
                                     includeObjects: true,
                                     excludeBounds:
                                         initialVisibleBounds ?? undefined,
                                 }),
                             )
-                            .then(() =>
-                                options.warmCommonCharacterAssets(engine),
-                            )
-                            .then(() => options.prefetchNearbyMaps(engine))
+                            .then(() => {
+                                markMapRendered(engine, bootstrapMapNumber);
+                                return options.warmCommonCharacterAssets(
+                                    engine,
+                                );
+                            })
+                            .then(() => options.streamWorldNeighbors(engine))
                             .catch((error) => {
                                 console.warn(
                                     "Failed to finish deferred scene enhancement:",

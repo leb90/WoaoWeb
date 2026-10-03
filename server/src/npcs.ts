@@ -1287,6 +1287,12 @@ function canNpcUseTileForFlow(idMap: number, pos: Position, aguaValida: boolean,
     }
 
     const tile = vars.mapa[idMap]?.[pos.y]?.[pos.x];
+
+    // Las franjas de exits no son transitables para NPC (ver hasLegalNpcMovement).
+    if (typeof tile?.tileExit !== "undefined") {
+        return false;
+    }
+
     const isWaterTile = game.hayAgua(idMap, pos);
 
     if (aguaValida && tierraInvalida) {

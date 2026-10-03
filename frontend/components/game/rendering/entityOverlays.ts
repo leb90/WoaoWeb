@@ -477,10 +477,10 @@ export function createEntityOverlays(options: CreateEntityOverlaysOptions) {
             projectileSprite = new Sprite(texture);
         }
 
-        const startWorldX = (startPos.x - 1) * TILE_SIZE + TILE_SIZE / 2;
-        const startWorldY = (startPos.y - 1) * TILE_SIZE + TILE_SIZE / 2;
-        const endWorldX = (endPos.x - 1) * TILE_SIZE + TILE_SIZE / 2;
-        const endWorldY = (endPos.y - 1) * TILE_SIZE + TILE_SIZE / 2;
+        const startWorldX = engine.tileToWorldX(startPos.x) + TILE_SIZE / 2;
+        const startWorldY = engine.tileToWorldY(startPos.y) + TILE_SIZE / 2;
+        const endWorldX = engine.tileToWorldX(endPos.x) + TILE_SIZE / 2;
+        const endWorldY = engine.tileToWorldY(endPos.y) + TILE_SIZE / 2;
         const distancePixels = Math.hypot(
             endWorldX - startWorldX,
             endWorldY - startWorldY,
@@ -536,10 +536,10 @@ export function createEntityOverlays(options: CreateEntityOverlaysOptions) {
             return;
         }
 
-        const startWorldX = (startPos.x - 1) * TILE_SIZE + TILE_SIZE / 2;
-        const startWorldY = (startPos.y - 1) * TILE_SIZE + TILE_SIZE / 2;
-        const endWorldX = (endPos.x - 1) * TILE_SIZE + TILE_SIZE / 2;
-        const endWorldY = (endPos.y - 1) * TILE_SIZE + TILE_SIZE / 2;
+        const startWorldX = engine.tileToWorldX(startPos.x) + TILE_SIZE / 2;
+        const startWorldY = engine.tileToWorldY(startPos.y) + TILE_SIZE / 2;
+        const endWorldX = engine.tileToWorldX(endPos.x) + TILE_SIZE / 2;
+        const endWorldY = engine.tileToWorldY(endPos.y) + TILE_SIZE / 2;
         const distancePixels = Math.hypot(
             endWorldX - startWorldX,
             endWorldY - startWorldY,

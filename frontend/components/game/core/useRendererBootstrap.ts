@@ -226,6 +226,12 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                     options.canProcessMovementInput;
                 options.engineRef.current = engine;
                 options.syncMovementState(engine);
+                if (process.env.NODE_ENV !== "production") {
+                    // Solo en desarrollo: permite inspeccionar el motor desde
+                    // la consola o desde pruebas automatizadas.
+                    (window as unknown as { __woaoEngine?: Engine }).__woaoEngine =
+                        engine;
+                }
 
                 engine.sendPositionPacket = (heading: number) => {
                     const socket = options.websocketRef.current;
@@ -475,21 +481,13 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                     }
 
                     const localPos = mapContainer.toLocal(event.global);
+                    // Tile en el marco del mapa actual; con mundo continuo puede
+                    // caer fuera de 1..100 (sobre un vecino) y se traduce al
+                    // mandar el paquete.
                     const tile = engine.worldToCurrentMapTile(
                         localPos.x,
                         localPos.y,
                     );
-
-                    // Los clicks sobre un mapa vecino no tienen destino en el
-                    // protocolo (x/y viajan relativos al mapa actual).
-                    if (
-                        tile.x < 1 ||
-                        tile.y < 1 ||
-                        tile.x > engine.mapDimensions.width ||
-                        tile.y > engine.mapDimensions.height
-                    ) {
-                        return null;
-                    }
 
                     return {
                         socket,
@@ -510,10 +508,23 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                         return;
                     }
 
-                    socket.send(createClickPacket(x, y, button));
+                    const mapTile = engine.viewerTileToMapTile(x, y);
+                    if (!mapTile) {
+                        return;
+                    }
+
+                    socket.send(
+                        createClickPacket(
+                            mapTile.x,
+                            mapTile.y,
+                            button,
+                            mapTile.map,
+                        ),
+                    );
                     options.recordClientGameAction("interaction_click", {
-                        x,
-                        y,
+                        map: mapTile.map,
+                        x: mapTile.x,
+                        y: mapTile.y,
                         button,
                     });
                 };
@@ -658,11 +669,10 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                                 event,
                                 interaction,
                             );
-                        const targetEntity = findVisibleEntityAtExactTile(
-                            engine,
-                            resolvedCombatTarget.x,
-                            resolvedCombatTarget.y,
-                        );
+                        const targetEntity =
+                            typeof resolvedCombatTarget.entityId === "number"
+                                ? engine.personajes[resolvedCombatTarget.entityId]
+                                : null;
 
                         if (targetEntity?.isNpc) {
                             engine.addHealthBarEntity(targetEntity.id);
@@ -672,10 +682,12 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                             createAttackRangePacket(
                                 resolvedCombatTarget.x,
                                 resolvedCombatTarget.y,
+                                resolvedCombatTarget.map,
                             ),
                         );
                         engine.playLocalCombatSwing();
                         options.recordClientGameAction("range_attack", {
+                            map: resolvedCombatTarget.map,
                             x: resolvedCombatTarget.x,
                             y: resolvedCombatTarget.y,
                         });
@@ -739,10 +751,12 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                             resolvedSpellTarget.x,
                             resolvedSpellTarget.y,
                             resolvedSpellTarget.preferSelfIfEmpty,
+                            resolvedSpellTarget.map,
                         ),
                     );
                     options.recordClientGameAction("spell_attack", {
                         slot: targetingMode.slot,
+                        map: resolvedSpellTarget.map,
                         x: resolvedSpellTarget.x,
                         y: resolvedSpellTarget.y,
                         preferSelfIfEmpty:

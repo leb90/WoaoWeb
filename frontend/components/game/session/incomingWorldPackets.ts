@@ -70,7 +70,7 @@ function clearVisibleGroundItemsFromAreaSnapshot(
                 objInfo: null,
             }));
 
-            if (engine?.mapData && targetMap === engine.mapNumber) {
+            if (engine?.mapData && engine.isEntityMapVisible(targetMap)) {
                 const tile = engine.mapData?.[targetMap]?.[y]?.[x];
 
                 if (tile?.objInfo) {
@@ -210,7 +210,7 @@ export async function handleIncomingWorldPacket({
                     };
                 }
 
-                if (packet.payload.map === engine.mapNumber) {
+                if (engine.isEntityMapVisible(packet.payload.map)) {
                     ctx.queueTileObjectVisualSync(
                         engine,
                         packet.payload.map,
@@ -265,7 +265,7 @@ export async function handleIncomingWorldPacket({
                     delete tile.objInfo;
                 }
 
-                if (packet.payload.map === engine.mapNumber) {
+                if (engine.isEntityMapVisible(packet.payload.map)) {
                     const tileKey = `${packet.payload.map}:${packet.payload.x},${packet.payload.y}`;
                     engine.tileObjectRenderRequestIds.set(
                         tileKey,

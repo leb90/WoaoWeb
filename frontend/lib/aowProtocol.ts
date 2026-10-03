@@ -700,25 +700,33 @@ export interface AnimFXPacket {
     fxGrh: number;
 }
 
+// Mundo continuo: origen y destino de un proyectil llevan su mapa porque
+// pueden estar en mapas vecinos distintos.
 export interface CreateProjectilePacket {
+    startMap: number;
     startX: number;
     startY: number;
+    endMap: number;
     endX: number;
     endY: number;
     grhIndex: number;
 }
 
 export interface SpellProjectilePacket {
+    startMap: number;
     startX: number;
     startY: number;
+    endMap: number;
     endX: number;
     endY: number;
     spellId: number;
 }
 
 export interface SpellVisualPacket {
+    startMap?: number;
     startX?: number;
     startY?: number;
+    endMap?: number;
     endX?: number;
     endY?: number;
     spellId?: number;
@@ -971,7 +979,10 @@ export type ParsedServerPacket =
           type: "revivirUsuario";
           payload: { id: number; head: number; body: number };
       }
-    | { type: "actPosition"; payload: { id: number; x: number; y: number } }
+    | {
+          type: "actPosition";
+          payload: { id: number; map: number; x: number; y: number };
+      }
     | {
           type: "actPositionServer";
           payload: {
@@ -985,7 +996,13 @@ export type ParsedServerPacket =
       }
     | {
           type: "moveEntity";
-          payload: { id: number; x: number; y: number; heading: number };
+          payload: {
+              id: number;
+              map: number;
+              x: number;
+              y: number;
+              heading: number;
+          };
       }
     | { type: "changeHeading"; payload: { id: number; heading: number } }
     | { type: "deleteCharacter"; payload: { id: number } }
@@ -1725,6 +1742,7 @@ function parseServerPacketById(
                 type: "actPosition",
                 payload: {
                     id: reader.getDouble(),
+                    map: reader.getShort(),
                     x: reader.getByte(),
                     y: reader.getByte(),
                 },
@@ -1746,6 +1764,7 @@ function parseServerPacketById(
                 type: "moveEntity",
                 payload: {
                     id: reader.getDouble(),
+                    map: reader.getShort(),
                     x: reader.getByte(),
                     y: reader.getByte(),
                     heading: reader.getByte(),
@@ -1944,8 +1963,10 @@ function parseServerPacketById(
             return {
                 type: "createProjectile",
                 payload: {
+                    startMap: reader.getShort(),
                     startX: reader.getByte(),
                     startY: reader.getByte(),
+                    endMap: reader.getShort(),
                     endX: reader.getByte(),
                     endY: reader.getByte(),
                     grhIndex: reader.getShort(),
@@ -1955,8 +1976,10 @@ function parseServerPacketById(
             return {
                 type: "spellProjectile",
                 payload: {
+                    startMap: reader.getShort(),
                     startX: reader.getByte(),
                     startY: reader.getByte(),
+                    endMap: reader.getShort(),
                     endX: reader.getByte(),
                     endY: reader.getByte(),
                     spellId: reader.getShort(),
@@ -1972,8 +1995,10 @@ function parseServerPacketById(
             const payload: SpellVisualPacket = {};
 
             if (hasProjectile) {
+                payload.startMap = reader.getShort();
                 payload.startX = reader.getByte();
                 payload.startY = reader.getByte();
+                payload.endMap = reader.getShort();
                 payload.endX = reader.getByte();
                 payload.endY = reader.getByte();
                 payload.spellId = reader.getShort();
@@ -2535,15 +2560,21 @@ export function createResyncPositionPacket(): ArrayBuffer {
     return writer.toArrayBuffer();
 }
 
+// Mundo continuo: el tile clickeado puede pertenecer a un mapa vecino, así
+// que el mapa viaja al final (el server lo lee solo si está presente).
 export function createClickPacket(
     x: number,
     y: number,
     button = 0,
+    map = 0,
 ): ArrayBuffer {
     const writer = new PacketWriter(SERVER_PACKET_ID.click);
     writer.writeByte(x);
     writer.writeByte(y);
     writer.writeByte(button);
+    if (map > 0) {
+        writer.writeShort(map);
+    }
     return writer.toArrayBuffer();
 }
 
@@ -2626,10 +2657,17 @@ export function createAttackMeleePacket(): ArrayBuffer {
     return new PacketWriter(SERVER_PACKET_ID.attackMele).toArrayBuffer();
 }
 
-export function createAttackRangePacket(x: number, y: number): ArrayBuffer {
+export function createAttackRangePacket(
+    x: number,
+    y: number,
+    map = 0,
+): ArrayBuffer {
     const writer = new PacketWriter(SERVER_PACKET_ID.attackRange);
     writer.writeByte(x);
     writer.writeByte(y);
+    if (map > 0) {
+        writer.writeShort(map);
+    }
     return writer.toArrayBuffer();
 }
 
@@ -2638,12 +2676,16 @@ export function createAttackSpellPacket(
     x: number,
     y: number,
     preferSelfIfEmpty = false,
+    map = 0,
 ): ArrayBuffer {
     const writer = new PacketWriter(SERVER_PACKET_ID.attackSpell);
     writer.writeByte(spellSlot);
     writer.writeByte(x);
     writer.writeByte(y);
     writer.writeByte(preferSelfIfEmpty ? 1 : 0);
+    if (map > 0) {
+        writer.writeShort(map);
+    }
     return writer.toArrayBuffer();
 }
 

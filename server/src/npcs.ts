@@ -32,6 +32,7 @@ import { rollMountEggDrops } from "./mountEggDrops";
 export {};
 
 const vars = require("./vars");
+const worldLayout = require("./worldLayout");
 const socket = require("./socket") as SocketApi;
 const funct = require("./functions");
 const game = require("./game") as GameApi;
@@ -532,8 +533,8 @@ function sendNpcSpellProjectileToArea(npc: NpcCharacter, target: PlayerCharacter
         withUserClient(viewer.id, (targetClient) => {
             sentClientIds.add(Number(viewer.id));
             handleProtocol.spellProjectile(
-                { x: npc.pos.x, y: npc.pos.y },
-                { x: target.pos.x, y: target.pos.y },
+                { map: npc.map, x: npc.pos.x, y: npc.pos.y },
+                { map: target.map, x: target.pos.x, y: target.pos.y },
                 spellId,
                 targetClient,
             );
@@ -833,11 +834,7 @@ function applyNpcGhostDisplacement(ghost: PlayerCharacter, pos: Position, moverI
 }
 
 function isUserInsideNpcViewport(npc: NpcCharacter, user: PlayerCharacter) {
-    return (
-        npc.map === user.map &&
-        Math.abs(npc.pos.x - user.pos.x) <= AREA_RANGE_X &&
-        Math.abs(npc.pos.y - user.pos.y) <= AREA_RANGE_Y
-    );
+    return worldLayout.isWithinWorldRange(user.map, user.pos, npc.map, npc.pos, AREA_RANGE_X, AREA_RANGE_Y);
 }
 
 function syncNpcVisibilityForUser(npc: NpcCharacter, user: PlayerCharacter | undefined) {
@@ -2915,19 +2912,15 @@ function Npcs(this: NpcsApi) {
             const posXEnd = npc.pos.x + AREA_RANGE_X;
             const posYEnd = npc.pos.y + AREA_RANGE_Y;
 
-            for (let y = posYStart; y <= posYEnd; y++) {
-                for (let x = posXStart; x <= posXEnd; x++) {
-                    if (x >= 1 && x <= 100 && y >= 1 && y <= 100) {
-                        const mapData = vars.mapData[npc.map][y][x];
-                        if (mapData.id) {
-                            const target = getUser(mapData.id);
-                            if (target) {
-                                callback(target);
-                            }
-                        }
+            worldLayout.forEachAreaTile(npc.map, posXStart, posXEnd, posYStart, posYEnd, (tileMap: number, x: number, y: number) => {
+                const mapData = vars.mapData[tileMap]?.[y]?.[x];
+                if (mapData?.id) {
+                    const target = getUser(mapData.id);
+                    if (target) {
+                        callback(target);
                     }
                 }
-            }
+            });
         } catch (err) {
             funct.dumpError(err);
         }
@@ -2940,19 +2933,15 @@ function Npcs(this: NpcsApi) {
             const posXEnd = pos.x + AREA_RANGE_X;
             const posYEnd = pos.y + AREA_RANGE_Y;
 
-            for (let y = posYStart; y <= posYEnd; y++) {
-                for (let x = posXStart; x <= posXEnd; x++) {
-                    if (x >= 1 && x <= 100 && y >= 1 && y <= 100) {
-                        const mapData = vars.mapData[idMap][y][x];
-                        if (mapData.id) {
-                            const target = getUser(mapData.id);
-                            if (target) {
-                                callback(target);
-                            }
-                        }
+            worldLayout.forEachAreaTile(idMap, posXStart, posXEnd, posYStart, posYEnd, (tileMap: number, x: number, y: number) => {
+                const mapData = vars.mapData[tileMap]?.[y]?.[x];
+                if (mapData?.id) {
+                    const target = getUser(mapData.id);
+                    if (target) {
+                        callback(target);
                     }
                 }
-            }
+            });
         } catch (err) {
             funct.dumpError(err);
         }
@@ -2964,7 +2953,7 @@ function Npcs(this: NpcsApi) {
 
             this.loopArea(idNpc, (client) => {
                 withUserClient(client.id, (targetClient) => {
-                    handleProtocol.actPosition(idNpc, npc.pos, targetClient);
+                    handleProtocol.actPosition(idNpc, npc.map, npc.pos, targetClient);
                 });
             });
 
@@ -2981,7 +2970,8 @@ function Npcs(this: NpcsApi) {
                     return;
                 }
 
-                if (!isInvisibleToNpc(target) && vars.areaNpc[idNpc].indexOf(userId) < 0) {
+                // Los NPC solo agreden dentro de su propio mapa.
+                if (target.map === npc.map && !isInvisibleToNpc(target) && vars.areaNpc[idNpc].indexOf(userId) < 0) {
                     vars.areaNpc[idNpc].push(userId);
                 }
 
@@ -3005,86 +2995,40 @@ function Npcs(this: NpcsApi) {
                 handleProtocol.deleteCharacter(idNpc, targetClient);
             };
 
+            // Franja que entra al área y franja que sale, en el marco del mundo
+            // (cruzan a los mapas vecinos).
+            const forEachUserInLine = (
+                minX: number,
+                maxX: number,
+                minY: number,
+                maxY: number,
+                apply: (userId: EntityId) => void,
+            ) => {
+                worldLayout.forEachAreaTile(npc.map, minX, maxX, minY, maxY, (tileMap: number, x: number, y: number) => {
+                    const occupantId = vars.mapData[tileMap]?.[y]?.[x]?.id as EntityId | 0 | undefined;
+                    if (occupantId) {
+                        apply(occupantId);
+                    }
+                });
+            };
+
+            const spanMinX = npc.pos.x - AREA_RANGE_X;
+            const spanMaxX = spanMinX + AREA_DIAMETER_X - 1;
+            const spanMinY = npc.pos.y - AREA_RANGE_Y;
+            const spanMaxY = spanMinY + AREA_DIAMETER_Y - 1;
+
             if (heading === vars.direcciones.right) {
-                let positionStartX = npc.pos.x + AREA_RANGE_X;
-                let positionStartY = npc.pos.y - AREA_RANGE_Y;
-
-                for (let y = positionStartY; y < positionStartY + AREA_DIAMETER_Y; y++) {
-                    if (positionStartX >= 1 && y >= 1 && positionStartX <= 100 && y <= 100) {
-                        const newUserID = vars.mapData[npc.map][y][positionStartX].id as EntityId | 0;
-                        if (newUserID) addNpcToUser(newUserID);
-                    }
-                }
-
-                positionStartX = npc.pos.x - AREA_OUTSIDE_OFFSET_X;
-                positionStartY = npc.pos.y - AREA_RANGE_Y;
-
-                for (let y = positionStartY; y < positionStartY + AREA_DIAMETER_Y; y++) {
-                    if (positionStartX >= 1 && y >= 1 && positionStartX <= 100 && y <= 100) {
-                        const newUserID = vars.mapData[npc.map][y][positionStartX].id as EntityId | 0;
-                        if (newUserID) removeNpcFromUser(newUserID);
-                    }
-                }
+                forEachUserInLine(npc.pos.x + AREA_RANGE_X, npc.pos.x + AREA_RANGE_X, spanMinY, spanMaxY, addNpcToUser);
+                forEachUserInLine(npc.pos.x - AREA_OUTSIDE_OFFSET_X, npc.pos.x - AREA_OUTSIDE_OFFSET_X, spanMinY, spanMaxY, removeNpcFromUser);
             } else if (heading === vars.direcciones.left) {
-                let positionStartX = npc.pos.x - AREA_RANGE_X;
-                let positionStartY = npc.pos.y - AREA_RANGE_Y;
-
-                for (let y = positionStartY; y < positionStartY + AREA_DIAMETER_Y; y++) {
-                    if (positionStartX >= 1 && y >= 1 && positionStartX <= 100 && y <= 100) {
-                        const newUserID = vars.mapData[npc.map][y][positionStartX].id as EntityId | 0;
-                        if (newUserID) addNpcToUser(newUserID);
-                    }
-                }
-
-                positionStartX = npc.pos.x + AREA_OUTSIDE_OFFSET_X;
-                positionStartY = npc.pos.y - AREA_RANGE_Y;
-
-                for (let y = positionStartY; y < positionStartY + AREA_DIAMETER_Y; y++) {
-                    if (positionStartX >= 1 && y >= 1 && positionStartX <= 100 && y <= 100) {
-                        const newUserID = vars.mapData[npc.map][y][positionStartX].id as EntityId | 0;
-                        if (newUserID) removeNpcFromUser(newUserID);
-                    }
-                }
+                forEachUserInLine(npc.pos.x - AREA_RANGE_X, npc.pos.x - AREA_RANGE_X, spanMinY, spanMaxY, addNpcToUser);
+                forEachUserInLine(npc.pos.x + AREA_OUTSIDE_OFFSET_X, npc.pos.x + AREA_OUTSIDE_OFFSET_X, spanMinY, spanMaxY, removeNpcFromUser);
             } else if (heading === vars.direcciones.down) {
-                let positionStartX = npc.pos.x - AREA_RANGE_X;
-                let positionStartY = npc.pos.y + AREA_RANGE_Y;
-
-                for (let x = positionStartX; x < positionStartX + AREA_DIAMETER_X; x++) {
-                    if (x >= 1 && positionStartY >= 1 && x <= 100 && positionStartY <= 100) {
-                        const newUserID = vars.mapData[npc.map][positionStartY][x].id as EntityId | 0;
-                        if (newUserID) addNpcToUser(newUserID);
-                    }
-                }
-
-                positionStartX = npc.pos.x - AREA_RANGE_X;
-                positionStartY = npc.pos.y - AREA_OUTSIDE_OFFSET_Y;
-
-                for (let x = positionStartX; x < positionStartX + AREA_DIAMETER_X; x++) {
-                    if (x >= 1 && positionStartY >= 1 && x <= 100 && positionStartY <= 100) {
-                        const newUserID = vars.mapData[npc.map][positionStartY][x].id as EntityId | 0;
-                        if (newUserID) removeNpcFromUser(newUserID);
-                    }
-                }
+                forEachUserInLine(spanMinX, spanMaxX, npc.pos.y + AREA_RANGE_Y, npc.pos.y + AREA_RANGE_Y, addNpcToUser);
+                forEachUserInLine(spanMinX, spanMaxX, npc.pos.y - AREA_OUTSIDE_OFFSET_Y, npc.pos.y - AREA_OUTSIDE_OFFSET_Y, removeNpcFromUser);
             } else if (heading === vars.direcciones.up) {
-                let positionStartX = npc.pos.x - AREA_RANGE_X;
-                let positionStartY = npc.pos.y - AREA_RANGE_Y;
-
-                for (let x = positionStartX; x < positionStartX + AREA_DIAMETER_X; x++) {
-                    if (x >= 1 && positionStartY >= 1 && x <= 100 && positionStartY <= 100) {
-                        const newUserID = vars.mapData[npc.map][positionStartY][x].id as EntityId | 0;
-                        if (newUserID) addNpcToUser(newUserID);
-                    }
-                }
-
-                positionStartX = npc.pos.x - AREA_RANGE_X;
-                positionStartY = npc.pos.y + AREA_OUTSIDE_OFFSET_Y;
-
-                for (let x = positionStartX; x < positionStartX + AREA_DIAMETER_X; x++) {
-                    if (x >= 1 && positionStartY >= 1 && x <= 100 && positionStartY <= 100) {
-                        const newUserID = vars.mapData[npc.map][positionStartY][x].id as EntityId | 0;
-                        if (newUserID) removeNpcFromUser(newUserID);
-                    }
-                }
+                forEachUserInLine(spanMinX, spanMaxX, npc.pos.y - AREA_RANGE_Y, npc.pos.y - AREA_RANGE_Y, addNpcToUser);
+                forEachUserInLine(spanMinX, spanMaxX, npc.pos.y + AREA_OUTSIDE_OFFSET_Y, npc.pos.y + AREA_OUTSIDE_OFFSET_Y, removeNpcFromUser);
             }
         } catch (err) {
             funct.dumpError(err);

@@ -102,8 +102,16 @@ export async function handleIncomingUiPacket({
             }
             await ctx.renderSpellProjectileVisual(
                 engine,
-                { x: packet.payload.startX, y: packet.payload.startY },
-                { x: packet.payload.endX, y: packet.payload.endY },
+                {
+                    x: packet.payload.startX,
+                    y: packet.payload.startY,
+                    map: packet.payload.startMap,
+                },
+                {
+                    x: packet.payload.endX,
+                    y: packet.payload.endY,
+                    map: packet.payload.endMap,
+                },
                 spellProjectileData,
             );
             return true;
@@ -137,10 +145,12 @@ export async function handleIncomingUiPacket({
                         {
                             x: packet.payload.startX,
                             y: packet.payload.startY,
+                            map: packet.payload.startMap,
                         },
                         {
                             x: packet.payload.endX,
                             y: packet.payload.endY,
+                            map: packet.payload.endMap,
                         },
                         spellProjectileData,
                     );
@@ -179,8 +189,16 @@ export async function handleIncomingUiPacket({
             }
             await ctx.renderProjectileVisual(
                 engine,
-                { x: packet.payload.startX, y: packet.payload.startY },
-                { x: packet.payload.endX, y: packet.payload.endY },
+                {
+                    x: packet.payload.startX,
+                    y: packet.payload.startY,
+                    map: packet.payload.startMap,
+                },
+                {
+                    x: packet.payload.endX,
+                    y: packet.payload.endY,
+                    map: packet.payload.endMap,
+                },
                 packet.payload.grhIndex,
             );
             return true;

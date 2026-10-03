@@ -6,6 +6,7 @@ export {};
 
 const funct = require("./functions");
 const vars = require("./vars");
+const worldLayout = require("./worldLayout");
 const pkg = require("./package") as PackageApi;
 const arenaManager = require("./arenaManager");
 const challengeManager = require("./challengeManager");
@@ -547,27 +548,17 @@ const socket: SocketApi = {
             const posXEnd = user.pos.x + AREA_RANGE_X;
             const posYEnd = user.pos.y + AREA_RANGE_Y;
 
-            for (let y = posYStart; y <= posYEnd; y++) {
-                for (let x = posXStart; x <= posXEnd; x++) {
-                    if (x >= 1 && y >= 1 && x <= 100 && y <= 100) {
-                        const mapData = vars.mapData[user.map]?.[y]?.[x];
+            worldLayout.forEachAreaTile(user.map, posXStart, posXEnd, posYStart, posYEnd, (tileMap: number, x: number, y: number) => {
+                const mapData = vars.mapData[tileMap]?.[y]?.[x];
 
-                        if (!mapData) {
-                            continue;
-                        }
+                if (mapData?.id) {
+                    const target = (vars.npcs[mapData.id] ?? vars.personajes[mapData.id]) as AreaTarget | undefined;
 
-                        if (mapData.id) {
-                            const target = (vars.npcs[mapData.id] ?? vars.personajes[mapData.id]) as
-                                | AreaTarget
-                                | undefined;
-
-                            if (target) {
-                                callback(target);
-                            }
-                        }
+                    if (target) {
+                        callback(target);
                     }
                 }
-            }
+            });
         } catch (err) {
             funct.dumpError(err);
         }

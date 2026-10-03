@@ -127,6 +127,8 @@ type FactionWarStatePayload = {
     allianceKills: number;
 };
 
+type MapPosition = Position & { map: number };
+
 type AreaItemSnapshot = {
     idItem: number;
     map: number;
@@ -367,8 +369,8 @@ export type HandleProtocolApi = {
         stateVersion: number,
         client: RuntimeClient,
     ) => void;
-    moveEntity: (idUser: EntityId, pos: Position, heading: number, client: RuntimeClient) => void;
-    actPosition: (idUser: EntityId, pos: Position, client: RuntimeClient) => void;
+    moveEntity: (idUser: EntityId, map: number, pos: Position, heading: number, client: RuntimeClient) => void;
+    actPosition: (idUser: EntityId, map: number, pos: Position, client: RuntimeClient) => void;
     deleteCharacter: (idUser: EntityId, client: RuntimeClient) => void;
     dialog: (
         idUser: EntityId,
@@ -386,12 +388,12 @@ export type HandleProtocolApi = {
     ) => void;
     animFX: (idUser: EntityId, fxGrh: number, client: RuntimeClient) => void;
     characterSwing: (idUser: EntityId, flags: number, client: RuntimeClient) => void;
-    createProjectile: (startPos: Position, endPos: Position, grhIndex: number, client: RuntimeClient) => void;
-    spellProjectile: (startPos: Position, endPos: Position, spellId: number, client: RuntimeClient) => void;
+    createProjectile: (startPos: MapPosition, endPos: MapPosition, grhIndex: number, client: RuntimeClient) => void;
+    spellProjectile: (startPos: MapPosition, endPos: MapPosition, spellId: number, client: RuntimeClient) => void;
     spellVisual: (
         payload: {
-            startPos?: Position;
-            endPos?: Position;
+            startPos?: MapPosition;
+            endPos?: MapPosition;
             spellId?: number;
             targetId?: EntityId;
             fxGrh?: number;
@@ -840,6 +842,12 @@ function writeNpcPayload(npc: ProtocolNpc, viewerId?: EntityId) {
     pkg.writeByte(getNpcQuestStatusForViewer(npc, viewerId));
 }
 
+function writeMapPosition(position: MapPosition) {
+    pkg.writeShort(position.map);
+    pkg.writeByte(position.x);
+    pkg.writeByte(position.y);
+}
+
 function writeAreaItemSnapshot(item: AreaItemSnapshot) {
     pkg.writeInt(item.idItem);
     pkg.writeShort(item.map);
@@ -983,18 +991,22 @@ const handleServer: HandleProtocolApi = {
         socket.send(client);
     },
 
-    moveEntity(idUser, pos, heading, client) {
+    // Mundo continuo: las posiciones de otras entidades viajan con su mapa,
+    // porque el que mira puede estar en un mapa vecino.
+    moveEntity(idUser, map, pos, heading, client) {
         pkg.setPackageID(pkg.clientPacketID.moveEntity);
         pkg.writeDouble(idUser);
+        pkg.writeShort(map);
         pkg.writeByte(pos.x);
         pkg.writeByte(pos.y);
         pkg.writeByte(heading);
         socket.send(client);
     },
 
-    actPosition(idUser, pos, client) {
+    actPosition(idUser, map, pos, client) {
         pkg.setPackageID(pkg.clientPacketID.actPosition);
         pkg.writeDouble(idUser);
+        pkg.writeShort(map);
         pkg.writeByte(pos.x);
         pkg.writeByte(pos.y);
         socket.send(client);
@@ -1050,20 +1062,16 @@ const handleServer: HandleProtocolApi = {
 
     createProjectile(startPos, endPos, grhIndex, client) {
         pkg.setPackageID(pkg.clientPacketID.createProjectile);
-        pkg.writeByte(startPos.x);
-        pkg.writeByte(startPos.y);
-        pkg.writeByte(endPos.x);
-        pkg.writeByte(endPos.y);
+        writeMapPosition(startPos);
+        writeMapPosition(endPos);
         pkg.writeShort(grhIndex);
         socket.send(client);
     },
 
     spellProjectile(startPos, endPos, spellId, client) {
         pkg.setPackageID(pkg.clientPacketID.spellProjectile);
-        pkg.writeByte(startPos.x);
-        pkg.writeByte(startPos.y);
-        pkg.writeByte(endPos.x);
-        pkg.writeByte(endPos.y);
+        writeMapPosition(startPos);
+        writeMapPosition(endPos);
         pkg.writeShort(spellId);
         socket.send(client);
     },
@@ -1099,10 +1107,8 @@ const handleServer: HandleProtocolApi = {
         pkg.writeByte(flags);
 
         if (hasProjectile) {
-            pkg.writeByte(payload.startPos!.x);
-            pkg.writeByte(payload.startPos!.y);
-            pkg.writeByte(payload.endPos!.x);
-            pkg.writeByte(payload.endPos!.y);
+            writeMapPosition(payload.startPos!);
+            writeMapPosition(payload.endPos!);
             pkg.writeShort(payload.spellId!);
         }
 

@@ -31,7 +31,11 @@ async function ensureMapLoaded(engine: Engine, mapNumber: number): Promise<boole
         return false;
     }
 
-    if (!engine.mapData[mapNumber]) {
+    // ensureMapTile puede haber creado un esqueleto con un par de tiles (ítems
+    // del suelo recibidos antes de cargar el mapa): no cuenta como cargado.
+    const hasFullMapData = Object.keys(engine.mapData[mapNumber] ?? {}).length >= 100;
+
+    if (!hasFullMapData) {
         let loaded: MapData;
         try {
             loaded = await loadMapData(mapNumber);
@@ -44,7 +48,7 @@ async function ensureMapLoaded(engine: Engine, mapNumber: number): Promise<boole
             return false;
         }
 
-        if (!engine.mapData[mapNumber] && loaded[mapNumber]) {
+        if (loaded[mapNumber] && Object.keys(engine.mapData[mapNumber] ?? {}).length < 100) {
             engine.mapData[mapNumber] = loaded[mapNumber];
         }
     }

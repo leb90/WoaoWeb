@@ -110,13 +110,16 @@ export function findInspectableNpcAtTile(
     const visibleNpcs = Object.values(engine.personajes).filter(
         (character) =>
             character.isNpc &&
-            character.map === engine.mapNumber &&
+            engine.isEntityMapVisible(character.map) &&
             !character.dead,
     );
 
-    const exactMatch = visibleNpcs.find(
-        (character) => character.pos.x === tileX && character.pos.y === tileY,
-    );
+    const exactMatch = visibleNpcs.find((character) => {
+        const viewerTile = engine.getViewerTile(character);
+        return Boolean(
+            viewerTile && viewerTile.x === tileX && viewerTile.y === tileY,
+        );
+    });
 
     if (exactMatch) {
         return exactMatch;
@@ -126,9 +129,13 @@ export function findInspectableNpcAtTile(
     let closestDistance = Number.POSITIVE_INFINITY;
 
     for (const character of visibleNpcs) {
+        const viewerTile = engine.getViewerTile(character);
+        if (!viewerTile) {
+            continue;
+        }
         const distance = Math.max(
-            Math.abs(character.pos.x - tileX),
-            Math.abs(character.pos.y - tileY),
+            Math.abs(viewerTile.x - tileX),
+            Math.abs(viewerTile.y - tileY),
         );
 
         if (distance > 1 || distance >= closestDistance) {
@@ -148,14 +155,17 @@ export function findVisibleEntityAtExactTile(
     tileY: number,
 ): Character | null {
     const visibleEntities = Object.values(engine.personajes).filter(
-        (character) => character.map === engine.mapNumber && !character.tthoney,
+        (character) =>
+            engine.isEntityMapVisible(character.map) && !character.tthoney,
     );
 
     return (
-        visibleEntities.find(
-            (character) =>
-                character.pos.x === tileX && character.pos.y === tileY,
-        ) ?? null
+        visibleEntities.find((character) => {
+            const viewerTile = engine.getViewerTile(character);
+            return Boolean(
+                viewerTile && viewerTile.x === tileX && viewerTile.y === tileY,
+            );
+        }) ?? null
     );
 }
 
@@ -182,15 +192,17 @@ export function findRevivableCharacterAtTile(
         (character) =>
             !character.isNpc &&
             !character.tthoney &&
-            character.map === engine.mapNumber &&
+            engine.isEntityMapVisible(character.map) &&
             character.dead,
     );
 
     return (
-        visibleCharacters.find(
-            (character) =>
-                character.pos.x === tileX && character.pos.y === tileY,
-        ) ?? null
+        visibleCharacters.find((character) => {
+            const viewerTile = engine.getViewerTile(character);
+            return Boolean(
+                viewerTile && viewerTile.x === tileX && viewerTile.y === tileY,
+            );
+        }) ?? null
     );
 }
 

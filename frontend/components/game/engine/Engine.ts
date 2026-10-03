@@ -1292,14 +1292,98 @@ export class Engine {
     ): Character | undefined {
         const ignoredIds = new Set(ignoreCharacterIds);
 
-        return Object.values(this.personajes).find(
-            (personaje) =>
-                !ignoredIds.has(personaje.id) &&
-                !personaje.tthoney &&
-                personaje.map === this.mapNumber &&
-                personaje.pos.x === tX &&
-                personaje.pos.y === tY,
-        );
+        // Las entidades de los mapas vecinos se comparan en el marco del mapa
+        // actual: la primera fila del vecino coincide con la fila de exits propia.
+        return Object.values(this.personajes).find((personaje) => {
+            if (ignoredIds.has(personaje.id) || personaje.tthoney) {
+                return false;
+            }
+
+            const viewerTile = this.getViewerTile(personaje);
+            return Boolean(viewerTile && viewerTile.x === tX && viewerTile.y === tY);
+        });
+    }
+
+    // Un mapa es visible si es el actual o un vecino cargado del mundo continuo.
+    isEntityMapVisible(mapNumber: number): boolean {
+        return mapNumber === this.mapNumber || this.isMapLoadedInWorld(mapNumber);
+    }
+
+    /**
+     * Tile de una entidad expresado en el marco del mapa actual (puede caer
+     * fuera de 1..100 si la entidad está en un vecino). null si su mapa no
+     * forma parte del mundo cargado.
+     */
+    getViewerTile(entity: { map: number; pos: { x: number; y: number } }): {
+        x: number;
+        y: number;
+    } | null {
+        if (entity.map === this.mapNumber) {
+            return { x: entity.pos.x, y: entity.pos.y };
+        }
+
+        const placement = this.worldLayout?.placements.get(entity.map);
+        if (!placement) {
+            return null;
+        }
+
+        return {
+            x: entity.pos.x + placement.originX - this.worldOriginX,
+            y: entity.pos.y + placement.originY - this.worldOriginY,
+        };
+    }
+
+    /**
+     * Convierte un tile del marco actual al mapa y coordenadas locales que el
+     * servidor entiende: el mapa de la entidad parada ahí si la hay, si no el
+     * mapa actual cuando el tile le pertenece, si no el vecino que lo cubre.
+     */
+    viewerTileToMapTile(x: number, y: number): { map: number; x: number; y: number } | null {
+        for (const personaje of Object.values(this.personajes)) {
+            if (personaje.tthoney || personaje.map === this.mapNumber) {
+                continue;
+            }
+            const viewerTile = this.getViewerTile(personaje);
+            if (viewerTile && viewerTile.x === x && viewerTile.y === y) {
+                return { map: personaje.map, x: personaje.pos.x, y: personaje.pos.y };
+            }
+        }
+
+        if (
+            x >= 1 &&
+            y >= 1 &&
+            x <= this.mapDimensions.width &&
+            y <= this.mapDimensions.height
+        ) {
+            return { map: this.mapNumber, x, y };
+        }
+
+        const worldX = x + this.worldOriginX;
+        const worldY = y + this.worldOriginY;
+        let fallback: { map: number; x: number; y: number } | null = null;
+
+        for (const placement of this.worldLayout?.placements.values() ?? []) {
+            if (placement.map === this.mapNumber) {
+                continue;
+            }
+            const localX = worldX - placement.originX;
+            const localY = worldY - placement.originY;
+            if (localX < 1 || localY < 1 || localX > placement.dimensions.width || localY > placement.dimensions.height) {
+                continue;
+            }
+            const candidate = { map: placement.map, x: localX, y: localY };
+            const insideInterior =
+                localX >= placement.interior.minX &&
+                localX <= placement.interior.maxX &&
+                localY >= placement.interior.minY &&
+                localY <= placement.interior.maxY;
+            if (insideInterior) {
+                return candidate;
+            }
+            fallback = fallback ?? candidate;
+        }
+
+        return fallback;
     }
 
     private isTileWalkableForCharacter(
@@ -1748,15 +1832,32 @@ export class Engine {
             heading?: number;
             startedAt?: number;
             durationMs?: number;
+            map?: number;
         },
     ): void {
         const personaje = this.personajes[idPj];
         if (!personaje) return;
 
+        // Mundo continuo: si la entidad cruzó a un mapa vecino, el paso se mide
+        // en el marco del mundo (un cruce es un paso de 1 tile, no de 80).
+        const targetMap = options?.map ?? personaje.map;
+        const previousViewerTile = this.getViewerTile(personaje);
+        const nextViewerTile = this.getViewerTile({
+            map: targetMap,
+            pos: { x: posX, y: posY },
+        });
+        personaje.map = targetMap;
+
         const oldX = personaje.pos.x;
         const oldY = personaje.pos.y;
-        const deltaX = posX - oldX;
-        const deltaY = posY - oldY;
+        const deltaX =
+            previousViewerTile && nextViewerTile
+                ? nextViewerTile.x - previousViewerTile.x
+                : posX - oldX;
+        const deltaY =
+            previousViewerTile && nextViewerTile
+                ? nextViewerTile.y - previousViewerTile.y
+                : posY - oldY;
         let heading = options?.heading ?? personaje.heading;
 
         if (
@@ -2072,10 +2173,10 @@ export class Engine {
             }
 
             container.x = Math.round(
-                this.tileToWorldX(entity.pos.x) + entity.moveOffsetX,
+                this.tileToWorldX(entity.pos.x, entity.map) + entity.moveOffsetX,
             );
             container.y = Math.round(
-                this.tileToWorldY(entity.pos.y) + entity.moveOffsetY,
+                this.tileToWorldY(entity.pos.y, entity.map) + entity.moveOffsetY,
             );
             container.zIndex = getRowZIndex(
                 entity.pos.y - entity.addtoUserPos.y,

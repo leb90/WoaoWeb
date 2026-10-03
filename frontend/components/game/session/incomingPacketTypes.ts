@@ -108,14 +108,14 @@ export type IncomingPacketHandlerContext = {
     renderEntityFX: (engine: any, id: number, fxGrh: number) => Promise<void>;
     renderSpellProjectileVisual: (
         engine: any,
-        start: { x: number; y: number },
-        end: { x: number; y: number },
+        start: { x: number; y: number; map?: number },
+        end: { x: number; y: number; map?: number },
         spellData: any,
     ) => Promise<void> | void;
     renderProjectileVisual: (
         engine: any,
-        start: { x: number; y: number },
-        end: { x: number; y: number },
+        start: { x: number; y: number; map?: number },
+        end: { x: number; y: number; map?: number },
         grhIndex: number,
     ) => Promise<void>;
     soundManagerRef: MutableRef<any>;

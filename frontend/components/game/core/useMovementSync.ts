@@ -179,16 +179,21 @@ export function useMovementSync({
 
     const retainPendingRemoteSnapshotsForMap = useCallback(
         (targetMap: number) => {
+            const engine = engineRef.current;
             for (const [
                 entityId,
                 snapshot,
             ] of pendingRemoteSnapshotsRef.current) {
-                if (snapshot.map !== targetMap) {
+                // Con mundo continuo también valen los vecinos cargados.
+                const isVisibleMap =
+                    snapshot.map === targetMap ||
+                    Boolean(engine?.isMapLoadedInWorld(snapshot.map));
+                if (!isVisibleMap) {
                     pendingRemoteSnapshotsRef.current.delete(entityId);
                 }
             }
         },
-        [pendingRemoteSnapshotsRef],
+        [engineRef, pendingRemoteSnapshotsRef],
     );
 
     const resetMovementSyncState = useCallback(() => {

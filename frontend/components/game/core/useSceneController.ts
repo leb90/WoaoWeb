@@ -14,6 +14,12 @@ import {
     syncTileObjectVisual as syncSceneTileObjectVisual,
 } from "../rendering/sceneRenderer";
 import type { TileBounds } from "../assets/scenePreload";
+import {
+    prefetchWorldTextures,
+    renderWorldNeighbors,
+    streamWorldAroundCurrentMap,
+    syncWorldLayout,
+} from "../world/worldStreaming";
 
 type PendingTileState = {
     objInfo?: MapTile["objInfo"] | null;
@@ -177,6 +183,51 @@ export function useSceneController({
         [],
     );
 
+    const prepareWorldLayout = useCallback(
+        (engine: Engine) => syncWorldLayout(engine),
+        [],
+    );
+
+    const streamWorldNeighbors = useCallback(
+        async (engine: Engine, clipToCurrentMapBounds?: TileBounds) => {
+            await renderWorldNeighbors(engine, renderMap, clipToCurrentMapBounds);
+            if (!clipToCurrentMapBounds) {
+                prefetchWorldTextures(engine, preloadGraphicIds);
+            }
+        },
+        [preloadGraphicIds, renderMap],
+    );
+
+    /**
+     * Cambio de mapa sin corte: si el destino es un vecino ya dibujado, solo se
+     * mueve el origen del mapa actual y se completa el mundo alrededor en
+     * segundo plano. Devuelve false cuando hace falta la transición completa.
+     */
+    const tryRebaseToMap = useCallback(
+        (engine: Engine | null, targetMap: number): boolean => {
+            if (!engine || !engine.rebaseToMap(targetMap)) {
+                return false;
+            }
+
+            clearPendingTileStatesForMap(targetMap);
+            void streamWorldAroundCurrentMap(
+                engine,
+                renderMap,
+                preloadGraphicIds,
+            ).catch(
+                (error) => {
+                    console.warn(
+                        "No se pudo completar el mundo alrededor del mapa",
+                        targetMap,
+                        error,
+                    );
+                },
+            );
+            return true;
+        },
+        [clearPendingTileStatesForMap, preloadGraphicIds, renderMap],
+    );
+
     const applyPendingTileStates = useCallback(
         (engine: Engine) =>
             applyPendingSceneTileStates(engine, pendingTileStatesRef.current),
@@ -228,12 +279,15 @@ export function useSceneController({
         applyPendingTileStates,
         clearPendingTileStatesForMap,
         ensureMapTile,
+        prepareWorldLayout,
         queueTileObjectVisualSync,
         removeObjectSprite,
         renderMap,
         scheduleTileObjectVisualSyncFlush,
         setWorldVisibility,
         startMapChangeTransition,
+        streamWorldNeighbors,
+        tryRebaseToMap,
         updatePendingTileState,
     };
 }

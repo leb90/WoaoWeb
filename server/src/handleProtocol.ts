@@ -127,6 +127,8 @@ type FactionWarStatePayload = {
     allianceKills: number;
 };
 
+type MapPosition = Position & { map: number };
+
 type AreaItemSnapshot = {
     idItem: number;
     map: number;
@@ -367,8 +369,8 @@ export type HandleProtocolApi = {
         stateVersion: number,
         client: RuntimeClient,
     ) => void;
-    moveEntity: (idUser: EntityId, pos: Position, heading: number, client: RuntimeClient) => void;
-    actPosition: (idUser: EntityId, pos: Position, client: RuntimeClient) => void;
+    moveEntity: (idUser: EntityId, map: number, pos: Position, heading: number, client: RuntimeClient) => void;
+    actPosition: (idUser: EntityId, map: number, pos: Position, client: RuntimeClient) => void;
     deleteCharacter: (idUser: EntityId, client: RuntimeClient) => void;
     dialog: (
         idUser: EntityId,
@@ -386,12 +388,12 @@ export type HandleProtocolApi = {
     ) => void;
     animFX: (idUser: EntityId, fxGrh: number, client: RuntimeClient) => void;
     characterSwing: (idUser: EntityId, flags: number, client: RuntimeClient) => void;
-    createProjectile: (startPos: Position, endPos: Position, grhIndex: number, client: RuntimeClient) => void;
-    spellProjectile: (startPos: Position, endPos: Position, spellId: number, client: RuntimeClient) => void;
+    createProjectile: (startPos: MapPosition, endPos: MapPosition, grhIndex: number, client: RuntimeClient) => void;
+    spellProjectile: (startPos: MapPosition, endPos: MapPosition, spellId: number, client: RuntimeClient) => void;
     spellVisual: (
         payload: {
-            startPos?: Position;
-            endPos?: Position;
+            startPos?: MapPosition;
+            endPos?: MapPosition;
             spellId?: number;
             targetId?: EntityId;
             fxGrh?: number;
@@ -983,20 +985,25 @@ const handleServer: HandleProtocolApi = {
         socket.send(client);
     },
 
-    moveEntity(idUser, pos, heading, client) {
+    // Mundo continuo: las posiciones de otras entidades viajan con su mapa,
+    // porque el que mira puede estar en un mapa vecino. El mapa va al final
+    // para que un cliente viejo siga leyendo bien x/y.
+    moveEntity(idUser, map, pos, heading, client) {
         pkg.setPackageID(pkg.clientPacketID.moveEntity);
         pkg.writeDouble(idUser);
         pkg.writeByte(pos.x);
         pkg.writeByte(pos.y);
         pkg.writeByte(heading);
+        pkg.writeShort(map);
         socket.send(client);
     },
 
-    actPosition(idUser, pos, client) {
+    actPosition(idUser, map, pos, client) {
         pkg.setPackageID(pkg.clientPacketID.actPosition);
         pkg.writeDouble(idUser);
         pkg.writeByte(pos.x);
         pkg.writeByte(pos.y);
+        pkg.writeShort(map);
         socket.send(client);
     },
 
@@ -1055,6 +1062,8 @@ const handleServer: HandleProtocolApi = {
         pkg.writeByte(endPos.x);
         pkg.writeByte(endPos.y);
         pkg.writeShort(grhIndex);
+        pkg.writeShort(startPos.map);
+        pkg.writeShort(endPos.map);
         socket.send(client);
     },
 
@@ -1065,6 +1074,8 @@ const handleServer: HandleProtocolApi = {
         pkg.writeByte(endPos.x);
         pkg.writeByte(endPos.y);
         pkg.writeShort(spellId);
+        pkg.writeShort(startPos.map);
+        pkg.writeShort(endPos.map);
         socket.send(client);
     },
 
@@ -1121,6 +1132,12 @@ const handleServer: HandleProtocolApi = {
         if (hasWords) {
             pkg.writeDouble(payload.casterId ?? 0);
             pkg.writeString(payload.msg ?? "");
+        }
+
+        // Mapas del proyectil al final, para no desarmar el formato de un cliente viejo.
+        if (hasProjectile) {
+            pkg.writeShort(payload.startPos!.map);
+            pkg.writeShort(payload.endPos!.map);
         }
 
         socket.send(client);

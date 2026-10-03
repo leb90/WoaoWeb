@@ -135,7 +135,7 @@ export function useRemoteEntityController(
         ): Promise<void> => {
             if (
                 snapshotOrEntity.id === engine.user?.id ||
-                snapshotOrEntity.map !== engine.mapNumber
+                !engine.isEntityMapVisible(snapshotOrEntity.map)
             ) {
                 return;
             }
@@ -205,7 +205,7 @@ export function useRemoteEntityController(
             const renderableSnapshots = snapshots.filter(
                 (snapshot) =>
                     snapshot.id !== engine.user?.id &&
-                    snapshot.map === engine.mapNumber,
+                    engine.isEntityMapVisible(snapshot.map),
             );
 
             if (renderableSnapshots.length === 0) {
@@ -267,9 +267,11 @@ export function useRemoteEntityController(
             )
                 .filter(
                     (snapshot) =>
-                        snapshot.map === engine.mapNumber &&
+                        engine.isEntityMapVisible(snapshot.map) &&
                         snapshot.id !== engine.user?.id &&
-                        (!bounds || isCharacterWithinBounds(snapshot, bounds)),
+                        (!bounds ||
+                            snapshot.map !== engine.mapNumber ||
+                            isCharacterWithinBounds(snapshot, bounds)),
                 )
                 .sort((left, right) => left.id - right.id);
 
@@ -354,7 +356,7 @@ export function useRemoteEntityController(
         (engine: Engine, snapshot: CharacterSnapshot): void => {
             if (
                 snapshot.id === engine.user?.id ||
-                snapshot.map !== engine.mapNumber
+                !engine.isEntityMapVisible(snapshot.map)
             ) {
                 return;
             }

@@ -303,6 +303,106 @@ function normalizeGraphicsDbSpeeds(graphicsDb: GraphicsDB): GraphicsDB {
     return graphicsDb;
 }
 
+// Decodifica una fila del formato compacto `d` (row-major, y=1..h, x=1..w, igual
+// que exportFrontendOptimizedMaps y server/mapas_source) en mapData[y][x].
+function decompressCompactRow(optimizedMap: any, mapData: any, y: number): void {
+    mapData[y] = {};
+    for (let x = 1; x <= optimizedMap.w; x++) {
+        const value = optimizedMap.d[(y - 1) * optimizedMap.w + (x - 1)];
+        if (value === 0) continue; // Empty tile
+
+        const tile: any = {};
+
+        if (value > 100000) {
+            // Simple blocked tile
+            tile.blocked = 1;
+            tile.graphics = { "1": value - 100000 };
+        } else if (value > 0) {
+            // Simple walkable tile
+            tile.graphics = { "1": value };
+        } else if (value < 0 && optimizedMap.cx) {
+            // Complex tile - get from complex array
+            const complexIndex = -value - 1;
+            const complexTile = optimizedMap.cx[complexIndex];
+
+            if (complexTile.b) tile.blocked = complexTile.b;
+
+            if (complexTile.g !== undefined) {
+                if (typeof complexTile.g === "number") {
+                    tile.graphics = { "1": complexTile.g };
+                } else if (Array.isArray(complexTile.g)) {
+                    // Handle graphics array format
+                    const graphics: any = {};
+                    for (let i = 0; i < complexTile.g.length; i++) {
+                        if (complexTile.g[i] !== null) {
+                            graphics[(i + 1).toString()] =
+                                complexTile.g[i];
+                        }
+                    }
+                    tile.graphics = graphics;
+                } else {
+                    tile.graphics = complexTile.g;
+                }
+            }
+
+            if (complexTile.e) {
+                tile.tileExit = {
+                    map: complexTile.e.m,
+                    x: complexTile.e.x,
+                    y: complexTile.e.y,
+                };
+            }
+
+            if (complexTile.t !== undefined)
+                tile.trigger = complexTile.t;
+            // if (complexTile.n !== undefined)
+            //     tile.npcIndex = complexTile.n;
+            if (complexTile.o) {
+                tile.objInfo = {
+                    objIndex: complexTile.o.i,
+                    amount: complexTile.o.a,
+                };
+            }
+        }
+
+        mapData[y][x] = tile;
+    }
+}
+
+const INCREMENTAL_DECOMPRESS_ROWS = 10;
+
+function yieldToBrowser(): Promise<void> {
+    return new Promise((resolve) => {
+        if (typeof window === "undefined") {
+            resolve();
+            return;
+        }
+        window.setTimeout(resolve, 0);
+    });
+}
+
+/**
+ * Igual que decompressMap para el formato `d`, pero cede el hilo cada pocas
+ * filas: se usa para los mapas vecinos que se cargan mientras se juega, así la
+ * decodificación de 10.000 tiles no congela un frame.
+ */
+async function decompressMapIncremental(optimizedMap: any) {
+    if (!optimizedMap?.d) {
+        return decompressMap(optimizedMap);
+    }
+
+    const result: any = {};
+    const mapData: any = {};
+    for (let y = 1; y <= optimizedMap.h; y++) {
+        decompressCompactRow(optimizedMap, mapData, y);
+        if (y % INCREMENTAL_DECOMPRESS_ROWS === 0) {
+            await yieldToBrowser();
+        }
+    }
+    result[optimizedMap.id] = mapData;
+    return result;
+}
+
 /**
  * Decompressor utility for optimized maps
  */
@@ -368,77 +468,11 @@ function decompressMap(optimizedMap: any) {
     }
 
     if (optimizedMap.d) {
-        // Enhanced ultra-compact format.
-        // `d` is row-major: for y=1..h, for x=1..w (same as exportFrontendOptimizedMaps
-        // and server mapas_source). Store as mapData[y][x] to match getTileAt().
         const result: any = {};
         const mapData: any = {};
-        let index = 0;
-
         for (let y = 1; y <= optimizedMap.h; y++) {
-            mapData[y] = {};
-            for (let x = 1; x <= optimizedMap.w; x++) {
-                const value = optimizedMap.d[index++];
-                if (value === 0) continue; // Empty tile
-
-                const tile: any = {};
-
-                if (value > 100000) {
-                    // Simple blocked tile
-                    tile.blocked = 1;
-                    tile.graphics = { "1": value - 100000 };
-                } else if (value > 0) {
-                    // Simple walkable tile
-                    tile.graphics = { "1": value };
-                } else if (value < 0 && optimizedMap.cx) {
-                    // Complex tile - get from complex array
-                    const complexIndex = -value - 1;
-                    const complexTile = optimizedMap.cx[complexIndex];
-
-                    if (complexTile.b) tile.blocked = complexTile.b;
-
-                    if (complexTile.g !== undefined) {
-                        if (typeof complexTile.g === "number") {
-                            tile.graphics = { "1": complexTile.g };
-                        } else if (Array.isArray(complexTile.g)) {
-                            // Handle graphics array format
-                            const graphics: any = {};
-                            for (let i = 0; i < complexTile.g.length; i++) {
-                                if (complexTile.g[i] !== null) {
-                                    graphics[(i + 1).toString()] =
-                                        complexTile.g[i];
-                                }
-                            }
-                            tile.graphics = graphics;
-                        } else {
-                            tile.graphics = complexTile.g;
-                        }
-                    }
-
-                    if (complexTile.e) {
-                        tile.tileExit = {
-                            map: complexTile.e.m,
-                            x: complexTile.e.x,
-                            y: complexTile.e.y,
-                        };
-                    }
-
-                    if (complexTile.t !== undefined)
-                        tile.trigger = complexTile.t;
-                    // if (complexTile.n !== undefined)
-                    //     tile.npcIndex = complexTile.n;
-                    if (complexTile.o) {
-                        tile.objInfo = {
-                            objIndex: complexTile.o.i,
-                            amount: complexTile.o.a,
-                        };
-                    }
-                }
-
-                mapData[y][x] = tile;
-            }
+            decompressCompactRow(optimizedMap, mapData, y);
         }
-
         result[optimizedMap.id] = mapData;
         return result;
     }
@@ -568,7 +602,13 @@ export async function loadObjectsDB(): Promise<ObjectsDB> {
 /**
  * Load map data from a specific map file
  */
-export async function loadMapData(mapNumber: number): Promise<MapData> {
+export async function loadMapData(
+    mapNumber: number,
+    options?: { incremental?: boolean },
+): Promise<MapData> {
+    const decompress = options?.incremental
+        ? decompressMapIncremental
+        : async (raw: any) => decompressMap(raw);
     const cachedMap = mapValueCache.get(mapNumber);
     if (cachedMap) {
         return cloneMapData(cachedMap);
@@ -618,7 +658,7 @@ export async function loadMapData(mapNumber: number): Promise<MapData> {
                     },
                 );
                 const remappedData = remapMapDataKey(
-                    decompressMap(data),
+                    await decompress(data),
                     dynamicBaseMapNumber,
                     mapNumber,
                 );
@@ -676,7 +716,7 @@ export async function loadMapData(mapNumber: number): Promise<MapData> {
                 },
             );
             const decompressedData = remapMapDataKey(
-                decompressMap(data),
+                await decompress(data),
                 assetMapNumber,
                 mapNumber,
             );

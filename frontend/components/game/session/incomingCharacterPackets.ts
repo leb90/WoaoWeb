@@ -24,7 +24,7 @@ export async function handleIncomingCharacterPacket({
 
             if (
                 ctx.canRenderRemoteEntities(engine) &&
-                snapshot.map === engine.mapNumber &&
+                engine.isEntityMapVisible(snapshot.map) &&
                 snapshot.id !== engine.user?.id
             ) {
                 ctx.pendingRemoteSnapshotsRef.current.delete(snapshot.id);
@@ -76,11 +76,13 @@ export async function handleIncomingCharacterPacket({
 
             if (packet.payload.map !== renderedMapNumber) {
                 ctx.retainPendingRemoteSnapshotsForMap(packet.payload.map);
-                ctx.startMapChangeTransition(
-                    packet.payload.map,
-                    engine,
-                    `Cambiando al mapa ${packet.payload.map}...`,
-                );
+                if (!ctx.tryRebaseToMap(engine, packet.payload.map)) {
+                    ctx.startMapChangeTransition(
+                        packet.payload.map,
+                        engine,
+                        `Cambiando al mapa ${packet.payload.map}...`,
+                    );
+                }
             }
 
             if (engine && packet.payload.map === engine.mapNumber) {
@@ -217,7 +219,7 @@ export async function handleIncomingCharacterPacket({
             }
             if (
                 ctx.canRenderRemoteEntities(engine) &&
-                packet.payload.map === engine.mapNumber &&
+                engine.isEntityMapVisible(packet.payload.map) &&
                 packet.payload.id !== engine.user?.id
             ) {
                 ctx.pendingRemoteSnapshotsRef.current.delete(packet.payload.id);
@@ -395,6 +397,7 @@ export async function handleIncomingCharacterPacket({
                                 heading: previousHeading,
                                 durationMs:
                                     ctx.runtimeTimingRef.current.walkStepMs,
+                                map: packet.payload.map || entity.map,
                             },
                         );
                         const remoteContainer = engine.remoteEntities.get(
@@ -435,6 +438,7 @@ export async function handleIncomingCharacterPacket({
                             packet.payload.id,
                             {
                                 ...bufferedSnapshot,
+                                map: packet.payload.map || bufferedSnapshot.map,
                                 pos: {
                                     x: packet.payload.x,
                                     y: packet.payload.y,
@@ -464,6 +468,7 @@ export async function handleIncomingCharacterPacket({
                                 heading: packet.payload.heading,
                                 durationMs:
                                     ctx.runtimeTimingRef.current.walkStepMs,
+                                map: packet.payload.map || entity.map,
                             },
                         );
 
@@ -501,6 +506,7 @@ export async function handleIncomingCharacterPacket({
                             packet.payload.id,
                             {
                                 ...bufferedSnapshot,
+                                map: packet.payload.map || bufferedSnapshot.map,
                                 heading: packet.payload.heading,
                                 pos: {
                                     x: packet.payload.x,
@@ -627,7 +633,12 @@ export async function handleIncomingCharacterPacket({
                 y: packet.payload.y,
             };
 
-            if (packet.payload.map !== renderedMapNumber) {
+            // Si el destino es un vecino ya dibujado, el cruce es continuo:
+            // se mueve el origen y se aplica el snapshot como en el mismo mapa.
+            if (
+                packet.payload.map !== renderedMapNumber &&
+                !ctx.tryRebaseToMap(engine, packet.payload.map)
+            ) {
                 ctx.startMapChangeTransition(
                     packet.payload.map,
                     engine,

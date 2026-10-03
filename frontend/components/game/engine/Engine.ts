@@ -48,6 +48,11 @@ import {
     type RuntimeTimingConfig,
 } from "../../../lib/runtime-config";
 import { TILE_SIZE } from "../../../lib/viewport";
+import type { TileBounds } from "../assets/scenePreload";
+import {
+    isTileCoveredByOtherMap,
+    type WorldLayout,
+} from "../world/worldLayout";
 import {
     BODY_ANIMATION_CYCLE_MS,
     SHIELD_ANIMATION_CYCLE_MS,
@@ -554,6 +559,17 @@ export class Engine {
     mapNumber: number;
     mapDimensions: { width: number; height: number } = { width: 0, height: 0 };
 
+    // Mundo continuo: todos los sprites viven en un marco de mundo compartido.
+    // El mapa actual tiene su origen en (worldOriginX, worldOriginY) tiles y los
+    // vecinos se ubican según `worldLayout`; al cruzar a un vecino solo cambia
+    // el origen, nunca se mueve lo que ya está dibujado.
+    worldOriginX = 0;
+    worldOriginY = 0;
+    worldLayout: WorldLayout | null = null;
+    // Rectángulo (en tiles locales) ya dibujado de cada mapa cargado.
+    worldRenderedBounds: Map<number, TileBounds> = new Map();
+    worldStreamingVersion = 0;
+
     // Characters
     personajes: Record<number, Character> = {};
     user: PlayerCharacter | null = null;
@@ -908,10 +924,72 @@ export class Engine {
         );
     }
 
+    /**
+     * Tile de almacenamiento que ocupa una posición del marco del mapa actual.
+     * Con mundo continuo, el borde del mapa (y lo que queda más allá de 1..100)
+     * está cubierto por el interior de un vecino: ahí se mira el tile del
+     * vecino. Así el cliente puede predecir el paso a través del borde sin
+     * esperar al servidor. null si la posición no pertenece a ningún mapa.
+     */
+    resolveWalkTile(
+        tX: number,
+        tY: number,
+    ): { map: number; x: number; y: number } | null {
+        const insideCurrentMap =
+            tX >= 1 &&
+            tY >= 1 &&
+            tX <= this.mapDimensions.width &&
+            tY <= this.mapDimensions.height;
+        const layout = this.worldLayout;
+        const currentPlacement = layout?.placements.get(this.mapNumber);
+
+        if (!layout || !currentPlacement) {
+            return insideCurrentMap ? { map: this.mapNumber, x: tX, y: tY } : null;
+        }
+
+        if (
+            insideCurrentMap &&
+            !isTileCoveredByOtherMap(layout, currentPlacement, tX, tY)
+        ) {
+            return { map: this.mapNumber, x: tX, y: tY };
+        }
+
+        const worldX = tX + this.worldOriginX;
+        const worldY = tY + this.worldOriginY;
+        for (const placement of layout.placements.values()) {
+            if (placement.map === this.mapNumber || !this.mapData?.[placement.map]) {
+                continue;
+            }
+            const localX = worldX - placement.originX;
+            const localY = worldY - placement.originY;
+            if (
+                localX >= placement.interior.minX &&
+                localX <= placement.interior.maxX &&
+                localY >= placement.interior.minY &&
+                localY <= placement.interior.maxY
+            ) {
+                return { map: placement.map, x: localX, y: localY };
+            }
+        }
+
+        return insideCurrentMap ? { map: this.mapNumber, x: tX, y: tY } : null;
+    }
+
+    private getWalkTileData(tX: number, tY: number) {
+        if (!this.mapData) {
+            return null;
+        }
+        const resolved = this.resolveWalkTile(tX, tY);
+        if (!resolved || !this.mapData[resolved.map]) {
+            return null;
+        }
+        return getTileAt(this.mapData, resolved.map, resolved.x, resolved.y) ?? null;
+    }
+
     isWaterTile(tX: number, tY: number): boolean {
         if (!this.mapData) return false;
 
-        const tile = getTileAt(this.mapData, this.mapNumber, tX, tY);
+        const tile = this.getWalkTileData(tX, tY);
         const layer1 = tile?.graphics?.["1"];
         const layer2 = tile?.graphics?.["2"];
 
@@ -1279,14 +1357,98 @@ export class Engine {
     ): Character | undefined {
         const ignoredIds = new Set(ignoreCharacterIds);
 
-        return Object.values(this.personajes).find(
-            (personaje) =>
-                !ignoredIds.has(personaje.id) &&
-                !personaje.tthoney &&
-                personaje.map === this.mapNumber &&
-                personaje.pos.x === tX &&
-                personaje.pos.y === tY,
-        );
+        // Las entidades de los mapas vecinos se comparan en el marco del mapa
+        // actual: la primera fila del vecino coincide con la fila de exits propia.
+        return Object.values(this.personajes).find((personaje) => {
+            if (ignoredIds.has(personaje.id) || personaje.tthoney) {
+                return false;
+            }
+
+            const viewerTile = this.getViewerTile(personaje);
+            return Boolean(viewerTile && viewerTile.x === tX && viewerTile.y === tY);
+        });
+    }
+
+    // Un mapa es visible si es el actual o un vecino cargado del mundo continuo.
+    isEntityMapVisible(mapNumber: number): boolean {
+        return mapNumber === this.mapNumber || this.isMapLoadedInWorld(mapNumber);
+    }
+
+    /**
+     * Tile de una entidad expresado en el marco del mapa actual (puede caer
+     * fuera de 1..100 si la entidad está en un vecino). null si su mapa no
+     * forma parte del mundo cargado.
+     */
+    getViewerTile(entity: { map: number; pos: { x: number; y: number } }): {
+        x: number;
+        y: number;
+    } | null {
+        if (entity.map === this.mapNumber) {
+            return { x: entity.pos.x, y: entity.pos.y };
+        }
+
+        const placement = this.worldLayout?.placements.get(entity.map);
+        if (!placement) {
+            return null;
+        }
+
+        return {
+            x: entity.pos.x + placement.originX - this.worldOriginX,
+            y: entity.pos.y + placement.originY - this.worldOriginY,
+        };
+    }
+
+    /**
+     * Convierte un tile del marco actual al mapa y coordenadas locales que el
+     * servidor entiende: el mapa de la entidad parada ahí si la hay, si no el
+     * mapa actual cuando el tile le pertenece, si no el vecino que lo cubre.
+     */
+    viewerTileToMapTile(x: number, y: number): { map: number; x: number; y: number } | null {
+        for (const personaje of Object.values(this.personajes)) {
+            if (personaje.tthoney || personaje.map === this.mapNumber) {
+                continue;
+            }
+            const viewerTile = this.getViewerTile(personaje);
+            if (viewerTile && viewerTile.x === x && viewerTile.y === y) {
+                return { map: personaje.map, x: personaje.pos.x, y: personaje.pos.y };
+            }
+        }
+
+        if (
+            x >= 1 &&
+            y >= 1 &&
+            x <= this.mapDimensions.width &&
+            y <= this.mapDimensions.height
+        ) {
+            return { map: this.mapNumber, x, y };
+        }
+
+        const worldX = x + this.worldOriginX;
+        const worldY = y + this.worldOriginY;
+        let fallback: { map: number; x: number; y: number } | null = null;
+
+        for (const placement of this.worldLayout?.placements.values() ?? []) {
+            if (placement.map === this.mapNumber) {
+                continue;
+            }
+            const localX = worldX - placement.originX;
+            const localY = worldY - placement.originY;
+            if (localX < 1 || localY < 1 || localX > placement.dimensions.width || localY > placement.dimensions.height) {
+                continue;
+            }
+            const candidate = { map: placement.map, x: localX, y: localY };
+            const insideInterior =
+                localX >= placement.interior.minX &&
+                localX <= placement.interior.maxX &&
+                localY >= placement.interior.minY &&
+                localY <= placement.interior.maxY;
+            if (insideInterior) {
+                return candidate;
+            }
+            fallback = fallback ?? candidate;
+        }
+
+        return fallback;
     }
 
     private isTileWalkableForCharacter(
@@ -1299,16 +1461,12 @@ export class Engine {
             return false;
         }
 
-        if (
-            tX < 1 ||
-            tX > this.mapDimensions.width ||
-            tY < 1 ||
-            tY > this.mapDimensions.height
-        ) {
+        const resolvedTile = this.resolveWalkTile(tX, tY);
+        if (!resolvedTile) {
             return false;
         }
 
-        const tile = getTileAt(this.mapData, this.mapNumber, tX, tY);
+        const tile = this.getWalkTileData(tX, tY);
         const isWaterTile = this.isWaterTile(tX, tY);
         const usesWaterMovement = Boolean(
             character?.navegando ||
@@ -1341,16 +1499,11 @@ export class Engine {
             return false;
         }
 
-        if (
-            tX < 1 ||
-            tX > this.mapDimensions.width ||
-            tY < 1 ||
-            tY > this.mapDimensions.height
-        ) {
+        if (!this.resolveWalkTile(tX, tY)) {
             return false;
         }
 
-        const tile = getTileAt(this.mapData, this.mapNumber, tX, tY);
+        const tile = this.getWalkTileData(tX, tY);
         if (tile?.blocked === 1) {
             return false;
         }
@@ -1735,15 +1888,32 @@ export class Engine {
             heading?: number;
             startedAt?: number;
             durationMs?: number;
+            map?: number;
         },
     ): void {
         const personaje = this.personajes[idPj];
         if (!personaje) return;
 
+        // Mundo continuo: si la entidad cruzó a un mapa vecino, el paso se mide
+        // en el marco del mundo (un cruce es un paso de 1 tile, no de 80).
+        const targetMap = options?.map ?? personaje.map;
+        const previousViewerTile = this.getViewerTile(personaje);
+        const nextViewerTile = this.getViewerTile({
+            map: targetMap,
+            pos: { x: posX, y: posY },
+        });
+        personaje.map = targetMap;
+
         const oldX = personaje.pos.x;
         const oldY = personaje.pos.y;
-        const deltaX = posX - oldX;
-        const deltaY = posY - oldY;
+        const deltaX =
+            previousViewerTile && nextViewerTile
+                ? nextViewerTile.x - previousViewerTile.x
+                : posX - oldX;
+        const deltaY =
+            previousViewerTile && nextViewerTile
+                ? nextViewerTile.y - previousViewerTile.y
+                : posY - oldY;
         let heading = options?.heading ?? personaje.heading;
 
         if (
@@ -2059,10 +2229,10 @@ export class Engine {
             }
 
             container.x = Math.round(
-                (entity.pos.x - 1) * TILE_SIZE + entity.moveOffsetX,
+                this.tileToWorldX(entity.pos.x, entity.map) + entity.moveOffsetX,
             );
             container.y = Math.round(
-                (entity.pos.y - 1) * TILE_SIZE + entity.moveOffsetY,
+                this.tileToWorldY(entity.pos.y, entity.map) + entity.moveOffsetY,
             );
             container.zIndex = getRowZIndex(
                 entity.pos.y - entity.addtoUserPos.y,
@@ -2419,6 +2589,73 @@ export class Engine {
         }
     }
 
+    getMapWorldOrigin(mapNumber: number = this.mapNumber): {
+        x: number;
+        y: number;
+    } {
+        if (mapNumber === this.mapNumber) {
+            return { x: this.worldOriginX, y: this.worldOriginY };
+        }
+
+        const placement = this.worldLayout?.placements.get(mapNumber);
+        return placement
+            ? { x: placement.originX, y: placement.originY }
+            : { x: this.worldOriginX, y: this.worldOriginY };
+    }
+
+    tileToWorldX(tileX: number, mapNumber: number = this.mapNumber): number {
+        return (tileX - 1 + this.getMapWorldOrigin(mapNumber).x) * TILE_SIZE;
+    }
+
+    tileToWorldY(tileY: number, mapNumber: number = this.mapNumber): number {
+        return (tileY - 1 + this.getMapWorldOrigin(mapNumber).y) * TILE_SIZE;
+    }
+
+    // Fila de mundo (para los contenedores por fila) de un tile de un mapa.
+    getWorldRow(tileY: number, mapNumber: number = this.mapNumber): number {
+        return tileY + this.getMapWorldOrigin(mapNumber).y;
+    }
+
+    // Convierte píxeles de mundo al tile del mapa actual (puede caer fuera de 1..100).
+    worldToCurrentMapTile(worldX: number, worldY: number): { x: number; y: number } {
+        return {
+            x: Math.floor(worldX / TILE_SIZE) + 1 - this.worldOriginX,
+            y: Math.floor(worldY / TILE_SIZE) + 1 - this.worldOriginY,
+        };
+    }
+
+    isMapLoadedInWorld(mapNumber: number): boolean {
+        return Boolean(
+            this.worldLayout?.placements.has(mapNumber) &&
+                this.mapData?.[mapNumber],
+        );
+    }
+
+    /**
+     * Pasa a tener como mapa actual a un vecino ya ubicado en el layout. No
+     * toca ningún sprite: solo cambia el origen desde el que se interpretan las
+     * coordenadas locales del jugador y de las entidades del servidor.
+     */
+    rebaseToMap(mapNumber: number): boolean {
+        if (mapNumber === this.mapNumber) {
+            return true;
+        }
+
+        const placement = this.worldLayout?.placements.get(mapNumber);
+        if (!placement || !this.mapData?.[mapNumber]) {
+            return false;
+        }
+
+        this.mapNumber = mapNumber;
+        this.worldOriginX = placement.originX;
+        this.worldOriginY = placement.originY;
+        this.mapDimensions = placement.dimensions;
+        this.cullingDirty = true;
+        this.roofVisibilityDirty = true;
+        this.treeTransparencyDirty = true;
+        return true;
+    }
+
     // Update camera position (like engine.js renderBackground with offsets)
     updateCamera(): void {
         if (!this.user || !this.mapContainer || !this.app) return;
@@ -2435,8 +2672,8 @@ export class Engine {
 
         // The player tile position in world pixels (matching engine.js rendering)
         // Since tiles render at (x-1)*32, the player at tile (50,50) is at pixel (1568, 1568)
-        const playerWorldX = (tileX - 1) * TILE_SIZE;
-        const playerWorldY = (tileY - 1) * TILE_SIZE;
+        const playerWorldX = this.tileToWorldX(tileX);
+        const playerWorldY = this.tileToWorldY(tileY);
 
         // Apply camera offsets (like engine.js line 596: tempPixelOffsetX = (ScreenX - 1) * 32 + pixelOffsetX)
         // The offsetCounter provides smooth scrolling between tiles
@@ -2464,10 +2701,12 @@ export class Engine {
         this.mapContainer.x = Math.round(this.mapContainer.x);
         this.mapContainer.y = Math.round(this.mapContainer.y);
 
-        // Update debug grid position to match map
+        // La grilla de debug es del mapa actual: la corremos a su origen de mundo.
         if (this.debugGrid) {
-            this.debugGrid.x = this.mapContainer.x;
-            this.debugGrid.y = this.mapContainer.y;
+            this.debugGrid.x =
+                this.mapContainer.x + this.worldOriginX * TILE_SIZE;
+            this.debugGrid.y =
+                this.mapContainer.y + this.worldOriginY * TILE_SIZE;
         }
 
         // Update roof container to follow camera (roofs are in screen space)
@@ -2550,11 +2789,16 @@ export class Engine {
             return;
         }
 
-        const playerPosition = getInterpolatedCharacterPosition(
+        const localPlayerPosition = getInterpolatedCharacterPosition(
             this.user,
             Math.abs(this.offsetCounterX),
             Math.abs(this.offsetCounterY),
         );
+        // Los árboles se registran en tiles de mundo (pueden ser de un vecino).
+        const playerPosition = {
+            x: localPlayerPosition.x + this.worldOriginX,
+            y: localPlayerPosition.y + this.worldOriginY,
+        };
 
         if (
             !this.treeTransparencyDirty &&
@@ -3206,6 +3450,8 @@ export class Engine {
         this.treeSpritesByRow.clear();
         this.treeGraphicIds.clear();
         this.fadedTreeSprites.clear();
+        this.worldLayout = null;
+        this.worldRenderedBounds.clear();
         this.mapRowLayerContainers.clear();
         this.roofRowContainers.clear();
         this.entityFXRowContainers.clear();

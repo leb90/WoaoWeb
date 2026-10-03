@@ -40,6 +40,7 @@ const pkg = require("./package") as PackageApi;
 const npcs = require("./npcs");
 const handleProtocol = require("./handleProtocol");
 const safeZone = require("./safeZone");
+const worldLayout = require("./worldLayout");
 const fishing = require("./fishing");
 const harvesting = require("./harvesting");
 const crafting = require("./crafting");
@@ -339,6 +340,8 @@ function canRenderCharacter(viewerId: EntityId, character: RuntimeCharacter | un
     return !isInvisibleAdmin(character);
 }
 
+type MapPosition = Position & { map: number };
+
 function canReceiveCharacterEvent(viewerId: EntityId, subjectId: EntityId | null | undefined) {
     const subject = getCharacterById(subjectId);
 
@@ -537,9 +540,8 @@ function emitMeleeAirSwing(ws: RuntimeClient, attackerId: EntityId, user: { idIt
 function sendProjectileToCombatViewers(
     ws: RuntimeClient,
     attackerId: EntityId,
-    mapId: number,
-    startPos: Position,
-    endPos: Position,
+    startPos: MapPosition,
+    endPos: MapPosition,
     grhIndex: number,
 ) {
     if (grhIndex <= 0) {
@@ -568,7 +570,7 @@ function sendProjectileToCombatViewers(
         }
     });
 
-    game.loopAreaPos(mapId, endPos, function (target: RuntimeCharacter) {
+    game.loopAreaPos(endPos.map, endPos, function (target: RuntimeCharacter) {
         trySendToClient(target.id);
     });
 }
@@ -576,9 +578,8 @@ function sendProjectileToCombatViewers(
 function sendSpellProjectileToCombatViewers(
     ws: RuntimeClient,
     casterId: EntityId,
-    mapId: number,
-    startPos: Position,
-    endPos: Position,
+    startPos: MapPosition,
+    endPos: MapPosition,
     spellId: number,
 ) {
     if (spellId <= 0) {
@@ -614,7 +615,7 @@ function sendSpellProjectileToCombatViewers(
         }
     });
 
-    game.loopAreaPos(mapId, endPos, function (target: RuntimeCharacter) {
+    game.loopAreaPos(endPos.map, endPos, function (target: RuntimeCharacter) {
         trySendToClient(target.id);
     });
 }
@@ -843,11 +844,13 @@ function isReviveTargetVisibleToCaster(
         return false;
     }
 
-    if (caster.map !== target.map) {
+    const targetInCasterFrame = worldLayout.toViewerFrame(caster.map, target.map, target.pos.x, target.pos.y);
+
+    if (!targetInCasterFrame) {
         return false;
     }
 
-    return !isOutsideClientVision(caster.pos, target.pos);
+    return !isOutsideClientVision(caster.pos, targetInCasterFrame);
 }
 
 function syncPendingReviveCastVisibilityForUser(movedUserId: EntityId) {
@@ -1657,7 +1660,7 @@ function applyGhostDisplacement(
     game.loopAreaPos(ghost.map, ghost.pos, function (target: RuntimeCharacter) {
         if (target.id !== ghost.id && canRenderCharacter(target.id, ghost)) {
             withTargetClient(target.id, (targetClient) => {
-                handleProtocol.actPosition(ghost.id, ghost.pos, targetClient);
+                handleProtocol.actPosition(ghost.id, ghost.map, ghost.pos, targetClient);
             });
         }
     });
@@ -1666,463 +1669,204 @@ function applyGhostDisplacement(
 function updateUserAreaAfterMovement(ws: RuntimeClient, user: RuntimeCharacter, heading: number) {
     const clientId = ws.id!;
 
+    // Mundo continuo: la franja que entra y la que sale del área se recorren en
+    // el marco del mapa del usuario y pueden caer en los mapas vecinos.
+    const enterTile = (tileMap: number, x: number, y: number) => {
+        const mapData = vars.mapData[tileMap]?.[y]?.[x];
+
+        if (!mapData) {
+            return;
+        }
+
+        if (mapData.id) {
+            const areaTarget = resolveAreaTarget(tileMap, x, y);
+
+            if (areaTarget) {
+                if (areaTarget.isNpc) {
+                    const npcArea = Array.isArray(vars.areaNpc[areaTarget.id]) ? vars.areaNpc[areaTarget.id] : [];
+
+                    if (vars.areaNpc[areaTarget.id] !== npcArea) {
+                        vars.areaNpc[areaTarget.id] = npcArea;
+                    }
+
+                    // Los NPC solo agreden dentro de su propio mapa.
+                    if (
+                        tileMap === user.map &&
+                        areaTarget.target.movement == 3 &&
+                        canNpcDetectCharacter(user) &&
+                        npcArea.indexOf(clientId) < 0
+                    ) {
+                        npcArea.push(clientId);
+                    }
+
+                    handleProtocol.sendNpc(areaTarget.target);
+                    socket.send(ws);
+                } else if (canRenderCharacter(clientId, areaTarget.target as RuntimeCharacter)) {
+                    handleProtocol.sendCharacter(areaTarget.target, clientId);
+                    socket.send(ws);
+                }
+
+                if (!areaTarget.isNpc && canRenderCharacter(areaTarget.id, user)) {
+                    handleProtocol.sendCharacter(user, areaTarget.id);
+                    withTargetClient(areaTarget.id, (targetClient) => {
+                        socket.send(targetClient);
+                    });
+                }
+            }
+        }
+
+        const pos = { x, y };
+
+        if (game.hayObj(tileMap, pos)) {
+            const item = game.objMap(tileMap, pos);
+            const obj = vars.datObj[item.objIndex];
+
+            // Los bloqueos de puertas viajan sin mapa: solo los del mapa propio.
+            if (tileMap === user.map && obj && obj.objType == vars.objType.puerta && item.objIndex == obj.indexAbierta) {
+                handleProtocol.blockMap(tileMap, pos, 0, ws);
+                handleProtocol.blockMap(tileMap, { x: pos.x - 1, y: pos.y }, 0, ws);
+            }
+
+            handleProtocol.renderItem(item.objIndex, tileMap, pos, ws);
+        }
+    };
+
+    const leaveTile = (tileMap: number, x: number, y: number) => {
+        const mapData = vars.mapData[tileMap]?.[y]?.[x];
+
+        if (!mapData) {
+            return;
+        }
+
+        if (mapData.id) {
+            const areaTarget = resolveAreaTarget(tileMap, x, y);
+
+            if (areaTarget) {
+                handleProtocol.deleteCharacter(areaTarget.id, ws);
+
+                if (!areaTarget.isNpc) {
+                    withTargetClient(areaTarget.id, (targetClient) => {
+                        handleProtocol.deleteCharacter(ws.id, targetClient);
+                    });
+                } else if (areaTarget.target.movement == 3) {
+                    const npcArea = vars.areaNpc[areaTarget.id] as Array<string | number> | undefined;
+                    const index = npcArea?.indexOf(clientId) ?? -1;
+
+                    if (npcArea && index > -1) {
+                        npcArea.splice(index, 1);
+                    }
+                }
+            }
+        }
+
+        const pos = { x, y };
+
+        if (game.hayObj(tileMap, pos)) {
+            handleProtocol.deleteItem(tileMap, pos, ws);
+        }
+    };
+
+    const forEachLineTile = (
+        minX: number,
+        maxX: number,
+        minY: number,
+        maxY: number,
+        apply: (tileMap: number, x: number, y: number) => void,
+    ) => {
+        worldLayout.forEachAreaTile(user.map, minX, maxX, minY, maxY, apply);
+    };
+
+    const spanMinX = user.pos.x - AREA_RANGE_X;
+    const spanMaxX = spanMinX + AREA_DIAMETER_X - 1;
+    const spanMinY = user.pos.y - AREA_RANGE_Y;
+    const spanMaxY = spanMinY + AREA_DIAMETER_Y - 1;
+
     if (heading == vars.direcciones.right) {
-        let positionStartX = user.pos.x + AREA_RANGE_X;
-        let positionStartY = user.pos.y - AREA_RANGE_Y;
-
-        for (let y = positionStartY; y < positionStartY + AREA_DIAMETER_Y; y++) {
-            if (positionStartX >= 1 && y >= 1 && positionStartX <= 100 && y <= 100) {
-                const mapData = vars.mapData[user.map][y][positionStartX];
-
-                if (mapData.id) {
-                    const areaTarget = resolveAreaTarget(user.map, positionStartX, y);
-
-                    if (!areaTarget) {
-                        continue;
-                    }
-
-                    if (areaTarget.isNpc) {
-                        const npcArea = Array.isArray(vars.areaNpc[areaTarget.id]) ? vars.areaNpc[areaTarget.id] : [];
-
-                        if (vars.areaNpc[areaTarget.id] !== npcArea) {
-                            vars.areaNpc[areaTarget.id] = npcArea;
-                        }
-
-                        if (
-                            areaTarget.target.movement == 3 &&
-                            canNpcDetectCharacter(user) &&
-                            npcArea.indexOf(clientId) < 0
-                        ) {
-                            npcArea.push(clientId);
-                        }
-
-                        handleProtocol.sendNpc(areaTarget.target);
-                        socket.send(ws);
-                    } else if (canRenderCharacter(clientId, areaTarget.target as RuntimeCharacter)) {
-                        handleProtocol.sendCharacter(areaTarget.target, clientId);
-                        socket.send(ws);
-                    }
-
-                    if (!areaTarget.isNpc && canRenderCharacter(areaTarget.id, user)) {
-                        handleProtocol.sendCharacter(user, areaTarget.id);
-                        withTargetClient(areaTarget.id, (targetClient) => {
-                            socket.send(targetClient);
-                        });
-                    }
-                }
-
-                const pos = {
-                    x: positionStartX,
-                    y: y,
-                };
-
-                if (game.hayObj(user.map, pos)) {
-                    const item = game.objMap(user.map, pos);
-                    const obj = vars.datObj[item.objIndex];
-
-                    if (obj && obj.objType == vars.objType.puerta) {
-                        if (item.objIndex == obj.indexAbierta) {
-                            handleProtocol.blockMap(user.map, pos, 0, ws);
-                            handleProtocol.blockMap(
-                                user.map,
-                                {
-                                    x: pos.x - 1,
-                                    y: pos.y,
-                                },
-                                0,
-                                ws,
-                            );
-                        }
-                    }
-
-                    handleProtocol.renderItem(item.objIndex, user.map, pos, ws);
-                }
-            }
-        }
-
-        positionStartX = user.pos.x - AREA_OUTSIDE_OFFSET_X;
-        positionStartY = user.pos.y - AREA_RANGE_Y;
-
-        for (let y = positionStartY; y < positionStartY + AREA_DIAMETER_Y; y++) {
-            if (positionStartX >= 1 && y >= 1 && positionStartX <= 100 && y <= 100) {
-                const mapData = vars.mapData[user.map][y][positionStartX];
-
-                if (mapData.id) {
-                    const areaTarget = resolveAreaTarget(user.map, positionStartX, y);
-
-                    if (!areaTarget) {
-                        continue;
-                    }
-
-                    handleProtocol.deleteCharacter(areaTarget.id, ws);
-
-                    if (!areaTarget.isNpc) {
-                        withTargetClient(areaTarget.id, (targetClient) => {
-                            handleProtocol.deleteCharacter(ws.id, targetClient);
-                        });
-                    } else if (areaTarget.target.movement == 3) {
-                        const npcArea = vars.areaNpc[areaTarget.id] as Array<string | number> | undefined;
-                        const index = npcArea?.indexOf(clientId) ?? -1;
-
-                        if (npcArea && index > -1) {
-                            npcArea.splice(index, 1);
-                        }
-                    }
-                }
-
-                const pos = {
-                    x: positionStartX,
-                    y: y,
-                };
-
-                if (game.hayObj(user.map, pos)) {
-                    handleProtocol.deleteItem(user.map, pos, ws);
-                }
-            }
-        }
+        forEachLineTile(user.pos.x + AREA_RANGE_X, user.pos.x + AREA_RANGE_X, spanMinY, spanMaxY, enterTile);
+        forEachLineTile(user.pos.x - AREA_OUTSIDE_OFFSET_X, user.pos.x - AREA_OUTSIDE_OFFSET_X, spanMinY, spanMaxY, leaveTile);
     } else if (heading == vars.direcciones.left) {
-        let positionStartX = user.pos.x - AREA_RANGE_X;
-        let positionStartY = user.pos.y - AREA_RANGE_Y;
-
-        for (let y = positionStartY; y < positionStartY + AREA_DIAMETER_Y; y++) {
-            if (positionStartX >= 1 && y >= 1 && positionStartX <= 100 && y <= 100) {
-                const mapData = vars.mapData[user.map][y][positionStartX];
-
-                if (mapData.id) {
-                    const areaTarget = resolveAreaTarget(user.map, positionStartX, y);
-
-                    if (!areaTarget) {
-                        continue;
-                    }
-
-                    if (areaTarget.isNpc) {
-                        const npcArea = Array.isArray(vars.areaNpc[areaTarget.id]) ? vars.areaNpc[areaTarget.id] : [];
-
-                        if (vars.areaNpc[areaTarget.id] !== npcArea) {
-                            vars.areaNpc[areaTarget.id] = npcArea;
-                        }
-
-                        if (
-                            areaTarget.target.movement == 3 &&
-                            canNpcDetectCharacter(user) &&
-                            npcArea.indexOf(clientId) < 0
-                        ) {
-                            npcArea.push(clientId);
-                        }
-
-                        handleProtocol.sendNpc(areaTarget.target);
-                        socket.send(ws);
-                    } else if (canRenderCharacter(clientId, areaTarget.target as RuntimeCharacter)) {
-                        handleProtocol.sendCharacter(areaTarget.target, clientId);
-                        socket.send(ws);
-                    }
-
-                    if (!areaTarget.isNpc && canRenderCharacter(areaTarget.id, user)) {
-                        handleProtocol.sendCharacter(user, areaTarget.id);
-                        withTargetClient(areaTarget.id, (targetClient) => {
-                            socket.send(targetClient);
-                        });
-                    }
-                }
-
-                const pos = {
-                    x: positionStartX,
-                    y: y,
-                };
-
-                if (game.hayObj(user.map, pos)) {
-                    const item = game.objMap(user.map, pos);
-                    const obj = vars.datObj[item.objIndex];
-
-                    if (obj && obj.objType == vars.objType.puerta) {
-                        if (item.objIndex == obj.indexAbierta) {
-                            handleProtocol.blockMap(user.map, pos, 0, ws);
-                            handleProtocol.blockMap(
-                                user.map,
-                                {
-                                    x: pos.x - 1,
-                                    y: pos.y,
-                                },
-                                0,
-                                ws,
-                            );
-                        }
-                    }
-
-                    handleProtocol.renderItem(item.objIndex, user.map, pos, ws);
-                }
-            }
-        }
-
-        positionStartX = user.pos.x + AREA_OUTSIDE_OFFSET_X;
-        positionStartY = user.pos.y - AREA_RANGE_Y;
-
-        for (let y = positionStartY; y < positionStartY + AREA_DIAMETER_Y; y++) {
-            if (positionStartX >= 1 && y >= 1 && positionStartX <= 100 && y <= 100) {
-                const mapData = vars.mapData[user.map][y][positionStartX];
-
-                if (mapData.id) {
-                    const areaTarget = resolveAreaTarget(user.map, positionStartX, y);
-
-                    if (!areaTarget) {
-                        continue;
-                    }
-
-                    handleProtocol.deleteCharacter(areaTarget.id, ws);
-
-                    if (!areaTarget.isNpc) {
-                        withTargetClient(areaTarget.id, (targetClient) => {
-                            handleProtocol.deleteCharacter(ws.id, targetClient);
-                        });
-                    } else if (areaTarget.target.movement == 3) {
-                        const npcArea = vars.areaNpc[areaTarget.id] as Array<string | number> | undefined;
-                        const index = npcArea?.indexOf(clientId) ?? -1;
-
-                        if (npcArea && index > -1) {
-                            npcArea.splice(index, 1);
-                        }
-                    }
-                }
-
-                const pos = {
-                    x: positionStartX,
-                    y: y,
-                };
-
-                if (game.hayObj(user.map, pos)) {
-                    handleProtocol.deleteItem(user.map, pos, ws);
-                }
-            }
-        }
+        forEachLineTile(user.pos.x - AREA_RANGE_X, user.pos.x - AREA_RANGE_X, spanMinY, spanMaxY, enterTile);
+        forEachLineTile(user.pos.x + AREA_OUTSIDE_OFFSET_X, user.pos.x + AREA_OUTSIDE_OFFSET_X, spanMinY, spanMaxY, leaveTile);
     } else if (heading == vars.direcciones.down) {
-        let positionStartX = user.pos.x - AREA_RANGE_X;
-        let positionStartY = user.pos.y + AREA_RANGE_Y;
-
-        for (let x = positionStartX; x < positionStartX + AREA_DIAMETER_X; x++) {
-            if (x >= 1 && positionStartY >= 1 && x <= 100 && positionStartY <= 100) {
-                const mapData = vars.mapData[user.map][positionStartY][x];
-
-                if (mapData.id) {
-                    const areaTarget = resolveAreaTarget(user.map, x, positionStartY);
-
-                    if (!areaTarget) {
-                        continue;
-                    }
-
-                    if (areaTarget.isNpc) {
-                        const npcArea = Array.isArray(vars.areaNpc[areaTarget.id]) ? vars.areaNpc[areaTarget.id] : [];
-
-                        if (vars.areaNpc[areaTarget.id] !== npcArea) {
-                            vars.areaNpc[areaTarget.id] = npcArea;
-                        }
-
-                        if (
-                            areaTarget.target.movement == 3 &&
-                            canNpcDetectCharacter(user) &&
-                            npcArea.indexOf(clientId) < 0
-                        ) {
-                            npcArea.push(clientId);
-                        }
-
-                        handleProtocol.sendNpc(areaTarget.target);
-                        socket.send(ws);
-                    } else if (canRenderCharacter(clientId, areaTarget.target as RuntimeCharacter)) {
-                        handleProtocol.sendCharacter(areaTarget.target, clientId);
-                        socket.send(ws);
-                    }
-
-                    if (!areaTarget.isNpc && canRenderCharacter(areaTarget.id, user)) {
-                        handleProtocol.sendCharacter(user, areaTarget.id);
-                        withTargetClient(areaTarget.id, (targetClient) => {
-                            socket.send(targetClient);
-                        });
-                    }
-                }
-
-                const pos = {
-                    x: x,
-                    y: positionStartY,
-                };
-
-                if (game.hayObj(user.map, pos)) {
-                    const item = game.objMap(user.map, pos);
-                    const obj = vars.datObj[item.objIndex];
-
-                    if (obj && obj.objType == vars.objType.puerta) {
-                        if (item.objIndex == obj.indexAbierta) {
-                            handleProtocol.blockMap(user.map, pos, 0, ws);
-                            handleProtocol.blockMap(
-                                user.map,
-                                {
-                                    x: pos.x - 1,
-                                    y: pos.y,
-                                },
-                                0,
-                                ws,
-                            );
-                        }
-                    }
-
-                    handleProtocol.renderItem(item.objIndex, user.map, pos, ws);
-                }
-            }
-        }
-
-        positionStartX = user.pos.x - AREA_RANGE_X;
-        positionStartY = user.pos.y - AREA_OUTSIDE_OFFSET_Y;
-
-        for (let x = positionStartX; x < positionStartX + AREA_DIAMETER_X; x++) {
-            if (x >= 1 && positionStartY >= 1 && x <= 100 && positionStartY <= 100) {
-                const mapData = vars.mapData[user.map][positionStartY][x];
-
-                if (mapData.id) {
-                    const areaTarget = resolveAreaTarget(user.map, x, positionStartY);
-
-                    if (!areaTarget) {
-                        continue;
-                    }
-
-                    handleProtocol.deleteCharacter(areaTarget.id, ws);
-
-                    if (!areaTarget.isNpc) {
-                        withTargetClient(areaTarget.id, (targetClient) => {
-                            handleProtocol.deleteCharacter(ws.id, targetClient);
-                        });
-                    } else if (areaTarget.target.movement == 3) {
-                        const npcArea = vars.areaNpc[areaTarget.id] as Array<string | number> | undefined;
-                        const index = npcArea?.indexOf(clientId) ?? -1;
-
-                        if (npcArea && index > -1) {
-                            npcArea.splice(index, 1);
-                        }
-                    }
-                }
-
-                const pos = {
-                    x: x,
-                    y: positionStartY,
-                };
-
-                if (game.hayObj(user.map, pos)) {
-                    handleProtocol.deleteItem(user.map, pos, ws);
-                }
-            }
-        }
+        forEachLineTile(spanMinX, spanMaxX, user.pos.y + AREA_RANGE_Y, user.pos.y + AREA_RANGE_Y, enterTile);
+        forEachLineTile(spanMinX, spanMaxX, user.pos.y - AREA_OUTSIDE_OFFSET_Y, user.pos.y - AREA_OUTSIDE_OFFSET_Y, leaveTile);
     } else if (heading == vars.direcciones.up) {
-        let positionStartX = user.pos.x - AREA_RANGE_X;
-        let positionStartY = user.pos.y - AREA_RANGE_Y;
-
-        for (let x = positionStartX; x < positionStartX + AREA_DIAMETER_X; x++) {
-            if (x >= 1 && positionStartY >= 1 && x <= 100 && positionStartY <= 100) {
-                const mapData = vars.mapData[user.map][positionStartY][x];
-
-                if (mapData.id) {
-                    const areaTarget = resolveAreaTarget(user.map, x, positionStartY);
-
-                    if (!areaTarget) {
-                        continue;
-                    }
-
-                    if (areaTarget.isNpc) {
-                        const npcArea = Array.isArray(vars.areaNpc[areaTarget.id]) ? vars.areaNpc[areaTarget.id] : [];
-
-                        if (vars.areaNpc[areaTarget.id] !== npcArea) {
-                            vars.areaNpc[areaTarget.id] = npcArea;
-                        }
-
-                        if (
-                            areaTarget.target.movement == 3 &&
-                            canNpcDetectCharacter(user) &&
-                            npcArea.indexOf(clientId) < 0
-                        ) {
-                            npcArea.push(clientId);
-                        }
-
-                        handleProtocol.sendNpc(areaTarget.target);
-                        socket.send(ws);
-                    } else if (canRenderCharacter(clientId, areaTarget.target as RuntimeCharacter)) {
-                        handleProtocol.sendCharacter(areaTarget.target, clientId);
-                        socket.send(ws);
-                    }
-
-                    if (!areaTarget.isNpc && canRenderCharacter(areaTarget.id, user)) {
-                        handleProtocol.sendCharacter(user, areaTarget.id);
-                        withTargetClient(areaTarget.id, (targetClient) => {
-                            socket.send(targetClient);
-                        });
-                    }
-                }
-
-                const pos = {
-                    x: x,
-                    y: positionStartY,
-                };
-
-                if (game.hayObj(user.map, pos)) {
-                    const item = game.objMap(user.map, pos);
-                    const obj = vars.datObj[item.objIndex];
-
-                    if (obj && obj.objType == vars.objType.puerta) {
-                        if (item.objIndex == obj.indexAbierta) {
-                            handleProtocol.blockMap(user.map, pos, 0, ws);
-                            handleProtocol.blockMap(
-                                user.map,
-                                {
-                                    x: pos.x - 1,
-                                    y: pos.y,
-                                },
-                                0,
-                                ws,
-                            );
-                        }
-                    }
-
-                    handleProtocol.renderItem(item.objIndex, user.map, pos, ws);
-                }
-            }
-        }
-
-        positionStartX = user.pos.x - AREA_RANGE_X;
-        positionStartY = user.pos.y + AREA_OUTSIDE_OFFSET_Y;
-
-        for (let x = positionStartX; x < positionStartX + AREA_DIAMETER_X; x++) {
-            if (x >= 1 && positionStartY >= 1 && x <= 100 && positionStartY <= 100) {
-                const mapData = vars.mapData[user.map][positionStartY][x];
-
-                if (mapData.id) {
-                    const areaTarget = resolveAreaTarget(user.map, x, positionStartY);
-
-                    if (!areaTarget) {
-                        continue;
-                    }
-
-                    handleProtocol.deleteCharacter(areaTarget.id, ws);
-
-                    if (!areaTarget.isNpc) {
-                        withTargetClient(areaTarget.id, (targetClient) => {
-                            handleProtocol.deleteCharacter(ws.id, targetClient);
-                        });
-                    } else if (areaTarget.target.movement == 3) {
-                        const npcArea = vars.areaNpc[areaTarget.id] as Array<string | number> | undefined;
-                        const index = npcArea?.indexOf(clientId) ?? -1;
-
-                        if (npcArea && index > -1) {
-                            npcArea.splice(index, 1);
-                        }
-                    }
-                }
-
-                const pos = {
-                    x: x,
-                    y: positionStartY,
-                };
-
-                if (game.hayObj(user.map, pos)) {
-                    handleProtocol.deleteItem(user.map, pos, ws);
-                }
-            }
-        }
+        forEachLineTile(spanMinX, spanMaxX, user.pos.y - AREA_RANGE_Y, user.pos.y - AREA_RANGE_Y, enterTile);
+        forEachLineTile(spanMinX, spanMaxX, user.pos.y + AREA_OUTSIDE_OFFSET_Y, user.pos.y + AREA_OUTSIDE_OFFSET_Y, leaveTile);
     }
+}
+
+function getRawTileExitDestination(tileExit: unknown): { map: number; x: number; y: number } | null {
+    if (!tileExit || typeof tileExit !== "object") {
+        return null;
+    }
+
+    const exit = tileExit as { map?: number; x?: number; y?: number; destinations?: unknown[] };
+
+    if (Array.isArray(exit.destinations)) {
+        return exit.destinations.length === 1 ? getRawTileExitDestination(exit.destinations[0]) : null;
+    }
+
+    if (typeof exit.map !== "number" || typeof exit.x !== "number" || typeof exit.y !== "number") {
+        return null;
+    }
+
+    return { map: exit.map, x: exit.x, y: exit.y };
+}
+
+/**
+ * Mapa sobre el que el cliente dice haber clickeado. Solo se acepta el propio
+ * o uno de los vecinos del mundo continuo; cualquier otra cosa cae al propio.
+ */
+function resolveRequestedTargetMap(user: RuntimeCharacter, requestedMap: number): number {
+    if (requestedMap && requestedMap !== user.map && worldLayout.isNeighborMap(user.map, requestedMap)) {
+        return requestedMap;
+    }
+
+    return user.map;
+}
+
+/**
+ * Entidad parada en un tile clickeado (expresado en coordenadas del mapa
+ * `targetMap`), mirando también los tiles de los mapas vecinos que ocupan la
+ * misma posición del mundo.
+ */
+function resolveClickedTarget(user: RuntimeCharacter, targetMap: number, x: number, y: number) {
+    const viewerTile = worldLayout.toViewerFrame(user.map, targetMap, x, y);
+
+    if (!viewerTile) {
+        return undefined;
+    }
+
+    const occupant = worldLayout.findOccupantAtViewerTile(user.map, viewerTile.x, viewerTile.y);
+
+    return occupant ? resolveAreaTarget(occupant.map, occupant.x, occupant.y) : undefined;
+}
+
+/**
+ * Tras cruzar a un mapa vecino, las criaturas de ese mapa que ya estaban a la
+ * vista no tienen al jugador en su área (solo agreden dentro de su mapa, y
+ * cuando entraron a la vista el jugador estaba en el otro). Un teleport lo
+ * resolvía reenviando toda el área; el cruce continuo lo registra acá.
+ */
+function registerUserWithNearbyNpcs(ws: RuntimeClient, user: RuntimeCharacter) {
+    const clientId = ws.id!;
+
+    game.loopArea(ws, function (target: AreaTarget) {
+        if (!target.isNpc || target.map !== user.map || target.movement != 3 || !canNpcDetectCharacter(user)) {
+            return;
+        }
+
+        const npcArea = Array.isArray(vars.areaNpc[target.id]) ? vars.areaNpc[target.id] : [];
+
+        if (vars.areaNpc[target.id] !== npcArea) {
+            vars.areaNpc[target.id] = npcArea;
+        }
+
+        if (npcArea.indexOf(clientId) < 0) {
+            npcArea.push(clientId);
+        }
+    });
 }
 
 function processUserMovement(ws: RuntimeClient, heading: number, moveId: number, now = Date.now()) {
@@ -2233,47 +1977,86 @@ function processUserMovement(ws: RuntimeClient, heading: number, moveId: number,
     }
 
     const tileExit = vars.mapa[user.map]?.[posY]?.[posX]?.tileExit;
-    const tileExitDestination = game.resolveTileExitDestination(
-        ws,
-        tileExit,
-        `protocol.writeWalk.tileExit ${user.map}@${posX},${posY}`,
-        { mapId: user.map, x: posX, y: posY },
-    );
+    const rawExitDestination = getRawTileExitDestination(tileExit);
+    const previousMap = user.map;
+    let targetMap = user.map;
+    let effectiveGhostMove = ghostMove;
 
-    if (tileExitDestination) {
-        const mapChangeDeniedMessage = game.getPvpMapChangeDeniedMessage(user, now);
+    if (rawExitDestination && worldLayout.isContinuousExit(user.map, posX, posY, rawExitDestination)) {
+        // Mundo continuo: el exit hacia el mapa vecino recíproco ocupa la misma
+        // posición del mundo que su destino, así que se camina como un paso más
+        // (sin teleport, sin reenviar el área y sin la restricción PvP de cambio
+        // de mapa). Solo cambia el mapa en el que queda guardado el jugador.
+        const entryDeniedMessage = game.getMapEntryDeniedMessage(user, rawExitDestination.map);
 
-        if (mapChangeDeniedMessage) {
-            handleProtocol.console(mapChangeDeniedMessage, "white", 0, 0, ws);
+        if (entryDeniedMessage) {
+            handleProtocol.console(entryDeniedMessage, "white", 0, 0, ws);
             sendOwnPositionUpdate(ws, user);
             return;
         }
 
-        cancelPendingReviveCast(ws, user);
-        npcs.deleteUserToAllNpcs(ws.id);
-        game.telep(
+        if (
+            !game.legalPos(rawExitDestination.x, rawExitDestination.y, rawExitDestination.map, Boolean(user.navegando), ws.id)
+        ) {
+            sendOwnPositionUpdate(ws, user);
+            return;
+        }
+
+        targetMap = rawExitDestination.map;
+        posX = rawExitDestination.x;
+        posY = rawExitDestination.y;
+        effectiveGhostMove = null;
+    } else {
+        const tileExitDestination = game.resolveTileExitDestination(
             ws,
-            tileExitDestination.map,
-            tileExitDestination.x,
-            tileExitDestination.y,
+            tileExit,
             `protocol.writeWalk.tileExit ${user.map}@${posX},${posY}`,
+            { mapId: user.map, x: posX, y: posY },
         );
-        return;
+
+        if (tileExitDestination) {
+            const mapChangeDeniedMessage = game.getPvpMapChangeDeniedMessage(user, now);
+
+            if (mapChangeDeniedMessage) {
+                handleProtocol.console(mapChangeDeniedMessage, "white", 0, 0, ws);
+                sendOwnPositionUpdate(ws, user);
+                return;
+            }
+
+            cancelPendingReviveCast(ws, user);
+            npcs.deleteUserToAllNpcs(ws.id);
+            game.telep(
+                ws,
+                tileExitDestination.map,
+                tileExitDestination.x,
+                tileExitDestination.y,
+                `protocol.writeWalk.tileExit ${user.map}@${posX},${posY}`,
+            );
+            return;
+        }
     }
 
     cancelPendingReviveCast(ws, user, "Se canceló el resucitar al moverte.");
 
-    vars.mapData[user.map][oldY][oldX].id = 0;
-    vars.mapData[user.map][posY][posX].id = ws.id;
+    if (targetMap !== previousMap) {
+        // Las criaturas del mapa que se deja no siguen al jugador, y las
+        // invocaciones tampoco cruzan (igual que en un teleport).
+        npcs.deleteUserToAllNpcs(ws.id);
+        npcs.removeOwnerSummons(ws.id);
+    }
 
+    vars.mapData[previousMap][oldY][oldX].id = 0;
+    vars.mapData[targetMap][posY][posX].id = ws.id;
+
+    user.map = targetMap;
     user.pos.x = posX;
     user.pos.y = posY;
     user.nextWalkAt = now + vars.timing.walkStepMs;
     user.stateVersion = Number(user.stateVersion ?? 0) + 1;
     user.lastMovementActivityAt = now;
 
-    if (ghostMove) {
-        applyGhostDisplacement(ghostMove, now);
+    if (effectiveGhostMove) {
+        applyGhostDisplacement(effectiveGhostMove, now);
     }
 
     cancelPendingLogout(user, ws, LOGOUT_CANCELLED_MESSAGE);
@@ -2292,12 +2075,18 @@ function processUserMovement(ws: RuntimeClient, heading: number, moveId: number,
     game.loopArea(ws, function (target: AreaTarget) {
         if (!target.isNpc && target.id != ws.id && canRenderCharacter(target.id, user)) {
             withTargetClient(target.id, (targetClient) => {
-                handleProtocol.moveEntity(ws.id, user.pos, user.heading, targetClient);
+                handleProtocol.moveEntity(ws.id, user.map, user.pos, user.heading, targetClient);
             });
         }
     });
 
     sendOwnPositionUpdate(ws, user);
+
+    if (targetMap !== previousMap) {
+        handleProtocol.nameMap(ws.id);
+        registerUserWithNearbyNpcs(ws, user);
+    }
+
     game.syncPartyStateForMember(ws.id);
     game.syncClanStateForMember(ws.id);
     updateUserAreaAfterMovement(ws, user, heading);
@@ -2494,6 +2283,7 @@ function eventClick(ws: RuntimeClient) {
         const x = pkg.getByte();
         const y = pkg.getByte();
         const mouseButton = pkg.canReadBytes(1) ? pkg.getByte() : 0;
+        const requestedMap = pkg.canReadBytes(2) ? pkg.getShort() : 0;
 
         if (x < 1 || x > 100) {
             return;
@@ -2509,8 +2299,11 @@ function eventClick(ws: RuntimeClient) {
             return;
         }
 
+        // Mundo continuo: el click puede caer en un mapa vecino visible.
+        const targetMap = resolveRequestedTargetMap(user, requestedMap);
+
         if (mouseButton === 2 && user.privileges === 1) {
-            game.telep(ws, user.map, x, y, `protocol.clickMap.admin ${user.map}@${x},${y}`);
+            game.telep(ws, targetMap, x, y, `protocol.clickMap.admin ${targetMap}@${x},${y}`);
             return;
         }
 
@@ -2518,20 +2311,22 @@ function eventClick(ws: RuntimeClient) {
             return;
         }
 
-        if (fishing.handleMapClick(ws, x, y)) {
-            return;
-        }
+        if (targetMap === user.map) {
+            if (fishing.handleMapClick(ws, x, y)) {
+                return;
+            }
 
-        if (harvesting.handleMapClick(ws, x, y)) {
-            return;
-        }
+            if (harvesting.handleMapClick(ws, x, y)) {
+                return;
+            }
 
-        if (smelting.handleMapClick(ws, x, y)) {
-            return;
-        }
+            if (smelting.handleMapClick(ws, x, y)) {
+                return;
+            }
 
-        if (crafting.handleMapClick(ws, x, y)) {
-            return;
+            if (crafting.handleMapClick(ws, x, y)) {
+                return;
+            }
         }
 
         const pos = {
@@ -2542,29 +2337,29 @@ function eventClick(ws: RuntimeClient) {
         let objMap: MapObjectInfo | null = null,
             obj: DataObject | null = null;
 
-        if (game.hayObj(user.map, pos)) {
-            objMap = game.objMap(user.map, pos) as MapObjectInfo;
+        if (game.hayObj(targetMap, pos)) {
+            objMap = game.objMap(targetMap, pos) as MapObjectInfo;
             obj = (vars.datObj[objMap.objIndex] as DataObject | undefined) ?? null;
 
-            if (obj && obj.objType == vars.objType.puerta) {
+            if (targetMap === user.map && obj && obj.objType == vars.objType.puerta) {
                 game.openDoor(clientId, pos, objMap, obj);
             }
 
             handleProtocol.console((obj?.name ?? `Objeto ${objMap.objIndex}`) + " - " + objMap.amount, "white", 1, 0, ws);
         } else if (
-            game.hayObj(user.map, {
+            game.hayObj(targetMap, {
                 x: pos.x + 1,
                 y: pos.y,
             })
         ) {
-            objMap = game.objMap(user.map, {
+            objMap = game.objMap(targetMap, {
                 x: pos.x + 1,
                 y: pos.y,
             }) as MapObjectInfo;
 
             obj = (vars.datObj[objMap.objIndex] as DataObject | undefined) ?? null;
 
-            if (obj && obj.objType == vars.objType.puerta) {
+            if (targetMap === user.map && obj && obj.objType == vars.objType.puerta) {
                 game.openDoor(
                     ws.id,
                     {
@@ -2578,18 +2373,18 @@ function eventClick(ws: RuntimeClient) {
 
             handleProtocol.console((obj?.name ?? `Objeto ${objMap.objIndex}`) + " - " + objMap.amount, "white", 1, 0, ws);
         } else if (
-            game.hayObj(user.map, {
+            game.hayObj(targetMap, {
                 x: pos.x + 1,
                 y: pos.y + 1,
             })
         ) {
-            objMap = game.objMap(user.map, {
+            objMap = game.objMap(targetMap, {
                 x: pos.x + 1,
                 y: pos.y + 1,
             }) as MapObjectInfo;
             obj = (vars.datObj[objMap.objIndex] as DataObject | undefined) ?? null;
 
-            if (obj && obj.objType == vars.objType.puerta) {
+            if (targetMap === user.map && obj && obj.objType == vars.objType.puerta) {
                 game.openDoor(
                     ws.id,
                     {
@@ -2603,18 +2398,18 @@ function eventClick(ws: RuntimeClient) {
 
             handleProtocol.console((obj?.name ?? `Objeto ${objMap.objIndex}`) + " - " + objMap.amount, "white", 1, 0, ws);
         } else if (
-            game.hayObj(user.map, {
+            game.hayObj(targetMap, {
                 x: pos.x,
                 y: pos.y + 1,
             })
         ) {
-            objMap = game.objMap(user.map, {
+            objMap = game.objMap(targetMap, {
                 x: pos.x,
                 y: pos.y + 1,
             }) as MapObjectInfo;
             obj = (vars.datObj[objMap.objIndex] as DataObject | undefined) ?? null;
 
-            if (obj && obj.objType == vars.objType.puerta) {
+            if (targetMap === user.map && obj && obj.objType == vars.objType.puerta) {
                 game.openDoor(
                     ws.id,
                     {
@@ -2629,10 +2424,10 @@ function eventClick(ws: RuntimeClient) {
             handleProtocol.console((obj?.name ?? `Objeto ${objMap.objIndex}`) + " - " + objMap.amount, "white", 1, 0, ws);
         }
 
-        let selectedTarget = resolveAreaTarget(user.map, x, y);
+        let selectedTarget = resolveClickedTarget(user, targetMap, x, y);
 
         if (!selectedTarget && y < 100) {
-            selectedTarget = resolveAreaTarget(user.map, x, y + 1);
+            selectedTarget = resolveClickedTarget(user, targetMap, x, y + 1);
         }
 
         if (selectedTarget) {
@@ -3715,27 +3510,13 @@ function attackMele(ws: RuntimeClient) {
         const x = user.pos.x;
         const y = user.pos.y;
         const heading = user.heading;
-        let recibe: number | string | 0 = 0;
-        let targetTile;
-
-        switch (heading) {
-            case 1:
-                targetTile = vars.mapData[user.map]?.[y - 1]?.[x];
-                recibe = targetTile?.id ?? 0;
-                break;
-            case 2:
-                targetTile = vars.mapData[user.map]?.[y + 1]?.[x];
-                recibe = targetTile?.id ?? 0;
-                break;
-            case 3:
-                targetTile = vars.mapData[user.map]?.[y]?.[x + 1];
-                recibe = targetTile?.id ?? 0;
-                break;
-            case 4:
-                targetTile = vars.mapData[user.map]?.[y]?.[x - 1];
-                recibe = targetTile?.id ?? 0;
-                break;
-        }
+        // Mundo continuo: el tile de enfrente puede pertenecer al mapa vecino.
+        const frontOffset = getHeadingOffset(heading);
+        const frontOccupant = worldLayout.findOccupantAtViewerTile(user.map, x + frontOffset.x, y + frontOffset.y);
+        const recibe: number | string | 0 = frontOccupant?.id ?? 0;
+        const targetTile = frontOccupant
+            ? vars.mapData[frontOccupant.map]?.[frontOccupant.y]?.[frontOccupant.x]
+            : undefined;
 
         if (!targetTile || !recibe) {
             emitMeleeAirSwing(ws, clientId, user);
@@ -3945,6 +3726,7 @@ function attackRange(ws: RuntimeClient) {
             x: pkg.getByte(),
             y: pkg.getByte(),
         };
+        const requestedMap = pkg.canReadBytes(2) ? pkg.getShort() : 0;
 
         if (pos.x < 1 || pos.x > 100) {
             return;
@@ -3954,24 +3736,15 @@ function attackRange(ws: RuntimeClient) {
             return;
         }
 
-        const userMapData = vars.mapData[user.map];
-        let tileSelected = userMapData?.[pos.y]?.[pos.x];
+        const targetMap = resolveRequestedTargetMap(user, requestedMap);
+        let selectedTarget = resolveClickedTarget(user, targetMap, pos.x, pos.y);
 
-        if (!tileSelected?.id && pos.y < 100) {
-            tileSelected = userMapData?.[pos.y + 1]?.[pos.x];
+        if (!selectedTarget && pos.y < 100) {
+            selectedTarget = resolveClickedTarget(user, targetMap, pos.x, pos.y + 1);
         }
 
-        if (tileSelected?.id) {
-            let pjSelected = getCharacterById(tileSelected.id);
-
-            if (!pjSelected) {
-                pjSelected = vars.npcs[tileSelected.id];
-            }
-
-            if (!pjSelected) {
-                user.spellsErrados++;
-                return;
-            }
+        if (selectedTarget) {
+            const pjSelected = selectedTarget.target as any;
 
             const combatTarget = resolveOwnSummonCombatRedirect(clientId, pjSelected) ?? pjSelected;
 
@@ -4030,9 +3803,8 @@ function attackRange(ws: RuntimeClient) {
                     sendProjectileToCombatViewers(
                         ws,
                         clientId,
-                        user.map,
-                        { x: user.pos.x, y: user.pos.y },
-                        { x: resolvedTarget.pos.x, y: resolvedTarget.pos.y },
+                        { map: user.map, x: user.pos.x, y: user.pos.y },
+                        { map: resolvedTarget.map, x: resolvedTarget.pos.x, y: resolvedTarget.pos.y },
                         arrowGraphicId,
                     );
 
@@ -4219,6 +3991,8 @@ function attackSpell(ws: RuntimeClient) {
             y: pkg.getByte(),
         };
         const preferSelfIfEmpty = pkg.canReadBytes(1) ? pkg.getByte() === 1 : false;
+        const requestedMap = pkg.canReadBytes(2) ? pkg.getShort() : 0;
+        const targetMap = resolveRequestedTargetMap(user, requestedMap);
 
         if (pos.x < 1 || pos.x > 100) {
             return;
@@ -4298,15 +4072,16 @@ function attackSpell(ws: RuntimeClient) {
             return;
         }
 
-        const userMapData = vars.mapData[user.map];
-        let tileSelected = userMapData?.[pos.y]?.[pos.x];
+        let selectedTarget = resolveClickedTarget(user, targetMap, pos.x, pos.y);
 
-        if (!tileSelected?.id && pos.y < 100) {
-            tileSelected = userMapData?.[pos.y + 1]?.[pos.x];
+        if (!selectedTarget && pos.y < 100) {
+            selectedTarget = resolveClickedTarget(user, targetMap, pos.x, pos.y + 1);
         }
 
+        let tileSelected: { id: EntityId } | undefined = selectedTarget ? { id: selectedTarget.id } : undefined;
+
         if (!tileSelected?.id && preferSelfIfEmpty && isSelfTargetFallbackEligibleSpell(datSpell)) {
-            tileSelected = { id: clientId } as typeof tileSelected;
+            tileSelected = { id: clientId };
         }
 
         if (tileSelected?.id) {
@@ -4434,9 +4209,8 @@ function attackSpell(ws: RuntimeClient) {
                 sendSpellProjectileToCombatViewers(
                     ws,
                     clientId,
-                    user.map,
-                    { x: user.pos.x, y: user.pos.y },
-                    { x: spellTarget.pos.x, y: spellTarget.pos.y },
+                    { map: user.map, x: user.pos.x, y: user.pos.y },
+                    { map: spellTarget.map, x: spellTarget.pos.x, y: spellTarget.pos.y },
                     idSpell,
                 );
             }

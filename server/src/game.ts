@@ -59,6 +59,7 @@ export {};
 const funct = require("./functions");
 const socket = require("./socket") as SocketApi;
 const vars = require("./vars");
+const worldLayout = require("./worldLayout");
 const handleProtocol = require("./handleProtocol");
 const fishing = require("./fishing");
 const harvesting = require("./harvesting");
@@ -3446,6 +3447,7 @@ export type GameApi = {
         user: Pick<GameCharacter, "pvpMapChangeBlockedUntil"> | undefined,
         now?: number,
     ) => string | null;
+    getMapEntryDeniedMessage: (user: GameCharacter, numMap: number) => string | null;
     setSpellInvisibility: (idUser: EntityId, enabled: boolean) => void;
     syncUserNpcVisibility: (idUser: EntityId) => void;
     inviteToParty: (idUser: EntityId, targetId: EntityId) => { ok: boolean; message: string };
@@ -4978,6 +4980,10 @@ function Game(this: GameApi) {
         return !isWaterTile && !tile?.blocked && !hasOccupant;
     };
 
+    // Mundo continuo: los NPC no cambian de mapa ni pisan las franjas de exits
+    // del borde. Si pudieran pararse ahí quedarían dibujados "dentro" del mapa
+    // vecino, y una criatura arrastrada hasta el borde seguiría al jugador de
+    // mapa en mapa.
     const hasLegalNpcMovement = (x: number, y: number, idMapa: number, aguaValida: boolean, tierraInvalida = false) => {
         if (x < 1 || y < 1 || x > 100 || y > 100) {
             return false;
@@ -4985,6 +4991,10 @@ function Game(this: GameApi) {
 
         const hasOccupant = Boolean(vars.mapData[idMapa]?.[y]?.[x]?.id);
         const tile = vars.mapa[idMapa]?.[y]?.[x];
+
+        if (typeof tile?.tileExit !== "undefined") {
+            return false;
+        }
         const graphicLayer1 = tile?.graphics?.[1] ?? 0;
         const graphicLayer2 = tile?.graphics?.[2] ?? 0;
         const isWaterTile = isPlayerWaterGraphic(graphicLayer1) && !graphicLayer2;
@@ -5007,6 +5017,10 @@ function Game(this: GameApi) {
 
         const hasOccupant = Boolean(vars.mapData[idMapa]?.[y]?.[x]?.id);
         const tile = vars.mapa[idMapa]?.[y]?.[x];
+
+        if (typeof tile?.tileExit !== "undefined") {
+            return false;
+        }
         const graphicLayer1 = tile?.graphics?.[1] ?? 0;
         const graphicLayer2 = tile?.graphics?.[2] ?? 0;
         const isWaterTile = isPlayerWaterGraphic(graphicLayer1) && !graphicLayer2;
@@ -7034,93 +7048,91 @@ function Game(this: GameApi) {
                 const posXEnd = user.pos.x + AREA_RANGE_X;
                 const posYEnd = user.pos.y + AREA_RANGE_Y;
 
-                for (let y = posYStart; y <= posYEnd; y++) {
-                    for (let x = posXStart; x <= posXEnd; x++) {
-                        if (x >= 1 && y >= 1 && x <= 100 && y <= 100) {
-                            const mapData = vars.mapData[user.map][y][x];
+                // Mundo continuo: el área cruza a los mapas vecinos recíprocos.
+                worldLayout.forEachAreaTile(user.map, posXStart, posXEnd, posYStart, posYEnd, (tileMap: number, x: number, y: number) => {
+                    const mapData = vars.mapData[tileMap][y][x];
 
-                            if (mapData.id) {
-                                const areaTarget = resolveAreaTarget(user.map, x, y);
+                    if (mapData.id) {
+                        const areaTarget = resolveAreaTarget(tileMap, x, y);
 
-                                if (!areaTarget) {
-                                    continue;
-                                }
-
-                                if (!areaTarget.isNpc) {
-                                    if (areaTarget.id != clientId) {
-                                        if (canRenderCharacter(areaTarget.id, user)) {
-                                            handleProtocol.sendCharacter(user, areaTarget.id);
-                                            withUserClient(areaTarget.id, (targetClient) => {
-                                                socket.send(targetClient);
-                                                if (user.meditar && Number(user.meditarFx ?? 0) > 0) {
-                                                    handleProtocol.animFX(user.id, user.meditarFx, targetClient);
-                                                }
-                                            });
-                                        }
-
-                                        const areaCharacter = areaTarget.target as GameCharacter;
-
-                                        if (canRenderCharacter(clientId, areaCharacter)) {
-                                            visibleCharactersForUser.push(areaCharacter);
-                                        }
-                                    }
-                                } else {
-                                    const npcArea = Array.isArray(vars.areaNpc[areaTarget.id])
-                                        ? vars.areaNpc[areaTarget.id]
-                                        : [];
-
-                                    if (vars.areaNpc[areaTarget.id] !== npcArea) {
-                                        vars.areaNpc[areaTarget.id] = npcArea;
+                        if (areaTarget) {
+                            if (!areaTarget.isNpc) {
+                                if (areaTarget.id != clientId) {
+                                    if (canRenderCharacter(areaTarget.id, user)) {
+                                        handleProtocol.sendCharacter(user, areaTarget.id);
+                                        withUserClient(areaTarget.id, (targetClient) => {
+                                            socket.send(targetClient);
+                                            if (user.meditar && Number(user.meditarFx ?? 0) > 0) {
+                                                handleProtocol.animFX(user.id, user.meditarFx, targetClient);
+                                            }
+                                        });
                                     }
 
-                                    if (
-                                        areaTarget.target.movement == 3 &&
-                                        canNpcDetectCharacter(user) &&
-                                        npcArea.indexOf(clientId) < 0
-                                    ) {
-                                        npcArea.push(clientId);
-                                    }
+                                    const areaCharacter = areaTarget.target as GameCharacter;
 
-                                    visibleNpcsForUser.push(areaTarget.target as RuntimeNpc);
-                                }
-                            }
-
-                            const pos = {
-                                x: x,
-                                y: y,
-                            };
-
-                            if (game.hayObj(user.map, pos)) {
-                                const item = game.objMap(user.map, pos)!;
-                                const obj = vars.datObj[item.objIndex];
-
-                                if (obj && obj.objType == vars.objType.puerta) {
-                                    if (item.objIndex == obj.indexAbierta) {
-                                        blockedTilesForUser.push(
-                                            {
-                                                pos,
-                                                blocked: 0,
-                                            },
-                                            {
-                                                pos: {
-                                                    x: pos.x - 1,
-                                                    y: pos.y,
-                                                },
-                                                blocked: 0,
-                                            },
-                                        );
+                                    if (canRenderCharacter(clientId, areaCharacter)) {
+                                        visibleCharactersForUser.push(areaCharacter);
                                     }
                                 }
+                            } else {
+                                const npcArea = Array.isArray(vars.areaNpc[areaTarget.id])
+                                    ? vars.areaNpc[areaTarget.id]
+                                    : [];
 
-                                visibleItemsForUser.push({
-                                    idItem: item.objIndex,
-                                    map: user.map,
-                                    pos,
-                                });
+                                if (vars.areaNpc[areaTarget.id] !== npcArea) {
+                                    vars.areaNpc[areaTarget.id] = npcArea;
+                                }
+
+                                // Los NPC solo agreden dentro de su propio mapa.
+                                if (
+                                    tileMap === user.map &&
+                                    areaTarget.target.movement == 3 &&
+                                    canNpcDetectCharacter(user) &&
+                                    npcArea.indexOf(clientId) < 0
+                                ) {
+                                    npcArea.push(clientId);
+                                }
+
+                                visibleNpcsForUser.push(areaTarget.target as RuntimeNpc);
                             }
                         }
                     }
-                }
+
+                    const pos = {
+                        x: x,
+                        y: y,
+                    };
+
+                    if (game.hayObj(tileMap, pos)) {
+                        const item = game.objMap(tileMap, pos)!;
+                        const obj = vars.datObj[item.objIndex];
+
+                        // Los bloqueos de puertas viajan sin mapa: solo los del mapa propio.
+                        if (tileMap === user.map && obj && obj.objType == vars.objType.puerta) {
+                            if (item.objIndex == obj.indexAbierta) {
+                                blockedTilesForUser.push(
+                                    {
+                                        pos,
+                                        blocked: 0,
+                                    },
+                                    {
+                                        pos: {
+                                            x: pos.x - 1,
+                                            y: pos.y,
+                                        },
+                                        blocked: 0,
+                                    },
+                                );
+                            }
+                        }
+
+                        visibleItemsForUser.push({
+                            idItem: item.objIndex,
+                            map: tileMap,
+                            pos,
+                        });
+                    }
+                });
 
                 handleProtocol.areaMetaSnapshot(
                     {
@@ -7174,21 +7186,17 @@ function Game(this: GameApi) {
             const posXEnd = user.pos.x + AREA_RANGE_X;
             const posYEnd = user.pos.y + AREA_RANGE_Y;
 
-            for (let y = posYStart; y <= posYEnd; y++) {
-                for (let x = posXStart; x <= posXEnd; x++) {
-                    if (x >= 1 && y >= 1 && x <= 100 && y <= 100) {
-                        const mapData = vars.mapData[user.map]?.[y]?.[x];
+            worldLayout.forEachAreaTile(user.map, posXStart, posXEnd, posYStart, posYEnd, (tileMap: number, x: number, y: number) => {
+                const mapData = vars.mapData[tileMap]?.[y]?.[x];
 
-                        if (mapData?.id) {
-                            const areaTarget = resolveAreaTarget(user.map, x, y);
+                if (mapData?.id) {
+                    const areaTarget = resolveAreaTarget(tileMap, x, y);
 
-                            if (areaTarget) {
-                                callback(areaTarget.target);
-                            }
-                        }
+                    if (areaTarget) {
+                        callback(areaTarget.target);
                     }
                 }
-            }
+            });
         } catch (err) {
             funct.dumpError(err);
         }
@@ -7213,21 +7221,17 @@ function Game(this: GameApi) {
             const posXEnd = pos.x + AREA_RANGE_X;
             const posYEnd = pos.y + AREA_RANGE_Y;
 
-            for (let y = posYStart; y <= posYEnd; y++) {
-                for (let x = posXStart; x <= posXEnd; x++) {
-                    if (x >= 1 && x <= 100 && y >= 1 && y <= 100) {
-                        const mapData = vars.mapData[idMap]?.[y]?.[x];
+            worldLayout.forEachAreaTile(idMap, posXStart, posXEnd, posYStart, posYEnd, (tileMap: number, x: number, y: number) => {
+                const mapData = vars.mapData[tileMap]?.[y]?.[x];
 
-                        if (mapData?.id) {
-                            const target = vars.personajes[mapData.id];
+                if (mapData?.id) {
+                    const target = vars.personajes[mapData.id];
 
-                            if (target) {
-                                callback(target);
-                            }
-                        }
+                    if (target) {
+                        callback(target);
                     }
                 }
-            }
+            });
         } catch (err) {
             funct.dumpError(err);
         }
@@ -7284,6 +7288,7 @@ function Game(this: GameApi) {
 
     this.getFactionPortalDeniedMessage = getFactionPortalDeniedMessage;
     this.getPvpMapChangeDeniedMessage = getPvpMapChangeDeniedMessage;
+    this.getMapEntryDeniedMessage = getMapEntryDeniedMessage;
 
     /**
      * [telep description]

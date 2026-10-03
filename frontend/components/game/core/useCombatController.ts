@@ -58,8 +58,10 @@ export type TargetingMode =
     | { type: "blacksmith"; name: string };
 
 export type ResolvedSpellReleaseTarget = {
+    // Coordenadas locales del mapa `map` (puede ser un vecino del actual).
     x: number;
     y: number;
+    map: number;
     preferSelfIfEmpty: boolean;
     resolvedEntityId: number | null;
     resolvedEntityType: "player" | "npc" | "self" | "none";
@@ -625,6 +627,16 @@ export function useCombatController(options: UseCombatControllerOptions) {
                     return;
                 }
 
+                // Las heurísticas de tile se evalúan en el marco del mapa actual.
+                const entityViewerTile = engine.getViewerTile(entity);
+                if (!entityViewerTile) {
+                    return;
+                }
+                const entityInViewerFrame = {
+                    isNpc: entity.isNpc,
+                    pos: entityViewerTile,
+                };
+
                 const isPointerOverSprite = isPointerOverMarkedSprite(
                     container,
                     hitMarkers,
@@ -647,13 +659,13 @@ export function useCombatController(options: UseCombatControllerOptions) {
                         preferSelfFirst,
                     ),
                     tileMatchRank: getCombatTileMatchRank(
-                        entity,
+                        entityInViewerFrame,
                         targetTileX,
                         targetTileY,
                     ),
-                    columnDistance: Math.abs(entity.pos.x - targetTileX),
+                    columnDistance: Math.abs(entityViewerTile.x - targetTileX),
                     tileDistance: getCombatTileDistance(
-                        entity,
+                        entityInViewerFrame,
                         targetTileX,
                         targetTileY,
                     ),
@@ -727,6 +739,8 @@ export function useCombatController(options: UseCombatControllerOptions) {
                 return {
                     x: entityTarget.entity.pos.x,
                     y: entityTarget.entity.pos.y,
+                    map: entityTarget.entity.map,
+                    entityId: Number(entityTarget.entity.id),
                 };
             }
             const exactTileEntity = findVisibleEntityAtExactTile(
@@ -735,9 +749,23 @@ export function useCombatController(options: UseCombatControllerOptions) {
                 interaction.targetTileY,
             );
             if (exactTileEntity) {
-                return { x: exactTileEntity.pos.x, y: exactTileEntity.pos.y };
+                return {
+                    x: exactTileEntity.pos.x,
+                    y: exactTileEntity.pos.y,
+                    map: exactTileEntity.map,
+                    entityId: Number(exactTileEntity.id),
+                };
             }
-            return { x: interaction.targetTileX, y: interaction.targetTileY };
+            const rawTile = engine.viewerTileToMapTile(
+                interaction.targetTileX,
+                interaction.targetTileY,
+            );
+            return {
+                x: rawTile?.x ?? interaction.targetTileX,
+                y: rawTile?.y ?? interaction.targetTileY,
+                map: rawTile?.map ?? engine.mapNumber,
+                entityId: null,
+            };
         },
         [resolveEntityTargetFromPointer],
     );
@@ -778,6 +806,7 @@ export function useCombatController(options: UseCombatControllerOptions) {
                         return {
                             x: fallbackPosition.x,
                             y: fallbackPosition.y,
+                            map: user.map,
                             preferSelfIfEmpty: true,
                             resolvedEntityId: Number(user.id),
                             resolvedEntityType: "self",
@@ -789,6 +818,7 @@ export function useCombatController(options: UseCombatControllerOptions) {
                 return {
                     x: entityTarget.entity.pos.x,
                     y: entityTarget.entity.pos.y,
+                    map: entityTarget.entity.map,
                     preferSelfIfEmpty: false,
                     resolvedEntityId: Number(entityTarget.entity.id),
                     resolvedEntityType: entityTarget.entity.isNpc
@@ -807,6 +837,7 @@ export function useCombatController(options: UseCombatControllerOptions) {
                 return {
                     x: exactTileEntity.pos.x,
                     y: exactTileEntity.pos.y,
+                    map: exactTileEntity.map,
                     preferSelfIfEmpty: exactTileEntity.id === engine.user?.id,
                     resolvedEntityId: Number(exactTileEntity.id),
                     resolvedEntityType:
@@ -840,6 +871,7 @@ export function useCombatController(options: UseCombatControllerOptions) {
                 return {
                     x: fallbackPosition.x,
                     y: fallbackPosition.y,
+                    map: engine.user.map,
                     preferSelfIfEmpty: true,
                     resolvedEntityId: Number(engine.user.id),
                     resolvedEntityType: "self",
@@ -847,9 +879,14 @@ export function useCombatController(options: UseCombatControllerOptions) {
                 };
             }
 
+            const rawTile = engine.viewerTileToMapTile(
+                interaction.targetTileX,
+                interaction.targetTileY,
+            );
             return {
-                x: interaction.targetTileX,
-                y: interaction.targetTileY,
+                x: rawTile?.x ?? interaction.targetTileX,
+                y: rawTile?.y ?? interaction.targetTileY,
+                map: rawTile?.map ?? engine.mapNumber,
                 preferSelfIfEmpty: false,
                 resolvedEntityId: null,
                 resolvedEntityType: "none",

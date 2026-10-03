@@ -23,6 +23,156 @@ import {
     type TreeFadeSource,
     type TreeSpriteEntry,
 } from "./visibility";
+import { isTileCoveredByOtherMap } from "../world/worldLayout";
+
+function waitForNextFrame(): Promise<void> {
+    return new Promise((resolve) => {
+        if (typeof window === "undefined") {
+            resolve();
+            return;
+        }
+        window.requestAnimationFrame(() => resolve());
+    });
+}
+
+export type RenderMapOptions = {
+    includeLayers?: Array<"1" | "2" | "3" | "4">;
+    includeObjects?: boolean;
+    bounds?: TileBounds;
+    excludeBounds?: TileBounds;
+    // Mapa a dibujar; por defecto el actual. Tiene que estar en el layout de mundo.
+    mapNumber?: number;
+    // Permite saltear tiles (p.ej. el borde del mapa cubierto por un vecino).
+    skipTile?: (x: number, y: number) => boolean;
+    // Presupuesto en ms de trabajo por frame: al agotarse se cede el hilo al
+    // navegador y se sigue en el frame siguiente. Evita que un mapa entero se
+    // instancie en un solo frame mientras el jugador camina.
+    frameBudgetMs?: number;
+};
+
+
+// Con mundo continuo, el borde de un mapa que queda debajo del interior de un
+// vecino no se dibuja (ver isTileCoveredByOtherMap).
+function getDefaultSkipTile(
+    engine: Engine,
+    mapNumber: number,
+): RenderMapOptions["skipTile"] | undefined {
+    const layout = engine.worldLayout;
+    const placement = layout?.placements.get(mapNumber);
+    if (!layout || !placement) {
+        return undefined;
+    }
+
+    return (x: number, y: number) =>
+        isTileCoveredByOtherMap(layout, placement, x, y);
+}
+
+// Las claves de sprites llevan el mapa porque conviven tiles de varios mapas.
+export function getSceneTileKey(mapNumber: number, x: number, y: number): string {
+    return `${mapNumber}:${x},${y}`;
+}
+
+/**
+ * Elimina todo lo dibujado de un mapa (capas, objetos, techos y árboles) sin
+ * tocar el resto del mundo. Se usa al dejar de tener un mapa como vecino. El
+ * trabajo se reparte en varios frames; si mientras tanto el mapa vuelve a
+ * dibujarse, los sprites nuevos no se tocan (se compara la identidad).
+ */
+export function removeMapSprites(
+    engine: Engine,
+    mapNumber: number,
+    options?: { frameBudgetMs?: number },
+): Promise<void> {
+    const prefix = `${mapNumber}:`;
+    const frameBudgetMs = options?.frameBudgetMs ?? 0;
+
+    for (const tileKey of Array.from(engine.tileObjectRenderRequestIds.keys())) {
+        if (tileKey.startsWith(prefix)) {
+            engine.tileObjectRenderRequestIds.delete(tileKey);
+        }
+    }
+
+    for (const queuedTile of Array.from(engine.pendingTileObjectVisualSyncs)) {
+        if (queuedTile.startsWith(prefix)) {
+            engine.pendingTileObjectVisualSyncs.delete(queuedTile);
+        }
+    }
+
+    engine.worldRenderedBounds.delete(mapNumber);
+
+    const run = async () => {
+        let frameStartedAt = performance.now();
+        let processed = 0;
+        const maybeYield = async () => {
+            if (
+                frameBudgetMs > 0 &&
+                ++processed % 16 === 0 &&
+                performance.now() - frameStartedAt > frameBudgetMs
+            ) {
+                await waitForNextFrame();
+                frameStartedAt = performance.now();
+            }
+        };
+
+        // Recolectar las claves del mapa también se reparte: con decenas de
+        // miles de sprites, el escaneo entero en un frame se nota.
+        const layerEntries: Array<[string, Sprite | AnimatedSprite]> = [];
+        for (const entry of engine.sceneLayerSprites) {
+            if (entry[0].slice(entry[0].indexOf(":") + 1).startsWith(prefix)) {
+                layerEntries.push(entry);
+            }
+            if (++processed % 512 === 0 && frameBudgetMs > 0 && performance.now() - frameStartedAt > frameBudgetMs) {
+                await waitForNextFrame();
+                frameStartedAt = performance.now();
+            }
+        }
+        const objectEntries: Array<[string, Sprite | AnimatedSprite]> = [];
+        for (const entry of engine.objectSprites) {
+            if (entry[0].startsWith(prefix)) {
+                objectEntries.push(entry);
+            }
+        }
+        const roofKeys = Array.from(engine.roofSprites.keys()).filter((tileKey) =>
+            tileKey.startsWith(prefix),
+        );
+        if (engine.isDestroyed) {
+            return;
+        }
+
+        for (const [spriteKey, sprite] of layerEntries) {
+            if (engine.isDestroyed) {
+                return;
+            }
+            if (engine.sceneLayerSprites.get(spriteKey) === sprite) {
+                const tileKey = spriteKey.slice(spriteKey.indexOf(":") + 1);
+                removeSceneLayerSprite(engine, spriteKey, tileKey);
+            }
+            await maybeYield();
+        }
+
+        for (const [tileKey, sprite] of objectEntries) {
+            if (engine.isDestroyed) {
+                return;
+            }
+            if (engine.objectSprites.get(tileKey) === sprite) {
+                removeObjectSprite(engine, tileKey);
+            }
+            await maybeYield();
+        }
+
+        for (const tileKey of roofKeys) {
+            if (engine.isDestroyed) {
+                return;
+            }
+            removeRoofSpritesForTile(engine, tileKey);
+            await maybeYield();
+        }
+
+        engine.cullingDirty = true;
+    };
+
+    return run();
+}
 
 export function registerTreeSprite(
     engine: Engine,
@@ -235,6 +385,7 @@ export function renderTileLayer(
     zIndex: number,
     container: Container,
     anchor: "tile" | "bottom" = "tile",
+    mapNumber: number = engine.mapNumber,
 ): Sprite | AnimatedSprite | null {
     if (!engine.graphicsDB || !canUseEngineContainer(engine, container)) {
         return null;
@@ -275,8 +426,8 @@ export function renderTileLayer(
         }
     }
 
-    sprite.x = (x - 1) * 32;
-    sprite.y = (y - 1) * 32;
+    sprite.x = engine.tileToWorldX(x, mapNumber);
+    sprite.y = engine.tileToWorldY(y, mapNumber);
 
     if (anchor === "bottom") {
         if (graphicData.numFrames === 1) {
@@ -320,6 +471,7 @@ export function renderRoofLayer(
     x: number,
     y: number,
     zIndex: number,
+    mapNumber: number = engine.mapNumber,
 ): void {
     if (
         !engine.graphicsDB ||
@@ -361,8 +513,8 @@ export function renderRoofLayer(
         }
     }
 
-    sprite.x = (x - 1) * 32;
-    sprite.y = (y - 1) * 32;
+    sprite.x = engine.tileToWorldX(x, mapNumber);
+    sprite.y = engine.tileToWorldY(y, mapNumber);
 
     if (graphicData.numFrames === 1) {
         const position = getBottomAnchoredGraphicPosition(
@@ -389,7 +541,7 @@ export function renderRoofLayer(
     sprite.y = Math.round(sprite.y);
     sprite.zIndex = zIndex;
 
-    const tileKey = `${x},${y}`;
+    const tileKey = getSceneTileKey(mapNumber, x, y);
     if (!engine.roofSprites.has(tileKey)) {
         engine.roofSprites.set(tileKey, []);
     }
@@ -397,7 +549,10 @@ export function renderRoofLayer(
     engine.roofTiles.add(tileKey);
     engine.roofVisibilityDirty = true;
 
-    const roofRowContainer = getRoofRowContainer(engine, y);
+    const roofRowContainer = getRoofRowContainer(
+        engine,
+        engine.getWorldRow(y, mapNumber),
+    );
 
     if (!roofRowContainer) {
         destroyDisplayObjectSafely(sprite);
@@ -431,13 +586,15 @@ export async function syncTileObjectVisual(
             zIndex: number,
             container: Container,
             anchor?: "tile" | "bottom",
+            mapNumber?: number,
         ) => Sprite | AnimatedSprite | null;
     },
 ): Promise<void> {
     const { mapNumber, x, y, canUseEngineContainer, loadTextures } = params;
     if (
         engine.isDestroyed ||
-        mapNumber !== engine.mapNumber ||
+        (mapNumber !== engine.mapNumber &&
+            !engine.isMapLoadedInWorld(mapNumber)) ||
         !canUseEngineContainer(engine, engine.mapContainer) ||
         !engine.mapData ||
         !engine.objectsDB
@@ -445,7 +602,7 @@ export async function syncTileObjectVisual(
         return;
     }
 
-    const tileKey = `${x},${y}`;
+    const tileKey = getSceneTileKey(mapNumber, x, y);
     const renderRequestId =
         (engine.tileObjectRenderRequestIds.get(tileKey) ?? 0) + 1;
     engine.tileObjectRenderRequestIds.set(tileKey, renderRequestId);
@@ -483,7 +640,11 @@ export async function syncTileObjectVisual(
         return;
     }
 
-    const objectLayerContainer = getMapRowLayerContainer(engine, y, "object");
+    const objectLayerContainer = getMapRowLayerContainer(
+        engine,
+        engine.getWorldRow(y, mapNumber),
+        "object",
+    );
 
     if (
         !objectLayerContainer ||
@@ -504,6 +665,7 @@ export async function syncTileObjectVisual(
         getRowZIndex(y, Z_INDEX_LAYERS.OBJECT),
         objectLayerContainer,
         "bottom",
+        mapNumber,
     );
 
     if (isStaleRender()) {
@@ -518,7 +680,15 @@ export async function syncTileObjectVisual(
 
     if (sprite) {
         if (isTreeObjectData(objectData)) {
-            registerTreeSprite(engine, tileKey, x, y, sprite, "object");
+            const origin = engine.getMapWorldOrigin(mapNumber);
+            registerTreeSprite(
+                engine,
+                tileKey,
+                x + origin.x,
+                y + origin.y,
+                sprite,
+                "object",
+            );
         }
 
         engine.objectSprites.set(tileKey, sprite);
@@ -653,12 +823,7 @@ export async function renderMap(
         renderTileLayer: any;
         renderRoofLayer: any;
     },
-    options?: {
-        includeLayers?: Array<"1" | "2" | "3" | "4">;
-        includeObjects?: boolean;
-        bounds?: TileBounds;
-        excludeBounds?: TileBounds;
-    },
+    options?: RenderMapOptions,
 ): Promise<void> {
     if (
         !params.canUseEngineContainer(engine, engine.mapContainer) ||
@@ -669,7 +834,21 @@ export async function renderMap(
         return;
     }
 
-    const { mapNumber, mapDimensions } = engine;
+    const mapNumber = options?.mapNumber ?? engine.mapNumber;
+    // Un mapa que dejó de ser vecino ya no tiene origen en el mundo.
+    if (mapNumber !== engine.mapNumber && !engine.isMapLoadedInWorld(mapNumber)) {
+        return;
+    }
+    const mapDimensions =
+        mapNumber === engine.mapNumber
+            ? engine.mapDimensions
+            : (engine.worldLayout?.placements.get(mapNumber)?.dimensions ??
+              engine.mapDimensions);
+    const skipTile = options?.skipTile ?? getDefaultSkipTile(engine, mapNumber);
+    const worldOrigin = engine.getMapWorldOrigin(mapNumber);
+    if (!engine.mapData[mapNumber]) {
+        return;
+    }
     const includedLayers = new Set(
         options?.includeLayers ?? ["1", "2", "3", "4"],
     );
@@ -677,6 +856,8 @@ export async function renderMap(
     const bounds = options?.bounds;
     const excludeBounds = options?.excludeBounds;
 
+    const debugWorld = (window as unknown as { __woaoDebugWorld?: boolean }).__woaoDebugWorld;
+    const collectStartedAt = performance.now();
     const graphicIds = collectMapGraphicIds(
         engine.mapData,
         mapNumber,
@@ -691,9 +872,16 @@ export async function renderMap(
             excludeBounds,
         },
     );
+    const collectMs = performance.now() - collectStartedAt;
 
+    const preloadStartedAt = performance.now();
     if (graphicIds.length > 0) {
         await params.preloadGraphicIds(engine, graphicIds);
+    }
+    if (debugWorld) {
+        console.log(
+            `[woao] renderMap mapa ${mapNumber} capas ${Array.from(includedLayers).join("")} collect ${collectMs.toFixed(1)}ms (${graphicIds.length} grh) preload ${(performance.now() - preloadStartedAt).toFixed(1)}ms t=${Math.round(performance.now())}`,
+        );
     }
 
     if (!params.canUseEngineContainer(engine, engine.mapContainer)) {
@@ -705,17 +893,39 @@ export async function renderMap(
     const minX = bounds?.minX ?? 1;
     const maxX = bounds?.maxX ?? mapDimensions.width;
 
+    const frameBudgetMs = options?.frameBudgetMs ?? 0;
+    let frameStartedAt = performance.now();
+    let tilesSinceCheck = 0;
+
     for (let y = minY; y <= maxY; y++) {
         if (!params.canUseEngineContainer(engine, engine.mapContainer)) {
             return;
         }
         for (let x = minX; x <= maxX; x++) {
+            if (
+                frameBudgetMs > 0 &&
+                ++tilesSinceCheck >= 8 &&
+                performance.now() - frameStartedAt > frameBudgetMs
+            ) {
+                await waitForNextFrame();
+                if (!params.canUseEngineContainer(engine, engine.mapContainer)) {
+                    return;
+                }
+                frameStartedAt = performance.now();
+                tilesSinceCheck = 0;
+            }
+
             if (excludeBounds && isTileWithinBounds(x, y, excludeBounds)) {
                 continue;
             }
 
+            if (skipTile?.(x, y)) {
+                continue;
+            }
+
             const tile = getTileAt(engine.mapData, mapNumber, x, y);
-            const tileKey = `${x},${y}`;
+            const tileKey = getSceneTileKey(mapNumber, x, y);
+            const worldRow = y + worldOrigin.y;
 
             if (!tile?.graphics) {
                 continue;
@@ -734,6 +944,7 @@ export async function renderMap(
                     Z_INDEX_LAYERS.FLOOR,
                     engine.groundLayerContainer ?? engine.mapContainer!,
                     "tile",
+                    mapNumber,
                 );
                 if (layer1Sprite) {
                     engine.sceneLayerSprites.set(layer1Key, layer1Sprite);
@@ -753,6 +964,7 @@ export async function renderMap(
                     Z_INDEX_LAYERS.BELOW,
                     engine.belowLayerContainer ?? engine.mapContainer!,
                     "tile",
+                    mapNumber,
                 );
                 if (layer2Sprite) {
                     engine.sceneLayerSprites.set(layer2Key, layer2Sprite);
@@ -776,7 +988,7 @@ export async function renderMap(
                 removeSceneLayerSprite(engine, layer3Key, tileKey);
                 const layer3Container = getMapRowLayerContainer(
                     engine,
-                    y,
+                    worldRow,
                     "above",
                 );
                 const layer3Sprite = params.renderTileLayer(
@@ -788,14 +1000,15 @@ export async function renderMap(
                     getRowZIndex(y, Z_INDEX_LAYERS.ABOVE),
                     layer3Container ?? engine.mapContainer!,
                     "bottom",
+                    mapNumber,
                 );
 
                 if (layer3Sprite && engine.treeGraphicIds.has(Number(layer3))) {
                     registerTreeSprite(
                         engine,
                         tileKey,
-                        x,
-                        y,
+                        x + worldOrigin.x,
+                        worldRow,
                         layer3Sprite,
                         "layer3",
                     );
@@ -816,6 +1029,7 @@ export async function renderMap(
                     x,
                     y,
                     getRowZIndex(y, Z_INDEX_LAYERS.ROOF),
+                    mapNumber,
                 );
             }
         }

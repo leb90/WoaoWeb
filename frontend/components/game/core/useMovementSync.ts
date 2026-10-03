@@ -26,6 +26,7 @@ type UseMovementSyncOptions = {
         engine: Engine | null,
         detail: string,
     ) => void;
+    tryRebaseToMap: (engine: Engine | null, targetMap: number) => boolean;
     mergeHud: (patch: any) => void;
 };
 
@@ -45,6 +46,7 @@ export function useMovementSync({
     lastServerConfirmedSelfPositionRef,
     runtimeTimingRef,
     startMapChangeTransition,
+    tryRebaseToMap,
     mergeHud,
 }: UseMovementSyncOptions) {
     const syncMovementState = useCallback(
@@ -177,16 +179,21 @@ export function useMovementSync({
 
     const retainPendingRemoteSnapshotsForMap = useCallback(
         (targetMap: number) => {
+            const engine = engineRef.current;
             for (const [
                 entityId,
                 snapshot,
             ] of pendingRemoteSnapshotsRef.current) {
-                if (snapshot.map !== targetMap) {
+                // Con mundo continuo también valen los vecinos cargados.
+                const isVisibleMap =
+                    snapshot.map === targetMap ||
+                    Boolean(engine?.isMapLoadedInWorld(snapshot.map));
+                if (!isVisibleMap) {
                     pendingRemoteSnapshotsRef.current.delete(entityId);
                 }
             }
         },
-        [pendingRemoteSnapshotsRef],
+        [engineRef, pendingRemoteSnapshotsRef],
     );
 
     const resetMovementSyncState = useCallback(() => {
@@ -297,6 +304,13 @@ export function useMovementSync({
             const isMovementRestricted = Boolean(
                 currentUser.tInmo || currentUser.tParalizado,
             );
+            // Mundo continuo: si el servidor confirma al jugador en un mapa
+            // vecino ya dibujado, primero se cambia el marco del motor y recién
+            // después se proyectan los pasos pendientes (ya en el mapa nuevo).
+            if (payload.map !== engine.mapNumber) {
+                tryRebaseToMap(engine, payload.map);
+            }
+
             const predictedTarget = isMovementRestricted
                 ? { map: payload.map, x: payload.x, y: payload.y }
                 : computePredictedPositionFromPendingMoves(
@@ -340,18 +354,34 @@ export function useMovementSync({
             const currentMap = currentUser.map;
             const currentX = currentUser.pos.x;
             const currentY = currentUser.pos.y;
-            const deltaX = predictedTarget.x - currentX;
-            const deltaY = predictedTarget.y - currentY;
+            // Las distancias se miden en el marco del mundo: el tile de exit del
+            // mapa viejo y el primer tile del vecino son la misma posición.
+            const currentViewerTile = engine.getViewerTile({
+                map: currentMap,
+                pos: { x: currentX, y: currentY },
+            }) ?? { x: currentX, y: currentY };
+            const predictedViewerTile = engine.getViewerTile({
+                map: predictedTarget.map,
+                pos: { x: predictedTarget.x, y: predictedTarget.y },
+            }) ?? { x: predictedTarget.x, y: predictedTarget.y };
+            const deltaX = predictedViewerTile.x - currentViewerTile.x;
+            const deltaY = predictedViewerTile.y - currentViewerTile.y;
             const manhattanDistance = Math.abs(deltaX) + Math.abs(deltaY);
+            const isSameWorldTile =
+                engine.isEntityMapVisible(currentMap) &&
+                manhattanDistance === 0;
 
             currentUser.heading = targetHeading;
             currentUser.stateVersion = payload.stateVersion;
 
-            if (
-                currentMap === predictedTarget.map &&
-                currentX === predictedTarget.x &&
-                currentY === predictedTarget.y
-            ) {
+            if (isSameWorldTile) {
+                // Mismo lugar (quizá expresado en el mapa vecino): se actualizan
+                // mapa y coordenadas sin tocar la animación del paso en curso.
+                currentUser.map = predictedTarget.map;
+                currentUser.pos.x = predictedTarget.x;
+                currentUser.pos.y = predictedTarget.y;
+                currentUser.pixelX = predictedTarget.x;
+                currentUser.pixelY = predictedTarget.y;
                 mergeHud({
                     map: predictedTarget.map,
                     pos: { x: predictedTarget.x, y: predictedTarget.y },
@@ -361,7 +391,7 @@ export function useMovementSync({
 
             currentUser.map = predictedTarget.map;
 
-            if (currentMap === predictedTarget.map && manhattanDistance === 1) {
+            if (manhattanDistance === 1) {
                 engine.resetMovement(currentUser, {
                     preserveAnimationFrame: true,
                 });
@@ -374,6 +404,7 @@ export function useMovementSync({
                     {
                         heading: targetHeading,
                         durationMs: runtimeTimingRef.current.walkStepMs,
+                        map: predictedTarget.map,
                     },
                 );
                 currentUser.heading = targetHeading;
@@ -403,6 +434,7 @@ export function useMovementSync({
             pendingUserSnapshotRef,
             runtimeTimingRef,
             startMapChangeTransition,
+            tryRebaseToMap,
         ],
     );
 

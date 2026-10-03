@@ -422,8 +422,8 @@ export function createEntityOverlays(options: CreateEntityOverlaysOptions) {
 
     const renderProjectileVisual = async (
         engine: Engine,
-        startPos: { x: number; y: number },
-        endPos: { x: number; y: number },
+        startPos: { x: number; y: number; map?: number },
+        endPos: { x: number; y: number; map?: number },
         graphicId: number,
     ) => {
         const overlay = engine.entityFXOverlayContainer;
@@ -477,10 +477,18 @@ export function createEntityOverlays(options: CreateEntityOverlaysOptions) {
             projectileSprite = new Sprite(texture);
         }
 
-        const startWorldX = (startPos.x - 1) * TILE_SIZE + TILE_SIZE / 2;
-        const startWorldY = (startPos.y - 1) * TILE_SIZE + TILE_SIZE / 2;
-        const endWorldX = (endPos.x - 1) * TILE_SIZE + TILE_SIZE / 2;
-        const endWorldY = (endPos.y - 1) * TILE_SIZE + TILE_SIZE / 2;
+        const startWorldX =
+            engine.tileToWorldX(startPos.x, startPos.map ?? engine.mapNumber) +
+            TILE_SIZE / 2;
+        const startWorldY =
+            engine.tileToWorldY(startPos.y, startPos.map ?? engine.mapNumber) +
+            TILE_SIZE / 2;
+        const endWorldX =
+            engine.tileToWorldX(endPos.x, endPos.map ?? engine.mapNumber) +
+            TILE_SIZE / 2;
+        const endWorldY =
+            engine.tileToWorldY(endPos.y, endPos.map ?? engine.mapNumber) +
+            TILE_SIZE / 2;
         const distancePixels = Math.hypot(
             endWorldX - startWorldX,
             endWorldY - startWorldY,
@@ -527,8 +535,8 @@ export function createEntityOverlays(options: CreateEntityOverlaysOptions) {
 
     const renderSpellProjectileVisual = (
         engine: Engine,
-        startPos: { x: number; y: number },
-        endPos: { x: number; y: number },
+        startPos: { x: number; y: number; map?: number },
+        endPos: { x: number; y: number; map?: number },
         spellData: SpellData | null | undefined,
     ) => {
         const overlay = engine.entityFXOverlayContainer;
@@ -536,10 +544,18 @@ export function createEntityOverlays(options: CreateEntityOverlaysOptions) {
             return;
         }
 
-        const startWorldX = (startPos.x - 1) * TILE_SIZE + TILE_SIZE / 2;
-        const startWorldY = (startPos.y - 1) * TILE_SIZE + TILE_SIZE / 2;
-        const endWorldX = (endPos.x - 1) * TILE_SIZE + TILE_SIZE / 2;
-        const endWorldY = (endPos.y - 1) * TILE_SIZE + TILE_SIZE / 2;
+        const startWorldX =
+            engine.tileToWorldX(startPos.x, startPos.map ?? engine.mapNumber) +
+            TILE_SIZE / 2;
+        const startWorldY =
+            engine.tileToWorldY(startPos.y, startPos.map ?? engine.mapNumber) +
+            TILE_SIZE / 2;
+        const endWorldX =
+            engine.tileToWorldX(endPos.x, endPos.map ?? engine.mapNumber) +
+            TILE_SIZE / 2;
+        const endWorldY =
+            engine.tileToWorldY(endPos.y, endPos.map ?? engine.mapNumber) +
+            TILE_SIZE / 2;
         const distancePixels = Math.hypot(
             endWorldX - startWorldX,
             endWorldY - startWorldY,

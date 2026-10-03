@@ -105,12 +105,12 @@ export async function handleIncomingUiPacket({
                 {
                     x: packet.payload.startX,
                     y: packet.payload.startY,
-                    map: packet.payload.startMap,
+                    map: packet.payload.startMap || undefined,
                 },
                 {
                     x: packet.payload.endX,
                     y: packet.payload.endY,
-                    map: packet.payload.endMap,
+                    map: packet.payload.endMap || undefined,
                 },
                 spellProjectileData,
             );
@@ -145,12 +145,12 @@ export async function handleIncomingUiPacket({
                         {
                             x: packet.payload.startX,
                             y: packet.payload.startY,
-                            map: packet.payload.startMap,
+                            map: packet.payload.startMap || undefined,
                         },
                         {
                             x: packet.payload.endX,
                             y: packet.payload.endY,
-                            map: packet.payload.endMap,
+                            map: packet.payload.endMap || undefined,
                         },
                         spellProjectileData,
                     );
@@ -192,12 +192,12 @@ export async function handleIncomingUiPacket({
                 {
                     x: packet.payload.startX,
                     y: packet.payload.startY,
-                    map: packet.payload.startMap,
+                    map: packet.payload.startMap || undefined,
                 },
                 {
                     x: packet.payload.endX,
                     y: packet.payload.endY,
-                    map: packet.payload.endMap,
+                    map: packet.payload.endMap || undefined,
                 },
                 packet.payload.grhIndex,
             );

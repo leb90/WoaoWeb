@@ -842,12 +842,6 @@ function writeNpcPayload(npc: ProtocolNpc, viewerId?: EntityId) {
     pkg.writeByte(getNpcQuestStatusForViewer(npc, viewerId));
 }
 
-function writeMapPosition(position: MapPosition) {
-    pkg.writeShort(position.map);
-    pkg.writeByte(position.x);
-    pkg.writeByte(position.y);
-}
-
 function writeAreaItemSnapshot(item: AreaItemSnapshot) {
     pkg.writeInt(item.idItem);
     pkg.writeShort(item.map);
@@ -992,23 +986,24 @@ const handleServer: HandleProtocolApi = {
     },
 
     // Mundo continuo: las posiciones de otras entidades viajan con su mapa,
-    // porque el que mira puede estar en un mapa vecino.
+    // porque el que mira puede estar en un mapa vecino. El mapa va al final
+    // para que un cliente viejo siga leyendo bien x/y.
     moveEntity(idUser, map, pos, heading, client) {
         pkg.setPackageID(pkg.clientPacketID.moveEntity);
         pkg.writeDouble(idUser);
-        pkg.writeShort(map);
         pkg.writeByte(pos.x);
         pkg.writeByte(pos.y);
         pkg.writeByte(heading);
+        pkg.writeShort(map);
         socket.send(client);
     },
 
     actPosition(idUser, map, pos, client) {
         pkg.setPackageID(pkg.clientPacketID.actPosition);
         pkg.writeDouble(idUser);
-        pkg.writeShort(map);
         pkg.writeByte(pos.x);
         pkg.writeByte(pos.y);
+        pkg.writeShort(map);
         socket.send(client);
     },
 
@@ -1062,17 +1057,25 @@ const handleServer: HandleProtocolApi = {
 
     createProjectile(startPos, endPos, grhIndex, client) {
         pkg.setPackageID(pkg.clientPacketID.createProjectile);
-        writeMapPosition(startPos);
-        writeMapPosition(endPos);
+        pkg.writeByte(startPos.x);
+        pkg.writeByte(startPos.y);
+        pkg.writeByte(endPos.x);
+        pkg.writeByte(endPos.y);
         pkg.writeShort(grhIndex);
+        pkg.writeShort(startPos.map);
+        pkg.writeShort(endPos.map);
         socket.send(client);
     },
 
     spellProjectile(startPos, endPos, spellId, client) {
         pkg.setPackageID(pkg.clientPacketID.spellProjectile);
-        writeMapPosition(startPos);
-        writeMapPosition(endPos);
+        pkg.writeByte(startPos.x);
+        pkg.writeByte(startPos.y);
+        pkg.writeByte(endPos.x);
+        pkg.writeByte(endPos.y);
         pkg.writeShort(spellId);
+        pkg.writeShort(startPos.map);
+        pkg.writeShort(endPos.map);
         socket.send(client);
     },
 
@@ -1107,8 +1110,10 @@ const handleServer: HandleProtocolApi = {
         pkg.writeByte(flags);
 
         if (hasProjectile) {
-            writeMapPosition(payload.startPos!);
-            writeMapPosition(payload.endPos!);
+            pkg.writeByte(payload.startPos!.x);
+            pkg.writeByte(payload.startPos!.y);
+            pkg.writeByte(payload.endPos!.x);
+            pkg.writeByte(payload.endPos!.y);
             pkg.writeShort(payload.spellId!);
         }
 
@@ -1127,6 +1132,12 @@ const handleServer: HandleProtocolApi = {
         if (hasWords) {
             pkg.writeDouble(payload.casterId ?? 0);
             pkg.writeString(payload.msg ?? "");
+        }
+
+        // Mapas del proyectil al final, para no desarmar el formato de un cliente viejo.
+        if (hasProjectile) {
+            pkg.writeShort(payload.startPos!.map);
+            pkg.writeShort(payload.endPos!.map);
         }
 
         socket.send(client);

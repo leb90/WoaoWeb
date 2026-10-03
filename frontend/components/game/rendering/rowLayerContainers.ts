@@ -128,7 +128,10 @@ export function getCharacterBaseRenderRow(
     engine: Engine,
     character: Character,
 ): number {
-    return engine.getWorldRow(character.pos.y - character.addtoUserPos.y);
+    return engine.getWorldRow(
+        character.pos.y - character.addtoUserPos.y,
+        character.map,
+    );
 }
 
 export function syncCharacterContainerToRenderRow(

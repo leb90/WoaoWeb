@@ -1737,16 +1737,14 @@ function parseServerPacketById(
                     body: reader.getShort(),
                 },
             };
-        case CLIENT_PACKET_ID.actPosition:
-            return {
-                type: "actPosition",
-                payload: {
-                    id: reader.getDouble(),
-                    map: reader.getShort(),
-                    x: reader.getByte(),
-                    y: reader.getByte(),
-                },
-            };
+        case CLIENT_PACKET_ID.actPosition: {
+            // Mundo continuo: el mapa de la entidad viaja al final (opcional).
+            const id = reader.getDouble();
+            const x = reader.getByte();
+            const y = reader.getByte();
+            const map = reader.canReadBytes(2) ? reader.getShort() : 0;
+            return { type: "actPosition", payload: { id, map, x, y } };
+        }
         case CLIENT_PACKET_ID.actPositionServer:
             return {
                 type: "actPositionServer",
@@ -1759,17 +1757,14 @@ function parseServerPacketById(
                     stateVersion: reader.getInt(),
                 },
             };
-        case CLIENT_PACKET_ID.moveEntity:
-            return {
-                type: "moveEntity",
-                payload: {
-                    id: reader.getDouble(),
-                    map: reader.getShort(),
-                    x: reader.getByte(),
-                    y: reader.getByte(),
-                    heading: reader.getByte(),
-                },
-            };
+        case CLIENT_PACKET_ID.moveEntity: {
+            const id = reader.getDouble();
+            const x = reader.getByte();
+            const y = reader.getByte();
+            const heading = reader.getByte();
+            const map = reader.canReadBytes(2) ? reader.getShort() : 0;
+            return { type: "moveEntity", payload: { id, map, x, y, heading } };
+        }
         case CLIENT_PACKET_ID.changeHeading:
             return {
                 type: "changeHeading",
@@ -1959,32 +1954,32 @@ function parseServerPacketById(
                     flags: reader.getByte(),
                 },
             };
-        case CLIENT_PACKET_ID.createProjectile:
+        case CLIENT_PACKET_ID.createProjectile: {
+            const startX = reader.getByte();
+            const startY = reader.getByte();
+            const endX = reader.getByte();
+            const endY = reader.getByte();
+            const grhIndex = reader.getShort();
+            const startMap = reader.canReadBytes(2) ? reader.getShort() : 0;
+            const endMap = reader.canReadBytes(2) ? reader.getShort() : 0;
             return {
                 type: "createProjectile",
-                payload: {
-                    startMap: reader.getShort(),
-                    startX: reader.getByte(),
-                    startY: reader.getByte(),
-                    endMap: reader.getShort(),
-                    endX: reader.getByte(),
-                    endY: reader.getByte(),
-                    grhIndex: reader.getShort(),
-                },
+                payload: { startMap, startX, startY, endMap, endX, endY, grhIndex },
             };
-        case CLIENT_PACKET_ID.spellProjectile:
+        }
+        case CLIENT_PACKET_ID.spellProjectile: {
+            const startX = reader.getByte();
+            const startY = reader.getByte();
+            const endX = reader.getByte();
+            const endY = reader.getByte();
+            const spellId = reader.getShort();
+            const startMap = reader.canReadBytes(2) ? reader.getShort() : 0;
+            const endMap = reader.canReadBytes(2) ? reader.getShort() : 0;
             return {
                 type: "spellProjectile",
-                payload: {
-                    startMap: reader.getShort(),
-                    startX: reader.getByte(),
-                    startY: reader.getByte(),
-                    endMap: reader.getShort(),
-                    endX: reader.getByte(),
-                    endY: reader.getByte(),
-                    spellId: reader.getShort(),
-                },
+                payload: { startMap, startX, startY, endMap, endX, endY, spellId },
             };
+        }
         case CLIENT_PACKET_ID.spellVisual: {
             const flags = reader.getByte();
             const hasProjectile = (flags & 1) !== 0;
@@ -1995,10 +1990,8 @@ function parseServerPacketById(
             const payload: SpellVisualPacket = {};
 
             if (hasProjectile) {
-                payload.startMap = reader.getShort();
                 payload.startX = reader.getByte();
                 payload.startY = reader.getByte();
-                payload.endMap = reader.getShort();
                 payload.endX = reader.getByte();
                 payload.endY = reader.getByte();
                 payload.spellId = reader.getShort();
@@ -2019,6 +2012,11 @@ function parseServerPacketById(
             if (hasWords) {
                 payload.casterId = reader.getDouble();
                 payload.msg = reader.getString();
+            }
+
+            if (hasProjectile && reader.canReadBytes(4)) {
+                payload.startMap = reader.getShort();
+                payload.endMap = reader.getShort();
             }
 
             return {

@@ -397,7 +397,7 @@ export async function handleIncomingCharacterPacket({
                                 heading: previousHeading,
                                 durationMs:
                                     ctx.runtimeTimingRef.current.walkStepMs,
-                                map: packet.payload.map,
+                                map: packet.payload.map || entity.map,
                             },
                         );
                         const remoteContainer = engine.remoteEntities.get(
@@ -438,7 +438,7 @@ export async function handleIncomingCharacterPacket({
                             packet.payload.id,
                             {
                                 ...bufferedSnapshot,
-                                map: packet.payload.map,
+                                map: packet.payload.map || bufferedSnapshot.map,
                                 pos: {
                                     x: packet.payload.x,
                                     y: packet.payload.y,
@@ -468,7 +468,7 @@ export async function handleIncomingCharacterPacket({
                                 heading: packet.payload.heading,
                                 durationMs:
                                     ctx.runtimeTimingRef.current.walkStepMs,
-                                map: packet.payload.map,
+                                map: packet.payload.map || entity.map,
                             },
                         );
 
@@ -506,7 +506,7 @@ export async function handleIncomingCharacterPacket({
                             packet.payload.id,
                             {
                                 ...bufferedSnapshot,
-                                map: packet.payload.map,
+                                map: packet.payload.map || bufferedSnapshot.map,
                                 heading: packet.payload.heading,
                                 pos: {
                                     x: packet.payload.x,

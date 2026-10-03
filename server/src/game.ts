@@ -4978,6 +4978,10 @@ function Game(this: GameApi) {
         return !isWaterTile && !tile?.blocked && !hasOccupant;
     };
 
+    // Mundo continuo: los NPC no cambian de mapa ni pisan las franjas de exits
+    // del borde. Si pudieran pararse ahí quedarían dibujados "dentro" del mapa
+    // vecino, y una criatura arrastrada hasta el borde seguiría al jugador de
+    // mapa en mapa.
     const hasLegalNpcMovement = (x: number, y: number, idMapa: number, aguaValida: boolean, tierraInvalida = false) => {
         if (x < 1 || y < 1 || x > 100 || y > 100) {
             return false;
@@ -4985,6 +4989,10 @@ function Game(this: GameApi) {
 
         const hasOccupant = Boolean(vars.mapData[idMapa]?.[y]?.[x]?.id);
         const tile = vars.mapa[idMapa]?.[y]?.[x];
+
+        if (typeof tile?.tileExit !== "undefined") {
+            return false;
+        }
         const graphicLayer1 = tile?.graphics?.[1] ?? 0;
         const graphicLayer2 = tile?.graphics?.[2] ?? 0;
         const isWaterTile = isPlayerWaterGraphic(graphicLayer1) && !graphicLayer2;
@@ -5007,6 +5015,10 @@ function Game(this: GameApi) {
 
         const hasOccupant = Boolean(vars.mapData[idMapa]?.[y]?.[x]?.id);
         const tile = vars.mapa[idMapa]?.[y]?.[x];
+
+        if (typeof tile?.tileExit !== "undefined") {
+            return false;
+        }
         const graphicLayer1 = tile?.graphics?.[1] ?? 0;
         const graphicLayer2 = tile?.graphics?.[2] ?? 0;
         const isWaterTile = isPlayerWaterGraphic(graphicLayer1) && !graphicLayer2;

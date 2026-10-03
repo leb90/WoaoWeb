@@ -1153,7 +1153,6 @@ export default function MapRenderer({
         preloadGraphicIds,
         preloadCurrentSceneAssets,
         preloadInitialVisibleMapAssets,
-        prefetchNearbyMaps,
         warmCommonCharacterAssets,
     } = useAssetPipeline({
         getGraphicImagePaths,
@@ -1163,11 +1162,14 @@ export default function MapRenderer({
     const {
         applyPendingTileStates,
         ensureMapTile,
+        prepareWorldLayout,
         queueTileObjectVisualSync,
         removeObjectSprite,
         renderMap,
         setWorldVisibility,
         startMapChangeTransition,
+        streamWorldNeighbors,
+        tryRebaseToMap,
         updatePendingTileState,
     } = useSceneController({
         pendingTileStatesRef,
@@ -1302,6 +1304,7 @@ export default function MapRenderer({
         lastServerConfirmedSelfPositionRef,
         runtimeTimingRef,
         startMapChangeTransition,
+        tryRebaseToMap,
         mergeHud,
     });
 
@@ -1807,7 +1810,8 @@ export default function MapRenderer({
         updateSeguroIndicators,
         updateDebugCombatText,
         warmCommonCharacterAssets,
-        prefetchNearbyMaps,
+        prepareWorldLayout,
+        streamWorldNeighbors,
         applyOwnCharacterSnapshot,
         syncMovementState,
         mergeHud,
@@ -1874,6 +1878,7 @@ export default function MapRenderer({
                 emitHud,
                 retainPendingRemoteSnapshotsForMap,
                 startMapChangeTransition,
+                tryRebaseToMap,
                 applyOwnCharacterSnapshot,
                 emitStatus,
                 onConsoleMessage,
@@ -1978,6 +1983,7 @@ export default function MapRenderer({
         syncRemoteEntitiesBatch,
         syncRemoteEntity,
         syncTtEntity,
+        tryRebaseToMap,
         updateEquippedInventoryByType,
         updatePendingTileState,
         upsertInventoryItem,

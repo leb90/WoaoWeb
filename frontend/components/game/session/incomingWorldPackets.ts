@@ -77,7 +77,7 @@ function clearVisibleGroundItemsFromAreaSnapshot(
                     delete tile.objInfo;
                 }
 
-                const tileKey = `${x},${y}`;
+                const tileKey = `${targetMap}:${x},${y}`;
                 if (engine.objectSprites?.has(tileKey)) {
                     ctx.removeObjectSprite(engine, tileKey);
                 }
@@ -266,7 +266,7 @@ export async function handleIncomingWorldPacket({
                 }
 
                 if (packet.payload.map === engine.mapNumber) {
-                    const tileKey = `${packet.payload.x},${packet.payload.y}`;
+                    const tileKey = `${packet.payload.map}:${packet.payload.x},${packet.payload.y}`;
                     engine.tileObjectRenderRequestIds.set(
                         tileKey,
                         (engine.tileObjectRenderRequestIds.get(tileKey) ?? 0) +

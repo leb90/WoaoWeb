@@ -48,6 +48,8 @@ import {
     type RuntimeTimingConfig,
 } from "../../../lib/runtime-config";
 import { TILE_SIZE } from "../../../lib/viewport";
+import type { TileBounds } from "../assets/scenePreload";
+import type { WorldLayout } from "../world/worldLayout";
 import {
     BODY_ANIMATION_CYCLE_MS,
     SHIELD_ANIMATION_CYCLE_MS,
@@ -553,6 +555,17 @@ export class Engine {
     // Map configuration
     mapNumber: number;
     mapDimensions: { width: number; height: number } = { width: 0, height: 0 };
+
+    // Mundo continuo: todos los sprites viven en un marco de mundo compartido.
+    // El mapa actual tiene su origen en (worldOriginX, worldOriginY) tiles y los
+    // vecinos se ubican según `worldLayout`; al cruzar a un vecino solo cambia
+    // el origen, nunca se mueve lo que ya está dibujado.
+    worldOriginX = 0;
+    worldOriginY = 0;
+    worldLayout: WorldLayout | null = null;
+    // Rectángulo (en tiles locales) ya dibujado de cada mapa cargado.
+    worldRenderedBounds: Map<number, TileBounds> = new Map();
+    worldStreamingVersion = 0;
 
     // Characters
     personajes: Record<number, Character> = {};
@@ -2059,10 +2072,10 @@ export class Engine {
             }
 
             container.x = Math.round(
-                (entity.pos.x - 1) * TILE_SIZE + entity.moveOffsetX,
+                this.tileToWorldX(entity.pos.x) + entity.moveOffsetX,
             );
             container.y = Math.round(
-                (entity.pos.y - 1) * TILE_SIZE + entity.moveOffsetY,
+                this.tileToWorldY(entity.pos.y) + entity.moveOffsetY,
             );
             container.zIndex = getRowZIndex(
                 entity.pos.y - entity.addtoUserPos.y,
@@ -2419,6 +2432,73 @@ export class Engine {
         }
     }
 
+    getMapWorldOrigin(mapNumber: number = this.mapNumber): {
+        x: number;
+        y: number;
+    } {
+        if (mapNumber === this.mapNumber) {
+            return { x: this.worldOriginX, y: this.worldOriginY };
+        }
+
+        const placement = this.worldLayout?.placements.get(mapNumber);
+        return placement
+            ? { x: placement.originX, y: placement.originY }
+            : { x: this.worldOriginX, y: this.worldOriginY };
+    }
+
+    tileToWorldX(tileX: number, mapNumber: number = this.mapNumber): number {
+        return (tileX - 1 + this.getMapWorldOrigin(mapNumber).x) * TILE_SIZE;
+    }
+
+    tileToWorldY(tileY: number, mapNumber: number = this.mapNumber): number {
+        return (tileY - 1 + this.getMapWorldOrigin(mapNumber).y) * TILE_SIZE;
+    }
+
+    // Fila de mundo (para los contenedores por fila) de un tile de un mapa.
+    getWorldRow(tileY: number, mapNumber: number = this.mapNumber): number {
+        return tileY + this.getMapWorldOrigin(mapNumber).y;
+    }
+
+    // Convierte píxeles de mundo al tile del mapa actual (puede caer fuera de 1..100).
+    worldToCurrentMapTile(worldX: number, worldY: number): { x: number; y: number } {
+        return {
+            x: Math.floor(worldX / TILE_SIZE) + 1 - this.worldOriginX,
+            y: Math.floor(worldY / TILE_SIZE) + 1 - this.worldOriginY,
+        };
+    }
+
+    isMapLoadedInWorld(mapNumber: number): boolean {
+        return Boolean(
+            this.worldLayout?.placements.has(mapNumber) &&
+                this.mapData?.[mapNumber],
+        );
+    }
+
+    /**
+     * Pasa a tener como mapa actual a un vecino ya ubicado en el layout. No
+     * toca ningún sprite: solo cambia el origen desde el que se interpretan las
+     * coordenadas locales del jugador y de las entidades del servidor.
+     */
+    rebaseToMap(mapNumber: number): boolean {
+        if (mapNumber === this.mapNumber) {
+            return true;
+        }
+
+        const placement = this.worldLayout?.placements.get(mapNumber);
+        if (!placement || !this.mapData?.[mapNumber]) {
+            return false;
+        }
+
+        this.mapNumber = mapNumber;
+        this.worldOriginX = placement.originX;
+        this.worldOriginY = placement.originY;
+        this.mapDimensions = placement.dimensions;
+        this.cullingDirty = true;
+        this.roofVisibilityDirty = true;
+        this.treeTransparencyDirty = true;
+        return true;
+    }
+
     // Update camera position (like engine.js renderBackground with offsets)
     updateCamera(): void {
         if (!this.user || !this.mapContainer || !this.app) return;
@@ -2435,8 +2515,8 @@ export class Engine {
 
         // The player tile position in world pixels (matching engine.js rendering)
         // Since tiles render at (x-1)*32, the player at tile (50,50) is at pixel (1568, 1568)
-        const playerWorldX = (tileX - 1) * TILE_SIZE;
-        const playerWorldY = (tileY - 1) * TILE_SIZE;
+        const playerWorldX = this.tileToWorldX(tileX);
+        const playerWorldY = this.tileToWorldY(tileY);
 
         // Apply camera offsets (like engine.js line 596: tempPixelOffsetX = (ScreenX - 1) * 32 + pixelOffsetX)
         // The offsetCounter provides smooth scrolling between tiles
@@ -2464,10 +2544,12 @@ export class Engine {
         this.mapContainer.x = Math.round(this.mapContainer.x);
         this.mapContainer.y = Math.round(this.mapContainer.y);
 
-        // Update debug grid position to match map
+        // La grilla de debug es del mapa actual: la corremos a su origen de mundo.
         if (this.debugGrid) {
-            this.debugGrid.x = this.mapContainer.x;
-            this.debugGrid.y = this.mapContainer.y;
+            this.debugGrid.x =
+                this.mapContainer.x + this.worldOriginX * TILE_SIZE;
+            this.debugGrid.y =
+                this.mapContainer.y + this.worldOriginY * TILE_SIZE;
         }
 
         // Update roof container to follow camera (roofs are in screen space)
@@ -2550,11 +2632,16 @@ export class Engine {
             return;
         }
 
-        const playerPosition = getInterpolatedCharacterPosition(
+        const localPlayerPosition = getInterpolatedCharacterPosition(
             this.user,
             Math.abs(this.offsetCounterX),
             Math.abs(this.offsetCounterY),
         );
+        // Los árboles se registran en tiles de mundo (pueden ser de un vecino).
+        const playerPosition = {
+            x: localPlayerPosition.x + this.worldOriginX,
+            y: localPlayerPosition.y + this.worldOriginY,
+        };
 
         if (
             !this.treeTransparencyDirty &&
@@ -3206,6 +3293,8 @@ export class Engine {
         this.treeSpritesByRow.clear();
         this.treeGraphicIds.clear();
         this.fadedTreeSprites.clear();
+        this.worldLayout = null;
+        this.worldRenderedBounds.clear();
         this.mapRowLayerContainers.clear();
         this.roofRowContainers.clear();
         this.entityFXRowContainers.clear();

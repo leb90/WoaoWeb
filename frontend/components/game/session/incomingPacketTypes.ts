@@ -33,6 +33,7 @@ export type IncomingPacketHandlerContext = {
         engine: any,
         detail: string,
     ) => void;
+    tryRebaseToMap: (engine: any, targetMap: number) => boolean;
     applyOwnCharacterSnapshot: (engine: any, payload: any) => Promise<void>;
     emitStatus: (status: any) => void;
     onConsoleMessage?: ((message: any) => void) | undefined;

@@ -2,9 +2,7 @@ import { useCallback } from "react";
 import { Assets, Rectangle, Texture } from "pixi.js";
 import type { CharacterSnapshot } from "../../../lib/aowProtocol";
 import type { GraphicData } from "../../../types/game";
-import { getMapDimensions, loadMapData } from "../../../utils/gameLoader";
 import {
-    collectAdjacentMapNumbers,
     collectCharacterGraphicIds,
     collectMapGraphicIds,
     collectSpecificBodyGraphicIds,
@@ -542,67 +540,6 @@ export function useAssetPipeline({
         [preloadGraphicIds, updateLoadingProgress],
     );
 
-    const prefetchNearbyMaps = useCallback(
-        async (engine: Engine) => {
-            if (!engine.mapData || !engine.objectsDB || engine.isDestroyed) {
-                return;
-            }
-
-            const nearbyMaps = collectAdjacentMapNumbers(
-                engine.mapData,
-                engine.mapNumber,
-            );
-            if (!nearbyMaps.length) {
-                return;
-            }
-
-            updateLoadingProgress(
-                "Precargando alrededores",
-                88,
-                `Analizando ${nearbyMaps.length} mapas cercanos...`,
-            );
-
-            for (let index = 0; index < nearbyMaps.length; index++) {
-                if (engine.isDestroyed) {
-                    return;
-                }
-
-                const targetMap = nearbyMaps[index];
-                try {
-                    const nextMapData = await loadMapData(targetMap);
-                    const nextMapDimensions = getMapDimensions(
-                        nextMapData,
-                        targetMap,
-                    );
-                    await preloadGraphicIds(
-                        engine,
-                        collectMapGraphicIds(
-                            nextMapData,
-                            targetMap,
-                            nextMapDimensions,
-                            engine.objectsDB,
-                            {
-                                includeLayers: ["1", "2"],
-                                includeObjects: false,
-                            },
-                        ),
-                    );
-                    updateLoadingProgress(
-                        "Precargando alrededores",
-                        88 + Math.round(((index + 1) / nearbyMaps.length) * 12),
-                        `Mapa ${targetMap} listo para transicion rapida.`,
-                    );
-                } catch (error) {
-                    console.warn(
-                        `Failed to prefetch nearby map ${targetMap}:`,
-                        error,
-                    );
-                }
-            }
-        },
-        [preloadGraphicIds, updateLoadingProgress],
-    );
-
     const warmCommonCharacterAssets = useCallback(
         async (engine: Engine) => {
             if (engine.isDestroyed) {
@@ -625,7 +562,6 @@ export function useAssetPipeline({
         preloadCurrentSceneAssets,
         preloadGraphicIds,
         preloadInitialVisibleMapAssets,
-        prefetchNearbyMaps,
         warmCommonCharacterAssets,
     };
 }

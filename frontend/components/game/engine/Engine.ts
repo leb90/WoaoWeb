@@ -49,7 +49,10 @@ import {
 } from "../../../lib/runtime-config";
 import { TILE_SIZE } from "../../../lib/viewport";
 import type { TileBounds } from "../assets/scenePreload";
-import type { WorldLayout } from "../world/worldLayout";
+import {
+    isTileCoveredByOtherMap,
+    type WorldLayout,
+} from "../world/worldLayout";
 import {
     BODY_ANIMATION_CYCLE_MS,
     SHIELD_ANIMATION_CYCLE_MS,
@@ -921,10 +924,72 @@ export class Engine {
         );
     }
 
+    /**
+     * Tile de almacenamiento que ocupa una posición del marco del mapa actual.
+     * Con mundo continuo, el borde del mapa (y lo que queda más allá de 1..100)
+     * está cubierto por el interior de un vecino: ahí se mira el tile del
+     * vecino. Así el cliente puede predecir el paso a través del borde sin
+     * esperar al servidor. null si la posición no pertenece a ningún mapa.
+     */
+    resolveWalkTile(
+        tX: number,
+        tY: number,
+    ): { map: number; x: number; y: number } | null {
+        const insideCurrentMap =
+            tX >= 1 &&
+            tY >= 1 &&
+            tX <= this.mapDimensions.width &&
+            tY <= this.mapDimensions.height;
+        const layout = this.worldLayout;
+        const currentPlacement = layout?.placements.get(this.mapNumber);
+
+        if (!layout || !currentPlacement) {
+            return insideCurrentMap ? { map: this.mapNumber, x: tX, y: tY } : null;
+        }
+
+        if (
+            insideCurrentMap &&
+            !isTileCoveredByOtherMap(layout, currentPlacement, tX, tY)
+        ) {
+            return { map: this.mapNumber, x: tX, y: tY };
+        }
+
+        const worldX = tX + this.worldOriginX;
+        const worldY = tY + this.worldOriginY;
+        for (const placement of layout.placements.values()) {
+            if (placement.map === this.mapNumber || !this.mapData?.[placement.map]) {
+                continue;
+            }
+            const localX = worldX - placement.originX;
+            const localY = worldY - placement.originY;
+            if (
+                localX >= placement.interior.minX &&
+                localX <= placement.interior.maxX &&
+                localY >= placement.interior.minY &&
+                localY <= placement.interior.maxY
+            ) {
+                return { map: placement.map, x: localX, y: localY };
+            }
+        }
+
+        return insideCurrentMap ? { map: this.mapNumber, x: tX, y: tY } : null;
+    }
+
+    private getWalkTileData(tX: number, tY: number) {
+        if (!this.mapData) {
+            return null;
+        }
+        const resolved = this.resolveWalkTile(tX, tY);
+        if (!resolved || !this.mapData[resolved.map]) {
+            return null;
+        }
+        return getTileAt(this.mapData, resolved.map, resolved.x, resolved.y) ?? null;
+    }
+
     isWaterTile(tX: number, tY: number): boolean {
         if (!this.mapData) return false;
 
-        const tile = getTileAt(this.mapData, this.mapNumber, tX, tY);
+        const tile = this.getWalkTileData(tX, tY);
         const layer1 = tile?.graphics?.["1"];
         const layer2 = tile?.graphics?.["2"];
 
@@ -1396,16 +1461,12 @@ export class Engine {
             return false;
         }
 
-        if (
-            tX < 1 ||
-            tX > this.mapDimensions.width ||
-            tY < 1 ||
-            tY > this.mapDimensions.height
-        ) {
+        const resolvedTile = this.resolveWalkTile(tX, tY);
+        if (!resolvedTile) {
             return false;
         }
 
-        const tile = getTileAt(this.mapData, this.mapNumber, tX, tY);
+        const tile = this.getWalkTileData(tX, tY);
         const isWaterTile = this.isWaterTile(tX, tY);
         const usesWaterMovement = Boolean(
             character?.navegando ||
@@ -1438,16 +1499,11 @@ export class Engine {
             return false;
         }
 
-        if (
-            tX < 1 ||
-            tX > this.mapDimensions.width ||
-            tY < 1 ||
-            tY > this.mapDimensions.height
-        ) {
+        if (!this.resolveWalkTile(tX, tY)) {
             return false;
         }
 
-        const tile = getTileAt(this.mapData, this.mapNumber, tX, tY);
+        const tile = this.getWalkTileData(tX, tY);
         if (tile?.blocked === 1) {
             return false;
         }

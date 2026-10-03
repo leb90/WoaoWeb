@@ -1,6 +1,6 @@
 import type { MapData } from "../../../types/game";
 import { getMapDimensions, loadMapData } from "../../../utils/gameLoader";
-import type { TileBounds } from "../assets/scenePreload";
+import { collectMapGraphicIds, type TileBounds } from "../assets/scenePreload";
 import type { Engine } from "../engine/Engine";
 import { removeMapSprites, type RenderMapOptions } from "../rendering/sceneRenderer";
 import {
@@ -20,57 +20,241 @@ import {
 // ve el final de la franja mientras el jugador está dentro del mapa actual.
 export const NEIGHBOR_RENDER_DEPTH = 18;
 
-// Filas por frame al dibujar en segundo plano (ver RenderMapOptions.yieldEveryRows).
-export const BACKGROUND_RENDER_ROWS_PER_FRAME = 3;
+// Presupuesto de trabajo por frame para dibujar o descartar en segundo plano
+// (ver RenderMapOptions.frameBudgetMs). Un cruce de mapa no tiene que costar
+// ni un frame: todo lo que no se ve se hace de a poco.
+export const BACKGROUND_FRAME_BUDGET_MS = 3;
 
 type RenderMapFn = (engine: Engine, options?: RenderMapOptions) => Promise<void>;
+type PreloadGraphicIdsFn = (engine: Engine, graphicIds: string[]) => Promise<void>;
 
-// Los exits de un mapa son estáticos: se calculan una vez por sesión.
+// Gráficos por ciclo ocioso al precalentar texturas del vecindario.
+const TEXTURE_PREFETCH_BATCH = 6;
+type MapRows = MapData[string];
+
+// Caches de sesión: los mapas son estáticos. Las filas se cargan y
+// descomprimen una sola vez y se comparten con el motor sin clonar, así un
+// cruce no vuelve a pagar la carga ni la clonación de 10.000 tiles.
+const mapRowsCache = new Map<number, MapRows>();
+const mapLoadPromises = new Map<number, Promise<MapRows | null>>();
 const edgesCache = new Map<number, MapEdges>();
 const dimensionsCache = new Map<number, { width: number; height: number }>();
 
+async function loadMapRows(mapNumber: number): Promise<MapRows | null> {
+    const cached = mapRowsCache.get(mapNumber);
+    if (cached) {
+        return cached;
+    }
+
+    const pending = mapLoadPromises.get(mapNumber);
+    if (pending) {
+        return pending;
+    }
+
+    const promise = (async () => {
+        try {
+            const loaded = await loadMapData(mapNumber);
+            const rows = loaded[mapNumber];
+            if (!rows) {
+                return null;
+            }
+            const existing = mapRowsCache.get(mapNumber);
+            if (existing) {
+                return existing;
+            }
+            mapRowsCache.set(mapNumber, rows);
+            dimensionsCache.set(mapNumber, getMapDimensions(loaded, mapNumber));
+            edgesCache.set(mapNumber, computeMapEdges(loaded, mapNumber, dimensionsCache.get(mapNumber)!));
+            return rows;
+        } catch (error) {
+            console.warn(`No se pudo cargar el mapa vecino ${mapNumber}:`, error);
+            return null;
+        } finally {
+            mapLoadPromises.delete(mapNumber);
+        }
+    })();
+
+    mapLoadPromises.set(mapNumber, promise);
+    return promise;
+}
+
+function hasFullMapData(engine: Engine, mapNumber: number): boolean {
+    // ensureMapTile puede haber creado un esqueleto con un par de tiles (ítems
+    // del suelo recibidos antes de cargar el mapa): no cuenta como cargado.
+    return Object.keys(engine.mapData?.[mapNumber] ?? {}).length >= 100;
+}
+
+/**
+ * Deja las filas del mapa disponibles en `engine.mapData` y sus aristas en la
+ * caché. El mapa actual del motor ya viene cargado por `initResources`.
+ */
 async function ensureMapLoaded(engine: Engine, mapNumber: number): Promise<boolean> {
     if (!engine.mapData) {
         return false;
     }
 
-    // ensureMapTile puede haber creado un esqueleto con un par de tiles (ítems
-    // del suelo recibidos antes de cargar el mapa): no cuenta como cargado.
-    const hasFullMapData = Object.keys(engine.mapData[mapNumber] ?? {}).length >= 100;
-
-    if (!hasFullMapData) {
-        let loaded: MapData;
-        try {
-            loaded = await loadMapData(mapNumber);
-        } catch (error) {
-            console.warn(`No se pudo cargar el mapa vecino ${mapNumber}:`, error);
+    if (!hasFullMapData(engine, mapNumber)) {
+        const rows = await loadMapRows(mapNumber);
+        if (!rows || engine.isDestroyed || !engine.mapData) {
             return false;
         }
-
-        if (engine.isDestroyed || !engine.mapData) {
-            return false;
+        if (!hasFullMapData(engine, mapNumber)) {
+            engine.mapData[mapNumber] = rows;
         }
-
-        if (loaded[mapNumber] && Object.keys(engine.mapData[mapNumber] ?? {}).length < 100) {
-            engine.mapData[mapNumber] = loaded[mapNumber];
-        }
-    }
-
-    if (!engine.mapData[mapNumber]) {
-        return false;
     }
 
     if (!dimensionsCache.has(mapNumber)) {
         dimensionsCache.set(mapNumber, getMapDimensions(engine.mapData, mapNumber));
     }
     if (!edgesCache.has(mapNumber)) {
-        edgesCache.set(
-            mapNumber,
-            computeMapEdges(engine.mapData, mapNumber, dimensionsCache.get(mapNumber)!),
-        );
+        edgesCache.set(mapNumber, computeMapEdges(engine.mapData, mapNumber, dimensionsCache.get(mapNumber)!));
     }
 
     return true;
+}
+
+function scheduleIdle(callback: () => void): void {
+    if (typeof window === "undefined") {
+        return;
+    }
+    const idle = (
+        window as Window & {
+            requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+        }
+    ).requestIdleCallback;
+    // Sin timeout: la precarga nunca compite con un frame ocupado.
+    if (idle) {
+        idle(callback);
+    } else {
+        window.setTimeout(callback, 100);
+    }
+}
+
+/**
+ * Precarga en tiempo ocioso los mapas que harían falta si el jugador cruzara
+ * a cualquiera de sus vecinos (el vecindario de cada vecino), de a uno por
+ * ciclo ocioso, para que el cruce en sí no tenga que cargar ni decodificar
+ * nada.
+ */
+function prefetchOuterRing(engine: Engine): void {
+    const layout = engine.worldLayout;
+    if (!layout || engine.isDestroyed) {
+        return;
+    }
+
+    const version = engine.worldStreamingVersion;
+    const wanted = new Set<number>();
+    const neighbors = resolveReciprocalNeighbors(layout.currentMap, edgesCache);
+    for (const edge of Object.values(neighbors)) {
+        if (!edge) {
+            continue;
+        }
+        for (const candidate of collectCandidateNeighborMaps(edgesCache.get(edge.map))) {
+            wanted.add(candidate);
+            for (const second of collectCandidateNeighborMaps(edgesCache.get(candidate))) {
+                wanted.add(second);
+            }
+        }
+    }
+
+    const queue = Array.from(wanted).filter(
+        (map) => !mapRowsCache.has(map) && !layout.placements.has(map),
+    );
+
+    const loadNext = () => {
+        if (engine.isDestroyed || engine.worldStreamingVersion !== version) {
+            return;
+        }
+        const next = queue.shift();
+        if (next === undefined) {
+            return;
+        }
+        void loadMapRows(next).finally(() => scheduleIdle(loadNext));
+    };
+
+    scheduleIdle(loadNext);
+}
+
+/**
+ * Precalienta en tiempo ocioso las texturas de todo lo que rodea al jugador:
+ * los mapas del vecindario completos (al cruzar hay que dibujar el resto del
+ * mapa nuevo) y después el anillo exterior ya cargado. Así el cruce no tiene
+ * que decodificar ni recortar ningún gráfico nuevo.
+ */
+export function prefetchWorldTextures(engine: Engine, preloadGraphicIds: PreloadGraphicIdsFn): void {
+    const layout = engine.worldLayout;
+    if (!layout || engine.isDestroyed || !engine.mapData || !engine.objectsDB) {
+        return;
+    }
+
+    const version = engine.worldStreamingVersion;
+    const objectsDB = engine.objectsDB;
+    const orderedMaps: number[] = [];
+    for (const placement of layout.placements.values()) {
+        if (placement.role === "edge") {
+            orderedMaps.push(placement.map);
+        }
+    }
+    for (const placement of layout.placements.values()) {
+        if (placement.role === "corner") {
+            orderedMaps.push(placement.map);
+        }
+    }
+    for (const map of mapRowsCache.keys()) {
+        if (!layout.placements.has(map)) {
+            orderedMaps.push(map);
+        }
+    }
+
+    // Recorrer los 10.000 tiles de un mapa para juntar sus gráficos también
+    // cuesta: se hace de a un mapa por ciclo ocioso, nunca todos juntos.
+    const queue: string[] = [];
+    const queued = new Set<string>();
+    const collectNextMap = (): boolean => {
+        const map = orderedMaps.shift();
+        if (map === undefined) {
+            return false;
+        }
+        const rows = engine.mapData?.[map] ?? mapRowsCache.get(map);
+        const dimensions = dimensionsCache.get(map);
+        if (!rows || !dimensions) {
+            return true;
+        }
+        const graphicIds = collectMapGraphicIds({ [map]: rows }, map, dimensions, objectsDB, {
+            includeLayers: ["1", "2", "3", "4"],
+            includeObjects: true,
+        });
+        for (const graphicId of graphicIds) {
+            if (
+                queued.has(graphicId) ||
+                engine.textureCache.has(graphicId) ||
+                engine.animatedTextureCache.has(graphicId)
+            ) {
+                continue;
+            }
+            queued.add(graphicId);
+            queue.push(graphicId);
+        }
+        return true;
+    };
+
+    const loadNext = () => {
+        if (engine.isDestroyed || engine.worldStreamingVersion !== version) {
+            return;
+        }
+        if (queue.length === 0) {
+            if (collectNextMap()) {
+                scheduleIdle(loadNext);
+            }
+            return;
+        }
+        const batch = queue.splice(0, TEXTURE_PREFETCH_BATCH);
+        void preloadGraphicIds(engine, batch)
+            .catch(() => undefined)
+            .finally(() => scheduleIdle(loadNext));
+    };
+
+    scheduleIdle(loadNext);
 }
 
 /**
@@ -131,9 +315,12 @@ export async function syncWorldLayout(engine: Engine): Promise<boolean> {
             const keepsPlace =
                 next && next.originX === previous.originX && next.originY === previous.originY;
             if (!keepsPlace) {
-                removeMapSprites(engine, previous.map);
+                void removeMapSprites(engine, previous.map, {
+                    frameBudgetMs: BACKGROUND_FRAME_BUDGET_MS,
+                });
             }
             if (!next && previous.map !== currentMap && engine.mapData) {
+                // Las filas siguen en la caché de sesión; solo salen del motor.
                 delete engine.mapData[previous.map];
             }
         }
@@ -141,6 +328,7 @@ export async function syncWorldLayout(engine: Engine): Promise<boolean> {
 
     engine.worldLayout = layout;
     engine.cullingDirty = true;
+    prefetchOuterRing(engine);
     return true;
 }
 
@@ -186,7 +374,8 @@ function intersectBounds(a: TileBounds, b: TileBounds): TileBounds | null {
  * Dibuja las franjas de los vecinos que todavía no están dibujadas. Primero los
  * laterales (son los que se ven al acercarse a un borde) y después las esquinas.
  * `clipToCurrentMapBounds` (tiles locales del mapa actual) limita el trabajo a
- * una ventana, p.ej. la vista inicial antes de mostrar la escena.
+ * una ventana, p.ej. la vista inicial antes de mostrar la escena; en ese caso
+ * se dibuja de una vez, el resto va con presupuesto por frame.
  */
 export async function renderWorldNeighbors(
     engine: Engine,
@@ -241,7 +430,7 @@ export async function renderWorldNeighbors(
             bounds: needed,
             excludeBounds: rendered,
             skipTile: getCurrentMapSkipTile(engine, placement.map),
-            yieldEveryRows: clipToCurrentMapBounds ? 0 : BACKGROUND_RENDER_ROWS_PER_FRAME,
+            frameBudgetMs: clipWorld ? 0 : BACKGROUND_FRAME_BUDGET_MS,
         });
 
         if (engine.isDestroyed || engine.worldStreamingVersion !== version) {
@@ -273,7 +462,7 @@ export async function renderCurrentMapRemainder(
         includeLayers: ["1", "2"],
         includeObjects: false,
         excludeBounds: rendered,
-        yieldEveryRows: BACKGROUND_RENDER_ROWS_PER_FRAME,
+        frameBudgetMs: BACKGROUND_FRAME_BUDGET_MS,
     });
 
     if (engine.isDestroyed || engine.worldStreamingVersion !== version) {
@@ -284,7 +473,7 @@ export async function renderCurrentMapRemainder(
         includeLayers: ["3", "4"],
         includeObjects: true,
         excludeBounds: rendered,
-        yieldEveryRows: BACKGROUND_RENDER_ROWS_PER_FRAME,
+        frameBudgetMs: BACKGROUND_FRAME_BUDGET_MS,
     });
 
     if (engine.isDestroyed || engine.worldStreamingVersion !== version) {
@@ -301,11 +490,29 @@ export async function renderCurrentMapRemainder(
 export async function streamWorldAroundCurrentMap(
     engine: Engine,
     renderMap: RenderMapFn,
+    preloadGraphicIds?: PreloadGraphicIdsFn,
 ): Promise<void> {
-    if (!(await syncWorldLayout(engine))) {
+    const debugWorld = (window as unknown as { __woaoDebugWorld?: boolean }).__woaoDebugWorld;
+    const startedAt = performance.now();
+    const synced = await syncWorldLayout(engine);
+    if (debugWorld) {
+        console.log(`[woao] syncWorldLayout ${(performance.now() - startedAt).toFixed(1)}ms ok=${synced} t=${Math.round(performance.now())}`);
+    }
+    if (!synced) {
         return;
     }
 
+    const remainderStartedAt = performance.now();
     await renderCurrentMapRemainder(engine, renderMap);
+    if (debugWorld) {
+        console.log(`[woao] remainder ${(performance.now() - remainderStartedAt).toFixed(1)}ms t=${Math.round(performance.now())}`);
+    }
+    const neighborsStartedAt = performance.now();
     await renderWorldNeighbors(engine, renderMap);
+    if (debugWorld) {
+        console.log(`[woao] neighbors ${(performance.now() - neighborsStartedAt).toFixed(1)}ms t=${Math.round(performance.now())}`);
+    }
+    if (preloadGraphicIds) {
+        prefetchWorldTextures(engine, preloadGraphicIds);
+    }
 }

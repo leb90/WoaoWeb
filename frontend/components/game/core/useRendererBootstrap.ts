@@ -22,7 +22,7 @@ import {
 } from "../../../lib/viewportRotation";
 import { createDebugGrid } from "../rendering/debugGrid";
 import {
-    BACKGROUND_RENDER_ROWS_PER_FRAME,
+    BACKGROUND_FRAME_BUDGET_MS,
     markMapRendered,
 } from "../world/worldStreaming";
 import {
@@ -1028,7 +1028,7 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                                 includeObjects: false,
                                 excludeBounds:
                                     initialVisibleBounds ?? undefined,
-                                yieldEveryRows: BACKGROUND_RENDER_ROWS_PER_FRAME,
+                                frameBudgetMs: BACKGROUND_FRAME_BUDGET_MS,
                             })
                             .then(() =>
                                 options.renderMap(engine, {
@@ -1037,8 +1037,7 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                                     includeObjects: true,
                                     excludeBounds:
                                         initialVisibleBounds ?? undefined,
-                                    yieldEveryRows:
-                                        BACKGROUND_RENDER_ROWS_PER_FRAME,
+                                    frameBudgetMs: BACKGROUND_FRAME_BUDGET_MS,
                                 }),
                             )
                             .then(() => {

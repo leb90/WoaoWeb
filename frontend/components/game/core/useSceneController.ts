@@ -15,6 +15,7 @@ import {
 } from "../rendering/sceneRenderer";
 import type { TileBounds } from "../assets/scenePreload";
 import {
+    prefetchWorldTextures,
     renderWorldNeighbors,
     streamWorldAroundCurrentMap,
     syncWorldLayout,
@@ -188,9 +189,13 @@ export function useSceneController({
     );
 
     const streamWorldNeighbors = useCallback(
-        (engine: Engine, clipToCurrentMapBounds?: TileBounds) =>
-            renderWorldNeighbors(engine, renderMap, clipToCurrentMapBounds),
-        [renderMap],
+        async (engine: Engine, clipToCurrentMapBounds?: TileBounds) => {
+            await renderWorldNeighbors(engine, renderMap, clipToCurrentMapBounds);
+            if (!clipToCurrentMapBounds) {
+                prefetchWorldTextures(engine, preloadGraphicIds);
+            }
+        },
+        [preloadGraphicIds, renderMap],
     );
 
     /**
@@ -205,7 +210,11 @@ export function useSceneController({
             }
 
             clearPendingTileStatesForMap(targetMap);
-            void streamWorldAroundCurrentMap(engine, renderMap).catch(
+            void streamWorldAroundCurrentMap(
+                engine,
+                renderMap,
+                preloadGraphicIds,
+            ).catch(
                 (error) => {
                     console.warn(
                         "No se pudo completar el mundo alrededor del mapa",
@@ -216,7 +225,7 @@ export function useSceneController({
             );
             return true;
         },
-        [clearPendingTileStatesForMap, renderMap],
+        [clearPendingTileStatesForMap, preloadGraphicIds, renderMap],
     );
 
     const applyPendingTileStates = useCallback(

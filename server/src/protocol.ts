@@ -763,6 +763,29 @@ function isNonAttackableNpcTarget(target: AreaTarget | undefined) {
     return Boolean(target?.isNpc && !target.summonedByUserId && Number(target.maxHp ?? target.hp ?? 0) <= 0);
 }
 
+/**
+ * El límite de una zona segura (ciudad, templo) corta el combate con criaturas
+ * en los dos sentidos: desde adentro no se ataca hacia afuera y desde afuera no
+ * se ataca a lo que está adentro. Devuelve el aviso para el jugador cuando el
+ * ataque queda bloqueado; null si se puede atacar.
+ */
+function getSafeZoneBoundaryAttackMessage(attacker: RuntimeCharacter, target: AreaTarget | undefined) {
+    if (!target?.isNpc) {
+        return null;
+    }
+
+    const attackerInSafeZone = isSafeZonePosition(attacker.map, attacker.pos);
+    const targetInSafeZone = isSafeZonePosition(target.map, target.pos);
+
+    if (attackerInSafeZone === targetInSafeZone) {
+        return null;
+    }
+
+    return attackerInSafeZone
+        ? "Estás en zona segura: su protección también te impide atacar a las criaturas que están afuera."
+        : "Esa criatura está en zona segura: su protección impide atacarla desde afuera.";
+}
+
 function isPartialInvisibilityRemovalSpell(datSpell: Record<string, unknown> | undefined) {
     return Number(datSpell?.remueveInvisibilidadParcial ?? 0) === 1;
 }
@@ -1689,9 +1712,8 @@ function updateUserAreaAfterMovement(ws: RuntimeClient, user: RuntimeCharacter, 
                         vars.areaNpc[areaTarget.id] = npcArea;
                     }
 
-                    // Los NPC solo agreden dentro de su propio mapa.
+                    // Las criaturas también ven a quien está en el mapa vecino.
                     if (
-                        tileMap === user.map &&
                         areaTarget.target.movement == 3 &&
                         canNpcDetectCharacter(user) &&
                         npcArea.indexOf(clientId) < 0
@@ -1853,7 +1875,7 @@ function registerUserWithNearbyNpcs(ws: RuntimeClient, user: RuntimeCharacter) {
     const clientId = ws.id!;
 
     game.loopArea(ws, function (target: AreaTarget) {
-        if (!target.isNpc || target.map !== user.map || target.movement != 3 || !canNpcDetectCharacter(user)) {
+        if (!target.isNpc || target.movement != 3 || !canNpcDetectCharacter(user)) {
             return;
         }
 
@@ -2039,9 +2061,8 @@ function processUserMovement(ws: RuntimeClient, heading: number, moveId: number,
     cancelPendingReviveCast(ws, user, "Se canceló el resucitar al moverte.");
 
     if (targetMap !== previousMap) {
-        // Las criaturas del mapa que se deja no siguen al jugador, y las
-        // invocaciones tampoco cruzan (igual que en un teleport).
-        npcs.deleteUserToAllNpcs(ws.id);
+        // Las criaturas siguen al jugador a través del borde (con su correa);
+        // las invocaciones no cruzan (igual que en un teleport).
         npcs.removeOwnerSummons(ws.id);
     }
 
@@ -3561,6 +3582,13 @@ function attackMele(ws: RuntimeClient) {
             return;
         }
 
+        const safeZoneBoundaryMessage = getSafeZoneBoundaryAttackMessage(user, combatTarget);
+
+        if (safeZoneBoundaryMessage) {
+            handleProtocol.console(safeZoneBoundaryMessage, "white", 0, 0, ws);
+            return;
+        }
+
         if (isOwnSummonTarget(clientId, combatTarget)) {
             handleProtocol.console("No puedes atacar a tus invocaciones.", "white", 0, 0, ws);
             return;
@@ -3765,6 +3793,13 @@ function attackRange(ws: RuntimeClient) {
 
             if (isNonAttackableNpcTarget(combatTarget)) {
                 handleProtocol.console("No puedes atacar a ese NPC.", "white", 0, 0, ws);
+                return;
+            }
+
+            const safeZoneBoundaryMessage = getSafeZoneBoundaryAttackMessage(user, combatTarget);
+
+            if (safeZoneBoundaryMessage) {
+                handleProtocol.console(safeZoneBoundaryMessage, "white", 0, 0, ws);
                 return;
             }
 
@@ -4182,6 +4217,15 @@ function attackSpell(ws: RuntimeClient) {
 
             if (isNonAttackableNpcTarget(spellTarget) && isHostileCombatSpell(datSpell)) {
                 handleProtocol.console("No puedes atacar a ese NPC.", "white", 0, 0, ws);
+                return;
+            }
+
+            const safeZoneBoundaryMessage = isHostileCombatSpell(datSpell)
+                ? getSafeZoneBoundaryAttackMessage(user, spellTarget)
+                : null;
+
+            if (safeZoneBoundaryMessage) {
+                handleProtocol.console(safeZoneBoundaryMessage, "white", 0, 0, ws);
                 return;
             }
 

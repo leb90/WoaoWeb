@@ -48,6 +48,9 @@ type UseSceneControllerOptions = {
     canUseEngineContainer: (engine: Engine, container: any) => boolean;
     preloadGraphicIds: (engine: Engine, graphicIds: string[]) => Promise<void>;
     loadTextures: (engine: Engine, graphicIds: string[]) => Promise<void>;
+    // Se llama cuando el mundo alrededor del mapa nuevo quedó completo tras
+    // un cruce continuo (hay entidades diferidas esperando ese momento).
+    onWorldStreamedRef?: RefObject<((engine: Engine) => void) | null>;
 };
 
 export function useSceneController({
@@ -60,6 +63,7 @@ export function useSceneController({
     canUseEngineContainer,
     preloadGraphicIds,
     loadTextures,
+    onWorldStreamedRef,
 }: UseSceneControllerOptions) {
     const getPendingTileStateKey = useCallback(
         (targetMap: number, x: number, y: number) => `${targetMap}:${x},${y}`,
@@ -214,18 +218,24 @@ export function useSceneController({
                 engine,
                 renderMap,
                 preloadGraphicIds,
-            ).catch(
-                (error) => {
+            )
+                .then(() => {
+                    // Los vecinos nuevos ya están ubicados: las entidades que
+                    // llegaron antes para esos mapas se pueden dibujar.
+                    if (!engine.isDestroyed && engine.mapNumber === targetMap) {
+                        onWorldStreamedRef?.current?.(engine);
+                    }
+                })
+                .catch((error) => {
                     console.warn(
                         "No se pudo completar el mundo alrededor del mapa",
                         targetMap,
                         error,
                     );
-                },
-            );
+                });
             return true;
         },
-        [clearPendingTileStatesForMap, preloadGraphicIds, renderMap],
+        [clearPendingTileStatesForMap, onWorldStreamedRef, preloadGraphicIds, renderMap],
     );
 
     const applyPendingTileStates = useCallback(

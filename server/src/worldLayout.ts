@@ -420,6 +420,46 @@ export function forEachAreaTile(
     }
 }
 
+function isInsideBounds(bounds: TileBounds, x: number, y: number): boolean {
+    return x >= bounds.minX && x <= bounds.maxX && y >= bounds.minY && y <= bounds.maxY;
+}
+
+/**
+ * Tile de almacenamiento donde queda parada una entidad que pisa una posición
+ * expresada en el marco de `viewerMap` (misma regla que el cliente para
+ * predecir pasos): el tile propio si cae en el interior del mapa; si no, el
+ * tile interior del vecino que cubre esa posición del mundo (la franja de
+ * exits de un mapa se solapa con el interior del vecino); y como último
+ * recurso el tile propio si existe. null si la posición no es de ningún mapa.
+ */
+export function resolveWalkTile(viewerMap: number, x: number, y: number): MapTileRef | null {
+    const layout = getWorldLayout(viewerMap);
+    const current = layout.placements.get(viewerMap);
+
+    if (current && isInsideBounds(current.interior, x, y)) {
+        return { map: viewerMap, x, y };
+    }
+
+    for (const placement of layout.placements.values()) {
+        if (placement.map === viewerMap || !vars.mapa[placement.map]) {
+            continue;
+        }
+
+        const localX = x - placement.originX;
+        const localY = y - placement.originY;
+
+        if (isInsideBounds(placement.interior, localX, localY)) {
+            return { map: placement.map, x: localX, y: localY };
+        }
+    }
+
+    if (x >= 1 && x <= MAP_SIZE && y >= 1 && y <= MAP_SIZE && vars.mapa[viewerMap]) {
+        return { map: viewerMap, x, y };
+    }
+
+    return null;
+}
+
 /**
  * Indica si un tile exit es un cruce continuo: su destino es el tile del mapa
  * vecino que ocupa exactamente la misma posición del mundo. Esos exits se
@@ -452,5 +492,6 @@ module.exports = {
     resetWorldLayoutCache,
     resolveReciprocalNeighbors,
     resolveStorageTiles,
+    resolveWalkTile,
     toViewerFrame,
 };

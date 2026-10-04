@@ -422,8 +422,14 @@ function applyNpcSpellDamageToUser(baseDamage: number, user: PlayerCharacter): n
 }
 
 function isWithinNpcSpellRange(npc: NpcCharacter, target: NpcFollowTarget) {
-    const deltaX = Math.abs(npc.pos.x - target.pos.x);
-    const deltaY = Math.abs(npc.pos.y - target.pos.y);
+    const delta = worldLayout.getWorldDelta(npc.map, npc.pos, target.map, target.pos);
+
+    if (!delta) {
+        return false;
+    }
+
+    const deltaX = Math.abs(delta.dx);
+    const deltaY = Math.abs(delta.dy);
 
     if (deltaX > DEFAULT_NPC_SPELL_RANGE_X || deltaY > DEFAULT_NPC_SPELL_RANGE_Y) {
         return false;
@@ -433,7 +439,7 @@ function isWithinNpcSpellRange(npc: NpcCharacter, target: NpcFollowTarget) {
         return true;
     }
 
-    return getManhattanDistance(npc.pos, target.pos) <= npc.spellRange;
+    return deltaX + deltaY <= npc.spellRange;
 }
 
 function getAvailableNpcSpellSlots(npc: NpcCharacter) {
@@ -733,7 +739,8 @@ function getHeadingDisplacementPriority(heading?: Direction) {
 }
 
 function getDeadGhostAtPosition(idMap: number, pos: Position) {
-    const occupantId = vars.mapData[idMap]?.[pos.y]?.[pos.x]?.id as EntityId | 0;
+    const tile = worldLayout.resolveWalkTile(idMap, pos.x, pos.y);
+    const occupantId = (tile ? vars.mapData[tile.map]?.[tile.y]?.[tile.x]?.id : 0) as EntityId | 0;
 
     if (!occupantId) {
         return;
@@ -771,8 +778,42 @@ function resolveGhostDisplacementPosition(
     }
 }
 
+function canNpcLeaveMap(npc: NpcCharacter) {
+    return !isSummonedNpc(npc) && (npc.leashState === "chasing" || npc.leashState === "returning");
+}
+
+/**
+ * Tile real que pisaría la criatura al moverse a `pos` (expresada en su propio
+ * marco): puede ser del mapa vecino cuando persigue o vuelve a casa a través
+ * del borde. Una criatura nunca cruza el límite de una zona segura (ni entra a
+ * la ciudad desde afuera ni la abandona); las invocaciones acompañan a su dueño.
+ */
+function resolveNpcStepTile(npc: NpcCharacter, pos: Position) {
+    const tile = worldLayout.resolveWalkTile(npc.map, pos.x, pos.y);
+
+    if (!tile) {
+        return null;
+    }
+
+    if (tile.map !== npc.map && !canNpcLeaveMap(npc)) {
+        return null;
+    }
+
+    if (!isSummonedNpc(npc) && isSafeZonePosition(npc.map, npc.pos) !== isSafeZonePosition(tile.map, tile)) {
+        return null;
+    }
+
+    return tile;
+}
+
 function canNpcOccupyPosition(npc: NpcCharacter, pos: Position, preferredHeading?: Direction) {
-    if (game.legalPosNpc(pos.x, pos.y, npc.map, Boolean(npc.aguaValida), Boolean(npc.tierraInvalida))) {
+    const tile = resolveNpcStepTile(npc, pos);
+
+    if (!tile) {
+        return false;
+    }
+
+    if (game.legalPosNpc(tile.x, tile.y, tile.map, Boolean(npc.aguaValida), Boolean(npc.tierraInvalida))) {
         return true;
     }
 
@@ -1114,6 +1155,7 @@ const NPC_TARGET_LOCK_MS = vars.npcAi.targetLockMs as number;
 const NPC_LEASH_RADIUS_TILES = Number(vars.npcAi.leashRadiusTiles ?? 18);
 const NPC_LEASH_GIVE_UP_MS = Number(vars.npcAi.leashGiveUpMs ?? 15000);
 const NPC_LEASH_HOME_TOLERANCE_TILES = Number(vars.npcAi.leashHomeToleranceTiles ?? 1);
+const NPC_LEASH_RETURN_BLOCKED_TICKS = Number(vars.npcAi.leashReturnBlockedTicks ?? 6);
 const NPC_LAST_AGGRESSOR_MEMORY_MS = vars.npcAi.lastAggressorMemoryMs as number;
 const NPC_TARGET_SWITCH_MARGIN = vars.npcAi.targetSwitchMargin as number;
 const MAX_SUMMONS_PER_USER = 3;
@@ -1195,8 +1237,53 @@ function getChebyshevDistance(from: Position, to: Position) {
     return Math.max(Math.abs(from.x - to.x), Math.abs(from.y - to.y));
 }
 
+/**
+ * Distancia (Chebyshev) desde la criatura hasta su hogar, que puede haber
+ * quedado en el mapa vecino. Infinita si el hogar no está en su vecindario.
+ */
+function getNpcDistanceFromHome(npc: NpcCharacter) {
+    if (!npc.leashHome) {
+        return 0;
+    }
+
+    const delta = worldLayout.getWorldDelta(npc.map, npc.pos, npc.leashHomeMap ?? npc.map, npc.leashHome);
+
+    return delta ? Math.max(Math.abs(delta.dx), Math.abs(delta.dy)) : Number.POSITIVE_INFINITY;
+}
+
 function isNpcFarFromHome(npc: NpcCharacter) {
-    return Boolean(npc.leashHome && getChebyshevDistance(npc.pos, npc.leashHome) > NPC_LEASH_HOME_TOLERANCE_TILES);
+    return getNpcDistanceFromHome(npc) > NPC_LEASH_HOME_TOLERANCE_TILES;
+}
+
+/** Donde está parada pasa a ser su hogar y deja de perseguir o volver. */
+function settleNpcHome(npc: NpcCharacter) {
+    npc.leashHome = { x: npc.pos.x, y: npc.pos.y };
+    npc.leashHomeMap = npc.map;
+    npc.leashState = "idle";
+    npc.leashReturnBlockedTicks = 0;
+}
+
+/**
+ * Objetivo expresado en el marco de la criatura: si está en un mapa vecino
+ * se convierten sus coordenadas; undefined si no está en el vecindario.
+ */
+function toNpcFrameTarget(npc: NpcCharacter, target: NpcFollowTarget): NpcFollowTarget | undefined {
+    if (target.map === npc.map) {
+        return target;
+    }
+
+    const pos = worldLayout.toViewerFrame(npc.map, target.map, target.pos.x, target.pos.y);
+
+    return pos ? { id: target.id, map: npc.map, pos, hp: target.hp } : undefined;
+}
+
+/**
+ * La criatura solo se mete con quien está de su mismo lado del límite de la
+ * zona segura: la de afuera no agrede a quien está en la ciudad y la de
+ * adentro (guardias) no sale a buscar a nadie.
+ */
+function isUserOnNpcSideOfSafeZone(npc: NpcCharacter, user: PlayerCharacter) {
+    return isSafeZonePosition(npc.map, npc.pos) === isSafeZonePosition(user.map, user.pos);
 }
 
 /**
@@ -1209,6 +1296,7 @@ function markNpcChasing(npc: NpcCharacter, now: number) {
     }
 
     npc.leashHome = { x: npc.pos.x, y: npc.pos.y };
+    npc.leashHomeMap = npc.map;
     npc.leashState = "chasing";
     npc.lastReachedTargetAt = now;
 }
@@ -1218,7 +1306,7 @@ function shouldNpcGiveUpChase(npc: NpcCharacter, now: number) {
         return false;
     }
 
-    if (getChebyshevDistance(npc.pos, npc.leashHome) > NPC_LEASH_RADIUS_TILES) {
+    if (getNpcDistanceFromHome(npc) > NPC_LEASH_RADIUS_TILES) {
         return true;
     }
 
@@ -1254,10 +1342,13 @@ function startNpcReturningHome(npc: NpcCharacter) {
  * eso, se queda donde está y ese pasa a ser su nuevo hogar.
  */
 function stepNpcTowardsHome(npc: NpcCharacter) {
-    const home = npc.leashHome;
+    const home = npc.leashHome
+        ? worldLayout.toViewerFrame(npc.map, npc.leashHomeMap ?? npc.map, npc.leashHome.x, npc.leashHome.y)
+        : null;
 
     if (!home || !isNpcFarFromHome(npc)) {
-        npc.leashState = "idle";
+        // Ya llegó, o el hogar quedó fuera de su vecindario: se queda acá.
+        settleNpcHome(npc);
         return;
     }
 
@@ -1271,7 +1362,7 @@ function stepNpcTowardsHome(npc: NpcCharacter) {
 
             if (
                 getChebyshevDistance(candidate, home) < getChebyshevDistance(npc.pos, home) &&
-                game.legalPosNpc(candidate.x, candidate.y, npc.map, Boolean(npc.aguaValida), Boolean(npc.tierraInvalida))
+                canNpcOccupyPosition(npc, candidate, heading)
             ) {
                 nextPos = candidate;
                 break;
@@ -1280,11 +1371,18 @@ function stepNpcTowardsHome(npc: NpcCharacter) {
     }
 
     if (!nextPos) {
-        npc.leashHome = { x: npc.pos.x, y: npc.pos.y };
-        npc.leashState = "idle";
+        // Camino tapado (otra criatura, un jugador): insiste unos ticks antes
+        // de darse por vencida y quedarse donde está.
+        npc.leashReturnBlockedTicks = Number(npc.leashReturnBlockedTicks ?? 0) + 1;
+
+        if (npc.leashReturnBlockedTicks >= NPC_LEASH_RETURN_BLOCKED_TICKS) {
+            settleNpcHome(npc);
+        }
+
         return;
     }
 
+    npc.leashReturnBlockedTicks = 0;
     npcs.moveNpcByPos(npc.id, nextPos);
 }
 
@@ -1370,27 +1468,26 @@ function isAttackTileReservedByOtherNpc(targetId: EntityId, pos: Position, npcId
     return Boolean(reservation && reservation.npcId !== npcId);
 }
 
-function isWithinMapBounds(pos: Position) {
-    return pos.x >= 1 && pos.y >= 1 && pos.x <= 100 && pos.y <= 100;
-}
-
 function isWithinFlowFieldBounds(pos: Position, center: Position) {
     return Math.abs(pos.x - center.x) <= NPC_FLOW_FIELD_RADIUS && Math.abs(pos.y - center.y) <= NPC_FLOW_FIELD_RADIUS;
 }
 
 function canNpcUseTileForFlow(idMap: number, pos: Position, aguaValida: boolean, tierraInvalida = false) {
-    if (!isWithinMapBounds(pos)) {
+    // La posición está en el marco de `idMap`; el tile real puede ser del vecino.
+    const storage = worldLayout.resolveWalkTile(idMap, pos.x, pos.y);
+
+    if (!storage) {
         return false;
     }
 
-    const tile = vars.mapa[idMap]?.[pos.y]?.[pos.x];
+    const tile = vars.mapa[storage.map]?.[storage.y]?.[storage.x];
 
     // Las franjas de exits no son transitables para NPC (ver hasLegalNpcMovement).
     if (typeof tile?.tileExit !== "undefined") {
         return false;
     }
 
-    const isWaterTile = game.hayAgua(idMap, pos);
+    const isWaterTile = game.hayAgua(storage.map, storage);
 
     if (aguaValida && tierraInvalida) {
         return isWaterTile && !tile?.blocked;
@@ -1417,7 +1514,9 @@ function getAdjacentAttackPositions(
     ];
 
     return positions.filter((pos) => {
-        if (game.legalPosNpc(pos.x, pos.y, idMap, aguaValida, tierraInvalida)) {
+        const tile = worldLayout.resolveWalkTile(idMap, pos.x, pos.y);
+
+        if (tile && game.legalPosNpc(tile.x, tile.y, tile.map, aguaValida, tierraInvalida)) {
             return true;
         }
 
@@ -1474,9 +1573,15 @@ function countUserEscapeTiles(user: PlayerCharacter) {
 
 function getTargetScore(npc: NpcCharacter, user: PlayerCharacter, targetPressure: Map<EntityId, number>) {
     const now = Date.now();
-    const distance = getManhattanDistance(npc.pos, user.pos);
+    const frameTarget = toNpcFrameTarget(npc, user);
+
+    if (!frameTarget) {
+        return Number.MAX_SAFE_INTEGER;
+    }
+
+    const distance = getManhattanDistance(npc.pos, frameTarget.pos);
     const pressure = targetPressure.get(user.id) ?? 0;
-    const availableAttackTiles = countAvailableAttackTiles(user, npc);
+    const availableAttackTiles = countAvailableAttackTiles(frameTarget, npc);
     const escapeTiles = countUserEscapeTiles(user);
     const isCurrentTarget = npc.currentTargetId === user.id;
     const isAdjacent = distance === 1;
@@ -1513,7 +1618,14 @@ function getRecentAggressorTarget(npc: NpcCharacter, visibleUsers: EntityId[]) {
 
     const user = getUser(npc.lastAggressorId);
 
-    if (!user || user.cerrado || user.map !== npc.map || user.hp <= 0 || isInvisibleToNpc(user)) {
+    if (
+        !user ||
+        user.cerrado ||
+        !worldLayout.isNeighborMap(npc.map, user.map) ||
+        user.hp <= 0 ||
+        isInvisibleToNpc(user) ||
+        !isUserOnNpcSideOfSafeZone(npc, user)
+    ) {
         return;
     }
 
@@ -1541,12 +1653,20 @@ function selectNpcTarget(npc: NpcCharacter, targetPressure: Map<EntityId, number
     for (const idUser of visibleUsers) {
         const user = getUser(idUser);
 
-        if (!user || user.cerrado || user.map !== npc.map || user.hp <= 0 || isInvisibleToNpc(user)) {
+        if (
+            !user ||
+            user.cerrado ||
+            !worldLayout.isNeighborMap(npc.map, user.map) ||
+            user.hp <= 0 ||
+            isInvisibleToNpc(user)
+        ) {
             removeUserFromNpcArea(npc.id, idUser);
             continue;
         }
 
-        if (require("./clanCastles").isProtectedByCastle(user, npc.map)) {
+        // Quien está en zona segura sigue en el área (puede volver a salir),
+        // pero la criatura lo ignora.
+        if (!isUserOnNpcSideOfSafeZone(npc, user) || require("./clanCastles").isProtectedByCastle(user, npc.map)) {
             continue;
         }
 
@@ -1865,7 +1985,7 @@ function getSummonedNpcTarget(idNpc: EntityId | undefined) {
 function getHostileNpcCurrentSummonTarget(npc: NpcCharacter) {
     const target = getSummonedNpcTarget(npc.currentTargetId);
 
-    if (!target || target.map !== npc.map) {
+    if (!target || !worldLayout.isNeighborMap(npc.map, target.map)) {
         return;
     }
 
@@ -1881,7 +2001,7 @@ function getRecentSummonAggressorTarget(npc: NpcCharacter) {
 
     const target = getSummonedNpcTarget(npc.lastAggressorId);
 
-    if (!target || target.map !== npc.map) {
+    if (!target || !worldLayout.isNeighborMap(npc.map, target.map)) {
         return;
     }
 
@@ -2137,7 +2257,8 @@ function Npcs(this: NpcsApi) {
     };
 
     const updateNpcHeading = (npc: NpcCharacter, target: NpcFollowTarget) => {
-        const directionNpc = this.findDirection(npc.pos, target.pos);
+        const targetPos = worldLayout.toViewerFrame(npc.map, target.map, target.pos.x, target.pos.y) ?? target.pos;
+        const directionNpc = this.findDirection(npc.pos, targetPos);
 
         if (directionNpc === npc.heading) {
             return;
@@ -2490,6 +2611,13 @@ function Npcs(this: NpcsApi) {
                 return;
             }
 
+            // Si murió en el mapa vecino persiguiendo, reaparece en su mapa de
+            // origen y arranca sin correa pendiente.
+            npc.map = Number(npc.spawnMapNum ?? npc.map);
+            npc.leashState = "idle";
+            npc.leashHome = undefined;
+            npc.leashHomeMap = undefined;
+
             const posNewNpc = game.respawnNpc(
                 npc.map,
                 Boolean(npc.aguaValida),
@@ -2589,7 +2717,11 @@ function Npcs(this: NpcsApi) {
                 npc.currentTargetLockedUntil = now + NPC_TARGET_LOCK_MS;
             }
 
-            if (npc.map !== target.map) {
+            // Objetivo en el marco de la criatura: puede estar en el mapa
+            // vecino y se lo persigue a través del borde.
+            const frameTarget = toNpcFrameTarget(npc, target);
+
+            if (!frameTarget) {
                 if (!targetIsSummon) {
                     removeUserFromNpcArea(idNpc, target.id);
                 }
@@ -2600,7 +2732,7 @@ function Npcs(this: NpcsApi) {
 
             markNpcChasing(npc, now);
 
-            if (isTargetAdjacent(npc, target)) {
+            if (isTargetAdjacent(npc, frameTarget)) {
                 npc.lastReachedTargetAt = now;
             } else if (shouldNpcGiveUpChase(npc, now)) {
                 startNpcReturningHome(npc);
@@ -2626,21 +2758,21 @@ function Npcs(this: NpcsApi) {
                 return;
             }
 
-            if (!isTargetAdjacent(npc, target)) {
+            if (!isTargetAdjacent(npc, frameTarget)) {
                 const chaseStartAt = vars.debugNpcPathfinding ? Date.now() : 0;
                 clearNpcRoute(npc);
 
-                const nextPos = getNextChasePosition(npc, target);
+                const nextPos = getNextChasePosition(npc, frameTarget);
 
                 if (vars.debugNpcPathfinding) {
                     const chaseDurationMs = Date.now() - chaseStartAt;
                     console.log(
-                        `[npc-path] npc=${idNpc} target=${target.id} map=${npc.map} pos=${npc.pos.x},${npc.pos.y} targetPos=${target.pos.x},${target.pos.y} durationMs=${chaseDurationMs}`,
+                        `[npc-path] npc=${idNpc} target=${target.id} map=${npc.map} pos=${npc.pos.x},${npc.pos.y} targetPos=${frameTarget.pos.x},${frameTarget.pos.y} durationMs=${chaseDurationMs}`,
                     );
                 }
 
                 if (nextPos) {
-                    const isAttackTile = getManhattanDistance(nextPos, target.pos) === 1;
+                    const isAttackTile = getManhattanDistance(nextPos, frameTarget.pos) === 1;
 
                     if (isAttackTile) {
                         reserveAttackTile(npc, target.id, nextPos);
@@ -2985,24 +3117,22 @@ function Npcs(this: NpcsApi) {
                       : pos.y > oldY
                         ? vars.direcciones.down
                         : vars.direcciones.up;
-            const ghost = getDeadGhostAtPosition(npc.map, pos);
-            const ghostMove = ghost ? resolveGhostDisplacementPosition(ghost, idNpc, heading) : undefined;
+            // `pos` viene en el marco de la criatura; el tile real puede ser del
+            // mapa vecino (persecución o vuelta a casa a través del borde) y
+            // nunca cruza el límite de una zona segura.
+            const tile = resolveNpcStepTile(npc, pos);
 
-            if (
-                !game.legalPosNpc(pos.x, pos.y, npc.map, Boolean(npc.aguaValida), Boolean(npc.tierraInvalida)) &&
-                !ghostMove
-            ) {
+            if (!tile) {
                 clearNpcRoute(npc);
                 return;
             }
 
-            // Las criaturas no entran a una zona segura (ciudad, templo) desde
-            // afuera; las que viven adentro (guardias) se mueven normalmente y
-            // las invocaciones acompañan a su dueño.
+            const ghost = getDeadGhostAtPosition(npc.map, pos);
+            const ghostMove = ghost ? resolveGhostDisplacementPosition(ghost, idNpc, heading) : undefined;
+
             if (
-                !isSummonedNpc(npc) &&
-                !isSafeZonePosition(npc.map, npc.pos) &&
-                isSafeZonePosition(npc.map, pos)
+                !game.legalPosNpc(tile.x, tile.y, tile.map, Boolean(npc.aguaValida), Boolean(npc.tierraInvalida)) &&
+                !ghostMove
             ) {
                 clearNpcRoute(npc);
                 return;
@@ -3017,22 +3147,32 @@ function Npcs(this: NpcsApi) {
             else if (funct.sign(newY) === 1) moveHeading = vars.direcciones.down;
             else if (funct.sign(newY) === -1) moveHeading = vars.direcciones.up;
 
+            const oldMap = npc.map;
             npc.heading = moveHeading;
             npc.lastChasePos = { x: oldX, y: oldY };
-            vars.mapData[npc.map][oldY][oldX].id = 0;
+            vars.mapData[oldMap][oldY][oldX].id = 0;
 
             if (ghostMove) {
                 if (!ghost || !applyNpcGhostDisplacement(ghost, ghostMove.pos, idNpc)) {
-                    vars.mapData[npc.map][oldY][oldX].id = idNpc;
+                    vars.mapData[oldMap][oldY][oldX].id = idNpc;
                     clearNpcRoute(npc);
                     return;
                 }
             }
 
-            vars.mapData[npc.map][pos.y][pos.x].id = idNpc;
-            npc.pos.x = pos.x;
-            npc.pos.y = pos.y;
-            npc.rute.shift();
+            vars.mapData[tile.map][tile.y][tile.x].id = idNpc;
+            npc.pos.x = tile.x;
+            npc.pos.y = tile.y;
+
+            if (tile.map !== oldMap) {
+                // Cruzó al mapa vecino: desde ahora piensa en el marco del nuevo
+                // mapa (la última posición y la ruta estaban en el anterior).
+                npc.map = tile.map;
+                npc.lastChasePos = worldLayout.toViewerFrame(tile.map, oldMap, oldX, oldY) ?? undefined;
+                clearNpcRoute(npc);
+            } else {
+                npc.rute.shift();
+            }
 
             this.npcToArea(idNpc, moveHeading);
             syncNpcVisibilityForUser(npc, ghost);
@@ -3107,8 +3247,7 @@ function Npcs(this: NpcsApi) {
                     return;
                 }
 
-                // Los NPC solo agreden dentro de su propio mapa.
-                if (target.map === npc.map && !isInvisibleToNpc(target) && vars.areaNpc[idNpc].indexOf(userId) < 0) {
+                if (!isInvisibleToNpc(target) && vars.areaNpc[idNpc].indexOf(userId) < 0) {
                     vars.areaNpc[idNpc].push(userId);
                 }
 

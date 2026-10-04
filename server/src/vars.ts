@@ -101,6 +101,9 @@ function Vars(this: any) {
         leashRadiusTiles: 18,
         leashGiveUpMs: 15000,
         leashHomeToleranceTiles: 1,
+        // Ticks de pensamiento seguidos con el camino de vuelta tapado antes
+        // de que la criatura se quede donde está.
+        leashReturnBlockedTicks: 6,
         targetSwitchMargin: 10,
         targetScoreWeights: {
             distance: 3,

@@ -503,7 +503,9 @@ export type RuntimeNpc = {
     currentTargetLockedUntil?: number;
     // Correa: dónde estaba al empezar a perseguir y en qué estado está.
     leashHome?: Position;
+    leashHomeMap?: number;
     leashState?: "idle" | "chasing" | "returning";
+    leashReturnBlockedTicks?: number;
     lastReachedTargetAt?: number;
     lastAggressorId?: EntityId;
     lastAggressedAt?: number;

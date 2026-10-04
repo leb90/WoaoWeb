@@ -7664,9 +7664,10 @@ function Game(this: GameApi) {
                                     vars.areaNpc[areaTarget.id] = npcArea;
                                 }
 
-                                // Los NPC solo agreden dentro de su propio mapa.
+                                // Las criaturas también ven a quien está en el
+                                // mapa vecino: la correa y la zona segura deciden
+                                // si lo persiguen.
                                 if (
-                                    tileMap === user.map &&
                                     areaTarget.target.movement == 3 &&
                                     canNpcDetectCharacter(user) &&
                                     npcArea.indexOf(clientId) < 0

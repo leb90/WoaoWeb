@@ -2611,6 +2611,13 @@ function Npcs(this: NpcsApi) {
                 return;
             }
 
+            // Si murió en el mapa vecino persiguiendo, reaparece en su mapa de
+            // origen y arranca sin correa pendiente.
+            npc.map = Number(npc.spawnMapNum ?? npc.map);
+            npc.leashState = "idle";
+            npc.leashHome = undefined;
+            npc.leashHomeMap = undefined;
+
             const posNewNpc = game.respawnNpc(
                 npc.map,
                 Boolean(npc.aguaValida),

@@ -748,6 +748,7 @@ export default function MapRenderer({
     const movementInputLockedUntilRef = useRef(0);
     const movementInputResumeTimeoutRef = useRef<number | null>(null);
     const isMapChangeTransitionRef = useRef(false);
+    const onWorldStreamedRef = useRef<((engine: Engine) => void) | null>(null);
     const hotkeySettingsRef = useRef(hotkeySettings);
     const macroKeyCodesRef = useRef<Set<string>>(new Set());
     const blockedKeyboardCodesRef = useRef<Map<string, number>>(new Map());
@@ -1192,6 +1193,7 @@ export default function MapRenderer({
         canUseEngineContainer,
         preloadGraphicIds,
         loadTextures,
+        onWorldStreamedRef,
     });
 
     const {
@@ -1768,6 +1770,17 @@ export default function MapRenderer({
         mergeHud,
         clearEntityFX,
     });
+
+    useEffect(() => {
+        onWorldStreamedRef.current = (engine: Engine) => {
+            void flushBufferedRemoteEntities(engine).catch((error) => {
+                console.warn("Failed to flush buffered remote entities:", error);
+            });
+        };
+        return () => {
+            onWorldStreamedRef.current = null;
+        };
+    }, [flushBufferedRemoteEntities]);
 
     useRendererBootstrap({
         isMounted,

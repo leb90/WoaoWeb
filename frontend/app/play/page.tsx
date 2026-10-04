@@ -19,6 +19,7 @@ import MacroBar from "../../components/MacroBar";
 import BailModal from "../../components/BailModal";
 import CharacterStatsModal from "../../components/CharacterStatsModal";
 import CraftingModal from "../../components/CraftingModal";
+import AuctionHouseModal from "../../components/AuctionHouseModal";
 import MarketModal from "../../components/MarketModal";
 import RetosModal from "../../components/RetosModal";
 import TradeModal from "../../components/TradeModal";
@@ -63,6 +64,7 @@ import type {
     ChatChannel,
     MarketPriceSort,
     PanelSnapshot,
+    MarketPanelState,
     MarketState,
     PlayerHudState,
     QuestProgressNoticePayload,
@@ -328,7 +330,18 @@ type CloseTradeRequest = {
 };
 
 type MarketActionRequest = {
-    action: "refresh" | "create" | "buy" | "cancel" | "claim";
+    action:
+        | "refresh"
+        | "create"
+        | "buy"
+        | "cancel"
+        | "claim"
+        | "auctionCreate"
+        | "auctionBid"
+        | "auctionBuyout"
+        | "auctionCancel"
+        | "auctionClaim"
+        | "auctionMailRead";
     payload?: Record<string, unknown>;
     token: number;
 };
@@ -964,7 +977,8 @@ function HomeContent() {
         Record<NotifiableChatTab, number>
     >(createEmptyUnreadChatCounts);
     const [tradeState, setTradeState] = useState<TradeState | null>(null);
-    const [marketState, setMarketState] = useState<MarketState | null>(null);
+    const [marketState, setMarketState] = useState<MarketPanelState | null>(null);
+    const [auctionHousePresentation, setAuctionHousePresentation] = useState<"modal" | "hub">("modal");
     const [retosState, setRetosState] = useState<RetosState | null>(null);
     const [tradeStatusMessage, setTradeStatusMessage] = useState<string | null>(
         null,
@@ -4313,6 +4327,90 @@ function HomeContent() {
                                         }))
                                     }
                                     onSendCommand={sendChatMessage}
+                                    auctionPanel={
+                                        auctionHousePresentation === "hub" &&
+                                        marketState &&
+                                        "kind" in marketState &&
+                                        marketState.kind === "auctionHouse" ? (
+                                            <AuctionHouseModal
+                                                embedded
+                                                state={marketState}
+                                                inventory={hud?.inventory ?? []}
+                                                gold={hud?.gold ?? 0}
+                                                onClose={() => {
+                                                    setMarketState(null);
+                                                    setAuctionHousePresentation("modal");
+                                                    setCloseTradeRequest((current) => ({
+                                                        token: (current?.token ?? 0) + 1,
+                                                    }));
+                                                }}
+                                                onRefresh={(browse) =>
+                                                    setMarketActionRequest((current) => ({
+                                                        action: "refresh",
+                                                        payload: browse,
+                                                        token: (current?.token ?? 0) + 1,
+                                                    }))
+                                                }
+                                                onCreate={(slot, quantity, startPrice, buyoutPrice, durationHours, browse) =>
+                                                    setMarketActionRequest((current) => ({
+                                                        action: "auctionCreate",
+                                                        payload: {
+                                                            slot,
+                                                            quantity,
+                                                            startPrice,
+                                                            buyoutPrice,
+                                                            durationHours,
+                                                            ...browse,
+                                                        },
+                                                        token: (current?.token ?? 0) + 1,
+                                                    }))
+                                                }
+                                                onBid={(auctionId, bidAmount, browse) =>
+                                                    setMarketActionRequest((current) => ({
+                                                        action: "auctionBid",
+                                                        payload: { auctionId, bidAmount, ...browse },
+                                                        token: (current?.token ?? 0) + 1,
+                                                    }))
+                                                }
+                                                onBuyout={(auctionId, browse) =>
+                                                    setMarketActionRequest((current) => ({
+                                                        action: "auctionBuyout",
+                                                        payload: { auctionId, ...browse },
+                                                        token: (current?.token ?? 0) + 1,
+                                                    }))
+                                                }
+                                                onClaim={(claimId, browse) =>
+                                                    setMarketActionRequest((current) => ({
+                                                        action: "auctionClaim",
+                                                        payload: { claimId, ...browse },
+                                                        token: (current?.token ?? 0) + 1,
+                                                    }))
+                                                }
+                                                onReadMail={(mailId, browse) =>
+                                                    setMarketActionRequest((current) => ({
+                                                        action: "auctionMailRead",
+                                                        payload: { mailId, ...browse },
+                                                        token: (current?.token ?? 0) + 1,
+                                                    }))
+                                                }
+                                            />
+                                        ) : null
+                                    }
+                                    onOpenAuctionHouse={() => {
+                                        setAuctionHousePresentation("hub");
+                                        sendChatMessage("/subastas");
+                                    }}
+                                    onCloseAuctionHouse={() => {
+                                        if (auctionHousePresentation !== "hub") {
+                                            return;
+                                        }
+
+                                        setMarketState(null);
+                                        setAuctionHousePresentation("modal");
+                                        setCloseTradeRequest((current) => ({
+                                            token: (current?.token ?? 0) + 1,
+                                        }));
+                                    }}
                                     selectedCharacterId={
                                         authSession?.selectedCharacterId ?? null
                                     }
@@ -4326,9 +4424,78 @@ function HomeContent() {
                 </div>
             </div>
 
-            {marketState ? (
+            {marketState && "kind" in marketState && marketState.kind === "auctionHouse" && auctionHousePresentation !== "hub" ? (
+                <AuctionHouseModal
+                    state={marketState}
+                    inventory={hud?.inventory ?? []}
+                    gold={hud?.gold ?? 0}
+                    onClose={() => {
+                        setMarketState(null);
+                        setAuctionHousePresentation("modal");
+                        setCloseTradeRequest((current) => ({
+                            token: (current?.token ?? 0) + 1,
+                        }));
+                    }}
+                    onRefresh={(browse) =>
+                        setMarketActionRequest((current) => ({
+                            action: "refresh",
+                            payload: browse,
+                            token: (current?.token ?? 0) + 1,
+                        }))
+                    }
+                    onCreate={(
+                        slot,
+                        quantity,
+                        startPrice,
+                        buyoutPrice,
+                        durationHours,
+                        browse,
+                    ) =>
+                        setMarketActionRequest((current) => ({
+                            action: "auctionCreate",
+                            payload: {
+                                slot,
+                                quantity,
+                                startPrice,
+                                buyoutPrice,
+                                durationHours,
+                                ...browse,
+                            },
+                            token: (current?.token ?? 0) + 1,
+                        }))
+                    }
+                    onBid={(auctionId, bidAmount, browse) =>
+                        setMarketActionRequest((current) => ({
+                            action: "auctionBid",
+                            payload: { auctionId, bidAmount, ...browse },
+                            token: (current?.token ?? 0) + 1,
+                        }))
+                    }
+                    onBuyout={(auctionId, browse) =>
+                        setMarketActionRequest((current) => ({
+                            action: "auctionBuyout",
+                            payload: { auctionId, ...browse },
+                            token: (current?.token ?? 0) + 1,
+                        }))
+                    }
+                    onClaim={(claimId, browse) =>
+                        setMarketActionRequest((current) => ({
+                            action: "auctionClaim",
+                            payload: { claimId, ...browse },
+                            token: (current?.token ?? 0) + 1,
+                        }))
+                    }
+                    onReadMail={(mailId, browse) =>
+                        setMarketActionRequest((current) => ({
+                            action: "auctionMailRead",
+                            payload: { mailId, ...browse },
+                            token: (current?.token ?? 0) + 1,
+                        }))
+                    }
+                />
+            ) : marketState && (!("kind" in marketState) || marketState.kind !== "auctionHouse") ? (
                 <MarketModal
-                    marketState={marketState}
+                    marketState={marketState as MarketState}
                     inventory={hud?.inventory ?? []}
                     gold={hud?.gold ?? 0}
                     currentCharacterName={hud?.nameCharacter ?? null}

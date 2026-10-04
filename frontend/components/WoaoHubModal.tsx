@@ -41,7 +41,7 @@ import {
 import type { GraphicData, ObjectsDB } from "../types/game";
 import { getTexturePath, loadGraphicsDB, loadObjectsDB } from "../utils/gameLoader";
 
-export type WoaoHubTab = "misiones" | "montura" | "premios" | "ranked" | "viajes" | "eventos";
+export type WoaoHubTab = "misiones" | "montura" | "premios" | "ranked" | "subastas" | "viajes" | "eventos";
 
 type PremioDef = {
     id: number;
@@ -68,8 +68,10 @@ type WoaoHubModalProps = {
     questDialog?: QuestEntryState | null;
     questPoints?: number;
     donationPoints?: number;
+    auctionPanel?: React.ReactNode;
     onTabChange: (tab: WoaoHubTab) => void;
     onClose: () => void;
+    onOpenAuctionHouse?: () => void;
     onSendCommand?: (message: string) => void;
 };
 
@@ -78,6 +80,7 @@ const TABS: Array<{ id: WoaoHubTab; label: string }> = [
     { id: "montura", label: "Montura" },
     { id: "premios", label: "Premios" },
     { id: "ranked", label: "Ranked" },
+    { id: "subastas", label: "Subastas" },
     { id: "viajes", label: "Viajes" },
     { id: "eventos", label: "Eventos" },
 ];
@@ -1038,8 +1041,10 @@ export default function WoaoHubModal({
     questDialog,
     questPoints = 0,
     donationPoints = 0,
+    auctionPanel,
     onTabChange,
     onClose,
+    onOpenAuctionHouse,
     onSendCommand,
 }: WoaoHubModalProps) {
     const [premios, setPremios] = React.useState<PremioDef[]>([]);
@@ -1058,6 +1063,7 @@ export default function WoaoHubModal({
     const [selectedEventDetail, setSelectedEventDetail] = React.useState<AutomaticEvent | null>(null);
     const [eventScheduleAnchor] = React.useState(() => Date.now());
     const [eventClockNow, setEventClockNow] = React.useState(() => Date.now());
+    const requestedAuctionPanelRef = React.useRef(false);
 
     React.useEffect(() => {
         let cancelled = false;
@@ -1122,6 +1128,24 @@ export default function WoaoHubModal({
 
         return () => window.clearInterval(intervalId);
     }, [tab]);
+
+    React.useEffect(() => {
+        if (tab !== "subastas") {
+            requestedAuctionPanelRef.current = false;
+            return;
+        }
+
+        if (requestedAuctionPanelRef.current) {
+            return;
+        }
+
+        requestedAuctionPanelRef.current = true;
+        if (onOpenAuctionHouse) {
+            onOpenAuctionHouse();
+        } else {
+            onSendCommand?.("/subastas");
+        }
+    }, [onOpenAuctionHouse, onSendCommand, tab]);
 
     const availableRoutes = routes.filter((route) => route.fromMap === Number(mapId ?? 0));
     const activePremios = premioCurrency === "quest" ? premios : donacionPremios;
@@ -1322,6 +1346,8 @@ export default function WoaoHubModal({
     const hubHeightClass =
         tab === "eventos"
             ? "h-[min(760px,calc(100vh-32px))]"
+            : tab === "subastas"
+              ? "h-[min(760px,calc(100vh-32px))]"
             : tab === "ranked"
               ? "h-[min(820px,calc(100vh-24px))]"
             : tab === "premios"
@@ -1332,6 +1358,8 @@ export default function WoaoHubModal({
     const hubWidthClass =
         tab === "eventos"
             ? "md:w-[min(1140px,calc(100vw-32px))]"
+            : tab === "subastas"
+              ? "md:w-[min(1280px,calc(100vw-32px))]"
             : tab === "ranked"
               ? "md:w-[min(1420px,calc(100vw-28px))]"
             : tab === "premios"
@@ -1342,7 +1370,7 @@ export default function WoaoHubModal({
                   ? ""
                   : "md:w-[min(620px,calc(100vw-32px))]";
     const contentOverflowClass =
-        tab === "premios" || tab === "ranked" || tab === "montura" || tab === "eventos" ? "overflow-hidden" : "overflow-y-auto";
+        tab === "premios" || tab === "ranked" || tab === "montura" || tab === "eventos" || tab === "subastas" ? "overflow-hidden" : "overflow-y-auto";
 
     if (tab === "misiones" && questDialog) {
         return (
@@ -2067,6 +2095,35 @@ export default function WoaoHubModal({
                             </div>
 
                         </div>
+                    ) : null}
+
+                    {tab === "subastas" ? (
+                        auctionPanel ? (
+                            <div className="h-full min-h-0">{auctionPanel}</div>
+                        ) : (
+                            <div className="flex h-full min-h-0 flex-col items-center justify-center rounded border border-amber-200/10 bg-black/28 px-6 text-center">
+                                <ShoppingCart aria-hidden="true" className="h-12 w-12 text-amber-300" strokeWidth={1.7} />
+                                <h4 className="mt-4 text-2xl font-bold text-[#f2e5ca]">
+                                    Casa de Subastas
+                                </h4>
+                                <p className="mt-2 max-w-xl text-sm leading-6 text-stone-300">
+                                    Cargando subastas...
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (onOpenAuctionHouse) {
+                                            onOpenAuctionHouse();
+                                        } else {
+                                            onSendCommand?.("/subastas");
+                                        }
+                                    }}
+                                    className="mt-6 min-h-[42px] min-w-[180px] rounded border border-amber-300/70 bg-[linear-gradient(180deg,#f4c449,#986015)] px-5 text-sm font-bold text-stone-950 shadow-[0_0_22px_rgba(245,158,11,0.18)] transition hover:brightness-110"
+                                >
+                                    Reintentar
+                                </button>
+                            </div>
+                        )
                     ) : null}
 
                     {tab === "viajes" ? (

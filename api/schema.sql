@@ -414,6 +414,98 @@ CREATE INDEX IF NOT EXISTS idx_market_listings_expires_at_active
 CREATE INDEX IF NOT EXISTS idx_market_claims_owner_created
     ON market_claims(owner_character_id, created_at ASC);
 
+CREATE TABLE IF NOT EXISTS auction_listings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    auction_type TEXT NOT NULL DEFAULT 'ITEM' CHECK (auction_type IN ('ITEM', 'MOUNT')),
+    seller_character_id UUID NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+    seller_name TEXT NOT NULL,
+    asset_payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+    item_id INTEGER,
+    quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0),
+    start_price INTEGER NOT NULL CHECK (start_price > 0),
+    buyout_price INTEGER CHECK (buyout_price IS NULL OR buyout_price > 0),
+    current_bid_amount INTEGER,
+    current_bidder_character_id UUID REFERENCES characters(id) ON DELETE SET NULL,
+    current_bidder_name TEXT,
+    starts_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    ends_at TIMESTAMPTZ NOT NULL,
+    status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'SOLD_BY_BID', 'SOLD_BY_BUYOUT', 'EXPIRED', 'CANCELLED')),
+    version INTEGER NOT NULL DEFAULT 1,
+    resolved_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (
+        (auction_type = 'ITEM' AND item_id IS NOT NULL)
+        OR (auction_type = 'MOUNT' AND item_id IS NULL)
+    ),
+    CHECK (buyout_price IS NULL OR buyout_price >= start_price),
+    CHECK (
+        (current_bid_amount IS NULL AND current_bidder_character_id IS NULL)
+        OR (current_bid_amount IS NOT NULL AND current_bidder_character_id IS NOT NULL)
+    )
+);
+
+CREATE TABLE IF NOT EXISTS auction_bids (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    auction_id UUID NOT NULL REFERENCES auction_listings(id) ON DELETE CASCADE,
+    bidder_character_id UUID NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+    bidder_name TEXT NOT NULL,
+    amount INTEGER NOT NULL CHECK (amount > 0),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS auction_claims (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    character_id UUID NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+    auction_id UUID REFERENCES auction_listings(id) ON DELETE SET NULL,
+    claim_type TEXT NOT NULL CHECK (claim_type IN ('ITEM_WON', 'ITEM_RETURN', 'GOLD_SALE')),
+    asset_type TEXT NOT NULL DEFAULT 'ITEM' CHECK (asset_type IN ('ITEM', 'MOUNT', 'GOLD')),
+    item_id INTEGER,
+    quantity INTEGER,
+    asset_payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+    gold_amount INTEGER NOT NULL DEFAULT 0 CHECK (gold_amount >= 0),
+    status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'CLAIMED')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    claimed_at TIMESTAMPTZ,
+    CHECK (
+        (claim_type IN ('ITEM_WON', 'ITEM_RETURN') AND asset_type = 'ITEM' AND item_id IS NOT NULL AND quantity IS NOT NULL AND quantity > 0 AND gold_amount = 0)
+        OR (claim_type = 'GOLD_SALE' AND asset_type = 'GOLD' AND gold_amount > 0 AND item_id IS NULL AND quantity IS NULL)
+    )
+);
+
+CREATE TABLE IF NOT EXISTS auction_mail (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    recipient_character_id UUID NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+    category TEXT NOT NULL CHECK (category IN ('AUCTION_SOLD', 'AUCTION_EXPIRED', 'AUCTION_WON', 'AUCTION_OUTBID', 'AUCTION_BID_RECEIVED', 'SYSTEM')),
+    subject TEXT NOT NULL,
+    body TEXT NOT NULL,
+    claim_id UUID REFERENCES auction_claims(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    read_at TIMESTAMPTZ,
+    deleted_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_auction_listings_status_ends_at
+    ON auction_listings(status, ends_at ASC);
+CREATE INDEX IF NOT EXISTS idx_auction_listings_active_ends_at
+    ON auction_listings(ends_at ASC)
+    WHERE status = 'ACTIVE';
+CREATE INDEX IF NOT EXISTS idx_auction_listings_item_status
+    ON auction_listings(item_id, status, ends_at ASC);
+CREATE INDEX IF NOT EXISTS idx_auction_listings_seller_status
+    ON auction_listings(seller_character_id, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_auction_listings_bidder_status
+    ON auction_listings(current_bidder_character_id, status, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_auction_bids_bidder_created
+    ON auction_bids(bidder_character_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_auction_bids_auction_created
+    ON auction_bids(auction_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_auction_claims_character_status_created
+    ON auction_claims(character_id, status, created_at ASC);
+CREATE INDEX IF NOT EXISTS idx_auction_mail_recipient_created
+    ON auction_mail(recipient_character_id, created_at DESC)
+    WHERE deleted_at IS NULL;
+
 CREATE TABLE IF NOT EXISTS auth_sessions (
     token TEXT PRIMARY KEY,
     account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,

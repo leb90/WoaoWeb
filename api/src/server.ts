@@ -108,6 +108,15 @@ import {
     listMarketListings,
 } from "./repositories/market";
 import {
+    buyoutAuction,
+    cancelAuctionListing,
+    claimAuctionReward,
+    createAuctionListing,
+    listAuctionHouseState,
+    markAuctionMailRead,
+    placeAuctionBid,
+} from "./repositories/auctionHouse";
+import {
     getGameNpcById,
     listGameNpcChangesSince,
     listGameNpcs,
@@ -2473,6 +2482,152 @@ app.post(
                     characterGold: request.body?.characterGold,
                     characterItems: request.body?.characterItems ?? [],
                 }),
+            );
+        } catch (error) {
+            response.status(400).json({
+                error:
+                    error instanceof Error ? error.message : "Unexpected error",
+            });
+        }
+    },
+);
+
+app.get("/internal/auction-house/state", requireAuth, async (request, response) => {
+    try {
+        response.json(
+            await listAuctionHouseState({
+                characterId:
+                    typeof request.query.characterId === "string"
+                        ? request.query.characterId
+                        : undefined,
+                search:
+                    typeof request.query.search === "string"
+                        ? request.query.search
+                        : undefined,
+                category:
+                    typeof request.query.category === "string"
+                        ? request.query.category
+                        : undefined,
+                minLevel:
+                    typeof request.query.minLevel === "string"
+                        ? Number.parseInt(request.query.minLevel, 10)
+                        : undefined,
+                maxLevel:
+                    typeof request.query.maxLevel === "string"
+                        ? Number.parseInt(request.query.maxLevel, 10)
+                        : undefined,
+                buyoutOnly:
+                    typeof request.query.buyoutOnly === "string"
+                        ? request.query.buyoutOnly === "true"
+                        : undefined,
+                page:
+                    typeof request.query.page === "string"
+                        ? Number.parseInt(request.query.page, 10)
+                        : undefined,
+                pageSize:
+                    typeof request.query.pageSize === "string"
+                        ? Number.parseInt(request.query.pageSize, 10)
+                        : undefined,
+            }),
+        );
+    } catch (error) {
+        response.status(400).json({
+            error: error instanceof Error ? error.message : "Unexpected error",
+        });
+    }
+});
+
+app.post("/internal/auction-house/listings", requireAuth, async (request, response) => {
+    try {
+        response.status(201).json(await createAuctionListing(request.body ?? {}));
+    } catch (error) {
+        response.status(400).json({
+            error: error instanceof Error ? error.message : "Unexpected error",
+        });
+    }
+});
+
+app.post("/internal/auction-house/bids", requireAuth, async (request, response) => {
+    try {
+        response.json(await placeAuctionBid(request.body ?? {}));
+    } catch (error) {
+        response.status(400).json({
+            error: error instanceof Error ? error.message : "Unexpected error",
+        });
+    }
+});
+
+app.post("/internal/auction-house/buyout", requireAuth, async (request, response) => {
+    try {
+        response.json(await buyoutAuction(request.body ?? {}));
+    } catch (error) {
+        response.status(400).json({
+            error: error instanceof Error ? error.message : "Unexpected error",
+        });
+    }
+});
+
+app.post(
+    "/internal/auction-house/listings/:auctionId/cancel",
+    requireAuth,
+    async (request, response) => {
+        try {
+            const auctionId = Array.isArray(request.params.auctionId)
+                ? request.params.auctionId[0]
+                : request.params.auctionId;
+            response.json(
+                await cancelAuctionListing({
+                    sellerCharacterId: request.body?.sellerCharacterId,
+                    auctionId: auctionId ?? "",
+                }),
+            );
+        } catch (error) {
+            response.status(400).json({
+                error:
+                    error instanceof Error ? error.message : "Unexpected error",
+            });
+        }
+    },
+);
+
+app.post(
+    "/internal/auction-house/claims/:claimId/claim",
+    requireAuth,
+    async (request, response) => {
+        try {
+            const claimId = Array.isArray(request.params.claimId)
+                ? request.params.claimId[0]
+                : request.params.claimId;
+            response.json(
+                await claimAuctionReward({
+                    characterId: request.body?.characterId,
+                    claimId: claimId ?? "",
+                    characterGold: request.body?.characterGold,
+                    characterItems: request.body?.characterItems ?? [],
+                }),
+            );
+        } catch (error) {
+            response.status(400).json({
+                error:
+                    error instanceof Error ? error.message : "Unexpected error",
+            });
+        }
+    },
+);
+
+app.post(
+    "/internal/auction-house/mail/:mailId/read",
+    requireAuth,
+    async (request, response) => {
+        try {
+            const mailId = Array.isArray(request.params.mailId)
+                ? request.params.mailId[0]
+                : request.params.mailId;
+            response.json(
+                await markAuctionMailRead(
+                    String(request.body?.characterId ?? ""),
+                    mailId ?? "",
+                ),
             );
         } catch (error) {
             response.status(400).json({

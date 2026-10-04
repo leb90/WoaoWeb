@@ -103,6 +103,21 @@ type MarketOpenPayload = {
     }>;
 };
 
+type AuctionHouseOpenPayload = {
+    kind: "auctionHouse";
+    npcName: string;
+    listings: unknown[];
+    myAuctions: unknown[];
+    myBids: unknown[];
+    claims: unknown[];
+    mails: unknown[];
+    totalListings: number;
+    unreadMailCount: number;
+    config: Record<string, unknown>;
+};
+
+type MarketPanelOpenPayload = MarketOpenPayload | AuctionHouseOpenPayload;
+
 type RetosOpenPayload = {
     challenges: Array<{
         id: string;
@@ -465,7 +480,7 @@ export type HandleProtocolApi = {
     blockMap: (idMap: number, pos: Position, block: number | boolean, client: RuntimeClient) => void;
     openTrade: (idUser: EntityId, idNpc: EntityId, client: RuntimeClient) => void;
     openCrafting: (payload: CraftingOpenPayload, client: RuntimeClient) => void;
-    openMarket: (payload: MarketOpenPayload, client: RuntimeClient) => void;
+    openMarket: (payload: MarketPanelOpenPayload, client: RuntimeClient) => void;
     openRetos: (payload: RetosOpenPayload, client: RuntimeClient) => void;
     aprenderSpell: (idUser: EntityId, idPosSpell: number | string) => void;
     closeForce: (idUser: EntityId) => void;

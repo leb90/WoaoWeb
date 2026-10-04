@@ -3515,6 +3515,24 @@ export type GameApi = {
     listMarketListings: (options?: { limit?: number }) => Promise<MarketListingSummary[]>;
     listCharacterMarketListings: (characterId: string) => Promise<MarketListingSummary[]>;
     getMarketClaims: (characterId: string) => Promise<MarketClaimSummary[]>;
+    getAuctionHouseState: (
+        idUser: EntityId,
+        npcName?: string,
+        browseOptions?: AuctionBrowseOptions,
+    ) => Promise<AuctionHouseUiState | null>;
+    createAuctionListing: (
+        idUser: EntityId,
+        slot: number,
+        quantity: number,
+        startPrice: number,
+        buyoutPrice: number | null,
+        durationHours: number,
+    ) => Promise<MarketCommandResult & { listingId?: string }>;
+    placeAuctionBid: (idUser: EntityId, auctionId: string, amount: number) => Promise<MarketCommandResult>;
+    buyoutAuctionListing: (idUser: EntityId, auctionId: string) => Promise<MarketCommandResult>;
+    cancelAuctionListing: (idUser: EntityId, auctionId: string) => Promise<MarketCommandResult>;
+    claimAuctionReward: (idUser: EntityId, claimId: string) => Promise<MarketCommandResult>;
+    markAuctionMailRead: (idUser: EntityId, mailId: string) => Promise<MarketCommandResult>;
     createMarketListing: (
         idUser: EntityId,
         slot: number,
@@ -3800,6 +3818,97 @@ type MarketUiState = {
     listingGroups: MarketUiListingGroup[];
     myListings: MarketUiListing[];
     claims: MarketUiClaim[];
+};
+
+type AuctionListingSummary = {
+    id: string;
+    auctionType: "ITEM" | "MOUNT";
+    sellerCharacterId: string;
+    sellerName: string;
+    itemId: number | null;
+    quantity: number;
+    startPrice: number;
+    buyoutPrice: number | null;
+    currentBidAmount: number | null;
+    currentBidderCharacterId: string | null;
+    currentBidderName: string | null;
+    startsAt: string;
+    endsAt: string;
+    status: "ACTIVE" | "SOLD_BY_BID" | "SOLD_BY_BUYOUT" | "EXPIRED" | "CANCELLED";
+    version: number;
+    createdAt: string;
+};
+
+type AuctionClaimSummary = {
+    id: string;
+    characterId: string;
+    auctionId: string | null;
+    claimType: "ITEM_WON" | "ITEM_RETURN" | "GOLD_SALE";
+    assetType: "ITEM" | "MOUNT" | "GOLD";
+    itemId: number | null;
+    quantity: number | null;
+    goldAmount: number;
+    status: "PENDING" | "CLAIMED";
+    createdAt: string;
+    claimedAt: string | null;
+};
+
+type AuctionMailSummary = {
+    id: string;
+    recipientCharacterId: string;
+    category: "AUCTION_SOLD" | "AUCTION_EXPIRED" | "AUCTION_WON" | "AUCTION_OUTBID" | "AUCTION_BID_RECEIVED" | "SYSTEM";
+    subject: string;
+    body: string;
+    claimId: string | null;
+    createdAt: string;
+    readAt: string | null;
+    deletedAt: string | null;
+};
+
+type AuctionUiListing = AuctionListingSummary & {
+    itemName: string;
+    itemGrhIndex: number;
+    itemObjType: number | null;
+    itemLevel: number;
+    itemRarity: "Comun" | "Raro" | "Epico";
+    minimumBid: number;
+    isMine: boolean;
+    isWinning: boolean;
+};
+
+type AuctionUiClaim = AuctionClaimSummary & {
+    itemName: string | null;
+    itemGrhIndex: number | null;
+};
+
+type AuctionHouseUiState = {
+    kind: "auctionHouse";
+    npcName: string;
+    gold: number;
+    listings: AuctionUiListing[];
+    myAuctions: AuctionUiListing[];
+    myBids: AuctionUiListing[];
+    claims: AuctionUiClaim[];
+    mails: AuctionMailSummary[];
+    totalListings: number;
+    unreadMailCount: number;
+    config: {
+        minDurationHours: number;
+        maxDurationHours: number;
+        minBidIncrementPercent: number;
+        saleFeePercent: number;
+        maxActiveListingsPerCharacter: number;
+    };
+};
+
+type AuctionBrowseOptions = {
+    page?: number;
+    pageSize?: number;
+    search?: string;
+    category?: string;
+    minLevel?: number;
+    maxLevel?: number;
+    buyoutOnly?: boolean;
 };
 
 const FX_MEDITAR_ORBITAL_AZUL = 18;
@@ -4610,6 +4719,34 @@ async function fetchMarketClaims(characterId: string) {
     return result.claims ?? [];
 }
 
+async function fetchAuctionHouseState(characterId: string, browseOptions?: AuctionBrowseOptions) {
+    const params = new URLSearchParams();
+    params.set("characterId", characterId);
+
+    if (browseOptions?.page) params.set("page", String(browseOptions.page));
+    if (browseOptions?.pageSize) params.set("pageSize", String(browseOptions.pageSize));
+    if (browseOptions?.search) params.set("search", browseOptions.search);
+    if (browseOptions?.category) params.set("category", browseOptions.category);
+    if (browseOptions?.minLevel) params.set("minLevel", String(browseOptions.minLevel));
+    if (browseOptions?.maxLevel) params.set("maxLevel", String(browseOptions.maxLevel));
+    if (browseOptions?.buyoutOnly) params.set("buyoutOnly", "true");
+
+    return (await funct.fetchUrl(`/internal/auction-house/state?${params.toString()}`, {
+        headers: {
+            Authorization: vars.tokenAuth,
+        },
+    })) as {
+        listings: AuctionListingSummary[];
+        myAuctions: AuctionListingSummary[];
+        myBids: AuctionListingSummary[];
+        claims: AuctionClaimSummary[];
+        mails: AuctionMailSummary[];
+        totalListings: number;
+        unreadMailCount: number;
+        config: AuctionHouseUiState["config"];
+    };
+}
+
 function toMarketUiListing(listing: MarketListingSummary): MarketUiListing {
     const objectData = vars.datObj[listing.itemId] as DataObject | undefined;
 
@@ -4624,6 +4761,69 @@ function toMarketUiListing(listing: MarketListingSummary): MarketUiListing {
         status: listing.status,
         expiresAt: listing.expiresAt,
         createdAt: listing.createdAt,
+    };
+}
+
+function getAuctionItemLevel(objectData: DataObject | undefined): number {
+    return Math.max(
+        1,
+        Math.floor(
+            Number(
+                (objectData as any)?.minLevel ??
+                    (objectData as any)?.nivel ??
+                    (objectData as any)?.requiredLevel ??
+                    1,
+            ) || 1,
+        ),
+    );
+}
+
+function getAuctionItemRarity(objectData: DataObject | undefined): "Comun" | "Raro" | "Epico" {
+    const level = getAuctionItemLevel(objectData);
+
+    if (level >= 45) {
+        return "Epico";
+    }
+
+    if (level >= 25) {
+        return "Raro";
+    }
+
+    return "Comun";
+}
+
+function calculateAuctionMinimumBid(listing: Pick<AuctionListingSummary, "startPrice" | "currentBidAmount">): number {
+    const currentBid = Number(listing.currentBidAmount ?? 0);
+    if (currentBid <= 0) {
+        return listing.startPrice;
+    }
+
+    return currentBid + Math.max(1, Math.ceil(currentBid * 0.05));
+}
+
+function toAuctionUiListing(listing: AuctionListingSummary, characterId: string): AuctionUiListing {
+    const objectData = listing.itemId ? (vars.datObj[listing.itemId] as DataObject | undefined) : undefined;
+
+    return {
+        ...listing,
+        itemName: objectData?.name ?? (listing.itemId ? `Item ${listing.itemId}` : "Montura"),
+        itemGrhIndex: Number(objectData?.grhIndex ?? 0),
+        itemObjType: typeof objectData?.objType === "number" ? objectData.objType : null,
+        itemLevel: getAuctionItemLevel(objectData),
+        itemRarity: getAuctionItemRarity(objectData),
+        minimumBid: calculateAuctionMinimumBid(listing),
+        isMine: listing.sellerCharacterId === characterId,
+        isWinning: listing.currentBidderCharacterId === characterId,
+    };
+}
+
+function toAuctionUiClaim(claim: AuctionClaimSummary): AuctionUiClaim {
+    const objectData = claim.itemId ? (vars.datObj[claim.itemId] as DataObject | undefined) : undefined;
+
+    return {
+        ...claim,
+        itemName: objectData?.name ?? (claim.itemId ? `Item ${claim.itemId}` : null),
+        itemGrhIndex: objectData ? Number(objectData.grhIndex ?? 0) : null,
     };
 }
 
@@ -6377,6 +6577,387 @@ function Game(this: GameApi) {
         handleProtocol.openTrade(idUser, user.npcTrade, client);
     };
 
+    this.getAuctionHouseState = async function (
+        idUser: EntityId,
+        npcName = "Casa de Subastas",
+        browseOptions?: AuctionBrowseOptions,
+    ): Promise<AuctionHouseUiState | null> {
+        const user = getCharacterById(idUser);
+
+        if (!user || !user._id || user.pvpChar) {
+            return null;
+        }
+
+        const characterId = user._id;
+        const state = await fetchAuctionHouseState(characterId, browseOptions);
+        return {
+            kind: "auctionHouse",
+            npcName,
+            gold: Math.max(0, Math.floor(Number(user.gold ?? 0))),
+            listings: state.listings.map((listing) => toAuctionUiListing(listing, characterId)),
+            myAuctions: state.myAuctions.map((listing) => toAuctionUiListing(listing, characterId)),
+            myBids: state.myBids.map((listing) => toAuctionUiListing(listing, characterId)),
+            claims: state.claims.map(toAuctionUiClaim),
+            mails: state.mails,
+            totalListings: state.totalListings,
+            unreadMailCount: state.unreadMailCount,
+            config: state.config,
+        };
+    };
+
+    this.createAuctionListing = async function (
+        idUser: EntityId,
+        slot: number,
+        quantity: number,
+        startPrice: number,
+        buyoutPrice: number | null,
+        durationHours: number,
+    ): Promise<MarketCommandResult & { listingId?: string }> {
+        const user = getCharacterById(idUser);
+        const client = getClientById(idUser);
+
+        if (!user || !client || !user._id || user.pvpChar) {
+            return { ok: false, message: "El personaje no esta listo para usar la casa de subastas." };
+        }
+
+        if (
+            !Number.isInteger(slot) ||
+            !Number.isInteger(quantity) ||
+            !Number.isInteger(startPrice) ||
+            !Number.isInteger(durationHours) ||
+            quantity < 1 ||
+            startPrice < 1 ||
+            durationHours < 1 ||
+            durationHours > 48
+        ) {
+            return { ok: false, message: "Parametros invalidos para publicar la subasta." };
+        }
+
+        if (buyoutPrice != null && (!Number.isInteger(buyoutPrice) || buyoutPrice < startPrice)) {
+            return { ok: false, message: "La compra directa debe ser mayor o igual al precio inicial." };
+        }
+
+        const sourceItem = user.inv[String(slot)];
+        if (!sourceItem) {
+            return { ok: false, message: "No hay ningun item en ese slot." };
+        }
+        if (sourceItem.equipped) {
+            return { ok: false, message: "Debes desequipar el item antes de publicarlo." };
+        }
+        if (quantity > sourceItem.cant) {
+            return { ok: false, message: "No tienes esa cantidad disponible." };
+        }
+
+        const objectData = vars.datObj[sourceItem.idItem] as DataObject | undefined;
+        if (!objectData || objectData.objType === vars.objType.dinero) {
+            return { ok: false, message: "Ese item no se puede subastar." };
+        }
+        if (isBoundMountItem(sourceItem.idItem)) {
+            return { ok: false, message: "Los items de montura no se subastan en esta etapa." };
+        }
+        if (objectData.newbie) {
+            return { ok: false, message: "Los items newbie no se pueden subastar." };
+        }
+
+        const previousInventory = cloneInventoryRecord(user.inv);
+        const nextInventory = cloneInventoryRecord(user.inv);
+        removeItemFromInventoryRecord(nextInventory, slot, quantity);
+
+        try {
+            const result = (await funct.fetchUrl("/internal/auction-house/listings", {
+                method: "POST",
+                body: JSON.stringify({
+                    sellerCharacterId: user._id,
+                    sellerName: user.nameCharacter,
+                    itemId: sourceItem.idItem,
+                    quantity,
+                    startPrice,
+                    buyoutPrice,
+                    durationHours,
+                    characterItems: serializeInventory(nextInventory),
+                }),
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: vars.tokenAuth,
+                },
+            })) as { listing: AuctionListingSummary };
+
+            replaceInventoryRecord(user.inv, nextInventory);
+            syncUnequippedItemVisuals(user, String(slot));
+            handleProtocol.quitarUserInvItem(idUser, slot, quantity, client);
+            logCharacterActivity(user, {
+                category: "economy",
+                action: "market_listing_create",
+                itemId: sourceItem.idItem,
+                itemName: objectData.name ?? null,
+                amount: quantity,
+                details: {
+                    auctionId: result.listing.id,
+                    startPrice,
+                    buyoutPrice,
+                    durationHours,
+                },
+            });
+            return { ok: true, message: "Subasta publicada correctamente.", listingId: result.listing.id };
+        } catch (error) {
+            replaceInventoryRecord(user.inv, previousInventory);
+            return { ok: false, message: error instanceof Error ? error.message : "No se pudo publicar la subasta." };
+        }
+    };
+
+    this.placeAuctionBid = async function (idUser: EntityId, auctionId: string, amount: number): Promise<MarketCommandResult> {
+        const user = getCharacterById(idUser);
+        const client = getClientById(idUser);
+
+        if (!user || !client || !user._id || user.pvpChar) {
+            return { ok: false, message: "El personaje no esta listo para ofertar." };
+        }
+
+        const safeAmount = Math.floor(Number(amount) || 0);
+        if (!auctionId || safeAmount < 1) {
+            return { ok: false, message: "Oferta invalida." };
+        }
+        const state = await fetchAuctionHouseState(user._id, { pageSize: 50 });
+        const listing = [...state.listings, ...state.myBids].find((entry) => entry.id === auctionId);
+        const reservedOwnBid =
+            listing?.currentBidderCharacterId === user._id ? Number(listing.currentBidAmount ?? 0) : 0;
+        const extraCost = Math.max(0, safeAmount - reservedOwnBid);
+
+        if (user.gold < extraCost) {
+            return { ok: false, message: "No tienes oro suficiente." };
+        }
+
+        const previousGold = user.gold;
+        const nextGold = balance.clampGold(user.gold - extraCost);
+
+        try {
+            const result = (await funct.fetchUrl("/internal/auction-house/bids", {
+                method: "POST",
+                body: JSON.stringify({
+                    bidderCharacterId: user._id,
+                    bidderName: user.nameCharacter,
+                    auctionId,
+                    amount: safeAmount,
+                    characterGold: nextGold,
+                }),
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: vars.tokenAuth,
+                },
+            })) as { previousBidderId?: string | null; previousBidAmount?: number; sameBidder?: boolean };
+
+            user.gold = nextGold;
+            handleProtocol.actGold(user.gold, client);
+
+            if (result.previousBidderId && !result.sameBidder && result.previousBidAmount) {
+                for (const onlineUser of Object.values(vars.personajes) as GameCharacter[]) {
+                    if (onlineUser?._id === result.previousBidderId) {
+                        onlineUser.gold = balance.clampGold(Number(onlineUser.gold ?? 0) + result.previousBidAmount);
+                        const onlineClient = getClientById(onlineUser.id);
+                        if (onlineClient) {
+                            handleProtocol.actGold(onlineUser.gold, onlineClient);
+                            handleProtocol.console("Has sido superado en una subasta. Tu oro fue devuelto.", "#E69500", 0, 0, onlineClient);
+                        }
+                    }
+                }
+            }
+
+            logCharacterActivity(user, {
+                category: "economy",
+                action: "market_listing_buy",
+                goldDelta: nextGold - previousGold,
+                details: { auctionId, bidAmount: safeAmount },
+            });
+            return { ok: true, message: "Oferta realizada correctamente." };
+        } catch (error) {
+            return { ok: false, message: error instanceof Error ? error.message : "No se pudo ofertar." };
+        }
+    };
+
+    this.buyoutAuctionListing = async function (idUser: EntityId, auctionId: string): Promise<MarketCommandResult> {
+        const user = getCharacterById(idUser);
+        const client = getClientById(idUser);
+
+        if (!user || !client || !user._id || user.pvpChar) {
+            return { ok: false, message: "El personaje no esta listo para comprar." };
+        }
+
+        const state = await fetchAuctionHouseState(user._id, { pageSize: 50 });
+        const listing = [...state.listings, ...state.myBids].find((entry) => entry.id === auctionId);
+        if (!listing?.buyoutPrice) {
+            return { ok: false, message: "Esa subasta no tiene compra directa." };
+        }
+        if (listing.sellerCharacterId === user._id) {
+            return { ok: false, message: "No puedes comprar tu propia subasta." };
+        }
+
+        const reservedOwnBid =
+            listing.currentBidderCharacterId === user._id ? Number(listing.currentBidAmount ?? 0) : 0;
+        const extraCost = Math.max(0, listing.buyoutPrice - reservedOwnBid);
+        if (user.gold < extraCost) {
+            return { ok: false, message: "No tienes oro suficiente." };
+        }
+
+        const previousGold = user.gold;
+        const nextGold = balance.clampGold(user.gold - extraCost);
+
+        try {
+            const result = (await funct.fetchUrl("/internal/auction-house/buyout", {
+                method: "POST",
+                body: JSON.stringify({
+                    buyerCharacterId: user._id,
+                    buyerName: user.nameCharacter,
+                    auctionId,
+                    characterGold: nextGold,
+                }),
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: vars.tokenAuth,
+                },
+            })) as { previousBidderId?: string | null; previousBidAmount?: number };
+
+            user.gold = nextGold;
+            handleProtocol.actGold(user.gold, client);
+
+            if (result.previousBidderId && result.previousBidderId !== user._id && result.previousBidAmount) {
+                for (const onlineUser of Object.values(vars.personajes) as GameCharacter[]) {
+                    if (onlineUser?._id === result.previousBidderId) {
+                        onlineUser.gold = balance.clampGold(Number(onlineUser.gold ?? 0) + result.previousBidAmount);
+                        const onlineClient = getClientById(onlineUser.id);
+                        if (onlineClient) {
+                            handleProtocol.actGold(onlineUser.gold, onlineClient);
+                        }
+                    }
+                }
+            }
+
+            logCharacterActivity(user, {
+                category: "economy",
+                action: "market_listing_buy",
+                goldDelta: nextGold - previousGold,
+                details: { auctionId, buyoutPrice: listing.buyoutPrice },
+            });
+            return { ok: true, message: "Compra directa realizada. Reclama el item en Mis Ofertas o Correo." };
+        } catch (error) {
+            return { ok: false, message: error instanceof Error ? error.message : "No se pudo comprar." };
+        }
+    };
+
+    this.cancelAuctionListing = async function (idUser: EntityId, auctionId: string): Promise<MarketCommandResult> {
+        void idUser;
+        void auctionId;
+        return { ok: false, message: "Las subastas publicadas no se pueden cancelar." };
+    };
+
+    this.claimAuctionReward = async function (idUser: EntityId, claimId: string): Promise<MarketCommandResult> {
+        const user = getCharacterById(idUser);
+        const client = getClientById(idUser);
+
+        if (!user || !client || !user._id || user.pvpChar) {
+            return { ok: false, message: "El personaje no esta listo para reclamar." };
+        }
+
+        const state = await fetchAuctionHouseState(user._id, { pageSize: 1 });
+        const claim = state.claims.find((entry) => entry.id === claimId);
+        if (!claim) {
+            return { ok: false, message: "No se encontro ese reclamo pendiente." };
+        }
+        const claimAuction = [...state.listings, ...state.myAuctions, ...state.myBids].find(
+            (entry) => entry.id === claim.auctionId,
+        );
+        const auctionItemName = claimAuction?.itemId ? vars.datObj[claimAuction.itemId]?.name : null;
+        const claimedItemName =
+            auctionItemName ??
+            (claim.itemId ? vars.datObj[claim.itemId]?.name : null) ??
+            "item";
+
+        const previousInventory = cloneInventoryRecord(user.inv);
+        const nextInventory = cloneInventoryRecord(user.inv);
+        const previousGold = user.gold;
+        let nextGold = user.gold;
+
+        if (claim.claimType === "GOLD_SALE") {
+            nextGold = balance.clampGold(user.gold + claim.goldAmount);
+        } else {
+            if (!claim.itemId || !claim.quantity) {
+                return { ok: false, message: "El reclamo de item es invalido." };
+            }
+            const addedSlots = addItemToRecord(nextInventory, claim.itemId, claim.quantity, {
+                maxSlots: 21,
+                equipped: 0,
+            });
+            if (addedSlots == null) {
+                return { ok: false, message: "No tienes espacio suficiente en el inventario." };
+            }
+        }
+
+        try {
+            await funct.fetchUrl(`/internal/auction-house/claims/${encodeURIComponent(claimId)}/claim`, {
+                method: "POST",
+                body: JSON.stringify({
+                    characterId: user._id,
+                    characterGold: nextGold,
+                    characterItems: serializeInventory(nextInventory),
+                }),
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: vars.tokenAuth,
+                },
+            });
+
+            replaceInventoryRecord(user.inv, nextInventory);
+            user.gold = nextGold;
+
+            const affectedSlots = new Set<string>([...Object.keys(previousInventory), ...Object.keys(nextInventory)]);
+            for (const slotKey of affectedSlots) {
+                const before = previousInventory[slotKey];
+                const after = nextInventory[slotKey];
+                if (!after && before) {
+                    handleProtocol.quitarUserInvItem(idUser, slotKey, before.cant, client);
+                } else if (
+                    after &&
+                    (!before || before.idItem !== after.idItem || before.cant !== after.cant || before.equipped !== after.equipped)
+                ) {
+                    handleProtocol.agregarUserInvItem(idUser, slotKey, client);
+                }
+            }
+
+            if (nextGold !== previousGold) {
+                handleProtocol.actGold(user.gold, client);
+            }
+            if (claim.claimType === "GOLD_SALE") {
+                const soldItemText = auctionItemName ? ` por ${auctionItemName}` : "";
+                return { ok: true, message: `Reclamaste ${Number(claim.goldAmount ?? 0).toLocaleString("es-AR")} oro${soldItemText}.` };
+            }
+            const quantityText = claim.quantity && claim.quantity > 1 ? ` x${claim.quantity}` : "";
+            return { ok: true, message: `Reclamaste ${claimedItemName}${quantityText}.` };
+        } catch (error) {
+            replaceInventoryRecord(user.inv, previousInventory);
+            user.gold = previousGold;
+            return { ok: false, message: error instanceof Error ? error.message : "No se pudo reclamar." };
+        }
+    };
+
+    this.markAuctionMailRead = async function (idUser: EntityId, mailId: string): Promise<MarketCommandResult> {
+        const user = getCharacterById(idUser);
+        if (!user || !user._id || user.pvpChar) {
+            return { ok: false, message: "El personaje no esta listo." };
+        }
+        try {
+            await funct.fetchUrl(`/internal/auction-house/mail/${encodeURIComponent(mailId)}/read`, {
+                method: "POST",
+                body: JSON.stringify({ characterId: user._id }),
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: vars.tokenAuth,
+                },
+            });
+            return { ok: true, message: "" };
+        } catch (error) {
+            return { ok: false, message: error instanceof Error ? error.message : "No se pudo marcar el correo." };
+        }
+    };
+
     this.getMarketState = async function (
         idUser: EntityId,
         npcName = "Mercado Global",
@@ -6446,17 +7027,17 @@ function Game(this: GameApi) {
         user.tradeMode = "market";
 
         try {
-            const marketState = await this.getMarketState(idUser, npc.nameCharacter);
+            const marketState = await this.getAuctionHouseState(idUser, npc.nameCharacter);
 
             if (!marketState) {
-                handleProtocol.console("No se pudo abrir el mercado global.", "white", 1, 0, client);
+                handleProtocol.console("No se pudo abrir la casa de subastas.", "white", 1, 0, client);
                 return false;
             }
 
             handleProtocol.openMarket(marketState, client);
             return true;
         } catch {
-            handleProtocol.console("No se pudo abrir el mercado global.", "white", 1, 0, client);
+            handleProtocol.console("No se pudo abrir la casa de subastas.", "white", 1, 0, client);
             return false;
         }
     };

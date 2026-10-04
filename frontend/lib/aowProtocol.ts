@@ -560,6 +560,96 @@ export interface MarketState {
     claims: MarketClaimEntry[];
 }
 
+export type AuctionStatus =
+    | "ACTIVE"
+    | "SOLD_BY_BID"
+    | "SOLD_BY_BUYOUT"
+    | "EXPIRED"
+    | "CANCELLED";
+
+export interface AuctionListingEntry {
+    id: string;
+    auctionType: "ITEM" | "MOUNT";
+    sellerCharacterId: string;
+    sellerName: string;
+    itemId: number | null;
+    quantity: number;
+    startPrice: number;
+    buyoutPrice: number | null;
+    currentBidAmount: number | null;
+    currentBidderCharacterId: string | null;
+    currentBidderName: string | null;
+    startsAt: string;
+    endsAt: string;
+    status: AuctionStatus;
+    version: number;
+    createdAt: string;
+    itemName: string;
+    itemGrhIndex: number;
+    itemObjType: number | null;
+    itemLevel: number;
+    itemRarity: "Comun" | "Raro" | "Epico";
+    minimumBid: number;
+    isMine: boolean;
+    isWinning: boolean;
+}
+
+export interface AuctionClaimEntry {
+    id: string;
+    characterId: string;
+    auctionId: string | null;
+    claimType: "ITEM_WON" | "ITEM_RETURN" | "GOLD_SALE";
+    assetType: "ITEM" | "MOUNT" | "GOLD";
+    itemId: number | null;
+    quantity: number | null;
+    goldAmount: number;
+    status: "PENDING" | "CLAIMED";
+    createdAt: string;
+    claimedAt: string | null;
+    itemName: string | null;
+    itemGrhIndex: number | null;
+}
+
+export interface AuctionMailEntry {
+    id: string;
+    recipientCharacterId: string;
+    category:
+        | "AUCTION_SOLD"
+        | "AUCTION_EXPIRED"
+        | "AUCTION_WON"
+        | "AUCTION_OUTBID"
+        | "AUCTION_BID_RECEIVED"
+        | "SYSTEM";
+    subject: string;
+    body: string;
+    claimId: string | null;
+    createdAt: string;
+    readAt: string | null;
+    deletedAt: string | null;
+}
+
+export interface AuctionHouseState {
+    kind: "auctionHouse";
+    npcName: string;
+    gold: number;
+    listings: AuctionListingEntry[];
+    myAuctions: AuctionListingEntry[];
+    myBids: AuctionListingEntry[];
+    claims: AuctionClaimEntry[];
+    mails: AuctionMailEntry[];
+    totalListings: number;
+    unreadMailCount: number;
+    config: {
+        minDurationHours: number;
+        maxDurationHours: number;
+        minBidIncrementPercent: number;
+        saleFeePercent: number;
+        maxActiveListingsPerCharacter: number;
+    };
+}
+
+export type MarketPanelState = MarketState | AuctionHouseState;
+
 export interface RetoEntry {
     id: string;
     createdAt: number;
@@ -1125,7 +1215,7 @@ export type ParsedServerPacket =
       }
     | { type: "openBail"; payload: BailOffer }
     | { type: "openCrafting"; payload: CraftingState }
-    | { type: "openMarket"; payload: MarketState }
+    | { type: "openMarket"; payload: MarketPanelState }
     | { type: "openRetos"; payload: RetosState }
     | { type: "closeBail"; payload: null }
     | { type: "openAdminIntervals"; payload: null }
@@ -2190,7 +2280,7 @@ function parseServerPacketById(
             const rawState = reader.getString();
             return {
                 type: "openMarket",
-                payload: JSON.parse(rawState) as MarketState,
+                payload: JSON.parse(rawState) as MarketPanelState,
             };
         }
         case CLIENT_PACKET_ID.openRetos: {
@@ -2742,7 +2832,18 @@ export function createCloseTradePacket(): ArrayBuffer {
 }
 
 export function createMarketActionPacket(
-    action: "refresh" | "create" | "buy" | "cancel" | "claim",
+    action:
+        | "refresh"
+        | "create"
+        | "buy"
+        | "cancel"
+        | "claim"
+        | "auctionCreate"
+        | "auctionBid"
+        | "auctionBuyout"
+        | "auctionCancel"
+        | "auctionClaim"
+        | "auctionMailRead",
     payload: Record<string, unknown> = {},
 ): ArrayBuffer {
     const writer = new PacketWriter(SERVER_PACKET_ID.marketAction);

@@ -4662,30 +4662,68 @@ async function marketAction(ws: RuntimeClient) {
 
         const rawPayload = pkg.getString();
         const payload = funct.jsonDecode(rawPayload || "{}") as {
-            action?: "refresh" | "create" | "buy" | "cancel" | "claim";
+            action?:
+                | "refresh"
+                | "create"
+                | "buy"
+                | "cancel"
+                | "claim"
+                | "auctionCreate"
+                | "auctionBid"
+                | "auctionBuyout"
+                | "auctionCancel"
+                | "auctionClaim"
+                | "auctionMailRead";
             slot?: number;
             quantity?: number;
             price?: number;
+            startPrice?: number;
+            buyoutPrice?: number | null;
+            bidAmount?: number;
+            claimId?: string;
+            mailId?: string;
+            auctionId?: string;
             expectedItemId?: number;
             expectedQuantity?: number;
             expectedPrice?: number;
             durationHours?: number;
             listingId?: string;
             listingLimit?: number;
+            page?: number;
+            pageSize?: number;
             search?: string;
+            category?: string;
+            minLevel?: number;
+            maxLevel?: number;
+            buyoutOnly?: boolean;
             objType?: number | null;
             sortPrice?: "recent" | "asc" | "desc";
         };
         const now = Date.now();
         const user = getCharacterById(ws.id);
 
-        if (!user || user.tradeMode !== "market" || !user.npcTrade) {
+        const normalizedAction = payload.action ?? "refresh";
+        const isAuctionAction =
+            normalizedAction === "refresh" ||
+            normalizedAction === "auctionCreate" ||
+            normalizedAction === "auctionBid" ||
+            normalizedAction === "auctionBuyout" ||
+            normalizedAction === "auctionCancel" ||
+            normalizedAction === "auctionClaim" ||
+            normalizedAction === "auctionMailRead";
+
+        if (!user || user.tradeMode !== "market") {
             return;
         }
 
-        const npc = vars.npcs[String(user.npcTrade)] as RuntimeNpc | undefined;
+        const npc = user.npcTrade ? (vars.npcs[String(user.npcTrade)] as RuntimeNpc | undefined) : undefined;
 
-        if (!npc || npc.npcType !== vars.npcType.subastador || isOriginalNpcInteractionOutOfRange(user, npc, 6)) {
+        if (user.npcTrade && (!npc || npc.npcType !== vars.npcType.subastador || isOriginalNpcInteractionOutOfRange(user, npc, 6))) {
+            game.closeTradeSession(ws.id!);
+            return;
+        }
+
+        if (!user.npcTrade && !isAuctionAction) {
             game.closeTradeSession(ws.id!);
             return;
         }
@@ -4696,7 +4734,6 @@ async function marketAction(ws: RuntimeClient) {
             return;
         }
 
-        const normalizedAction = payload.action ?? "refresh";
         const isBrowseAction = normalizedAction === "refresh";
         const browseOptions = {
             listingLimit: Number(payload.listingLimit ?? 20),
@@ -4706,6 +4743,27 @@ async function marketAction(ws: RuntimeClient) {
                     ? Math.max(0, Math.floor(payload.objType))
                     : null,
             sortPrice: payload.sortPrice === "asc" || payload.sortPrice === "desc" ? payload.sortPrice : "recent",
+        };
+        const auctionBrowseOptions = {
+            page:
+                typeof payload.page === "number" && Number.isFinite(payload.page)
+                    ? Math.max(1, Math.floor(payload.page))
+                    : 1,
+            pageSize:
+                typeof payload.pageSize === "number" && Number.isFinite(payload.pageSize)
+                    ? Math.max(1, Math.min(50, Math.floor(payload.pageSize)))
+                    : 20,
+            search: typeof payload.search === "string" ? payload.search.trim().slice(0, 80) : undefined,
+            category: typeof payload.category === "string" ? payload.category.trim().slice(0, 40) : undefined,
+            minLevel:
+                typeof payload.minLevel === "number" && Number.isFinite(payload.minLevel)
+                    ? Math.max(1, Math.floor(payload.minLevel))
+                    : undefined,
+            maxLevel:
+                typeof payload.maxLevel === "number" && Number.isFinite(payload.maxLevel)
+                    ? Math.max(1, Math.floor(payload.maxLevel))
+                    : undefined,
+            buyoutOnly: payload.buyoutOnly === true,
         };
 
         if (
@@ -4788,6 +4846,54 @@ async function marketAction(ws: RuntimeClient) {
                 message = result.message;
                 break;
             }
+            case "auctionCreate": {
+                const rawBuyout = payload.buyoutPrice;
+                const result = await game.createAuctionListing(
+                    ws.id!,
+                    Number(payload.slot ?? 0),
+                    Number(payload.quantity ?? 0),
+                    Number(payload.startPrice ?? 0),
+                    rawBuyout === null || typeof rawBuyout === "undefined" ? null : Number(rawBuyout),
+                    Number(payload.durationHours ?? 0),
+                );
+                ok = result.ok;
+                message = result.message;
+                break;
+            }
+            case "auctionBid": {
+                const result = await game.placeAuctionBid(
+                    ws.id!,
+                    String(payload.auctionId ?? ""),
+                    Number(payload.bidAmount ?? 0),
+                );
+                ok = result.ok;
+                message = result.message;
+                break;
+            }
+            case "auctionBuyout": {
+                const result = await game.buyoutAuctionListing(ws.id!, String(payload.auctionId ?? ""));
+                ok = result.ok;
+                message = result.message;
+                break;
+            }
+            case "auctionCancel": {
+                const result = await game.cancelAuctionListing(ws.id!, String(payload.auctionId ?? ""));
+                ok = result.ok;
+                message = result.message;
+                break;
+            }
+            case "auctionClaim": {
+                const result = await game.claimAuctionReward(ws.id!, String(payload.claimId ?? ""));
+                ok = result.ok;
+                message = result.message;
+                break;
+            }
+            case "auctionMailRead": {
+                const result = await game.markAuctionMailRead(ws.id!, String(payload.mailId ?? ""));
+                ok = result.ok;
+                message = result.message;
+                break;
+            }
             case "refresh":
             default:
                 break;
@@ -4797,7 +4903,9 @@ async function marketAction(ws: RuntimeClient) {
             handleProtocol.console(message, ok ? "#E69500" : "white", 0, 0, ws);
         }
 
-        const nextState = await game.getMarketState(ws.id!, npc.nameCharacter ?? "Mercado Global", browseOptions);
+        const nextState = isAuctionAction
+            ? await game.getAuctionHouseState(ws.id!, npc?.nameCharacter ?? "Casa de Subastas", auctionBrowseOptions)
+            : await game.getMarketState(ws.id!, npc?.nameCharacter ?? "Mercado Global", browseOptions);
 
         if (nextState) {
             handleProtocol.openMarket(nextState, ws);

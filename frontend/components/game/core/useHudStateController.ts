@@ -9,7 +9,7 @@ import type {
     BailOffer,
     CraftingState,
     InventoryItem,
-    MarketState,
+    MarketPanelState,
     PlayerHudState,
     RetosState,
     SpellEntry,
@@ -36,7 +36,7 @@ type UseHudStateControllerOptions = {
     onHudChange?: ((hud: PlayerHudState | null) => void) | undefined;
     onTradeStateChange?: ((tradeState: TradeState | null) => void) | undefined;
     onMarketStateChange?:
-        | ((marketState: MarketState | null) => void)
+        | ((marketState: MarketPanelState | null) => void)
         | undefined;
     onRetosStateChange?: ((retosState: RetosState | null) => void) | undefined;
     onBailStateChange?: ((bailState: BailOffer | null) => void) | undefined;
@@ -425,7 +425,7 @@ export function useHudStateController({
     );
 
     const emitMarketState = useCallback(
-        (marketState: MarketState | null) => {
+        (marketState: MarketPanelState | null) => {
             onMarketStateChange?.(marketState);
         },
         [onMarketStateChange],

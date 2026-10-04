@@ -22,7 +22,7 @@ import {
     type CraftingState,
     type CharacterSnapshot,
     type ClanHudMember,
-    type MarketState,
+    type MarketPanelState,
     type PartyHudMember,
     type PlayerHudState,
     type QuestProgressNoticePayload,
@@ -157,7 +157,18 @@ interface MapRendererProps {
     withdrawBankGoldRequest?: { amount: number; token: number } | null;
     closeTradeRequest?: { token: number } | null;
     marketActionRequest?: {
-        action: "refresh" | "create" | "buy" | "cancel" | "claim";
+        action:
+            | "refresh"
+            | "create"
+            | "buy"
+            | "cancel"
+            | "claim"
+            | "auctionCreate"
+            | "auctionBid"
+            | "auctionBuyout"
+            | "auctionCancel"
+            | "auctionClaim"
+            | "auctionMailRead";
         payload?: Record<string, unknown>;
         token: number;
     } | null;
@@ -211,7 +222,7 @@ interface MapRendererProps {
     onGlobalNotice?: (notice: { text: string; durationMs: number }) => void;
     onQuestProgressNotice?: (notice: QuestProgressNoticePayload) => void;
     onTradeStateChange?: (tradeState: TradeState | null) => void;
-    onMarketStateChange?: (marketState: MarketState | null) => void;
+    onMarketStateChange?: (marketState: MarketPanelState | null) => void;
     onRetosStateChange?: (retosState: RetosState | null) => void;
     onBailStateChange?: (bailState: BailOffer | null) => void;
     onCraftingStateChange?: (craftingState: CraftingState | null) => void;

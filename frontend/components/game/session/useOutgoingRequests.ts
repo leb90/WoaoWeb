@@ -58,7 +58,18 @@ type OutgoingRequestProps = {
     withdrawBankGoldRequest?: { amount: number; token: number } | null;
     closeTradeRequest?: { token: number } | null;
     marketActionRequest?: {
-        action: "refresh" | "create" | "buy" | "cancel" | "claim";
+        action:
+            | "refresh"
+            | "create"
+            | "buy"
+            | "cancel"
+            | "claim"
+            | "auctionCreate"
+            | "auctionBid"
+            | "auctionBuyout"
+            | "auctionCancel"
+            | "auctionClaim"
+            | "auctionMailRead";
         payload?: Record<string, unknown>;
         token: number;
     } | null;

@@ -106,6 +106,9 @@ type InventoryFloatingPanelProps = {
     compactSettings?: boolean;
     // Salir del juego (desconecta con la espera de /salir y vuelve al home).
     onLogoutRequest?: () => void;
+    auctionPanel?: React.ReactNode;
+    onOpenAuctionHouse?: () => void;
+    onCloseAuctionHouse?: () => void;
 };
 
 type HardwareAccelerationWarning = {
@@ -1150,6 +1153,9 @@ export default function InventoryFloatingPanel({
     openSettingsRequest,
     compactSettings = false,
     onLogoutRequest,
+    auctionPanel,
+    onOpenAuctionHouse,
+    onCloseAuctionHouse,
 }: InventoryFloatingPanelProps) {
     const items = React.useMemo(() => hud?.inventory ?? [], [hud?.inventory]);
     const spells = React.useMemo(() => hud?.spells ?? [], [hud?.spells]);
@@ -4394,14 +4400,22 @@ export default function InventoryFloatingPanel({
                           questDialog={isQuestNpcDialogOpen ? hud?.questState?.offer ?? null : null}
                           questPoints={hud?.puntosCanje ?? 0}
                           donationPoints={hud?.puntosDonacion ?? 0}
+                          auctionPanel={auctionPanel}
                           onTabChange={(nextTab) => {
+                              if (woaoHubTab === "subastas" && nextTab !== "subastas") {
+                                  onCloseAuctionHouse?.();
+                              }
                               setIsQuestNpcDialogOpen(false);
                               setWoaoHubTab(nextTab);
                           }}
                           onClose={() => {
+                              if (woaoHubTab === "subastas") {
+                                  onCloseAuctionHouse?.();
+                              }
                               setIsQuestNpcDialogOpen(false);
                               setWoaoHubTab(null);
                           }}
+                          onOpenAuctionHouse={onOpenAuctionHouse}
                           onSendCommand={onSendCommand}
                       />,
                       portalTarget ?? document.body,

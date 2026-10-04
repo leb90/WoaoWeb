@@ -3082,9 +3082,33 @@ const command: CommandApi = {
                     break;
                 }
 
+                case "/subastas": {
+                    if (vars.subastasHabilitadas === false) {
+                        handleProtocol.console("Las subastas se encuentran deshabilitadas.", "white", 1, 0, ws as CommandClient);
+                        break;
+                    }
+
+                    if (user.dead || user.pvpChar) {
+                        handleProtocol.console("No puedes abrir la casa de subastas ahora.", "white", 1, 0, ws as CommandClient);
+                        break;
+                    }
+
+                    user.tradeMode = "market";
+                    delete user.npcTrade;
+
+                    const auctionState = await game.getAuctionHouseState(clientId, "Casa de Subastas");
+                    if (!auctionState) {
+                        handleProtocol.console("No se pudo abrir la casa de subastas.", "white", 1, 0, ws as CommandClient);
+                        break;
+                    }
+
+                    handleProtocol.openMarket(auctionState, ws as CommandClient);
+                    break;
+                }
+
                 case "/woao": {
                     handleProtocol.console(
-                        "WOAO: /quest /quests /questaceptar /questabandonar /montura /activarmontura /renombrarmontura /liberarmontura /monturastat /ofertarmontura /premios /canjear /donaciones /canjeardonacion /viaje /comerciar /ranked /rankedaceptar /rankedrechazar /hunger /torneo /participar /atorneo /remort /ciudades /castillos /castillo /clanpuntos /bloodcastle /guerra /templo /domar /robar /critico /pagarmulta /casa /dia /party /aceptar /partyinfo /salirparty",
+                        "WOAO: /quest /quests /questaceptar /questabandonar /montura /activarmontura /renombrarmontura /liberarmontura /monturastat /ofertarmontura /subastas /premios /canjear /donaciones /canjeardonacion /viaje /comerciar /ranked /rankedaceptar /rankedrechazar /hunger /torneo /participar /atorneo /remort /ciudades /castillos /castillo /clanpuntos /bloodcastle /guerra /templo /domar /robar /critico /pagarmulta /casa /dia /party /aceptar /partyinfo /salirparty",
                         "#E69500",
                         1,
                         0,

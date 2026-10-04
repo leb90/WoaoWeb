@@ -682,5 +682,174 @@
     "rewardExp": 2800000,
     "rewardPoints": 50,
     "rewardObjs": []
+  },
+  "32": {
+    "id": 32,
+    "name": "Un sueño repetido",
+    "desc": "Erion: \"Soñaste con una isla y una criatura dormida bajo el agua. Todos acá sueñan lo mismo. Antes de salir hacia Ullathorpe, despeja la salida: mata 3 Imps y 2 Arañas pequeñas, y vuelve a contarme qué viste.\"",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 500,
+        "amount": 3
+      },
+      {
+        "index": 529,
+        "amount": 2
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 20,
+    "rewardExp": 400,
+    "rewardPoints": 1,
+    "rewardObjs": [
+      {
+        "index": 38,
+        "amount": 10
+      }
+    ]
+  },
+  "33": {
+    "id": 33,
+    "name": "Los animales de Ullathorpe",
+    "desc": "Orlan: \"Los lobos ya no huyen y las serpientes aparecen donde nunca hubo. Mata 5 Lobos y 5 Serpientes en el bosque del norte para que los viajeros vuelvan a dormir.\"",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 501,
+        "amount": 5
+      },
+      {
+        "index": 504,
+        "amount": 5
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 80,
+    "rewardExp": 1500,
+    "rewardPoints": 1,
+    "rewardObjs": []
+  },
+  "34": {
+    "id": 34,
+    "name": "Voces en el camino",
+    "desc": "Ysolde: \"Hay lobos nuevos en el bosque, con los ojos nublados como si soñaran despiertos. Tráeme 3 Garras Soñadoras de esos Lobos Soñadores. Quiero saber qué los cambió.\"",
+    "requiredLevel": 1,
+    "requiredNpcs": [],
+    "requiredObjs": [
+      {
+        "index": 1720,
+        "amount": 3
+      }
+    ],
+    "rewardGold": 150,
+    "rewardExp": 3000,
+    "rewardPoints": 2,
+    "rewardObjs": []
+  },
+  "35": {
+    "id": 35,
+    "name": "La estrella caída",
+    "desc": "Thamar: \"Donde cayó la estrella, en el segundo bosque al norte, la tierra se levantó y camina. Mata al Centinela del Sueño y quédate con lo que deje: eso no es una piedra.\"",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 791,
+        "amount": 1
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 300,
+    "rewardExp": 6000,
+    "rewardPoints": 3,
+    "rewardObjs": []
+  },
+  "36": {
+    "id": 36,
+    "name": "El Consejo escucha",
+    "desc": "Veyra: \"Una Esquirla Opaca. Hace siglos que no se veía una. Entrégamela y llevarás una carta sellada del Consejo a tu bando: la Alianza en Banderbill o la Horda en la ciudad del Caos. Ellos sabrán qué hacer con alguien como tú.\"",
+    "requiredLevel": 1,
+    "requiredNpcs": [],
+    "requiredObjs": [
+      {
+        "index": 1721,
+        "amount": 1
+      }
+    ],
+    "rewardGold": 200,
+    "rewardExp": 4000,
+    "rewardPoints": 3,
+    "rewardObjs": [
+      {
+        "index": 1722,
+        "amount": 1
+      }
+    ]
+  },
+  "37": {
+    "id": 37,
+    "name": "El llamado del Adalid",
+    "desc": "Rodrik: \"Con la carta del Consejo en mano te nombro Adalid de Banderbill. No eres el héroe elegido: eres uno de los muchos que pueden entrar donde nuestros ejércitos no pueden. Guarda este salvoconducto.\"",
+    "requiredLevel": 1,
+    "requiredNpcs": [],
+    "requiredObjs": [
+      {
+        "index": 1722,
+        "amount": 1
+      }
+    ],
+    "rewardGold": 400,
+    "rewardExp": 8000,
+    "rewardPoints": 5,
+    "rewardObjs": [
+      {
+        "index": 1723,
+        "amount": 1
+      }
+    ]
+  },
+  "38": {
+    "id": 38,
+    "name": "El llamado del Adalid (Horda)",
+    "desc": "Vhael: \"La Alianza quiere los fragmentos para usarlos. Nosotros sabemos que no deben juntarse. Entrégame la carta del Consejo y serás Adalid de la Horda. Guarda este salvoconducto.\"",
+    "requiredLevel": 1,
+    "requiredNpcs": [],
+    "requiredObjs": [
+      {
+        "index": 1722,
+        "amount": 1
+      }
+    ],
+    "rewardGold": 400,
+    "rewardExp": 8000,
+    "rewardPoints": 5,
+    "rewardObjs": [
+      {
+        "index": 1724,
+        "amount": 1
+      }
+    ]
+  },
+  "39": {
+    "id": 39,
+    "name": "Las Ruinas del Eco",
+    "desc": "Nemo: \"Bajo las Catacumbas de Ullathorpe hay una estatua con una inscripción: 'El primer sueño nunca murió'. Algo la custodia. Ve en grupo, mata al Eco de las Ruinas y tráeme el Fragmento del Sueño que deje. No lo toques más de lo necesario: quien lo toca, sueña.\"",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 789,
+        "amount": 1
+      }
+    ],
+    "requiredObjs": [
+      {
+        "index": 1725,
+        "amount": 1
+      }
+    ],
+    "rewardGold": 1000,
+    "rewardExp": 25000,
+    "rewardPoints": 10,
+    "rewardObjs": []
   }
 }

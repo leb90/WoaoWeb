@@ -94,6 +94,13 @@ function Vars(this: any) {
         crowdDetourMaxDepth: 6,
         targetLockMs: 3000,
         lastAggressorMemoryMs: 15000,
+        // Correa (estilo WoW): la criatura abandona la persecución si se aleja
+        // más de leashRadiusTiles de donde empezó a perseguir o si pasa
+        // leashGiveUpMs sin llegar a pegarle al objetivo; entonces vuelve a su
+        // lugar sin agredir a nadie y recupera la vida.
+        leashRadiusTiles: 18,
+        leashGiveUpMs: 15000,
+        leashHomeToleranceTiles: 1,
         targetSwitchMargin: 10,
         targetScoreWeights: {
             distance: 3,

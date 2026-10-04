@@ -1111,6 +1111,9 @@ const NPC_FLOW_FIELD_TTL_MS = vars.npcAi.flowFieldTtlMs as number;
 const NPC_ATTACK_TILE_RESERVATION_MS = vars.npcAi.attackTileReservationMs as number;
 const NPC_CROWD_DETOUR_MAX_DEPTH = vars.npcAi.crowdDetourMaxDepth as number;
 const NPC_TARGET_LOCK_MS = vars.npcAi.targetLockMs as number;
+const NPC_LEASH_RADIUS_TILES = Number(vars.npcAi.leashRadiusTiles ?? 18);
+const NPC_LEASH_GIVE_UP_MS = Number(vars.npcAi.leashGiveUpMs ?? 15000);
+const NPC_LEASH_HOME_TOLERANCE_TILES = Number(vars.npcAi.leashHomeToleranceTiles ?? 1);
 const NPC_LAST_AGGRESSOR_MEMORY_MS = vars.npcAi.lastAggressorMemoryMs as number;
 const NPC_TARGET_SWITCH_MARGIN = vars.npcAi.targetSwitchMargin as number;
 const MAX_SUMMONS_PER_USER = 3;
@@ -1186,6 +1189,103 @@ function clearNpcTarget(npc: NpcCharacter) {
     npc.currentTargetLockedUntil = 0;
     clearNpcRoute(npc);
     releaseNpcAttackReservation(npc);
+}
+
+function getChebyshevDistance(from: Position, to: Position) {
+    return Math.max(Math.abs(from.x - to.x), Math.abs(from.y - to.y));
+}
+
+function isNpcFarFromHome(npc: NpcCharacter) {
+    return Boolean(npc.leashHome && getChebyshevDistance(npc.pos, npc.leashHome) > NPC_LEASH_HOME_TOLERANCE_TILES);
+}
+
+/**
+ * La criatura empieza a perseguir desde donde estaba parada: ese es su
+ * "hogar" hasta que vuelva. Si ya estaba persiguiendo no se mueve el hogar.
+ */
+function markNpcChasing(npc: NpcCharacter, now: number) {
+    if (npc.leashState === "chasing") {
+        return;
+    }
+
+    npc.leashHome = { x: npc.pos.x, y: npc.pos.y };
+    npc.leashState = "chasing";
+    npc.lastReachedTargetAt = now;
+}
+
+function shouldNpcGiveUpChase(npc: NpcCharacter, now: number) {
+    if (npc.leashState !== "chasing" || !npc.leashHome) {
+        return false;
+    }
+
+    if (getChebyshevDistance(npc.pos, npc.leashHome) > NPC_LEASH_RADIUS_TILES) {
+        return true;
+    }
+
+    return now - Number(npc.lastReachedTargetAt ?? now) > NPC_LEASH_GIVE_UP_MS;
+}
+
+/**
+ * Abandona la persecución y vuelve a casa (estilo WoW): deja de agredir,
+ * olvida a quien la atacó y recupera la vida, así no se la puede desgastar
+ * tirándola de la correa una y otra vez.
+ */
+function startNpcReturningHome(npc: NpcCharacter) {
+    clearNpcTarget(npc);
+    npc.lastAggressorId = undefined;
+    npc.lastAggressedAt = 0;
+
+    if (!npc.leashHome || !isNpcFarFromHome(npc)) {
+        npc.leashState = "idle";
+        return;
+    }
+
+    npc.leashState = "returning";
+
+    if (Number(npc.hp ?? 0) < Number(npc.maxHp ?? 0)) {
+        npc.hp = npc.maxHp;
+        broadcastNpcVitalsDelta(npc);
+    }
+}
+
+/**
+ * Un paso hacia el hogar. Usa el mismo pathfinding que la persecución y, si
+ * el hogar queda fuera de su alcance, avanza en línea recta; si no puede ni
+ * eso, se queda donde está y ese pasa a ser su nuevo hogar.
+ */
+function stepNpcTowardsHome(npc: NpcCharacter) {
+    const home = npc.leashHome;
+
+    if (!home || !isNpcFarFromHome(npc)) {
+        npc.leashState = "idle";
+        return;
+    }
+
+    const homeTarget: NpcFollowTarget = { id: `home:${npc.id}`, map: npc.map, pos: home, hp: 1 };
+    let nextPos = getNextChasePosition(npc, homeTarget);
+
+    if (!nextPos) {
+        for (const heading of getOrderedHeadings(npc.pos, home, npc.heading)) {
+            const offset = getDirectionOffset(heading);
+            const candidate = { x: npc.pos.x + offset.x, y: npc.pos.y + offset.y };
+
+            if (
+                getChebyshevDistance(candidate, home) < getChebyshevDistance(npc.pos, home) &&
+                game.legalPosNpc(candidate.x, candidate.y, npc.map, Boolean(npc.aguaValida), Boolean(npc.tierraInvalida))
+            ) {
+                nextPos = candidate;
+                break;
+            }
+        }
+    }
+
+    if (!nextPos) {
+        npc.leashHome = { x: npc.pos.x, y: npc.pos.y };
+        npc.leashState = "idle";
+        return;
+    }
+
+    npcs.moveNpcByPos(npc.id, nextPos);
 }
 
 function getAttackTileReservationKey(targetId: EntityId, pos: Position) {
@@ -2273,16 +2373,25 @@ function Npcs(this: NpcsApi) {
                     continue;
                 }
 
-                if (
-                    npc.movement !== 3 ||
-                    (!vars.areaNpc[idNpc]?.length &&
-                        !getHostileNpcCurrentSummonTarget(npc) &&
-                        !getRecentSummonAggressorTarget(npc))
-                ) {
+                if (npc.movement !== 3) {
                     continue;
                 }
 
                 if ((npc.nextThinkAt ?? 0) > now) {
+                    continue;
+                }
+
+                if (npc.leashState === "returning") {
+                    npc.nextThinkAt = now + vars.timing.npcThinkMs;
+                    stepNpcTowardsHome(npc);
+                    continue;
+                }
+
+                if (
+                    !vars.areaNpc[idNpc]?.length &&
+                    !getHostileNpcCurrentSummonTarget(npc) &&
+                    !getRecentSummonAggressorTarget(npc)
+                ) {
                     continue;
                 }
 
@@ -2455,13 +2564,21 @@ function Npcs(this: NpcsApi) {
                 return;
             }
 
+            const now = Date.now();
+
+            if (npc.leashState === "returning") {
+                stepNpcTowardsHome(npc);
+                return;
+            }
+
             const previousTargetId = npc.currentTargetId;
             const summonTarget = getRecentSummonAggressorTarget(npc) ?? getHostileNpcCurrentSummonTarget(npc);
             const userTarget = summonTarget ? undefined : selectNpcTarget(npc, targetPressure);
             const target = (summonTarget ?? userTarget) as NpcFollowTarget | undefined;
 
             if (!target) {
-                clearNpcTarget(npc);
+                // Sin objetivo (se fue, murió o cruzó de mapa): vuelve a su lugar.
+                startNpcReturningHome(npc);
                 return;
             }
 
@@ -2469,16 +2586,24 @@ function Npcs(this: NpcsApi) {
             npc.currentTargetId = target.id;
 
             if (previousTargetId !== target.id) {
-                npc.currentTargetLockedUntil = Date.now() + NPC_TARGET_LOCK_MS;
+                npc.currentTargetLockedUntil = now + NPC_TARGET_LOCK_MS;
             }
 
             if (npc.map !== target.map) {
-                clearNpcTarget(npc);
-
                 if (!targetIsSummon) {
                     removeUserFromNpcArea(idNpc, target.id);
                 }
 
+                startNpcReturningHome(npc);
+                return;
+            }
+
+            markNpcChasing(npc, now);
+
+            if (isTargetAdjacent(npc, target)) {
+                npc.lastReachedTargetAt = now;
+            } else if (shouldNpcGiveUpChase(npc, now)) {
+                startNpcReturningHome(npc);
                 return;
             }
 
@@ -2866,6 +2991,18 @@ function Npcs(this: NpcsApi) {
             if (
                 !game.legalPosNpc(pos.x, pos.y, npc.map, Boolean(npc.aguaValida), Boolean(npc.tierraInvalida)) &&
                 !ghostMove
+            ) {
+                clearNpcRoute(npc);
+                return;
+            }
+
+            // Las criaturas no entran a una zona segura (ciudad, templo) desde
+            // afuera; las que viven adentro (guardias) se mueven normalmente y
+            // las invocaciones acompañan a su dueño.
+            if (
+                !isSummonedNpc(npc) &&
+                !isSafeZonePosition(npc.map, npc.pos) &&
+                isSafeZonePosition(npc.map, pos)
             ) {
                 clearNpcRoute(npc);
                 return;

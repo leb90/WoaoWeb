@@ -304,10 +304,11 @@ function Respawn(this: any) {
                 });
 
                 const useWarDeathFlow = require("./factionWars").shouldUseWarDeathFlow(String(idPersonaje));
+                const useHuntersDeathFlow = require("./huntersGame").shouldUseHuntersDeathFlow(String(idPersonaje));
 
                 if (clientPersonaje) {
                     handleProtocol.console(nameWs + " te ha matado!", "red", 1, 0, clientPersonaje);
-                    if (!useWarDeathFlow) {
+                    if (!useWarDeathFlow && !useHuntersDeathFlow) {
                         handleProtocol.console(
                             "En 15 segundos entraras al mundo de los muertos.",
                             "gray",
@@ -320,6 +321,7 @@ function Respawn(this: any) {
 
                 handleProtocol.console("¡Has matado a " + recibeName + "!", "red", 1, 0, ws);
 
+                require("./huntersGame").onUserKilled(String(ws.id), String(idPersonaje));
                 require("./factionWars").onUserKilled(String(ws.id), String(idPersonaje));
                 require("./clanMeta").onPlayerKill(String(ws.id), String(idPersonaje));
                 require("./cityConquest").tryConquer(Number(user.map), user.faction);

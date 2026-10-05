@@ -3088,7 +3088,7 @@ const command: CommandApi = {
                         break;
                     }
 
-                    if (user.dead || user.pvpChar) {
+                    if (user.dead || user.pvpChar || user.huntersGame) {
                         handleProtocol.console("No puedes abrir la casa de subastas ahora.", "white", 1, 0, ws as CommandClient);
                         break;
                     }
@@ -3108,7 +3108,7 @@ const command: CommandApi = {
 
                 case "/woao": {
                     handleProtocol.console(
-                        "WOAO: /quest /quests /questaceptar /questabandonar /montura /activarmontura /renombrarmontura /liberarmontura /monturastat /ofertarmontura /subastas /premios /canjear /donaciones /canjeardonacion /viaje /comerciar /ranked /rankedaceptar /rankedrechazar /hunger /torneo /participar /atorneo /remort /ciudades /castillos /castillo /clanpuntos /bloodcastle /guerra /templo /domar /robar /critico /pagarmulta /casa /dia /party /aceptar /partyinfo /salirparty",
+                        "WOAO: /quest /quests /questaceptar /questabandonar /montura /activarmontura /renombrarmontura /liberarmontura /monturastat /ofertarmontura /subastas /premios /canjear /donaciones /canjeardonacion /viaje /comerciar /ranked /rankedaceptar /rankedrechazar /hunters /hunger /torneo /participar /atorneo /remort /ciudades /castillos /castillo /clanpuntos /bloodcastle /guerra /templo /domar /robar /critico /pagarmulta /casa /dia /party /aceptar /partyinfo /salirparty",
                         "#E69500",
                         1,
                         0,
@@ -3139,6 +3139,78 @@ const command: CommandApi = {
                     }
                     const result = hungerGames.joinEvent(String(clientId));
                     handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/hunters": {
+                    const huntersGame = require("./huntersGame") as typeof import("./huntersGame");
+                    const [action] = nextText.trim().split(/\s+/);
+
+                    if (action === "start" && hasAdminPrivileges(user)) {
+                        const result = huntersGame.startEvent();
+                        handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                        break;
+                    }
+
+                    if ((action === "stop" || action === "cancel" || action === "cleanup") && hasAdminPrivileges(user)) {
+                        const result = huntersGame.cancelEvent();
+                        handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                        break;
+                    }
+
+                    if (action === "status" && hasAdminPrivileges(user)) {
+                        const status = huntersGame.status();
+                        handleProtocol.console(
+                            `Hunters Game> fase ${status.phase} - jugadores ${status.players} - vivos ${status.alive} - mapas ${status.arenaMaps.join(", ")}`,
+                            "#E69500",
+                            1,
+                            0,
+                            ws as CommandClient,
+                        );
+                        break;
+                    }
+
+                    if (action === "players" && hasAdminPrivileges(user)) {
+                        const players = huntersGame.listPlayers();
+                        const text =
+                            players.length > 0
+                                ? players.map((player) => `${player.name} ${player.alive ? "vivo" : "muerto"} K:${player.kills}`).join(" | ")
+                                : "sin participantes";
+                        handleProtocol.console(`Hunters Game> ${text}`, "#E69500", 1, 0, ws as CommandClient);
+                        break;
+                    }
+
+                    if (action === "cofre" || action === "chest") {
+                        const result = huntersGame.openNearestChest(String(clientId));
+                        handleProtocol.console(result.message, result.ok ? "#E69500" : "white", 1, 0, ws as CommandClient);
+                        break;
+                    }
+
+                    if (action === "chests" && hasAdminPrivileges(user)) {
+                        const status = huntersGame.status();
+                        handleProtocol.console(
+                            `Hunters Game> cofres ${status.closedChests}/${status.chests} cerrados.`,
+                            "#E69500",
+                            1,
+                            0,
+                            ws as CommandClient,
+                        );
+                        break;
+                    }
+
+                    if (action === "zone" && hasAdminPrivileges(user)) {
+                        handleProtocol.console(
+                            "Hunters Game> La zona segura progresiva queda preparada para la siguiente fase de implementacion visual/daño.",
+                            "#E69500",
+                            1,
+                            0,
+                            ws as CommandClient,
+                        );
+                        break;
+                    }
+
+                    const result = huntersGame.joinEvent(String(clientId));
+                    handleProtocol.console(result.message, result.ok ? "#E69500" : "white", 1, 0, ws as CommandClient);
                     break;
                 }
 
@@ -3191,12 +3263,20 @@ const command: CommandApi = {
                 }
 
                 case "/comerciar": {
+                    if (user.huntersGame) {
+                        handleProtocol.console("No puedes comerciar dentro de Hunters Game.", "white", 1, 0, ws as CommandClient);
+                        break;
+                    }
                     const result = require("./playerTrade").requestTrade(String(clientId), nextText.trim());
                     handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
                     break;
                 }
 
                 case "/ofertar": {
+                    if (user.huntersGame) {
+                        handleProtocol.console("No puedes comerciar dentro de Hunters Game.", "white", 1, 0, ws as CommandClient);
+                        break;
+                    }
                     const [slot, amount] = nextText.trim().split(/\s+/);
                     const result = require("./playerTrade").offerItem(String(clientId), slot, Number(amount || 1));
                     handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
@@ -3204,12 +3284,20 @@ const command: CommandApi = {
                 }
 
                 case "/ofertaroro": {
+                    if (user.huntersGame) {
+                        handleProtocol.console("No puedes comerciar dentro de Hunters Game.", "white", 1, 0, ws as CommandClient);
+                        break;
+                    }
                     const result = require("./playerTrade").offerGold(String(clientId), Number(nextText.trim() || 0));
                     handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
                     break;
                 }
 
                 case "/aceptarcomercio": {
+                    if (user.huntersGame) {
+                        handleProtocol.console("No puedes comerciar dentro de Hunters Game.", "white", 1, 0, ws as CommandClient);
+                        break;
+                    }
                     const result = require("./playerTrade").acceptTrade(String(clientId));
                     handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
                     break;

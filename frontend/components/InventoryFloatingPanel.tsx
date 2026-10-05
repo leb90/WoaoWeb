@@ -1086,6 +1086,76 @@ function RankedGameplayOverlay({
     );
 }
 
+function formatHuntersSeconds(seconds: number): string {
+    const safeSeconds = Math.max(0, Math.floor(seconds || 0));
+    const minutes = Math.floor(safeSeconds / 60);
+    const rest = safeSeconds % 60;
+    return `${minutes}:${String(rest).padStart(2, "0")}`;
+}
+
+function HuntersGameOverlay({ hud }: { hud: PlayerHudState | null }) {
+    const huntersState = hud?.huntersGameState ?? null;
+
+    if (!huntersState?.active) {
+        return null;
+    }
+
+    const phaseLabel =
+        huntersState.phase === "REGISTRATION"
+            ? "Inscripcion"
+            : huntersState.phase === "ACTIVE"
+              ? "En curso"
+              : huntersState.phase === "PREPARING"
+                ? "Preparando"
+                : huntersState.phase;
+
+    return (
+        <>
+            <div className="pointer-events-none fixed left-1/2 top-[168px] z-[77] -translate-x-1/2 max-[900px]:top-16">
+                <div className="min-w-[380px] rounded border border-amber-300/35 bg-[#100905]/92 px-5 py-2 text-center text-stone-100 shadow-[0_16px_40px_rgba(0,0,0,0.55)]">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-amber-200/80">
+                        Hunters Game
+                    </p>
+                    <div className="mt-1 grid grid-cols-3 items-center gap-3 text-sm font-bold">
+                        <span className="flex items-center justify-center gap-1 text-emerald-200">
+                            <Users className="h-4 w-4" />
+                            {huntersState.aliveCount}/{huntersState.totalPlayers}
+                        </span>
+                        <span className="rounded border border-amber-300/35 bg-black/45 px-3 py-1 text-base font-black uppercase text-amber-100">
+                            {phaseLabel}
+                        </span>
+                        <span className="flex items-center justify-center gap-1 text-red-200">
+                            <Swords className="h-4 w-4" />
+                            {huntersState.kills}
+                        </span>
+                    </div>
+                    {huntersState.zoneSecondsRemaining > 0 ? (
+                        <div className="mt-1 flex items-center justify-center gap-1 text-xs font-bold text-cyan-100">
+                            <Clock3 className="h-3.5 w-3.5" />
+                            Zona {formatHuntersSeconds(huntersState.zoneSecondsRemaining)}
+                        </div>
+                    ) : null}
+                </div>
+            </div>
+
+            {huntersState.killFeed.length > 0 ? (
+                <div className="pointer-events-none fixed right-[360px] top-[170px] z-[77] w-[260px] space-y-1 max-[1200px]:right-6 max-[900px]:top-[116px]">
+                    {huntersState.killFeed.slice(-3).map((entry) => (
+                        <div
+                            key={entry.id}
+                            className="rounded border border-red-400/25 bg-[#110603]/86 px-3 py-1.5 text-xs font-bold text-stone-100 shadow-[0_10px_30px_rgba(0,0,0,0.35)]"
+                        >
+                            <span className="text-amber-200">{entry.killerName}</span>
+                            <span className="text-stone-400"> mato a </span>
+                            <span className="text-red-200">{entry.victimName}</span>
+                        </div>
+                    ))}
+                </div>
+            ) : null}
+        </>
+    );
+}
+
 const SEASON_LABELS: Record<number, string> = {
     [SEASON.verano]: "Verano",
     [SEASON.otono]: "Otoño",
@@ -4091,7 +4161,10 @@ export default function InventoryFloatingPanel({
 
             {overlayTarget
                 ? createPortal(
-                      <RankedGameplayOverlay hud={hud} onSendCommand={onSendCommand} />,
+                      <>
+                          <RankedGameplayOverlay hud={hud} onSendCommand={onSendCommand} />
+                          <HuntersGameOverlay hud={hud} />
+                      </>,
                       overlayTarget,
                   )
                 : null}

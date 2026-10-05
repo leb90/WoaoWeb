@@ -4212,6 +4212,11 @@ function serializeInventory(record: InventoryRecord): SerializedInventoryItem[] 
     }));
 }
 
+function getPersistableInventoryRecord(user: GameCharacter): InventoryRecord {
+    const backup = user.huntersInventoryBackup as { inv?: InventoryRecord } | undefined;
+    return backup?.inv ?? user.inv;
+}
+
 function serializeBank(record: InventoryRecord): SerializedBankItem[] {
     return Object.entries(record).map(([idPos, item]) => ({
         idPos,
@@ -4283,7 +4288,7 @@ async function persistSharedVaultAndCharacterState(
         };
 
         if (options.characterItems) {
-            body.characterItems = serializeInventory(user.inv);
+            body.characterItems = serializeInventory(getPersistableInventoryRecord(user));
         }
 
         if (options.characterGold) {
@@ -4555,7 +4560,7 @@ async function persistCharacterStoragePatch(
         }
 
         if (options.items) {
-            body.items = serializeInventory(user.inv);
+            body.items = serializeInventory(getPersistableInventoryRecord(user));
         }
 
         if (options.bankItems) {
@@ -4620,7 +4625,7 @@ function buildCharacterSnapshotPayload(
         attrFuerza: persistedAttrFuerza,
         attrAgilidad: persistedAttrAgilidad,
         spells: serializeSpells(user.spells),
-        items: serializeInventory(user.inv),
+        items: serializeInventory(getPersistableInventoryRecord(user)),
         bankItems: serializeBank(user.bank ?? {}),
         updatedAt: new Date(),
     };
@@ -5922,6 +5927,11 @@ function Game(this: GameApi) {
                 return;
             }
 
+            if (user.huntersGame) {
+                handleProtocol.console("En Hunters Game solo puedes obtener items desde cofres del evento.", "white", 0, 0, ws);
+                return;
+            }
+
             if (game.hayObj(user.map, user.pos)) {
                 const item = game.objMap(user.map, user.pos)!;
                 const datObj = vars.datObj[item.objIndex];
@@ -6172,6 +6182,11 @@ function Game(this: GameApi) {
                 return;
             }
 
+            if (user.huntersGame) {
+                handleProtocol.console("No puedes tirar items dentro de Hunters Game.", "white", 0, 0, ws);
+                return;
+            }
+
             const item = user.inv[idPos];
 
             if (cant < 1) {
@@ -6392,6 +6407,11 @@ function Game(this: GameApi) {
         const npc = vars.npcs[idNpc] as GameNpc | undefined;
 
         if (!user || !client || !npc || npc.npcType !== vars.npcType.banquero || user.dead) {
+            return false;
+        }
+
+        if (user.huntersGame) {
+            handleProtocol.console("No puedes usar el banco dentro de Hunters Game.", "white", 1, 0, client);
             return false;
         }
 
@@ -7012,6 +7032,11 @@ function Game(this: GameApi) {
             return false;
         }
 
+        if (user.huntersGame) {
+            handleProtocol.console("No puedes usar subastas dentro de Hunters Game.", "white", 1, 0, client);
+            return false;
+        }
+
         if (!isMarketEnabled()) {
             handleProtocol.console("Las subastas se encuentran deshabilitadas.", "white", 1, 0, client);
             return false;
@@ -7216,7 +7241,7 @@ function Game(this: GameApi) {
                     expectedQuantity: expected?.quantity,
                     expectedPrice: expected?.price,
                     characterGold: nextGold,
-                    characterItems: serializeInventory(user.inv),
+                    characterItems: serializeInventory(getPersistableInventoryRecord(user)),
                 }),
                 headers: {
                     "Content-Type": "application/json",
@@ -7899,6 +7924,16 @@ function Game(this: GameApi) {
                 return;
             }
 
+            if (
+                user.huntersGame &&
+                typeof require("./huntersGame").isArenaMap === "function" &&
+                !require("./huntersGame").isArenaMap(Number(numMap))
+            ) {
+                handleProtocol.console("No puedes salir de la arena de Hunters Game.", "white", 0, 0, ws);
+                handleProtocol.actPositionServer(user.map, user.pos, user.heading, ws);
+                return;
+            }
+
             const deniedPortalMessage = getFactionPortalDeniedMessage(user, numMap, posX, posY);
 
             if (deniedPortalMessage) {
@@ -8225,6 +8260,7 @@ function Game(this: GameApi) {
             require("./summonRoom").scheduleDeadUserExit(idUser);
             require("./bloodCastle").onUserDied(String(idUser));
             require("./hungerGames").onUserDied(String(idUser));
+            require("./huntersGame").onUserDied(String(idUser));
             require("./tournamentAuto").onUserDied(String(idUser));
             require("./rankedArena").onUserDied(String(idUser));
             require("./factionWars").onUserDied(String(idUser));
@@ -11133,6 +11169,13 @@ function Game(this: GameApi) {
                 return;
             }
 
+            if (user.huntersGame) {
+                withUserClient(idUser, (userClient) => {
+                    handleProtocol.console("No puedes comerciar con NPCs dentro de Hunters Game.", "white", 0, 0, userClient);
+                });
+                return;
+            }
+
             if (user.dead) {
                 withUserClient(idUser, (userClient) => {
                     handleProtocol.console(
@@ -11345,6 +11388,13 @@ function Game(this: GameApi) {
             }
 
             if (cant < 1) {
+                return;
+            }
+
+            if (user.huntersGame) {
+                withUserClient(idUser, (userClient) => {
+                    handleProtocol.console("No puedes comerciar con NPCs dentro de Hunters Game.", "white", 0, 0, userClient);
+                });
                 return;
             }
 
@@ -11685,6 +11735,7 @@ function Game(this: GameApi) {
             require("./rankedArena").onUserLeft(String(idUser));
             require("./playerTrade").onUserLeft(String(idUser));
             require("./hungerGames").onUserDied(String(idUser));
+            require("./huntersGame").onUserDied(String(idUser));
             require("./tournamentAuto").onUserDied(String(idUser));
             require("./factionWars").onUserLeft(String(idUser));
             const client = getClientById(idUser);

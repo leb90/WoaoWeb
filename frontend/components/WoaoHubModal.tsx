@@ -172,6 +172,18 @@ const EVENT_FILTERS: Array<{ id: EventCategoryFilter; label: string; category?: 
 
 const AUTOMATIC_EVENT_DEFINITIONS: AutomaticEventDefinition[] = [
     {
+        id: "hunters_game",
+        name: "Hunters Game",
+        description: "Todos contra todos sin respawn. Loot de cofres, zona y ultimo sobreviviente.",
+        category: "pvp",
+        startsInMinutes: 0,
+        locationLabel: "Mapas 260/263",
+        status: "available",
+        actionLabel: "Participar",
+        actionType: "join",
+        actionData: { command: "/hunters" },
+    },
+    {
         id: "faction_war",
         name: "Guerra de facciones",
         description: "Horda contra Alianza. Gana la facción con más kills.",

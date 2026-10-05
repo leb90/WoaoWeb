@@ -169,6 +169,9 @@ export function useHudStateController({
                       ...(!hud.rankedState && previousHud?.rankedState
                           ? { rankedState: previousHud.rankedState }
                           : {}),
+                      ...(!hud.huntersGameState && previousHud?.huntersGameState
+                          ? { huntersGameState: previousHud.huntersGameState }
+                          : {}),
                   }
                 : hud;
 

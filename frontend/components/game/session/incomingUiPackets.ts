@@ -243,6 +243,10 @@ export async function handleIncomingUiPacket({
             ctx.mergeHud({ rankedState: packet.payload });
             return true;
 
+        case "huntersGameState":
+            ctx.mergeHud({ huntersGameState: packet.payload });
+            return true;
+
         case "questProgressNotice":
             ctx.onQuestProgressNotice?.(packet.payload);
             return true;

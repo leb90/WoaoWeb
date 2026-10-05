@@ -86,6 +86,7 @@ export const CLIENT_PACKET_ID = {
     castleState: 88,
     factionWarState: 89,
     rankedState: 90,
+    huntersGameState: 91,
 } as const;
 
 export const CHARACTER_SWING_WEAPON = 1;
@@ -732,6 +733,7 @@ export interface PlayerHudState {
     castleState?: CastleStatePayload;
     factionWarState?: FactionWarStatePayload;
     rankedState?: RankedStatePayload;
+    huntersGameState?: HuntersGameStatePayload;
     partyMembers: PartyHudMember[];
     clanMembers: ClanHudMember[];
 }
@@ -1005,6 +1007,48 @@ export interface FactionWarStatePayload {
     allianceKills: number;
 }
 
+export type HuntersGamePhase =
+    | "CLOSED"
+    | "REGISTRATION"
+    | "PREPARING"
+    | "ACTIVE"
+    | "FINISHING"
+    | "REWARDING"
+    | "CLEANUP"
+    | "COMPLETED"
+    | "ABORTED";
+
+export type HuntersGameKillFeedEntry = {
+    id: string;
+    killerName: string;
+    victimName: string;
+    at: number;
+};
+
+export interface HuntersGameStatePayload {
+    active: boolean;
+    phase: HuntersGamePhase;
+    matchId: string | null;
+    aliveCount: number;
+    totalPlayers: number;
+    kills: number;
+    zoneSecondsRemaining: number;
+    nextPhaseAt: number | null;
+    killFeed: HuntersGameKillFeedEntry[];
+}
+
+const DEFAULT_HUNTERS_GAME_STATE: HuntersGameStatePayload = {
+    active: false,
+    phase: "CLOSED",
+    matchId: null,
+    aliveCount: 0,
+    totalPlayers: 0,
+    kills: 0,
+    zoneSecondsRemaining: 0,
+    nextPhaseAt: null,
+    killFeed: [],
+};
+
 export interface SelfFlagsDelta {
     zonaSegura: number;
     seguroActivado: boolean;
@@ -1234,6 +1278,7 @@ export type ParsedServerPacket =
     | { type: "castleState"; payload: CastleStatePayload }
     | { type: "factionWarState"; payload: FactionWarStatePayload }
     | { type: "rankedState"; payload: RankedStatePayload }
+    | { type: "huntersGameState"; payload: HuntersGameStatePayload }
     | { type: "partyState"; payload: PartyHudStateDelta }
     | { type: "clanState"; payload: ClanHudStateDelta }
     | { type: "startCastBar"; payload: { id: number; durationMs: number } }
@@ -2450,6 +2495,22 @@ function parseServerPacketById(
                 return {
                     type: "rankedState",
                     payload: DEFAULT_RANKED_STATE,
+                };
+            }
+        }
+
+        case CLIENT_PACKET_ID.huntersGameState: {
+            const rawPayload = reader.getString();
+
+            try {
+                return {
+                    type: "huntersGameState",
+                    payload: JSON.parse(rawPayload) as HuntersGameStatePayload,
+                };
+            } catch {
+                return {
+                    type: "huntersGameState",
+                    payload: DEFAULT_HUNTERS_GAME_STATE,
                 };
             }
         }

@@ -46,7 +46,16 @@ type CatalogNpc = {
   headOffsetY?: number;
 };
 type CatalogObj = { id: number; name: string; grhIndex: number };
-type PlaceMode = "blocked" | "npc" | "object" | "exit" | "trigger" | null;
+type PlaceMode =
+  | "blocked"
+  | "npc"
+  | "object"
+  | "exit"
+  | "trigger"
+  | "erase-npc"
+  | "erase-object"
+  | "erase-trigger"
+  | null;
 type RightTab = "tile" | "palette" | "npcs" | "objects" | "triggers";
 type ClipSpecial = {
   npc?: number;
@@ -501,6 +510,12 @@ export function MapEditor({ mapId }: { mapId: number }) {
           next.specials.exits[key] = { ...exitTarget };
         } else if (placeMode === "trigger") {
           next.specials.triggers[key] = triggerValue;
+        } else if (placeMode === "erase-npc") {
+          delete next.specials.npcs[key];
+        } else if (placeMode === "erase-object") {
+          delete next.specials.objects[key];
+        } else if (placeMode === "erase-trigger") {
+          delete next.specials.triggers[key];
         } else if (prefs.tool === "brush" || prefs.tool === "stamp") {
           paintTerrainAt(
             next,
@@ -1351,7 +1366,13 @@ export function MapEditor({ mapId }: { mapId: number }) {
             </div>
             {placeMode && (
               <div style={{ marginTop: 6, fontSize: 11, color: "var(--me-warn)" }}>
-                Modo colocación: {placeMode} (Esc cancela)
+                {placeMode === "erase-npc"
+                  ? "Quitando solo NPCs. El traslado queda. Esc cancela."
+                  : placeMode === "erase-object"
+                    ? "Quitando solo objetos. El traslado queda. Esc cancela."
+                    : placeMode === "erase-trigger"
+                      ? "Quitando solo triggers. El traslado queda. Esc cancela."
+                      : `Modo colocación: ${placeMode} (Esc cancela)`}
               </div>
             )}
           </Section>
@@ -2115,7 +2136,16 @@ export function MapEditor({ mapId }: { mapId: number }) {
                       setRightTab("npcs");
                       setPlaceMode("npc");
                     }}
-                    onClear={() => eraseSpecialAt(selected.x, selected.y)}
+                    onClear={() => {
+                      beginStroke();
+                      setState((prev) => {
+                        if (!prev) return prev;
+                        const next = cloneEditorState(prev);
+                        delete next.specials.npcs[selKey];
+                        return next;
+                      });
+                      endStroke();
+                    }}
                   />
                   <PropRow
                     label="Objeto"
@@ -2128,7 +2158,16 @@ export function MapEditor({ mapId }: { mapId: number }) {
                       setRightTab("objects");
                       setPlaceMode("object");
                     }}
-                    onClear={() => eraseSpecialAt(selected.x, selected.y)}
+                    onClear={() => {
+                      beginStroke();
+                      setState((prev) => {
+                        if (!prev) return prev;
+                        const next = cloneEditorState(prev);
+                        delete next.specials.objects[selKey];
+                        return next;
+                      });
+                      endStroke();
+                    }}
                   />
                   <PropRow
                     label="TileExit"
@@ -2138,7 +2177,16 @@ export function MapEditor({ mapId }: { mapId: number }) {
                         : "—"
                     }
                     onEdit={() => setPlaceMode("exit")}
-                    onClear={() => eraseSpecialAt(selected.x, selected.y)}
+                    onClear={() => {
+                      beginStroke();
+                      setState((prev) => {
+                        if (!prev) return prev;
+                        const next = cloneEditorState(prev);
+                        delete next.specials.exits[selKey];
+                        return next;
+                      });
+                      endStroke();
+                    }}
                   />
                   {selectedExit && (
                       <Link
@@ -2280,6 +2328,17 @@ export function MapEditor({ mapId }: { mapId: number }) {
 
           {rightTab === "npcs" && (
             <div>
+              <button
+                type="button"
+                className={`me-btn ${placeMode === "erase-npc" ? "danger" : ""}`}
+                style={{ width: "100%", marginBottom: 8 }}
+                onClick={() => {
+                  setPlaceMode((mode) => (mode === "erase-npc" ? null : "erase-npc"));
+                  setPrefs((p) => ({ ...p, tool: "select" }));
+                }}
+              >
+                Quitar
+              </button>
               <input
                 className="me-input"
                 placeholder="Buscar NPC…"
@@ -2309,6 +2368,19 @@ export function MapEditor({ mapId }: { mapId: number }) {
 
           {rightTab === "objects" && (
             <div>
+              <button
+                type="button"
+                className={`me-btn ${placeMode === "erase-object" ? "danger" : ""}`}
+                style={{ width: "100%", marginBottom: 8 }}
+                onClick={() => {
+                  setPlaceMode((mode) =>
+                    mode === "erase-object" ? null : "erase-object",
+                  );
+                  setPrefs((p) => ({ ...p, tool: "select" }));
+                }}
+              >
+                Quitar
+              </button>
               <input
                 className="me-input"
                 placeholder="Buscar objeto…"
@@ -2339,6 +2411,19 @@ export function MapEditor({ mapId }: { mapId: number }) {
 
           {rightTab === "triggers" && (
             <div>
+              <button
+                type="button"
+                className={`me-btn ${placeMode === "erase-trigger" ? "danger" : ""}`}
+                style={{ width: "100%", marginBottom: 8 }}
+                onClick={() => {
+                  setPlaceMode((mode) =>
+                    mode === "erase-trigger" ? null : "erase-trigger",
+                  );
+                  setPrefs((p) => ({ ...p, tool: "select" }));
+                }}
+              >
+                Quitar
+              </button>
               {WOAO_TRIGGERS.map((t) => (
                 <button
                   key={t.value}

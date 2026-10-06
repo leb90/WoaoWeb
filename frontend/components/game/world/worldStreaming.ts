@@ -11,7 +11,6 @@ import {
     getNeighborRenderBounds,
     isTileCoveredByOtherMap,
     resolveReciprocalNeighbors,
-    unionBounds,
     type MapEdges,
 } from "./worldLayout";
 
@@ -351,13 +350,63 @@ function getFullMapBounds(engine: Engine, mapNumber: number): TileBounds {
     return { minX: 1, maxX: dimensions.width, minY: 1, maxY: dimensions.height };
 }
 
+/**
+ * Lo dibujado de cada mapa se guarda como una lista de rectángulos, no como
+ * un único rectángulo envolvente: un mapa visto primero como vecino lateral
+ * (franja vertical) y después como vecino de arriba o abajo (franja
+ * horizontal) tiene dibujada una "L", y el envolvente de esa L es el mapa
+ * entero, con lo que el relleno al entrar creía que no faltaba nada y el
+ * resto quedaba negro.
+ */
+function getRenderedRects(engine: Engine, mapNumber: number): TileBounds[] {
+    return engine.worldRenderedBounds.get(mapNumber) ?? [];
+}
+
 export function markMapRendered(engine: Engine, mapNumber: number, bounds?: TileBounds): void {
-    const renderedBounds = bounds ?? getFullMapBounds(engine, mapNumber);
-    const previous = engine.worldRenderedBounds.get(mapNumber);
-    engine.worldRenderedBounds.set(
-        mapNumber,
-        previous ? unionBounds(previous, renderedBounds) : renderedBounds,
-    );
+    const rect = bounds ?? getFullMapBounds(engine, mapNumber);
+    const rects = getRenderedRects(engine, mapNumber).filter((previous) => !boundsContain(rect, previous));
+    if (!rects.some((previous) => boundsContain(previous, rect))) {
+        rects.push(rect);
+    }
+    engine.worldRenderedBounds.set(mapNumber, rects);
+}
+
+/** Resta `b` de `a`: hasta cuatro rectángulos con lo que queda de `a`. */
+function subtractBounds(a: TileBounds, b: TileBounds): TileBounds[] {
+    const inter = intersectBounds(a, b);
+    if (!inter) {
+        return [a];
+    }
+    const out: TileBounds[] = [];
+    if (a.minY < inter.minY) {
+        out.push({ minX: a.minX, maxX: a.maxX, minY: a.minY, maxY: inter.minY - 1 });
+    }
+    if (inter.maxY < a.maxY) {
+        out.push({ minX: a.minX, maxX: a.maxX, minY: inter.maxY + 1, maxY: a.maxY });
+    }
+    if (a.minX < inter.minX) {
+        out.push({ minX: a.minX, maxX: inter.minX - 1, minY: inter.minY, maxY: inter.maxY });
+    }
+    if (inter.maxX < a.maxX) {
+        out.push({ minX: inter.maxX + 1, maxX: a.maxX, minY: inter.minY, maxY: inter.maxY });
+    }
+    return out;
+}
+
+/** Partes de `needed` que todavía no están dibujadas en `mapNumber`. */
+export function getUnrenderedRects(engine: Engine, mapNumber: number, needed: TileBounds): TileBounds[] {
+    let pending: TileBounds[] = [needed];
+    for (const rect of getRenderedRects(engine, mapNumber)) {
+        const next: TileBounds[] = [];
+        for (const piece of pending) {
+            next.push(...subtractBounds(piece, rect));
+        }
+        pending = next;
+        if (pending.length === 0) {
+            break;
+        }
+    }
+    return pending;
 }
 
 function intersectBounds(a: TileBounds, b: TileBounds): TileBounds | null {
@@ -420,24 +469,20 @@ export async function renderWorldNeighbors(
             continue;
         }
 
-        const rendered = engine.worldRenderedBounds.get(placement.map);
-        if (rendered && boundsContain(rendered, needed)) {
-            continue;
+        for (const piece of getUnrenderedRects(engine, placement.map, needed)) {
+            await renderMap(engine, {
+                mapNumber: placement.map,
+                bounds: piece,
+                skipTile: getCurrentMapSkipTile(engine, placement.map),
+                frameBudgetMs: clipWorld ? 0 : BACKGROUND_FRAME_BUDGET_MS,
+            });
+
+            if (engine.isDestroyed || engine.worldStreamingVersion !== version) {
+                return;
+            }
+
+            markMapRendered(engine, placement.map, piece);
         }
-
-        await renderMap(engine, {
-            mapNumber: placement.map,
-            bounds: needed,
-            excludeBounds: rendered,
-            skipTile: getCurrentMapSkipTile(engine, placement.map),
-            frameBudgetMs: clipWorld ? 0 : BACKGROUND_FRAME_BUDGET_MS,
-        });
-
-        if (engine.isDestroyed || engine.worldStreamingVersion !== version) {
-            return;
-        }
-
-        markMapRendered(engine, placement.map, needed);
     }
 }
 
@@ -452,32 +497,37 @@ export async function renderCurrentMapRemainder(
     const mapNumber = engine.mapNumber;
     const version = engine.worldStreamingVersion;
     const full = getFullMapBounds(engine, mapNumber);
-    const rendered = engine.worldRenderedBounds.get(mapNumber);
+    const pieces = getUnrenderedRects(engine, mapNumber, full);
 
-    if (rendered && boundsContain(rendered, full)) {
+    if (pieces.length === 0) {
         return;
     }
 
-    await renderMap(engine, {
-        includeLayers: ["1", "2"],
-        includeObjects: false,
-        excludeBounds: rendered,
-        frameBudgetMs: BACKGROUND_FRAME_BUDGET_MS,
-    });
+    // Primero el piso de todo lo que falta, después objetos y techos.
+    for (const piece of pieces) {
+        await renderMap(engine, {
+            includeLayers: ["1", "2"],
+            includeObjects: false,
+            bounds: piece,
+            frameBudgetMs: BACKGROUND_FRAME_BUDGET_MS,
+        });
 
-    if (engine.isDestroyed || engine.worldStreamingVersion !== version) {
-        return;
+        if (engine.isDestroyed || engine.worldStreamingVersion !== version) {
+            return;
+        }
     }
 
-    await renderMap(engine, {
-        includeLayers: ["3", "4"],
-        includeObjects: true,
-        excludeBounds: rendered,
-        frameBudgetMs: BACKGROUND_FRAME_BUDGET_MS,
-    });
+    for (const piece of pieces) {
+        await renderMap(engine, {
+            includeLayers: ["3", "4"],
+            includeObjects: true,
+            bounds: piece,
+            frameBudgetMs: BACKGROUND_FRAME_BUDGET_MS,
+        });
 
-    if (engine.isDestroyed || engine.worldStreamingVersion !== version) {
-        return;
+        if (engine.isDestroyed || engine.worldStreamingVersion !== version) {
+            return;
+        }
     }
 
     markMapRendered(engine, mapNumber, full);

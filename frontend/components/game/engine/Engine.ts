@@ -567,7 +567,8 @@ export class Engine {
     worldOriginY = 0;
     worldLayout: WorldLayout | null = null;
     // Rectángulo (en tiles locales) ya dibujado de cada mapa cargado.
-    worldRenderedBounds: Map<number, TileBounds> = new Map();
+    // Rectángulos ya dibujados de cada mapa (ver markMapRendered).
+    worldRenderedBounds: Map<number, TileBounds[]> = new Map();
     worldStreamingVersion = 0;
 
     // Characters

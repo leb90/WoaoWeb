@@ -3592,15 +3592,24 @@ function HomeContent() {
                                 ) : null}
 
                                 <div
-                                    className="pointer-events-none absolute right-3 z-30 rounded-md border border-stone-200/12 bg-stone-950/72 px-2.5 py-1.5 font-mono text-[11px] leading-none text-amber-100/90 shadow-xl backdrop-blur-sm"
+                                    className="pointer-events-none absolute right-2 z-30 rounded-md border border-stone-200/12 bg-stone-950/72 px-2.5 py-1.5 font-mono text-[11px] leading-none text-amber-100/90 shadow-xl backdrop-blur-sm"
                                     style={{
-                                        bottom: isFullscreen ? "44px" : "34px",
+                                        bottom: isFullscreen ? 42 : 8,
                                     }}
                                 >
-                                    <span className="tabular-nums">
-                                        Map: {hud?.map ?? selectedMap} X:{" "}
-                                        {hud?.pos?.x ?? "-"} Y:{" "}
-                                        {hud?.pos?.y ?? "-"}
+                                    <span className="inline-grid grid-cols-[auto_4ch_auto_3ch_auto_3ch] items-baseline gap-x-1 tabular-nums">
+                                        <span>Map:</span>
+                                        <span className="text-right">
+                                            {hud?.map ?? selectedMap ?? "—"}
+                                        </span>
+                                        <span>X:</span>
+                                        <span className="text-right">
+                                            {hud?.pos?.x ?? "—"}
+                                        </span>
+                                        <span>Y:</span>
+                                        <span className="text-right">
+                                            {hud?.pos?.y ?? "—"}
+                                        </span>
                                     </span>
                                 </div>
 

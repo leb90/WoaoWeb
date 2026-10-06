@@ -737,9 +737,8 @@ function sendCharacterRefresh(idUser: string) {
         return;
     }
 
-    const pkg = socket.getClient(client);
     handleProtocol.sendMyCharacter(user);
-    client.send(pkg);
+    socket.send(client);
 }
 
 function awardKillReward(killerId: string, victimId: string) {

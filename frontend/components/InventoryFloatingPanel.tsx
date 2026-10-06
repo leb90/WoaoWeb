@@ -493,38 +493,53 @@ function buildWorldMapGrid(worldMapGridData: WorldMapGridData): WorldMapGrid {
     };
 }
 
-function getMinimapFrame(aspectRatio: number) {
+function getMinimapImageFrame(
+    containerWidth: number,
+    containerHeight: number,
+    aspectRatio: number,
+) {
     const safeAspectRatio =
         Number.isFinite(aspectRatio) && aspectRatio > 0 ? aspectRatio : 1;
 
-    if (safeAspectRatio >= 1) {
-        const width = MINIMAP_PREVIEW_SIZE;
-        const height = MINIMAP_PREVIEW_SIZE / safeAspectRatio;
+    if (containerWidth <= 0 || containerHeight <= 0) {
+        return null;
+    }
+
+    const containerAspect = containerWidth / containerHeight;
+
+    if (safeAspectRatio >= containerAspect) {
+        const width = containerWidth;
+        const height = containerWidth / safeAspectRatio;
 
         return {
+            left: 0,
+            top: (containerHeight - height) / 2,
             width,
             height,
-            leftOffset: 0,
-            topOffset: (MINIMAP_PREVIEW_SIZE - height) / 2,
         };
     }
 
-    const width = MINIMAP_PREVIEW_SIZE * safeAspectRatio;
-    const height = MINIMAP_PREVIEW_SIZE;
+    const height = containerHeight;
+    const width = containerHeight * safeAspectRatio;
 
     return {
+        left: (containerWidth - width) / 2,
+        top: 0,
         width,
         height,
-        leftOffset: (MINIMAP_PREVIEW_SIZE - width) / 2,
-        topOffset: 0,
     };
 }
 
 function getMinimapMarkerStyle(
     pos: { x: number; y: number } | null | undefined,
-    aspectRatio: number,
+    frame: {
+        left: number;
+        top: number;
+        width: number;
+        height: number;
+    } | null,
 ) {
-    if (!pos) {
+    if (!pos || !frame) {
         return null;
     }
 
@@ -537,11 +552,10 @@ function getMinimapMarkerStyle(
         0,
         Math.min(1, (pos.y - 0.5) / maxCoordinate),
     );
-    const frame = getMinimapFrame(aspectRatio);
 
     return {
-        left: `${frame.leftOffset + normalizedX * frame.width}px`,
-        top: `${frame.topOffset + normalizedY * frame.height}px`,
+        left: `${frame.left + normalizedX * frame.width}px`,
+        top: `${frame.top + normalizedY * frame.height}px`,
     };
 }
 
@@ -1393,6 +1407,11 @@ export default function InventoryFloatingPanel({
     const [dropSlot, setDropSlot] = React.useState<number | null>(null);
     const [mapPreviewErrored, setMapPreviewErrored] = React.useState(false);
     const [mapPreviewAspectRatio, setMapPreviewAspectRatio] = React.useState(1);
+    const minimapStageRef = React.useRef<HTMLDivElement | null>(null);
+    const [minimapStageSize, setMinimapStageSize] = React.useState({
+        width: 0,
+        height: 0,
+    });
     const [worldMapGridData, setWorldMapGridData] =
         React.useState<WorldMapGridData | null>(null);
     const [worldMapPlayers, setWorldMapPlayers] = React.useState<
@@ -2179,13 +2198,50 @@ export default function InventoryFloatingPanel({
     const worldMapImageRenderWidth =
         (worldMapOriginalImageWidth / worldMapVisibleImageWidth) * 100;
     const adminWorldMapAlt = "Mapa del mundo completo";
+    React.useLayoutEffect(() => {
+        const node = minimapStageRef.current;
+
+        if (!node) {
+            return;
+        }
+
+        const update = () => {
+            const width = node.clientWidth;
+            const height = node.clientHeight;
+
+            setMinimapStageSize((current) =>
+                current.width === width && current.height === height
+                    ? current
+                    : { width, height },
+            );
+        };
+
+        update();
+        const observer = new ResizeObserver(update);
+        observer.observe(node);
+
+        return () => observer.disconnect();
+    }, [minimapHost, minimapVisible, mapPreviewSrc]);
+    const minimapImageFrame = React.useMemo(
+        () =>
+            getMinimapImageFrame(
+                minimapStageSize.width,
+                minimapStageSize.height,
+                mapPreviewAspectRatio,
+            ),
+        [
+            mapPreviewAspectRatio,
+            minimapStageSize.height,
+            minimapStageSize.width,
+        ],
+    );
     const minimapMarkerPosition = React.useMemo(() => {
         if (isChallengeInstanceMap) {
             return null;
         }
 
-        return getMinimapMarkerStyle(hud?.pos, mapPreviewAspectRatio);
-    }, [hud?.pos, isChallengeInstanceMap, mapPreviewAspectRatio]);
+        return getMinimapMarkerStyle(hud?.pos, minimapImageFrame);
+    }, [hud?.pos, isChallengeInstanceMap, minimapImageFrame]);
     const worldMapMarkerPosition = React.useMemo(() => {
         return getWorldMapMarkerStyle(worldMapGrid, previewMapId, hud?.pos);
     }, [hud?.pos, previewMapId, worldMapGrid]);
@@ -2235,7 +2291,7 @@ export default function InventoryFloatingPanel({
             .map((member) => {
                 const markerStyle = getMinimapMarkerStyle(
                     member.pos,
-                    mapPreviewAspectRatio,
+                    minimapImageFrame,
                 );
 
                 return {
@@ -2245,7 +2301,7 @@ export default function InventoryFloatingPanel({
                     title: member.nameCharacter,
                 };
             });
-    }, [hud, isChallengeInstanceMap, mapPreviewAspectRatio, normalizedHudId]);
+    }, [hud, isChallengeInstanceMap, minimapImageFrame, normalizedHudId]);
     const clanMinimapMarkerPositions = React.useMemo(() => {
         if (isChallengeInstanceMap || !hud?.clanMembers?.length) {
             return [];
@@ -2261,7 +2317,7 @@ export default function InventoryFloatingPanel({
             .map((member) => {
                 const markerStyle = getMinimapMarkerStyle(
                     member.pos,
-                    mapPreviewAspectRatio,
+                    minimapImageFrame,
                 );
 
                 return {
@@ -2271,7 +2327,7 @@ export default function InventoryFloatingPanel({
                     title: member.nameCharacter,
                 };
             });
-    }, [hud, isChallengeInstanceMap, mapPreviewAspectRatio, normalizedHudId]);
+    }, [hud, isChallengeInstanceMap, minimapImageFrame, normalizedHudId]);
 
     const closeWorldMap = React.useCallback(() => {
         setIsWorldMapOpen(false);
@@ -3636,7 +3692,10 @@ export default function InventoryFloatingPanel({
 
             {minimapVisible && minimapHost
                 ? createPortal(
-                      <div className="relative h-full w-full overflow-hidden bg-[#070504]">
+                      <div
+                          ref={minimapStageRef}
+                          className="relative h-full w-full overflow-hidden bg-[#070504]"
+                      >
                           <button
                               ref={worldMapTriggerRef}
                               type="button"

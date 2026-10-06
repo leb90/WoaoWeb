@@ -1101,13 +1101,17 @@ function HuntersGameOverlay({ hud }: { hud: PlayerHudState | null }) {
     }
 
     const phaseLabel =
-        huntersState.phase === "REGISTRATION"
+        huntersState.statusLabel ||
+        (huntersState.phase === "REGISTRATION"
             ? "Inscripcion"
             : huntersState.phase === "ACTIVE"
-              ? "En curso"
+              ? "Combate activo"
               : huntersState.phase === "PREPARING"
                 ? "Preparando"
-                : huntersState.phase;
+                : huntersState.phase);
+    const primaryCountdown = huntersState.safePhaseActive
+        ? huntersState.safePhaseSecondsRemaining
+        : huntersState.zoneSecondsRemaining;
 
     return (
         <>
@@ -1129,10 +1133,11 @@ function HuntersGameOverlay({ hud }: { hud: PlayerHudState | null }) {
                             {huntersState.kills}
                         </span>
                     </div>
-                    {huntersState.zoneSecondsRemaining > 0 ? (
+                    {primaryCountdown > 0 ? (
                         <div className="mt-1 flex items-center justify-center gap-1 text-xs font-bold text-cyan-100">
                             <Clock3 className="h-3.5 w-3.5" />
-                            Zona {formatHuntersSeconds(huntersState.zoneSecondsRemaining)}
+                            {huntersState.safePhaseActive ? "PvP en " : "Termina en "}
+                            {formatHuntersSeconds(primaryCountdown)}
                         </div>
                     ) : null}
                 </div>

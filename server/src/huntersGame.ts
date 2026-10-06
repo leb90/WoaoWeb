@@ -3,6 +3,8 @@ import type { RuntimeCharacter } from "./types/runtime";
 const game = require("./game");
 const vars = require("./vars");
 const handleProtocol = require("./handleProtocol");
+const socket = require("./socket");
+const { getProgress, saveProgress } = require("./woaoProgress");
 
 export type HuntersGamePhase =
     | "CLOSED"
@@ -24,6 +26,7 @@ type HunterParticipant = {
     returnMap: number;
     returnX: number;
     returnY: number;
+    assignedMap?: number;
 };
 
 type HunterChest = {
@@ -33,6 +36,12 @@ type HunterChest = {
     y: number;
     openedBy: string | null;
     loot: Array<{ idItem: number; amount: number }>;
+};
+
+type ArenaPosition = {
+    map: number;
+    x: number;
+    y: number;
 };
 
 type KillFeedEntry = {
@@ -64,28 +73,69 @@ type HuntersGameState = {
     participants: Map<string, HunterParticipant>;
     chests: Map<string, HunterChest>;
     killFeed: KillFeedEntry[];
+    rewardedKills: Set<string>;
     registrationStartsAt: number;
     startsAt: number;
     nextPhaseAt: number | null;
+    safePhaseEndsAt: number | null;
+    initialParticipantCount: number;
+    safePhaseNoticesSent: Set<number>;
     timer: ReturnType<typeof setInterval> | null;
 };
 
-const ARGENTINA_TIMEZONE = "America/Argentina/Buenos_Aires";
-const REGISTRATION_MINUTES = 10;
-const MATCH_DURATION_MS = 30 * 60_000;
-const MIN_PLAYERS = 2;
-const MAX_PLAYERS = 40;
-const EXIT = { map: 34, x: 50, y: 50 };
-const ARENA_MAPS = [260, 261, 262, 263];
-const CHESTS_PER_PLAYER = 3;
-const MIN_CHESTS = 12;
-const MAX_CHESTS = 36;
-const MIN_POTION_STACKS = 10;
-const MAX_POTION_STACKS = 20;
-const EQUIPMENT_LOOT = [
-    1037, 559, 1056, 1127, 844, 732, 730, 729, 496, 952, 950, 500, 745, 1223, 766, 764, 1088, 400, 165, 756,
-];
-const POTION_LOOT = [36, 37, 38, 39];
+export const HUNTERS_ITEM_IDS = {
+    chest: 1720,
+    redPotion: 1721,
+    bluePotion: 1722,
+    arrows: 1723,
+} as const;
+
+const huntersGameConfig = {
+    timezone: "America/Argentina/Buenos_Aires",
+    registrationMinutes: 10,
+    matchDurationMs: 30 * 60_000,
+    initialSafeSeconds: 120,
+    minPlayers: 4,
+    maxPlayers: 20,
+    exit: { map: 34, x: 50, y: 50 },
+    maps: [260, 261, 262, 263],
+    playerSpawn: {
+        minDistance: 15,
+        attemptsPerMap: 2400,
+    },
+    chestGeneration: {
+        perPlayer: 1.5,
+        min: 4,
+        max: 30,
+        minChestDistance: 8,
+        minPlayerChestDistance: 6,
+    },
+    chestLoot: {
+        potionsMin: 10,
+        potionsMax: 20,
+        arrowsMin: 10,
+        arrowsMax: 20,
+    },
+    killReward: {
+        questPoints: 2,
+        gold: 1000,
+    },
+    winnerReward: {
+        baseQuestPoints: 5,
+        questPointsPerParticipant: 1,
+        baseGold: 5000,
+        goldPerParticipant: 1000,
+    },
+};
+
+const ARGENTINA_TIMEZONE = huntersGameConfig.timezone;
+const REGISTRATION_MINUTES = huntersGameConfig.registrationMinutes;
+const MATCH_DURATION_MS = huntersGameConfig.matchDurationMs;
+const MIN_PLAYERS = huntersGameConfig.minPlayers;
+const MAX_PLAYERS = huntersGameConfig.maxPlayers;
+const EXIT = huntersGameConfig.exit;
+const ARENA_MAPS = huntersGameConfig.maps;
+const EQUIPMENT_LOOT = [1037, 559, 1056, 1127, 844, 732, 730, 729, 496, 952, 950, 500, 745, 1223, 766, 764, 1088, 400, 165, 756];
 const SCHEDULE = [
     { hour: 10, minute: 0 },
     { hour: 22, minute: 0 },
@@ -97,9 +147,13 @@ const state: HuntersGameState = {
     participants: new Map(),
     chests: new Map(),
     killFeed: [],
+    rewardedKills: new Set(),
     registrationStartsAt: 0,
     startsAt: 0,
     nextPhaseAt: null,
+    safePhaseEndsAt: null,
+    initialParticipantCount: 0,
+    safePhaseNoticesSent: new Set(),
     timer: null,
 };
 
@@ -283,43 +337,223 @@ function randomFrom<T>(items: T[]): T {
     return items[randomInt(0, items.length - 1)];
 }
 
-function findRandomArenaSpawn(index: number) {
-    const preferredMap = ARENA_MAPS[index % ARENA_MAPS.length];
-    const mapOrder = [preferredMap, ...ARENA_MAPS.filter((map) => map !== preferredMap)];
+function positionKey(map: number, x: number, y: number): string {
+    return `${map}:${x}:${y}`;
+}
 
-    for (const map of mapOrder) {
-        for (let attempt = 0; attempt < 2400; attempt++) {
+function chebyshevDistance(left: ArenaPosition, right: ArenaPosition): number {
+    if (Number(left.map) !== Number(right.map)) {
+        return Number.POSITIVE_INFINITY;
+    }
+
+    return Math.max(Math.abs(left.x - right.x), Math.abs(left.y - right.y));
+}
+
+function hasNpcAt(map: number, x: number, y: number): boolean {
+    for (const npc of Object.values(vars.npc ?? {}) as Array<any>) {
+        if (!npc || npc.dead) {
+            continue;
+        }
+
+        if (Number(npc.map) === Number(map) && Number(npc.pos?.x ?? 0) === x && Number(npc.pos?.y ?? 0) === y) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function hasPlayerAt(map: number, x: number, y: number): boolean {
+    for (const user of Object.values(vars.personajes ?? {}) as Array<any>) {
+        if (!user || user.dead) {
+            continue;
+        }
+
+        if (Number(user.map) === Number(map) && Number(user.pos?.x ?? 0) === x && Number(user.pos?.y ?? 0) === y) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function isValidArenaPosition(
+    map: number,
+    x: number,
+    y: number,
+    reserved: Set<string>,
+    existingPositions: ArenaPosition[],
+    minDistance: number,
+): boolean {
+    const tile = vars.mapa[map]?.[y]?.[x];
+    if (!tile || reserved.has(positionKey(map, x, y))) {
+        return false;
+    }
+
+    if (typeof tile.tileExit !== "undefined" || tile.objInfo?.objIndex || hasNpcAt(map, x, y) || hasPlayerAt(map, x, y)) {
+        return false;
+    }
+
+    if (!game.validPosRespawn({ x, y }, map, false)) {
+        return false;
+    }
+
+    const candidate = { map, x, y };
+    return existingPositions.every((position) => chebyshevDistance(candidate, position) >= minDistance);
+}
+
+function findRandomArenaSpawn(
+    map: number,
+    reserved: Set<string>,
+    existingPositions: ArenaPosition[],
+    minDistance: number,
+): ArenaPosition {
+    const attemptsPerMap = huntersGameConfig.playerSpawn.attemptsPerMap;
+    const distanceAttempts = [minDistance, Math.max(8, Math.floor(minDistance / 2)), 4, 0];
+
+    for (const distance of distanceAttempts) {
+        for (let attempt = 0; attempt < attemptsPerMap; attempt++) {
             const x = randomInt(5, 95);
             const y = randomInt(5, 95);
-            if (game.validPosRespawn({ x, y }, map, false)) {
-                return { map, x, y };
+            if (isValidArenaPosition(map, x, y, reserved, existingPositions, distance)) {
+                reserved.add(positionKey(map, x, y));
+                const position = { map, x, y };
+                existingPositions.push(position);
+                return position;
             }
         }
     }
 
-    return { map: preferredMap, x: 50, y: 50 };
+    const fallback = { map, x: 50, y: 50 };
+    reserved.add(positionKey(map, 50, 50));
+    existingPositions.push(fallback);
+    return fallback;
+}
+
+function pickLeastUsedMap(counts: Map<number, number>): number {
+    const min = Math.min(...ARENA_MAPS.map((map) => Number(counts.get(map) ?? 0)));
+    return randomFrom(ARENA_MAPS.filter((map) => Number(counts.get(map) ?? 0) === min));
+}
+
+function assignParticipantSpawns(): Map<string, ArenaPosition> {
+    const counts = new Map<number, number>(ARENA_MAPS.map((map) => [map, 0]));
+    const reserved = new Set<string>();
+    const positions: ArenaPosition[] = [];
+    const assignments = new Map<string, ArenaPosition>();
+
+    for (const idUser of state.participants.keys()) {
+        const map = pickLeastUsedMap(counts);
+        counts.set(map, Number(counts.get(map) ?? 0) + 1);
+        const spawn = findRandomArenaSpawn(map, reserved, positions, huntersGameConfig.playerSpawn.minDistance);
+        assignments.set(idUser, spawn);
+        const participant = state.participants.get(idUser);
+        if (participant) {
+            participant.assignedMap = spawn.map;
+        }
+    }
+
+    return assignments;
 }
 
 function isValidItem(idItem: number): boolean {
     return Boolean(vars.datObj?.[idItem]);
 }
 
+function placeChestOnMap(chest: HunterChest) {
+    const tile = vars.mapa[chest.map]?.[chest.y]?.[chest.x];
+    if (!tile) {
+        return;
+    }
+
+    tile.objInfo = {
+        objIndex: HUNTERS_ITEM_IDS.chest,
+        amount: 1,
+        huntersChestId: chest.id,
+    };
+
+    game.loopAreaPos(chest.map, { x: chest.x, y: chest.y }, function (target: RuntimeCharacter) {
+        const targetClient = getClient(String(target.id));
+        if (targetClient) {
+            handleProtocol.renderItem(HUNTERS_ITEM_IDS.chest, chest.map, { x: chest.x, y: chest.y }, targetClient);
+        }
+    });
+}
+
+function removeChestFromMap(chest: HunterChest) {
+    const tile = vars.mapa[chest.map]?.[chest.y]?.[chest.x];
+    if (tile?.objInfo?.objIndex === HUNTERS_ITEM_IDS.chest) {
+        delete tile.objInfo;
+    }
+
+    game.loopAreaPos(chest.map, { x: chest.x, y: chest.y }, function (target: RuntimeCharacter) {
+        const targetClient = getClient(String(target.id));
+        if (targetClient) {
+            handleProtocol.deleteItem(chest.map, { x: chest.x, y: chest.y }, targetClient);
+        }
+    });
+}
+
+function clearChestsFromMap() {
+    for (const chest of state.chests.values()) {
+        removeChestFromMap(chest);
+    }
+}
+
+function buildChestLoot(): HunterChest["loot"] {
+    const equipmentPool = EQUIPMENT_LOOT.filter(isValidItem);
+    const equipment = equipmentPool.length > 0 ? randomFrom(equipmentPool) : 480;
+    const potionTotal = randomInt(huntersGameConfig.chestLoot.potionsMin, huntersGameConfig.chestLoot.potionsMax);
+    const redPotions = randomInt(0, potionTotal);
+    const bluePotions = potionTotal - redPotions;
+    const loot: HunterChest["loot"] = [{ idItem: equipment, amount: 1 }];
+
+    if (redPotions > 0) {
+        loot.push({ idItem: HUNTERS_ITEM_IDS.redPotion, amount: redPotions });
+    }
+
+    if (bluePotions > 0) {
+        loot.push({ idItem: HUNTERS_ITEM_IDS.bluePotion, amount: bluePotions });
+    }
+
+    loot.push({
+        idItem: HUNTERS_ITEM_IDS.arrows,
+        amount: randomInt(huntersGameConfig.chestLoot.arrowsMin, huntersGameConfig.chestLoot.arrowsMax),
+    });
+
+    return loot;
+}
+
 function generateChests() {
+    clearChestsFromMap();
     state.chests.clear();
 
-    const chestCount = Math.max(MIN_CHESTS, Math.min(MAX_CHESTS, state.participants.size * CHESTS_PER_PLAYER));
-    let potionStacksLeft = randomInt(MIN_POTION_STACKS, MAX_POTION_STACKS);
+    const chestCount = Math.max(
+        huntersGameConfig.chestGeneration.min,
+        Math.min(huntersGameConfig.chestGeneration.max, Math.ceil(state.participants.size * huntersGameConfig.chestGeneration.perPlayer)),
+    );
+    const counts = new Map<number, number>(ARENA_MAPS.map((map) => [map, 0]));
+    const reserved = new Set<string>();
+    const playerPositions = Array.from(state.participants.values())
+        .map((participant) => {
+            const user = getUser(participant.id);
+            return user?.map && user?.pos ? { map: Number(user.map), x: Number(user.pos.x), y: Number(user.pos.y) } : null;
+        })
+        .filter(Boolean) as ArenaPosition[];
+    const chestPositions: ArenaPosition[] = [];
 
     for (let index = 0; index < chestCount; index++) {
-        const spawn = findRandomArenaSpawn(index);
-        const equipment = randomFrom(EQUIPMENT_LOOT.filter(isValidItem));
-        const loot: HunterChest["loot"] = [{ idItem: equipment, amount: 1 }];
-
-        if (potionStacksLeft > 0 && Math.random() < 0.65) {
-            const potion = randomFrom(POTION_LOOT.filter(isValidItem));
-            loot.push({ idItem: potion, amount: randomInt(2, 6) });
-            potionStacksLeft -= 1;
-        }
+        const map = pickLeastUsedMap(counts);
+        counts.set(map, Number(counts.get(map) ?? 0) + 1);
+        const blockedByPlayers = [...chestPositions, ...playerPositions];
+        const spawn = findRandomArenaSpawn(
+            map,
+            reserved,
+            blockedByPlayers,
+            index < playerPositions.length
+                ? huntersGameConfig.chestGeneration.minPlayerChestDistance
+                : huntersGameConfig.chestGeneration.minChestDistance,
+        );
+        chestPositions.push(spawn);
 
         const chest: HunterChest = {
             id: `chest-${state.matchId}-${index}`,
@@ -327,9 +561,10 @@ function generateChests() {
             x: spawn.x,
             y: spawn.y,
             openedBy: null,
-            loot,
+            loot: buildChestLoot(),
         };
         state.chests.set(chest.id, chest);
+        placeChestOnMap(chest);
     }
 }
 
@@ -404,6 +639,140 @@ function aliveCount(): number {
     return count;
 }
 
+export function isSafePhaseActive(): boolean {
+    return state.phase === "ACTIVE" && Boolean(state.safePhaseEndsAt && Date.now() < state.safePhaseEndsAt);
+}
+
+export function isPvpEnabled(): boolean {
+    return state.phase === "ACTIVE" && !isSafePhaseActive();
+}
+
+export function isParticipant(idUser: string | number | undefined | null): boolean {
+    return typeof idUser !== "undefined" && idUser !== null && state.participants.has(String(idUser));
+}
+
+export function isHuntersCombat(leftId: string | number | undefined | null, rightId: string | number | undefined | null): boolean {
+    if (!leftId || !rightId || !isPvpEnabled()) {
+        return false;
+    }
+
+    const left = getUser(String(leftId));
+    const right = getUser(String(rightId));
+    return Boolean(
+        left?.huntersGame &&
+            right?.huntersGame &&
+            left.huntersGameMatchId &&
+            left.huntersGameMatchId === right.huntersGameMatchId &&
+            state.participants.get(String(leftId))?.alive &&
+            state.participants.get(String(rightId))?.alive,
+    );
+}
+
+export function getAttackDeniedReason(
+    attacker: RuntimeCharacter | undefined,
+    target: RuntimeCharacter | undefined,
+): string | null {
+    if (!attacker?.huntersGame || !target?.huntersGame) {
+        return null;
+    }
+
+    if (!attacker.huntersGameMatchId || attacker.huntersGameMatchId !== target.huntersGameMatchId) {
+        return null;
+    }
+
+    if (isSafePhaseActive()) {
+        return "Hunters Game> Fase segura activa. No puedes atacar todavia.";
+    }
+
+    return null;
+}
+
+function safePhaseSecondsRemaining(): number {
+    return state.safePhaseEndsAt ? Math.max(0, Math.ceil((state.safePhaseEndsAt - Date.now()) / 1000)) : 0;
+}
+
+function statusLabel(): string {
+    if (state.phase === "ACTIVE" && isSafePhaseActive()) {
+        return "FASE SEGURA";
+    }
+
+    if (state.phase === "ACTIVE") {
+        return "COMBATE ACTIVO";
+    }
+
+    return state.phase;
+}
+
+function addQuestPoints(user: RuntimeCharacter, amount: number) {
+    if (amount <= 0) {
+        return;
+    }
+
+    const progress = getProgress(user);
+    progress.puntosCanje = Number(progress.puntosCanje ?? 0) + amount;
+    user.puntosCanje = progress.puntosCanje;
+    saveProgress(user);
+}
+
+function addGold(idUser: string, amount: number) {
+    const user = getUser(idUser);
+    const client = getClient(idUser);
+    if (!user || amount <= 0) {
+        return;
+    }
+
+    user.gold = Number(user.gold ?? 0) + amount;
+    if (client) {
+        handleProtocol.actGold(user.gold, client);
+    }
+}
+
+function sendCharacterRefresh(idUser: string) {
+    const user = getUser(idUser);
+    const client = getClient(idUser);
+    if (!user || !client) {
+        return;
+    }
+
+    const pkg = socket.getClient(client);
+    handleProtocol.sendMyCharacter(user);
+    client.send(pkg);
+}
+
+function awardKillReward(killerId: string, victimId: string) {
+    const key = `${state.matchId}:${killerId}:${victimId}`;
+    const user = getUser(killerId);
+    if (!user || state.rewardedKills.has(key)) {
+        return;
+    }
+
+    state.rewardedKills.add(key);
+    addQuestPoints(user, huntersGameConfig.killReward.questPoints);
+    addGold(killerId, huntersGameConfig.killReward.gold);
+    sendCharacterRefresh(killerId);
+    tell(
+        killerId,
+        `Kill valida: +${huntersGameConfig.killReward.questPoints} puntos de canje y +${huntersGameConfig.killReward.gold} oro.`,
+    );
+}
+
+function awardWinnerReward(winnerId: string) {
+    const user = getUser(winnerId);
+    if (!user) {
+        return;
+    }
+
+    const participantCount = Math.max(MIN_PLAYERS, Number(state.initialParticipantCount || state.participants.size || 0));
+    const questPoints =
+        huntersGameConfig.winnerReward.baseQuestPoints + participantCount * huntersGameConfig.winnerReward.questPointsPerParticipant;
+    const gold = huntersGameConfig.winnerReward.baseGold + participantCount * huntersGameConfig.winnerReward.goldPerParticipant;
+
+    addQuestPoints(user, questPoints);
+    addGold(winnerId, gold);
+    sendCharacterRefresh(winnerId);
+    tell(winnerId, `Ganaste Hunters Game: +${questPoints} puntos de canje y +${gold} oro.`);
+}
+
 function buildPayload(idUser?: string) {
     const participant = idUser ? state.participants.get(idUser) : null;
     const active = state.phase !== "CLOSED" && state.phase !== "COMPLETED" && state.phase !== "ABORTED";
@@ -415,8 +784,14 @@ function buildPayload(idUser?: string) {
         matchId: state.matchId,
         aliveCount: aliveCount(),
         totalPlayers: state.participants.size,
+        maxPlayers: MAX_PLAYERS,
+        isFull: state.participants.size >= MAX_PLAYERS,
         kills: participant?.kills ?? 0,
         zoneSecondsRemaining: endsAt ? Math.max(0, Math.ceil((endsAt - Date.now()) / 1000)) : 0,
+        safePhaseActive: isSafePhaseActive(),
+        safePhaseSecondsRemaining: safePhaseSecondsRemaining(),
+        pvpEnabled: isPvpEnabled(),
+        statusLabel: statusLabel(),
         nextPhaseAt: state.nextPhaseAt,
         killFeed: state.killFeed.slice(-5),
     };
@@ -441,6 +816,7 @@ function clearParticipantFlag(idUser: string) {
         user.huntersGame = false;
         user.huntersGameMatchId = null;
         user.huntersGameQueued = false;
+        sendCharacterRefresh(idUser);
     }
 }
 
@@ -475,11 +851,15 @@ function startRegistration(manual = false, scheduledStartsAt?: number) {
     state.phase = "REGISTRATION";
     state.matchId = `hunters-${now}`;
     state.participants.clear();
+    state.rewardedKills.clear();
     state.chests.clear();
     state.killFeed = [];
     state.registrationStartsAt = now;
     state.startsAt = manual ? now + 30_000 : scheduledStartsAt ?? now + REGISTRATION_MINUTES * 60_000;
     state.nextPhaseAt = state.startsAt;
+    state.safePhaseEndsAt = null;
+    state.initialParticipantCount = 0;
+    state.safePhaseNoticesSent.clear();
 
     announce(`Inscripcion abierta. Escribe /hunters para participar. Inicio en ${manual ? "30 segundos" : "10 minutos"}.`);
     sendStateToParticipants();
@@ -489,6 +869,7 @@ function startRegistration(manual = false, scheduledStartsAt?: number) {
 
 function abortEvent(reason: string) {
     const ids = Array.from(state.participants.keys());
+    clearChestsFromMap();
     for (const idUser of ids) {
         const wasInMatch = Boolean(getUser(idUser)?.huntersGame);
         restoreRealInventory(idUser);
@@ -502,9 +883,13 @@ function abortEvent(reason: string) {
     state.phase = "ABORTED";
     state.matchId = null;
     state.participants.clear();
+    state.rewardedKills.clear();
     state.chests.clear();
     state.killFeed = [];
     state.nextPhaseAt = null;
+    state.safePhaseEndsAt = null;
+    state.initialParticipantCount = 0;
+    state.safePhaseNoticesSent.clear();
     announce(`Evento cancelado: ${reason}`);
 
     return { ok: true, message: `Hunters Game cancelado: ${reason}` };
@@ -518,14 +903,16 @@ function beginMatch() {
 
     state.phase = "ACTIVE";
     state.nextPhaseAt = Date.now() + MATCH_DURATION_MS;
-    generateChests();
-    announce(`La partida comenzo con ${state.participants.size} jugadores.`);
+    state.safePhaseEndsAt = Date.now() + huntersGameConfig.initialSafeSeconds * 1000;
+    state.initialParticipantCount = state.participants.size;
+    state.safePhaseNoticesSent.clear();
+    announce(`La partida comenzo con ${state.participants.size} jugadores. Fase segura: ${huntersGameConfig.initialSafeSeconds} segundos.`);
 
-    let spawnIndex = 0;
+    const spawns = assignParticipantSpawns();
     for (const idUser of state.participants.keys()) {
         const user = getUser(idUser);
         if (user) {
-            const spawn = findRandomArenaSpawn(spawnIndex++);
+            const spawn = spawns.get(idUser) ?? { map: randomFrom(ARENA_MAPS), x: 50, y: 50 };
             applyEventInventory(idUser);
             game.forceDismount(idUser);
             user.huntersGame = true;
@@ -537,15 +924,18 @@ function beginMatch() {
         }
     }
 
+    generateChests();
     sendStateToParticipants();
 }
 
 function finishEvent(winnerId: string | null) {
     state.phase = "FINISHING";
     state.nextPhaseAt = Date.now() + 5_000;
+    clearChestsFromMap();
 
     if (winnerId) {
         const winner = state.participants.get(winnerId);
+        awardWinnerReward(winnerId);
         announce(`${winner?.name ?? "Un jugador"} gano Hunters Game.`);
     } else {
         announce("Hunters Game finalizo sin ganador.");
@@ -561,9 +951,28 @@ function finishEvent(winnerId: string | null) {
     state.phase = "COMPLETED";
     state.matchId = null;
     state.participants.clear();
+    state.rewardedKills.clear();
     state.chests.clear();
     state.killFeed = [];
     state.nextPhaseAt = null;
+    state.safePhaseEndsAt = null;
+    state.initialParticipantCount = 0;
+    state.safePhaseNoticesSent.clear();
+}
+
+function sendSafePhaseNotices() {
+    if (!isSafePhaseActive()) {
+        return;
+    }
+
+    const remaining = safePhaseSecondsRemaining();
+    const notices = [60, 30, 10, 5, 4, 3, 2, 1];
+    for (const notice of notices) {
+        if (remaining <= notice && !state.safePhaseNoticesSent.has(notice)) {
+            state.safePhaseNoticesSent.add(notice);
+            announce(`Fase segura: ${notice} segundo${notice === 1 ? "" : "s"}.`);
+        }
+    }
 }
 
 function tick() {
@@ -583,6 +992,13 @@ function tick() {
     }
 
     if (state.phase === "ACTIVE") {
+        if (isSafePhaseActive()) {
+            sendSafePhaseNotices();
+        } else if (state.safePhaseEndsAt && !state.safePhaseNoticesSent.has(0)) {
+            state.safePhaseNoticesSent.add(0);
+            announce("COMIENZA LA CACERIA!");
+        }
+
         sendStateToParticipants();
 
         if (aliveCount() <= 1) {
@@ -629,20 +1045,74 @@ export function openNearestChest(idUser: string) {
         return { ok: false, message: "No hay cofres cerrados cerca." };
     }
 
+    return openChest(idUser, chest);
+}
+
+function openChest(idUser: string, chest: HunterChest) {
+    if (chest.openedBy) {
+        return { ok: false, message: "Ese cofre ya fue abierto." };
+    }
+
     const delivered: string[] = [];
+    const deliveredItems: Array<{ idItem: number; amount: number }> = [];
     for (const item of chest.loot) {
         if (addEventItemToInventory(idUser, item.idItem, item.amount)) {
             delivered.push(`${item.amount}x ${vars.datObj[item.idItem]?.name ?? item.idItem}`);
+            deliveredItems.push(item);
         }
     }
 
-    if (delivered.length === 0) {
-        return { ok: false, message: "No tienes espacio para abrir este cofre." };
+    if (deliveredItems.length !== chest.loot.length) {
+        for (const item of deliveredItems) {
+            game.quitarUserInvItem(idUser, findSlotWithItem(idUser, item.idItem), item.amount);
+        }
+        return { ok: false, message: "No tienes espacio suficiente para abrir este cofre." };
     }
 
     chest.openedBy = idUser;
+    removeChestFromMap(chest);
     tell(idUser, `Abriste un cofre: ${delivered.join(", ")}.`);
     return { ok: true, message: `Cofre abierto: ${delivered.join(", ")}.` };
+}
+
+function findSlotWithItem(idUser: string, idItem: number): string {
+    const user = getUser(idUser);
+    const inv = (user?.inv ?? {}) as InventoryRecord;
+    return Object.entries(inv).find(([, item]) => Number(item.idItem) === Number(idItem))?.[0] ?? "0";
+}
+
+export function openChestAt(idUser: string, map: number, x: number, y: number) {
+    if (state.phase !== "ACTIVE") {
+        return { ok: false, message: "Los cofres solo se pueden abrir con la partida en curso." };
+    }
+
+    const user = getUser(idUser);
+    const participant = state.participants.get(idUser);
+    if (!user?.huntersGame || !participant?.alive) {
+        return { ok: false, message: "No estas participando activamente en Hunters Game." };
+    }
+
+    if (Number(user.map) !== Number(map)) {
+        return { ok: false, message: "Ese cofre no esta en tu mapa." };
+    }
+
+    const distance = Math.max(Math.abs(Number(user.pos?.x ?? 0) - x), Math.abs(Number(user.pos?.y ?? 0) - y));
+    if (distance > 2) {
+        return { ok: false, message: "Estas demasiado lejos del cofre." };
+    }
+
+    const tile = vars.mapa[map]?.[y]?.[x];
+    if (tile?.objInfo?.objIndex !== HUNTERS_ITEM_IDS.chest) {
+        return { ok: false, message: "No hay un Cofre Hunters en esa posicion." };
+    }
+
+    const chestId = tile.objInfo.huntersChestId;
+    const chest = (chestId ? state.chests.get(String(chestId)) : null) ?? findNearestClosedChest(user);
+    if (!chest || Number(chest.map) !== Number(map) || Number(chest.x) !== x || Number(chest.y) !== y) {
+        return { ok: false, message: "Ese cofre ya no esta disponible." };
+    }
+
+    return openChest(idUser, chest);
 }
 
 export function joinEvent(idUser: string) {
@@ -655,7 +1125,7 @@ export function joinEvent(idUser: string) {
     }
 
     if (state.participants.size >= MAX_PLAYERS) {
-        return { ok: false, message: "Hunters Game ya alcanzo el maximo de participantes." };
+        return { ok: false, message: `Hunters Game esta completo (${MAX_PLAYERS}/${MAX_PLAYERS}).` };
     }
 
     const user = getUser(idUser);
@@ -695,23 +1165,24 @@ export function joinEvent(idUser: string) {
 
 export function onUserKilled(killerId: string, victimId: string) {
     const victim = state.participants.get(victimId);
-    if (!victim?.alive) {
+    if (!victim?.alive || state.phase !== "ACTIVE" || !isPvpEnabled()) {
         return;
     }
 
     const killer = state.participants.get(killerId);
     if (killer && killerId !== victimId) {
         killer.kills += 1;
+        awardKillReward(killerId, victimId);
         state.killFeed.push({
             id: `${Date.now()}-${killerId}-${victimId}`,
-            killerName: killer.name,
-            victimName: victim.name,
+            killerName: "Jugador",
+            victimName: "Jugador",
             at: Date.now(),
         });
         if (state.killFeed.length > 12) {
             state.killFeed.splice(0, state.killFeed.length - 12);
         }
-        announce(`${killer.name} mato a ${victim.name}. Quedan ${Math.max(0, aliveCount() - 1)} vivos.`);
+        announce(`Jugador mato a Jugador. Quedan ${Math.max(0, aliveCount() - 1)} vivos.`);
     }
 
     onUserDied(victimId);
@@ -753,6 +1224,9 @@ export function status() {
         alive: aliveCount(),
         startsAt: state.startsAt,
         nextPhaseAt: state.nextPhaseAt,
+        safePhaseEndsAt: state.safePhaseEndsAt,
+        safePhaseActive: isSafePhaseActive(),
+        maxPlayers: MAX_PLAYERS,
         arenaMaps: ARENA_MAPS,
         chests: state.chests.size,
         closedChests: Array.from(state.chests.values()).filter((chest) => !chest.openedBy).length,

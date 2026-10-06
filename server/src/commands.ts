@@ -53,6 +53,13 @@ const npcsInMap = loadAllMapNpcPlacements() as Array<{
     movement?: number;
 }>;
 
+const HUNTERS_CHAT_BLOCK_MESSAGE = "No puedes hablar durante Hunters Game.";
+const HUNTERS_BLOCKED_CHAT_COMMANDS = new Set(["/global", "/g", "/p", "/partychat", "/c", "/clan", "/w", "/whisper", "/privado"]);
+
+function isHuntersChatBlocked(user: unknown): boolean {
+    return Boolean((user as { huntersGame?: unknown } | undefined)?.huntersGame);
+}
+
 type CommandClient = RuntimeClient & { id: EntityId };
 type CommandCharacter = RuntimeCharacter & {
     id: EntityId;
@@ -569,6 +576,10 @@ function showChatBubbleToVisibleTargets(
 }
 
 function handleGlobalChat(user: CommandCharacter, messageText: string) {
+    if (isHuntersChatBlocked(user)) {
+        return HUNTERS_CHAT_BLOCK_MESSAGE;
+    }
+
     const message = messageText.trim();
 
     if (!message) {
@@ -648,6 +659,10 @@ function runWorldSave(targetClient?: CommandClient) {
 }
 
 function handlePartyChat(user: CommandCharacter, messageText: string) {
+    if (isHuntersChatBlocked(user)) {
+        return HUNTERS_CHAT_BLOCK_MESSAGE;
+    }
+
     const message = messageText.trim();
 
     if (!message) {
@@ -678,6 +693,10 @@ function handlePartyChat(user: CommandCharacter, messageText: string) {
 }
 
 function handleClanChat(user: CommandCharacter, messageText: string) {
+    if (isHuntersChatBlocked(user)) {
+        return HUNTERS_CHAT_BLOCK_MESSAGE;
+    }
+
     const message = messageText.trim();
 
     if (!message) {
@@ -766,6 +785,10 @@ function resolveWhisperTarget(rawText: string): { target: CommandCharacter; mess
 }
 
 function handleWhisperChat(user: CommandCharacter, rawText: string) {
+    if (isHuntersChatBlocked(user)) {
+        return HUNTERS_CHAT_BLOCK_MESSAGE;
+    }
+
     const trimmedText = rawText.trim();
 
     if (!trimmedText) {
@@ -2147,6 +2170,14 @@ const command: CommandApi = {
             const clientId = getClientId(ws);
             const user = getCharacter(clientId);
             const userInSafeZone = isInSafeZone(user);
+
+            if (
+                isHuntersChatBlocked(user) &&
+                (!commandText.startsWith("/") || HUNTERS_BLOCKED_CHAT_COMMANDS.has(commandText))
+            ) {
+                handleProtocol.console(HUNTERS_CHAT_BLOCK_MESSAGE, "white", 0, 0, ws as CommandClient);
+                return;
+            }
 
             switch (commandText) {
                 case "/online":

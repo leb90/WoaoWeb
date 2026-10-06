@@ -325,6 +325,24 @@ function areClanMembersForViewer(viewerId: EntityId | undefined, character: Runt
     return Boolean(viewerClanTag && characterClanTag && viewerClanTag === characterClanTag);
 }
 
+function shouldAnonymizeHuntersCharacter(viewerId: EntityId | undefined, character: RuntimeCharacter | undefined): boolean {
+    if (!character?.huntersGame) {
+        return false;
+    }
+
+    if (typeof viewerId === "undefined") {
+        return Boolean(character.huntersGameMatchId);
+    }
+
+    const viewer = getCharacterById(viewerId);
+    return Boolean(
+        viewer?.huntersGame &&
+            viewer.huntersGameMatchId &&
+            character.huntersGameMatchId &&
+            viewer.huntersGameMatchId === character.huntersGameMatchId,
+    );
+}
+
 function getMovementRestrictionState(
     entity: Pick<RuntimeCharacter | RuntimeNpc, "inmovilizado" | "paralizado"> | undefined,
 ): number {
@@ -790,8 +808,10 @@ function writeInmoPayload(idUser: EntityId, movementRestriction: number | boolea
 }
 
 function writeCharacterPayload(character: ProtocolCharacter, viewerId?: EntityId, includeExtendedVitals = true) {
+    const huntersAnonymous = shouldAnonymizeHuntersCharacter(viewerId, character);
+
     pkg.writeDouble(character.id);
-    pkg.writeString(character.nameCharacter);
+    pkg.writeString(huntersAnonymous ? "Jugador" : character.nameCharacter);
     pkg.writeByte(character.idClase);
     pkg.writeShort(character.map);
     pkg.writeByte(character.pos.x);
@@ -803,12 +823,12 @@ function writeCharacterPayload(character: ProtocolCharacter, viewerId?: EntityId
     pkg.writeShort(character.idBody);
     pkg.writeByte(character.privileges);
     pkg.writeByte(character.heading);
-    pkg.writeString(character.color);
-    pkg.writeString(character.clan);
+    pkg.writeString(huntersAnonymous ? "#D8C7A1" : character.color);
+    pkg.writeString(huntersAnonymous ? "" : character.clan);
     pkg.writeByte(character.dead ? 1 : 0);
     pkg.writeByte(character.invisibleSpell ? 1 : 0);
     pkg.writeByte(character.hiddenSkill ? 1 : 0);
-    pkg.writeByte(arePartyMembersForViewer(viewerId, character) ? 1 : 0);
+    pkg.writeByte(!huntersAnonymous && arePartyMembersForViewer(viewerId, character) ? 1 : 0);
     pkg.writeByte(getMovementRestrictionState(character));
     pkg.writeInt(getMovementRestrictionRemainingMs(character, vars.timing.statusDurations.crowdControlUserMs));
     pkg.writeShort(character.hp);
@@ -820,7 +840,7 @@ function writeCharacterPayload(character: ProtocolCharacter, viewerId?: EntityId
         pkg.writeByte(character.adminSummonedBot ? 1 : 0);
     }
 
-    pkg.writeByte(areClanMembersForViewer(viewerId, character) ? 1 : 0);
+    pkg.writeByte(!huntersAnonymous && areClanMembersForViewer(viewerId, character) ? 1 : 0);
 }
 
 function getNpcQuestStatusForViewer(npc: ProtocolNpc, viewerId?: EntityId): number {
@@ -1231,10 +1251,11 @@ const handleServer: HandleProtocolApi = {
         const invisibilitySpellRemainingMs = character.invisibleSpell
             ? getInvisibilitySpellRemainingMs(character.cooldownInvisibleSpell)
             : 0;
+        const huntersAnonymous = shouldAnonymizeHuntersCharacter(character.id, character);
 
         pkg.setPackageID(pkg.clientPacketID.getMyCharacter);
         pkg.writeDouble(character.id);
-        pkg.writeString(character.nameCharacter);
+        pkg.writeString(huntersAnonymous ? "Jugador" : character.nameCharacter);
         pkg.writeByte(character.idClase);
         pkg.writeShort(character.map);
         pkg.writeByte(character.pos.x);
@@ -1262,8 +1283,8 @@ const handleServer: HandleProtocolApi = {
         pkg.writeByte(character.zonaSegura);
         pkg.writeByte(character.seguroActivado);
         pkg.writeByte(character.seguroClanActivado);
-        pkg.writeString(character.color);
-        pkg.writeString(character.clan);
+        pkg.writeString(huntersAnonymous ? "#D8C7A1" : character.color);
+        pkg.writeString(huntersAnonymous ? "" : character.clan);
         pkg.writeByte(character.dead ? 1 : 0);
         pkg.writeByte(character.deadWorldActive ? 1 : 0);
         pkg.writeByte(character.invisibleAdmin ? 1 : 0);

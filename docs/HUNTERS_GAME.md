@@ -59,9 +59,33 @@ Tipos separados:
 
 Los items del evento deben destruirse en cleanup. No se pueden tradear, guardar en banco, publicar en subasta, enviar por correo ni sacar del evento.
 
+## Reglas actuales
+
+- Minimo para iniciar: 4 jugadores.
+- Maximo por partida: 20 jugadores. Si la cola llega a 20, nuevas inscripciones se rechazan como evento completo.
+- Los jugadores se distribuyen balanceados entre mapas 260, 261, 262 y 263. La diferencia maxima buscada es 1 jugador entre mapas.
+- Fase segura inicial: 120 segundos exactos desde el inicio de la partida. Durante esta fase se puede mover, abrir cofres, equipar y usar items Hunters, pero no se puede danar a otros jugadores.
+- No hay circulo, cierre de zona ni dano ambiental por reduccion de area.
+- Al terminar la fase segura se habilita PvP total entre participantes en los 4 mapas, sin restricciones por faccion, clan, party o seguro.
+- Los participantes ven a otros participantes como `Jugador`, sin clan ni indicadores sociales. El servidor conserva las identidades reales para rewards y logs.
+- El chat saliente queda bloqueado durante la partida con el mensaje `No puedes hablar durante Hunters Game.`
+
 ## Cofres
 
-Cada partida genera cofres nuevos con posiciones aleatorias validas. La apertura debe ser atomica servidor-side para evitar doble loot. Cada cofre debe tener al menos una pieza de equipamiento y el total de pociones Hunters de toda la partida debe estar limitado.
+Cada partida genera cofres nuevos con posiciones aleatorias validas. La apertura es atomica servidor-side para evitar doble loot.
+
+- Cantidad: `ceil(jugadores * 1.5)`, minimo 4, maximo 30.
+- Distribucion: balanceada entre mapas, con diferencia maxima buscada de 1 cofre entre mapas.
+- Validacion de posicion: tile caminable, sin bloqueo, sin `tileExit`, sin NPC, sin jugador y sin otro cofre cercano.
+- Apertura: click sobre el `Cofre Hunters` en el mapa o `/hunters cofre` como comando de prueba.
+- Loot garantizado por cofre: 1 equipo + 10 a 20 pociones Hunters + 10 a 20 `Flecha Hunters`.
+
+Objetos reservados:
+
+- 1720: `Cofre Hunters`
+- 1721: `Pocion Roja Hunters`
+- 1722: `Pocion Azul Hunters`
+- 1723: `Flecha Hunters`
 
 ## Muerte y HUD
 
@@ -76,10 +100,17 @@ No hay respawn. Cuando un jugador muere:
 HUD minimo:
 
 - HUNTERS GAME
+- Fase segura / combate activo
+- Countdown servidor de fase segura o fin de partida
 - Vivos X/Y
 - Kills del jugador
-- Zona / siguiente cierre
 - Feed compacto de kills recientes.
+
+Recompensas:
+
+- Cada kill valida durante PvP entrega puntos de canje y oro una sola vez.
+- El ganador recibe recompensa escalada por `initialParticipantCount`, no por vivos al final.
+- Si no llega al minimo de jugadores, se cancela sin recompensas y se restaura a los anotados.
 
 ## Agenda
 
@@ -96,7 +127,7 @@ La inscripcion abre 10 minutos antes. El modulo servidor debe calcularlo por tim
 2. Mapas 260-263: limpieza/diseno desde editor, sin decorar manualmente en codigo.
 3. Inventario/equipamiento aislado y bloqueo de inventario real.
 4. Cofres atomicos con loot por partida.
-5. Zona segura con coordenadas globales.
+5. Fase segura inicial sin PvP.
 6. Recompensas, recovery tras reinicio y panel dinamico de eventos.
 
 ## Comandos de prueba

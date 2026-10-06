@@ -1031,8 +1031,14 @@ export interface HuntersGameStatePayload {
     matchId: string | null;
     aliveCount: number;
     totalPlayers: number;
+    maxPlayers: number;
+    isFull: boolean;
     kills: number;
     zoneSecondsRemaining: number;
+    safePhaseActive: boolean;
+    safePhaseSecondsRemaining: number;
+    pvpEnabled: boolean;
+    statusLabel: string;
     nextPhaseAt: number | null;
     killFeed: HuntersGameKillFeedEntry[];
 }
@@ -1043,8 +1049,14 @@ const DEFAULT_HUNTERS_GAME_STATE: HuntersGameStatePayload = {
     matchId: null,
     aliveCount: 0,
     totalPlayers: 0,
+    maxPlayers: 20,
+    isFull: false,
     kills: 0,
     zoneSecondsRemaining: 0,
+    safePhaseActive: false,
+    safePhaseSecondsRemaining: 0,
+    pvpEnabled: false,
+    statusLabel: "CLOSED",
     nextPhaseAt: null,
     killFeed: [],
 };

@@ -1291,6 +1291,7 @@ function resetFuerzaAgilidadBuffs(user: GameCharacter, client?: RuntimeClient) {
 function isArenaCombat(user: GameCharacter | undefined, userAttacked: GameCharacter | undefined): boolean {
     return Boolean(
         (user?.pvpChar && userAttacked?.pvpChar && user.arenaRoomId && user.arenaRoomId === userAttacked.arenaRoomId) ||
+        getHuntersGame().isHuntersCombat(user?.id, userAttacked?.id) ||
         (user?.rankedMatchId &&
             userAttacked?.rankedMatchId &&
             user.rankedMatchId === userAttacked.rankedMatchId &&
@@ -1318,6 +1319,10 @@ function getChallengeManager() {
 
 function getFactionWars() {
     return require("./factionWars") as typeof import("./factionWars");
+}
+
+function getHuntersGame() {
+    return require("./huntersGame") as typeof import("./huntersGame");
 }
 
 function isUnsafeArenaTile(character: Pick<GameCharacter, "map" | "pos">): boolean {
@@ -1349,6 +1354,14 @@ function isBlockedBySafeZone(user: GameCharacter, userAttacked: GameCharacter): 
 }
 
 function applyOpenWorldAttackRules(user: GameCharacter, userAttacked: GameCharacter, arenaCombat: boolean): boolean {
+    const huntersDeniedReason = getHuntersGame().getAttackDeniedReason(user, userAttacked);
+    if (huntersDeniedReason) {
+        withUserClient(user.id, (userClient) => {
+            handleProtocol.console(huntersDeniedReason, "white", 1, 0, userClient);
+        });
+        return false;
+    }
+
     if (arenaCombat) {
         return true;
     }
@@ -9213,6 +9226,13 @@ function Game(this: GameApi) {
             const isOffensiveSpell = idUser !== idUserAttacked && isOffensiveSpellData(datSpell);
             const factionWars = getFactionWars();
             const isSupportSpellCast = idUser !== idUserAttacked && isSupportSpell(datSpell);
+            const huntersDeniedReason = isOffensiveSpell ? getHuntersGame().getAttackDeniedReason(user, userAttacked) : null;
+            if (huntersDeniedReason) {
+                withUserClient(idUser, (userClient) => {
+                    handleProtocol.console(huntersDeniedReason, "white", 0, 0, userClient);
+                });
+                return 0;
+            }
 
             if (
                 vars.mapData[user.map].pk &&
@@ -9248,7 +9268,7 @@ function Game(this: GameApi) {
                 return 0;
             }
 
-            if (challengeCombatRelation === "ally" && isOffensiveSpell) {
+            if (!arenaCombat && challengeCombatRelation === "ally" && isOffensiveSpell) {
                 withUserClient(idUser, (userClient) => {
                     handleProtocol.console(
                         "[Retos] No puedes atacar a tu compañero de equipo.",
@@ -10047,6 +10067,13 @@ function Game(this: GameApi) {
 
             const arenaCombat = isArenaCombat(user, userAttacked);
             const challengeCombatRelation = getChallengeManager().getCombatRelation(user, userAttacked);
+            const huntersDeniedReason = getHuntersGame().getAttackDeniedReason(user, userAttacked);
+            if (huntersDeniedReason) {
+                withUserClient(idUser, (userClient) => {
+                    handleProtocol.console(huntersDeniedReason, "white", 0, 0, userClient);
+                });
+                return 0;
+            }
 
             if (idUser == idUserAttacked) {
                 withUserClient(idUser, (userClient) => {
@@ -10055,7 +10082,7 @@ function Game(this: GameApi) {
                 return 0;
             }
 
-            if (challengeCombatRelation === "ally") {
+            if (!arenaCombat && challengeCombatRelation === "ally") {
                 withUserClient(idUser, (userClient) => {
                     handleProtocol.console(
                         "[Retos] No puedes atacar a tu compañero de equipo.",
@@ -10068,11 +10095,9 @@ function Game(this: GameApi) {
                 return 0;
             }
 
-            const friendlyFireReason = getFriendlyFireBlockReason(
-                idUser,
-                idUserAttacked,
-                challengeCombatRelation,
-            );
+            const friendlyFireReason = !arenaCombat
+                ? getFriendlyFireBlockReason(idUser, idUserAttacked, challengeCombatRelation)
+                : null;
             if (friendlyFireReason) {
                 withUserClient(idUser, (userClient) => {
                     handleProtocol.console(friendlyFireReason, "white", 0, 0, userClient);

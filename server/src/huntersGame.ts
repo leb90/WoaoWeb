@@ -95,7 +95,7 @@ const huntersGameConfig = {
     registrationMinutes: 10,
     matchDurationMs: 30 * 60_000,
     initialSafeSeconds: 120,
-    minPlayers: 4,
+    minPlayers: 3,
     maxPlayers: 20,
     exit: { map: 34, x: 50, y: 50 },
     maps: [260, 261, 262, 263],
@@ -135,7 +135,10 @@ const MIN_PLAYERS = huntersGameConfig.minPlayers;
 const MAX_PLAYERS = huntersGameConfig.maxPlayers;
 const EXIT = huntersGameConfig.exit;
 const ARENA_MAPS = huntersGameConfig.maps;
-const EQUIPMENT_LOOT = [1037, 559, 1056, 1127, 844, 732, 730, 729, 496, 952, 950, 500, 745, 1223, 766, 764, 1088, 400, 165, 756];
+const EQUIPMENT_LOOT = [
+    1724, 1725, 1726, 1727, 1728, 1729, 1730, 1731, 1732, 1733, 1734, 1735, 1736, 1737, 1738, 1739, 1740, 1741, 1742,
+    1743, 1744, 1745, 1746, 1747, 1748,
+];
 const SCHEDULE = [
     { hour: 10, minute: 0 },
     { hour: 22, minute: 0 },

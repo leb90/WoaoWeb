@@ -5479,6 +5479,11 @@ function Game(this: GameApi) {
                 return;
             }
 
+            if (obj.eventOnly === "HUNTERS_GAME" && !user.huntersGame) {
+                handleProtocol.console("Este item solo se puede usar en Hunters Game.", "white", 0, 0, ws);
+                return;
+            }
+
             if (user.dead && obj.objType !== vars.objType.barcos) {
                 handleProtocol.console("Los muertos no pueden usar items.", "white", 0, 0, ws);
                 return;
@@ -6227,7 +6232,7 @@ function Game(this: GameApi) {
                 return;
             }
 
-            if (vars.datObj[idItem].newbie || user.pvpChar) {
+            if (vars.datObj[idItem].newbie || user.pvpChar || vars.datObj[idItem].eventOnly === "HUNTERS_GAME") {
                 handleProtocol.console("No puedes tirar este item.", "white", 0, 0, ws);
                 return;
             }
@@ -6690,6 +6695,9 @@ function Game(this: GameApi) {
         }
         if (objectData.newbie) {
             return { ok: false, message: "Los items newbie no se pueden subastar." };
+        }
+        if (objectData.eventOnly === "HUNTERS_GAME") {
+            return { ok: false, message: "Este item solo se puede usar en Hunters Game." };
         }
 
         const previousInventory = cloneInventoryRecord(user.inv);
@@ -11497,6 +11505,21 @@ function Game(this: GameApi) {
                             user.tradeMode === "bank"
                                 ? "No puedes guardar items de montura en la boveda."
                                 : "No puedes comerciar items de montura.",
+                            "white",
+                            0,
+                            0,
+                            userClient,
+                        );
+                    });
+                    return;
+                }
+
+                if (vars.datObj[itemUser.idItem]?.eventOnly === "HUNTERS_GAME") {
+                    withUserClient(idUser, (userClient) => {
+                        handleProtocol.console(
+                            user.tradeMode === "bank"
+                                ? "No puedes guardar items de Hunters Game en la boveda."
+                                : "Este item solo se puede usar en Hunters Game.",
                             "white",
                             0,
                             0,

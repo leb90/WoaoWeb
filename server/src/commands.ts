@@ -3139,7 +3139,7 @@ const command: CommandApi = {
 
                 case "/woao": {
                     handleProtocol.console(
-                        "WOAO: /quest /quests /questaceptar /questabandonar /montura /activarmontura /renombrarmontura /liberarmontura /monturastat /ofertarmontura /subastas /premios /canjear /donaciones /canjeardonacion /viaje /comerciar /ranked /rankedaceptar /rankedrechazar /hunters /hunger /torneo /participar /atorneo /remort /ciudades /castillos /castillo /clanpuntos /bloodcastle /guerra /templo /domar /robar /critico /pagarmulta /casa /dia /party /aceptar /partyinfo /salirparty",
+                        "WOAO: /quest /quests /questaceptar /questabandonar /montura /activarmontura /renombrarmontura /liberarmontura /monturastat /ofertarmontura /subastas /premios /canjear /donaciones /canjeardonacion /viaje /comerciar /ranked /rankedaceptar /rankedrechazar /hunters /crearhunter /hunger /torneo /participar /atorneo /remort /ciudades /castillos /castillo /clanpuntos /bloodcastle /guerra /templo /domar /robar /critico /pagarmulta /casa /dia /party /aceptar /partyinfo /salirparty",
                         "#E69500",
                         1,
                         0,
@@ -3173,23 +3173,48 @@ const command: CommandApi = {
                     break;
                 }
 
+                case "/crearhunter": {
+                    if (!hasStaffPrivileges(user)) {
+                        handleProtocol.console("No tienes permisos para crear Hunters Game.", "white", 1, 0, ws as CommandClient);
+                        break;
+                    }
+
+                    const huntersGame = require("./huntersGame") as typeof import("./huntersGame");
+                    const result = huntersGame.startEvent();
+                    handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
                 case "/hunters": {
                     const huntersGame = require("./huntersGame") as typeof import("./huntersGame");
-                    const [action] = nextText.trim().split(/\s+/);
+                    const [rawAction] = nextText.trim().split(/\s+/);
+                    const action = (rawAction ?? "").toLowerCase();
+                    const staffAction = ["start", "stop", "cancel", "cleanup", "status", "players", "chests", "zone"].includes(action);
 
-                    if (action === "start" && hasAdminPrivileges(user)) {
+                    if (staffAction && !hasStaffPrivileges(user)) {
+                        handleProtocol.console(
+                            "No tienes permisos para administrar Hunters Game.",
+                            "white",
+                            1,
+                            0,
+                            ws as CommandClient,
+                        );
+                        break;
+                    }
+
+                    if (action === "start") {
                         const result = huntersGame.startEvent();
                         handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
                         break;
                     }
 
-                    if ((action === "stop" || action === "cancel" || action === "cleanup") && hasAdminPrivileges(user)) {
+                    if (action === "stop" || action === "cancel" || action === "cleanup") {
                         const result = huntersGame.cancelEvent();
                         handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
                         break;
                     }
 
-                    if (action === "status" && hasAdminPrivileges(user)) {
+                    if (action === "status") {
                         const status = huntersGame.status();
                         handleProtocol.console(
                             `Hunters Game> fase ${status.phase} - jugadores ${status.players} - vivos ${status.alive} - mapas ${status.arenaMaps.join(", ")}`,
@@ -3201,7 +3226,7 @@ const command: CommandApi = {
                         break;
                     }
 
-                    if (action === "players" && hasAdminPrivileges(user)) {
+                    if (action === "players") {
                         const players = huntersGame.listPlayers();
                         const text =
                             players.length > 0
@@ -3217,7 +3242,7 @@ const command: CommandApi = {
                         break;
                     }
 
-                    if (action === "chests" && hasAdminPrivileges(user)) {
+                    if (action === "chests") {
                         const status = huntersGame.status();
                         handleProtocol.console(
                             `Hunters Game> cofres ${status.closedChests}/${status.chests} cerrados.`,
@@ -3229,7 +3254,7 @@ const command: CommandApi = {
                         break;
                     }
 
-                    if (action === "zone" && hasAdminPrivileges(user)) {
+                    if (action === "zone") {
                         handleProtocol.console(
                             "Hunters Game> La zona segura progresiva queda preparada para la siguiente fase de implementacion visual/daño.",
                             "#E69500",

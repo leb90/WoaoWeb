@@ -2943,6 +2943,11 @@ function equiparItem(ws: RuntimeClient) {
                 return;
             }
 
+            if (item.eventOnly === "HUNTERS_GAME" && !user.huntersGame && !itemInventary.equipped) {
+                handleProtocol.console("Este item solo se puede usar en Hunters Game.", "white", 0, 0, ws);
+                return;
+            }
+
             if (
                 Array.isArray(item.clasesNoPermitidas) &&
                 item.clasesNoPermitidas.includes(user.idClase) &&

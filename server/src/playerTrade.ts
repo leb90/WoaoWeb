@@ -138,6 +138,10 @@ export function offerItem(idUser: string, slot: string, amount: number) {
         return { ok: false, message: "Los items de montura no se pueden comerciar." };
     }
 
+    if (vars.datObj?.[item.idItem]?.eventOnly === "HUNTERS_GAME") {
+        return { ok: false, message: "Este item solo se puede usar en Hunters Game." };
+    }
+
     const safeAmount = Math.max(1, Math.min(Number(item.cant ?? item.amount ?? 0), Math.floor(amount)));
     const offer = session.offers[String(idUser)];
     offer.items = [{ slot: String(slot), idItem: Number(item.idItem), amount: safeAmount }];

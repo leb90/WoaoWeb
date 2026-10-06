@@ -3139,7 +3139,7 @@ const command: CommandApi = {
 
                 case "/woao": {
                     handleProtocol.console(
-                        "WOAO: /quest /quests /questaceptar /questabandonar /montura /activarmontura /renombrarmontura /liberarmontura /monturastat /ofertarmontura /subastas /premios /canjear /donaciones /canjeardonacion /viaje /comerciar /ranked /rankedaceptar /rankedrechazar /hunters /crearhunter /hunger /torneo /participar /atorneo /remort /ciudades /castillos /castillo /clanpuntos /bloodcastle /guerra /templo /domar /robar /critico /pagarmulta /casa /dia /party /aceptar /partyinfo /salirparty",
+                        "WOAO: /quest /quests /questaceptar /questabandonar /montura /activarmontura /renombrarmontura /liberarmontura /monturastat /ofertarmontura /subastas /premios /canjear /donaciones /canjeardonacion /viaje /comerciar /ranked /rankedaceptar /rankedrechazar /hunters /crearhunter /torneo /participar /atorneo /remort /ciudades /castillos /castillo /clanpuntos /bloodcastle /guerra /templo /domar /robar /critico /pagarmulta /casa /dia /party /aceptar /partyinfo /salirparty",
                         "#E69500",
                         1,
                         0,
@@ -3150,25 +3150,6 @@ const command: CommandApi = {
 
                 case "/remort": {
                     const result = require("./remort").doRemort(String(clientId), nextText);
-                    handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
-                    break;
-                }
-
-                case "/hunger":
-                case "/hungergames": {
-                    const hungerGames = require("./hungerGames") as typeof import("./hungerGames");
-                    const [action, rawCapacity] = nextText.trim().split(/\s+/);
-                    if (action === "start" && hasAdminPrivileges(user)) {
-                        const result = hungerGames.startEvent(Number(rawCapacity || 6));
-                        handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
-                        break;
-                    }
-                    if (action === "cancel" && hasAdminPrivileges(user)) {
-                        const result = hungerGames.cancelEvent();
-                        handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
-                        break;
-                    }
-                    const result = hungerGames.joinEvent(String(clientId));
                     handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
                     break;
                 }

@@ -97,6 +97,13 @@ type AutomaticEventActionData = {
     targetTab?: WoaoHubTab;
 };
 
+type EventSchedule = {
+    timezone: string;
+    slots: Array<{ hour: number; minute: number }>;
+    registrationMinutes: number;
+    durationMinutes: number;
+};
+
 type AutomaticEvent = {
     id: string;
     name: string;
@@ -110,10 +117,12 @@ type AutomaticEvent = {
     actionType: EventActionType;
     actionData?: AutomaticEventActionData;
     disabledReason?: string;
+    allowJoinWhileRunning?: boolean;
 };
 
 type AutomaticEventDefinition = Omit<AutomaticEvent, "startsAt"> & {
-    startsInMinutes: number;
+    startsInMinutes?: number;
+    schedule?: EventSchedule;
 };
 
 const EVENT_CATEGORY_META: Record<EventCategory, { label: string; dotClass: string; badgeClass: string }> = {
@@ -174,14 +183,23 @@ const AUTOMATIC_EVENT_DEFINITIONS: AutomaticEventDefinition[] = [
     {
         id: "hunters_game",
         name: "Hunters Game",
-        description: "Todos contra todos sin respawn. Loot de cofres, zona y ultimo sobreviviente.",
+        description: "Todos contra todos sin respawn. La inscripción abre 10 minutos antes. Inicia a las 10:00 y a las 22:00.",
         category: "pvp",
-        startsInMinutes: 0,
-        locationLabel: "Mapas 260/263",
-        status: "available",
+        locationLabel: "Mapas 260-263",
+        status: "upcoming",
         actionLabel: "Participar",
         actionType: "join",
         actionData: { command: "/hunters" },
+        allowJoinWhileRunning: false,
+        schedule: {
+            timezone: "America/Argentina/Buenos_Aires",
+            slots: [
+                { hour: 10, minute: 0 },
+                { hour: 22, minute: 0 },
+            ],
+            registrationMinutes: 10,
+            durationMinutes: 30,
+        },
     },
     {
         id: "faction_war",
@@ -236,6 +254,92 @@ function formatAmount(value: number): string {
     return new Intl.NumberFormat("es-AR").format(value);
 }
 
+function zonedParts(date: Date, timeZone: string) {
+    const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone,
+        hour12: false,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+    }).formatToParts(date);
+    const get = (type: string) => Number(parts.find((part) => part.type === type)?.value ?? 0);
+    const hour = get("hour");
+
+    return {
+        year: get("year"),
+        month: get("month"),
+        day: get("day"),
+        hour: hour === 24 ? 0 : hour,
+        minute: get("minute"),
+        second: get("second"),
+    };
+}
+
+function zonedLocalToUtc(
+    timeZone: string,
+    year: number,
+    month: number,
+    day: number,
+    hour: number,
+    minute: number,
+): number {
+    const utcGuess = Date.UTC(year, month - 1, day, hour, minute, 0);
+    const parts = zonedParts(new Date(utcGuess), timeZone);
+    const asZoned = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second);
+    const target = Date.UTC(year, month - 1, day, hour, minute, 0);
+
+    return utcGuess + (target - asZoned);
+}
+
+function addCalendarDays(year: number, month: number, day: number, days: number) {
+    const date = new Date(Date.UTC(year, month - 1, day + days));
+
+    return {
+        year: date.getUTCFullYear(),
+        month: date.getUTCMonth() + 1,
+        day: date.getUTCDate(),
+    };
+}
+
+function resolveScheduledWindow(schedule: EventSchedule, now: number): { startsAt: number; status: EventStatus } {
+    const parts = zonedParts(new Date(now), schedule.timezone);
+    let activeStart: number | null = null;
+    let nextStart = Number.POSITIVE_INFINITY;
+
+    for (let dayOffset = -1; dayOffset <= 1; dayOffset += 1) {
+        const day = addCalendarDays(parts.year, parts.month, parts.day, dayOffset);
+
+        for (const slot of schedule.slots) {
+            const startsAt = zonedLocalToUtc(schedule.timezone, day.year, day.month, day.day, slot.hour, slot.minute);
+            const registrationStartsAt = startsAt - schedule.registrationMinutes * 60_000;
+            const endsAt = startsAt + schedule.durationMinutes * 60_000;
+
+            if (now >= registrationStartsAt && now < endsAt) {
+                activeStart = startsAt;
+            }
+
+            if (startsAt > now && startsAt < nextStart) {
+                nextStart = startsAt;
+            }
+        }
+    }
+
+    if (activeStart !== null) {
+        return {
+            startsAt: activeStart,
+            status: now < activeStart ? "available" : "upcoming",
+        };
+    }
+
+    return {
+        startsAt: Number.isFinite(nextStart) ? nextStart : now,
+        status: "upcoming",
+    };
+}
+
 function formatEventCountdown(startsAt: number, now: number): string {
     const remainingMs = startsAt - now;
 
@@ -250,11 +354,23 @@ function formatEventCountdown(startsAt: number, now: number): string {
     return `${String(hours).padStart(2, "0")}hs ${String(minutes).padStart(2, "0")}min`;
 }
 
-function buildAutomaticEvents(anchorTime: number): AutomaticEvent[] {
-    return AUTOMATIC_EVENT_DEFINITIONS.map(({ startsInMinutes, ...event }) => ({
-        ...event,
-        startsAt: anchorTime + startsInMinutes * 60_000,
-    }));
+function buildAutomaticEvents(anchorTime: number, now: number): AutomaticEvent[] {
+    return AUTOMATIC_EVENT_DEFINITIONS.map(({ startsInMinutes, schedule, ...event }) => {
+        if (schedule) {
+            const window = resolveScheduledWindow(schedule, now);
+
+            return {
+                ...event,
+                startsAt: window.startsAt,
+                status: window.status,
+            };
+        }
+
+        return {
+            ...event,
+            startsAt: anchorTime + (startsInMinutes ?? 0) * 60_000,
+        };
+    });
 }
 
 function resolveEventStatus(event: AutomaticEvent, now: number): EventStatus {
@@ -1244,7 +1360,10 @@ export default function WoaoHubModal({
                   rank: selectedRankedRank ?? getRankFromElo(selectedRankedState.elo),
               }
             : null);
-    const automaticEvents = React.useMemo(() => buildAutomaticEvents(eventScheduleAnchor), [eventScheduleAnchor]);
+    const automaticEvents = React.useMemo(
+        () => buildAutomaticEvents(eventScheduleAnchor, eventClockNow),
+        [eventClockNow, eventScheduleAnchor],
+    );
     const visibleAutomaticEvents = React.useMemo(() => {
         return automaticEvents
             .filter((event) => eventCategoryFilter === "all" || event.category === eventCategoryFilter)
@@ -2210,12 +2329,19 @@ export default function WoaoHubModal({
                                         const categoryMeta = EVENT_CATEGORY_META[event.category];
                                         const status = resolveEventStatus(event, eventClockNow);
                                         const statusMeta = EVENT_STATUS_META[status];
-                                        const registrationClosed =
-                                            event.actionType === "join" && status !== "available" && status !== "running";
+                                        const joinOpen =
+                                            event.actionType !== "join" ||
+                                            status === "available" ||
+                                            (status === "running" && event.allowJoinWhileRunning !== false);
+                                        const registrationClosed = event.actionType === "join" && !joinOpen;
                                         const disabled = Boolean(event.disabledReason) || registrationClosed;
                                         const disabledTitle =
                                             event.disabledReason ??
-                                            (registrationClosed ? "El registro todavía no abrió." : undefined);
+                                            (registrationClosed
+                                                ? status === "running"
+                                                    ? "La inscripción ya cerró."
+                                                    : "El registro todavía no abrió."
+                                                : undefined);
                                         const countdown =
                                             status === "running" ? "EN CURSO" : formatEventCountdown(event.startsAt, eventClockNow);
 

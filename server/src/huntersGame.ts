@@ -104,9 +104,7 @@ const huntersGameConfig = {
         attemptsPerMap: 2400,
     },
     chestGeneration: {
-        perPlayer: 1.5,
-        min: 4,
-        max: 30,
+        perPlayerPerMap: 1,
         minChestDistance: 8,
         minPlayerChestDistance: 6,
     },
@@ -530,11 +528,7 @@ function generateChests() {
     clearChestsFromMap();
     state.chests.clear();
 
-    const chestCount = Math.max(
-        huntersGameConfig.chestGeneration.min,
-        Math.min(huntersGameConfig.chestGeneration.max, Math.ceil(state.participants.size * huntersGameConfig.chestGeneration.perPlayer)),
-    );
-    const counts = new Map<number, number>(ARENA_MAPS.map((map) => [map, 0]));
+    const chestsPerMap = Math.max(1, state.participants.size * huntersGameConfig.chestGeneration.perPlayerPerMap);
     const reserved = new Set<string>();
     const playerPositions = Array.from(state.participants.values())
         .map((participant) => {
@@ -542,32 +536,33 @@ function generateChests() {
             return user?.map && user?.pos ? { map: Number(user.map), x: Number(user.pos.x), y: Number(user.pos.y) } : null;
         })
         .filter(Boolean) as ArenaPosition[];
-    const chestPositions: ArenaPosition[] = [];
+    let index = 0;
 
-    for (let index = 0; index < chestCount; index++) {
-        const map = pickLeastUsedMap(counts);
-        counts.set(map, Number(counts.get(map) ?? 0) + 1);
-        const blockedByPlayers = [...chestPositions, ...playerPositions];
-        const spawn = findRandomArenaSpawn(
-            map,
-            reserved,
-            blockedByPlayers,
-            index < playerPositions.length
-                ? huntersGameConfig.chestGeneration.minPlayerChestDistance
-                : huntersGameConfig.chestGeneration.minChestDistance,
-        );
-        chestPositions.push(spawn);
+    for (const map of ARENA_MAPS) {
+        const occupied = playerPositions.filter((position) => position.map === map);
 
-        const chest: HunterChest = {
-            id: `chest-${state.matchId}-${index}`,
-            map: spawn.map,
-            x: spawn.x,
-            y: spawn.y,
-            openedBy: null,
-            loot: buildChestLoot(),
-        };
-        state.chests.set(chest.id, chest);
-        placeChestOnMap(chest);
+        for (let placed = 0; placed < chestsPerMap; placed++) {
+            const spawn = findRandomArenaSpawn(
+                map,
+                reserved,
+                occupied,
+                placed === 0
+                    ? huntersGameConfig.chestGeneration.minPlayerChestDistance
+                    : huntersGameConfig.chestGeneration.minChestDistance,
+            );
+
+            const chest: HunterChest = {
+                id: `chest-${state.matchId}-${index}`,
+                map: spawn.map,
+                x: spawn.x,
+                y: spawn.y,
+                openedBy: null,
+                loot: buildChestLoot(),
+            };
+            state.chests.set(chest.id, chest);
+            placeChestOnMap(chest);
+            index += 1;
+        }
     }
 }
 

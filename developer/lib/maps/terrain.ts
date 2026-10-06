@@ -169,6 +169,8 @@ export function floodFillLayer(
   startY0: number,
   layerIndex: number,
   newGrh: number,
+  /** Grilla del índice (fila por fila). Si viene, se repite uno al lado del otro. */
+  pattern?: number[][],
 ): void {
   if (
     startX0 < 0 ||
@@ -180,8 +182,14 @@ export function floodFillLayer(
   ) {
     return;
   }
+  const alto = pattern?.length ?? 0;
+  const ancho = pattern?.[0]?.length ?? 0;
+  const grhAt = (x: number, y: number) => {
+    if (alto < 1 || ancho < 1 || !pattern) return newGrh;
+    return pattern[y % alto]![x % ancho] ?? newGrh;
+  };
   const target = tiles[startY0]![startX0]!.layers[layerIndex];
-  if (target === newGrh) return;
+  if (alto <= 1 && ancho <= 1 && target === grhAt(startX0, startY0)) return;
 
   const stack: Array<[number, number]> = [[startX0, startY0]];
   const seen = new Set<string>();
@@ -194,7 +202,7 @@ export function floodFillLayer(
     if (x < 0 || y < 0 || x >= width || y >= height) continue;
     const tile = tiles[y]![x]!;
     if (tile.layers[layerIndex] !== target) continue;
-    tile.layers[layerIndex] = newGrh;
+    tile.layers[layerIndex] = grhAt(x, y);
     stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
   }
 }

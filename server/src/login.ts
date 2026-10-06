@@ -76,6 +76,25 @@ const FALLBACK_POS_Y = 50;
 const ULLA_MAP_ID = 1;
 const ULLA_POS_X = 54;
 const ULLA_POS_Y = 59;
+const NIX_MAP_ID = 34;
+const NIX_POS_X = 50;
+const NIX_POS_Y = 50;
+const EVENT_MAP_IDS = new Set([
+    164, // duelo de torneo
+    205, // Blood Castle
+    208, // torneo automatico
+    211,
+    212,
+    213,
+    214,
+    215, // ranked
+    260,
+    261,
+    262,
+    263, // Hunters Game
+    268,
+    269, // Juegos del Hambre
+]);
 const DRAGON_SLAYER_SWORD_ITEM_ID = 402;
 const CLAN_RING_MAP_ID = 273;
 const WELCOME_CONSOLE_MESSAGES = [
@@ -181,6 +200,51 @@ function getMapEntryDeniedMessage(
     }
 
     return "";
+}
+
+function isLoginEventMap(mapId: number): boolean {
+    if (EVENT_MAP_IDS.has(mapId)) {
+        return true;
+    }
+
+    const huntersGame = require("./huntersGame") as typeof import("./huntersGame");
+    return huntersGame.isArenaMap(mapId);
+}
+
+function relocateFromEventMapIfNeeded(user: StoredCharacter | undefined): string {
+    if (!user || !isLoginEventMap(Number(user.map ?? 0))) {
+        return "";
+    }
+
+    user.map = NIX_MAP_ID;
+    user.posX = NIX_POS_X;
+    user.posY = NIX_POS_Y;
+    user.pos = { x: NIX_POS_X, y: NIX_POS_Y };
+    user.zonaSegura = safeZone.getSafeZoneFlag(user.map, user.pos);
+    user.huntersGame = false;
+    user.huntersGameMatchId = null;
+    user.huntersGameQueued = false;
+    user.hungerGames = false;
+    user.bloodCastle = false;
+    user.rankedArena = false;
+    user.rankedMatchId = null;
+
+    if (user.dead) {
+        user.dead = false;
+        user.deadWorldActive = false;
+        user.hp = Number(user.maxHp ?? user.hp ?? 1);
+        user.mana = Number(user.maxMana ?? user.mana ?? 0);
+
+        if (Number(user.idHead) === 500 && Number(user.idLastHead) > 0) {
+            user.idHead = user.idLastHead;
+        }
+
+        if (Number(user.idBody) === 8) {
+            user.idBody = 0;
+        }
+    }
+
+    return "Estabas en un mapa de evento. Te enviamos a Nix.";
 }
 
 function relocateCharacterToUllaIfMapLevelDenied(user: MapLevelRestrictedCharacter | undefined): string {
@@ -853,9 +917,10 @@ function Login(this: LoginApi) {
                 personaje.gold = balance.clampGold(personaje.gold || 0);
                 relocateToJailIfNeeded(personaje);
                 ensureCharacterHasValidMapPosition(personaje);
+                const eventMapMessage = relocateFromEventMapIfNeeded(personaje);
                 const fortressDeniedMessage = require("./clanCastles").relocateFromFortressIfNeeded(personaje);
                 const mapLevelDeniedMessage =
-                    fortressDeniedMessage || relocateCharacterToUllaIfMapLevelDenied(personaje);
+                    eventMapMessage || fortressDeniedMessage || relocateCharacterToUllaIfMapLevelDenied(personaje);
 
                 personaje.connected = true;
                 personaje.invisibleAdmin = personaje.privileges === 1;

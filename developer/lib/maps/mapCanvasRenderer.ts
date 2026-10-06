@@ -25,6 +25,18 @@ export type CatalogNpc = {
   headOffsetY?: number;
 };
 
+export type NeighborOverlay = {
+  id: number;
+  name: string;
+  originX: number;
+  originY: number;
+  tiles: Array<{
+    x: number;
+    y: number;
+    layers: [number, number, number, number];
+  }>;
+};
+
 export type RenderFrameArgs = {
   ctx: CanvasRenderingContext2D;
   canvasW: number;
@@ -54,6 +66,11 @@ export type RenderFrameArgs = {
   npcs: CatalogNpc[];
   grhCache: Map<number, GrhMeta | null>;
   imageCache: Map<number, HTMLImageElement>;
+  /** Mapas vecinos del mundo continuo, en el marco del mapa editado. */
+  neighbors?: NeighborOverlay[];
+  showNeighbors?: boolean;
+  /** Interior jugable. Lo que queda entre esto y el borde del mapa lo cubre el vecino en el juego. */
+  neighborInterior?: { minX: number; maxX: number; minY: number; maxY: number };
 };
 
 function terrainAlpha(view: MapViewMode): number {
@@ -93,6 +110,9 @@ export function renderMapFrame(args: RenderFrameArgs): void {
     npcs,
     grhCache,
     imageCache,
+    neighbors,
+    showNeighbors,
+    neighborInterior,
   } = args;
 
   ctx.fillStyle = "#0a0e14";
@@ -185,6 +205,58 @@ export function renderMapFrame(args: RenderFrameArgs): void {
     }
     return true;
   };
+
+  const drawNeighborTiles = (overlap: boolean) => {
+    if (!showNeighbors || !neighbors || neighbors.length === 0) return;
+    const viewLeft = -pan.x / zoom - TILE_SIZE * 12;
+    const viewTop = -pan.y / zoom - TILE_SIZE * 12;
+    const viewRight = (-pan.x + canvasW) / zoom + TILE_SIZE * 12;
+    const viewBottom = (-pan.y + canvasH) / zoom + TILE_SIZE * 12;
+    for (const neighbor of neighbors) {
+      let labelX = 0;
+      let labelY = 0;
+      let labelDist = Infinity;
+      for (const tile of neighbor.tiles) {
+        const worldX = tile.x + neighbor.originX;
+        const worldY = tile.y + neighbor.originY;
+        const px = (worldX - 1) * TILE_SIZE;
+        const py = (worldY - 1) * TILE_SIZE;
+        const insideMap =
+          worldX >= 1 &&
+          worldX <= state.width &&
+          worldY >= 1 &&
+          worldY <= state.height;
+        if (insideMap !== overlap) continue;
+        if (px + TILE_SIZE < viewLeft || py + TILE_SIZE < viewTop) continue;
+        if (px > viewRight || py > viewBottom) continue;
+        const alpha = overlap ? 0.55 : 1;
+        for (let layer = 0; layer < 4; layer++) {
+          const grh = tile.layers[layer];
+          if (!grh || !layerVisible[layer]) continue;
+          drawGrh(grh, px, py, layer >= 2, alpha * layerOpacity[layer]);
+        }
+        if (!overlap) {
+          const dx = worldX < 1 ? 1 - worldX : worldX > state.width ? worldX - state.width : 0;
+          const dy = worldY < 1 ? 1 - worldY : worldY > state.height ? worldY - state.height : 0;
+          const dist = dx + dy;
+          if (dist < labelDist) {
+            labelDist = dist;
+            labelX = px;
+            labelY = py;
+          }
+        }
+      }
+      if (!overlap && labelDist < Infinity) {
+        ctx.fillStyle = "rgba(8, 12, 18, 0.82)";
+        ctx.fillRect(labelX + 2, labelY + 2, 58, 14);
+        ctx.fillStyle = "#f0c14a";
+        ctx.font = `${Math.max(9, 11 / zoom)}px ui-sans-serif`;
+        ctx.fillText(`#${neighbor.id}`, labelX + 6, labelY + 13);
+      }
+    }
+  };
+
+  drawNeighborTiles(false);
 
   if (showTerrain) {
     // Match the game: ALL L1 (ground) first, then ALL L2 (below).
@@ -331,6 +403,23 @@ export function renderMapFrame(args: RenderFrameArgs): void {
         }
       }
     }
+  }
+
+  // Franja del borde: en el juego la tapa el mapa vecino. Se dibuja encima,
+  // semitransparente, para alinear el diseño sin tapar lo que estás pintando.
+  drawNeighborTiles(true);
+  if (showNeighbors && neighborInterior && neighbors && neighbors.length > 0) {
+    ctx.save();
+    ctx.strokeStyle = "rgba(240, 193, 74, 0.85)";
+    ctx.lineWidth = 2 / zoom;
+    ctx.setLineDash([6 / zoom, 4 / zoom]);
+    ctx.strokeRect(
+      (neighborInterior.minX - 1) * TILE_SIZE,
+      (neighborInterior.minY - 1) * TILE_SIZE,
+      (neighborInterior.maxX - neighborInterior.minX + 1) * TILE_SIZE,
+      (neighborInterior.maxY - neighborInterior.minY + 1) * TILE_SIZE,
+    );
+    ctx.restore();
   }
 
   // Collisions / blocked
@@ -663,7 +752,47 @@ export function findCoveringGraphics(
   return out;
 }
 
-/** Draw compact minimap into a small canvas. */
+/** One pixel per tile, using the real L1–L3 sprites. */
+export function paintMinimapGraphics(
+  ctx: CanvasRenderingContext2D,
+  state: EditorMapState,
+  grhCache: Map<number, GrhMeta | null>,
+  imageCache: Map<number, HTMLImageElement>,
+): void {
+  ctx.fillStyle = "#121820";
+  ctx.fillRect(0, 0, state.width, state.height);
+  for (let layer = 0; layer < 3; layer++) {
+    for (let y = 0; y < state.height; y++) {
+      const row = state.tiles[y];
+      if (!row) continue;
+      for (let x = 0; x < state.width; x++) {
+        const g = row[x]?.layers[layer];
+        if (!g) continue;
+        const meta = grhCache.get(g);
+        if (!meta || meta.width <= 0 || meta.height <= 0) continue;
+        const img = imageCache.get(meta.numFile);
+        if (!img?.complete || img.naturalWidth === 0) continue;
+        try {
+          ctx.drawImage(
+            img,
+            meta.sX,
+            meta.sY,
+            meta.width,
+            meta.height,
+            x,
+            y,
+            1,
+            1,
+          );
+        } catch {
+          /* texture still decoding */
+        }
+      }
+    }
+  }
+}
+
+/** Draw the graphic minimap plus the current view rectangle. */
 export function renderMinimap(
   ctx: CanvasRenderingContext2D,
   state: EditorMapState,
@@ -673,25 +802,15 @@ export function renderMinimap(
   viewH: number,
   mapW: number,
   mapH: number,
+  graphics: HTMLCanvasElement | null,
 ): void {
   const scaleX = mapW / state.width;
   const scaleY = mapH / state.height;
   ctx.fillStyle = "#121820";
   ctx.fillRect(0, 0, mapW, mapH);
-
-  // sample every N tiles
-  const step = Math.max(1, Math.floor(state.width / mapW));
-  for (let y = 0; y < state.height; y += step) {
-    for (let x = 0; x < state.width; x += step) {
-      const tile = state.tiles[y]![x]!;
-      const g = tile.layers[0] || tile.layers[1];
-      ctx.fillStyle = tile.blocked
-        ? "#5a2020"
-        : g
-          ? "#2a4a32"
-          : "#1a2030";
-      ctx.fillRect(x * scaleX, y * scaleY, scaleX * step + 1, scaleY * step + 1);
-    }
+  if (graphics && graphics.width > 0) {
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(graphics, 0, 0, mapW, mapH);
   }
 
   const vx = (-pan.x / zoom / TILE_SIZE) * scaleX;

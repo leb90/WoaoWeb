@@ -57,6 +57,10 @@ export function requestTrade(idUser: string, targetName: string) {
         return { ok: false, message: "No se pudo comerciar." };
     }
 
+    if (user.huntersGame) {
+        return { ok: false, message: "No puedes comerciar dentro de Hunters Game." };
+    }
+
     if (getSession(idUser)) {
         return { ok: false, message: "Ya estas comerciando." };
     }
@@ -71,6 +75,10 @@ export function requestTrade(idUser: string, targetName: string) {
 
     if (!target || !vars.clients[target.id]) {
         return { ok: false, message: "Ese usuario no esta online." };
+    }
+
+    if (target.huntersGame) {
+        return { ok: false, message: "Ese usuario esta dentro de Hunters Game." };
     }
 
     if (String(target.id) === String(idUser)) {
@@ -108,6 +116,14 @@ export function offerItem(idUser: string, slot: string, amount: number) {
         return { ok: false, message: "No estas comerciando." };
     }
 
+    if (user.huntersGame) {
+        return { ok: false, message: "No puedes comerciar dentro de Hunters Game." };
+    }
+
+    if (user.huntersGame) {
+        return { ok: false, message: "No puedes comerciar dentro de Hunters Game." };
+    }
+
     const item = user.inv?.[slot];
     if (!item || Number(item.idItem) <= 0) {
         return { ok: false, message: "No hay un item en ese slot." };
@@ -120,6 +136,10 @@ export function offerItem(idUser: string, slot: string, amount: number) {
     const mounts = require("./mounts") as typeof import("./mounts");
     if (mounts.isMountItem(Number(item.idItem))) {
         return { ok: false, message: "Los items de montura no se pueden comerciar." };
+    }
+
+    if (vars.datObj?.[item.idItem]?.eventOnly === "HUNTERS_GAME") {
+        return { ok: false, message: "Este item solo se puede usar en Hunters Game." };
     }
 
     const safeAmount = Math.max(1, Math.min(Number(item.cant ?? item.amount ?? 0), Math.floor(amount)));
@@ -136,6 +156,10 @@ export function offerGold(idUser: string, amount: number) {
     const user = vars.personajes[idUser];
     if (!session || !user) {
         return { ok: false, message: "No estas comerciando." };
+    }
+
+    if (user.huntersGame) {
+        return { ok: false, message: "No puedes comerciar dentro de Hunters Game." };
     }
 
     const safeAmount = Math.max(0, Math.min(Number(user.gold ?? 0), Math.floor(amount)));
@@ -185,6 +209,10 @@ export function acceptTrade(idUser: string) {
     const session = getSession(idUser);
     if (!session) {
         return { ok: false, message: "No estas comerciando." };
+    }
+
+    if (vars.personajes[idUser]?.huntersGame) {
+        return { ok: false, message: "No puedes comerciar dentro de Hunters Game." };
     }
 
     session.offers[String(idUser)].accepted = true;

@@ -53,6 +53,13 @@ const npcsInMap = loadAllMapNpcPlacements() as Array<{
     movement?: number;
 }>;
 
+const HUNTERS_CHAT_BLOCK_MESSAGE = "No puedes hablar durante Hunters Game.";
+const HUNTERS_BLOCKED_CHAT_COMMANDS = new Set(["/global", "/g", "/p", "/partychat", "/c", "/clan", "/w", "/whisper", "/privado"]);
+
+function isHuntersChatBlocked(user: unknown): boolean {
+    return Boolean((user as { huntersGame?: unknown } | undefined)?.huntersGame);
+}
+
 type CommandClient = RuntimeClient & { id: EntityId };
 type CommandCharacter = RuntimeCharacter & {
     id: EntityId;
@@ -569,6 +576,10 @@ function showChatBubbleToVisibleTargets(
 }
 
 function handleGlobalChat(user: CommandCharacter, messageText: string) {
+    if (isHuntersChatBlocked(user)) {
+        return HUNTERS_CHAT_BLOCK_MESSAGE;
+    }
+
     const message = messageText.trim();
 
     if (!message) {
@@ -648,6 +659,10 @@ function runWorldSave(targetClient?: CommandClient) {
 }
 
 function handlePartyChat(user: CommandCharacter, messageText: string) {
+    if (isHuntersChatBlocked(user)) {
+        return HUNTERS_CHAT_BLOCK_MESSAGE;
+    }
+
     const message = messageText.trim();
 
     if (!message) {
@@ -678,6 +693,10 @@ function handlePartyChat(user: CommandCharacter, messageText: string) {
 }
 
 function handleClanChat(user: CommandCharacter, messageText: string) {
+    if (isHuntersChatBlocked(user)) {
+        return HUNTERS_CHAT_BLOCK_MESSAGE;
+    }
+
     const message = messageText.trim();
 
     if (!message) {
@@ -766,6 +785,10 @@ function resolveWhisperTarget(rawText: string): { target: CommandCharacter; mess
 }
 
 function handleWhisperChat(user: CommandCharacter, rawText: string) {
+    if (isHuntersChatBlocked(user)) {
+        return HUNTERS_CHAT_BLOCK_MESSAGE;
+    }
+
     const trimmedText = rawText.trim();
 
     if (!trimmedText) {
@@ -2148,6 +2171,14 @@ const command: CommandApi = {
             const user = getCharacter(clientId);
             const userInSafeZone = isInSafeZone(user);
 
+            if (
+                isHuntersChatBlocked(user) &&
+                (!commandText.startsWith("/") || HUNTERS_BLOCKED_CHAT_COMMANDS.has(commandText))
+            ) {
+                handleProtocol.console(HUNTERS_CHAT_BLOCK_MESSAGE, "white", 0, 0, ws as CommandClient);
+                return;
+            }
+
             switch (commandText) {
                 case "/online":
                     handleProtocol.console(
@@ -3088,7 +3119,7 @@ const command: CommandApi = {
                         break;
                     }
 
-                    if (user.dead || user.pvpChar) {
+                    if (user.dead || user.pvpChar || user.huntersGame) {
                         handleProtocol.console("No puedes abrir la casa de subastas ahora.", "white", 1, 0, ws as CommandClient);
                         break;
                     }
@@ -3108,7 +3139,7 @@ const command: CommandApi = {
 
                 case "/woao": {
                     handleProtocol.console(
-                        "WOAO: /quest /quests /questaceptar /questabandonar /montura /activarmontura /renombrarmontura /liberarmontura /monturastat /ofertarmontura /subastas /premios /canjear /donaciones /canjeardonacion /viaje /comerciar /ranked /rankedaceptar /rankedrechazar /hunger /torneo /participar /atorneo /remort /ciudades /castillos /castillo /clanpuntos /bloodcastle /guerra /templo /domar /robar /critico /pagarmulta /casa /dia /party /aceptar /partyinfo /salirparty",
+                        "WOAO: /quest /quests /questaceptar /questabandonar /montura /activarmontura /renombrarmontura /liberarmontura /monturastat /ofertarmontura /subastas /premios /canjear /donaciones /canjeardonacion /viaje /comerciar /ranked /rankedaceptar /rankedrechazar /hunters /crearhunter /hunger /torneo /participar /atorneo /remort /ciudades /castillos /castillo /clanpuntos /bloodcastle /guerra /templo /domar /robar /critico /pagarmulta /casa /dia /party /aceptar /partyinfo /salirparty",
                         "#E69500",
                         1,
                         0,
@@ -3139,6 +3170,103 @@ const command: CommandApi = {
                     }
                     const result = hungerGames.joinEvent(String(clientId));
                     handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/crearhunter": {
+                    if (!hasStaffPrivileges(user)) {
+                        handleProtocol.console("No tienes permisos para crear Hunters Game.", "white", 1, 0, ws as CommandClient);
+                        break;
+                    }
+
+                    const huntersGame = require("./huntersGame") as typeof import("./huntersGame");
+                    const result = huntersGame.startEvent();
+                    handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/hunters": {
+                    const huntersGame = require("./huntersGame") as typeof import("./huntersGame");
+                    const [rawAction] = nextText.trim().split(/\s+/);
+                    const action = (rawAction ?? "").toLowerCase();
+                    const staffAction = ["start", "stop", "cancel", "cleanup", "status", "players", "chests", "zone"].includes(action);
+
+                    if (staffAction && !hasStaffPrivileges(user)) {
+                        handleProtocol.console(
+                            "No tienes permisos para administrar Hunters Game.",
+                            "white",
+                            1,
+                            0,
+                            ws as CommandClient,
+                        );
+                        break;
+                    }
+
+                    if (action === "start") {
+                        const result = huntersGame.startEvent();
+                        handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                        break;
+                    }
+
+                    if (action === "stop" || action === "cancel" || action === "cleanup") {
+                        const result = huntersGame.cancelEvent();
+                        handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                        break;
+                    }
+
+                    if (action === "status") {
+                        const status = huntersGame.status();
+                        handleProtocol.console(
+                            `Hunters Game> fase ${status.phase} - jugadores ${status.players} - vivos ${status.alive} - mapas ${status.arenaMaps.join(", ")}`,
+                            "#E69500",
+                            1,
+                            0,
+                            ws as CommandClient,
+                        );
+                        break;
+                    }
+
+                    if (action === "players") {
+                        const players = huntersGame.listPlayers();
+                        const text =
+                            players.length > 0
+                                ? players.map((player) => `${player.name} ${player.alive ? "vivo" : "muerto"} K:${player.kills}`).join(" | ")
+                                : "sin participantes";
+                        handleProtocol.console(`Hunters Game> ${text}`, "#E69500", 1, 0, ws as CommandClient);
+                        break;
+                    }
+
+                    if (action === "cofre" || action === "chest") {
+                        const result = huntersGame.openNearestChest(String(clientId));
+                        handleProtocol.console(result.message, result.ok ? "#E69500" : "white", 1, 0, ws as CommandClient);
+                        break;
+                    }
+
+                    if (action === "chests") {
+                        const status = huntersGame.status();
+                        handleProtocol.console(
+                            `Hunters Game> cofres ${status.closedChests}/${status.chests} cerrados.`,
+                            "#E69500",
+                            1,
+                            0,
+                            ws as CommandClient,
+                        );
+                        break;
+                    }
+
+                    if (action === "zone") {
+                        handleProtocol.console(
+                            "Hunters Game> La zona segura progresiva queda preparada para la siguiente fase de implementacion visual/daño.",
+                            "#E69500",
+                            1,
+                            0,
+                            ws as CommandClient,
+                        );
+                        break;
+                    }
+
+                    const result = huntersGame.joinEvent(String(clientId));
+                    handleProtocol.console(result.message, result.ok ? "#E69500" : "white", 1, 0, ws as CommandClient);
                     break;
                 }
 
@@ -3191,12 +3319,20 @@ const command: CommandApi = {
                 }
 
                 case "/comerciar": {
+                    if (user.huntersGame) {
+                        handleProtocol.console("No puedes comerciar dentro de Hunters Game.", "white", 1, 0, ws as CommandClient);
+                        break;
+                    }
                     const result = require("./playerTrade").requestTrade(String(clientId), nextText.trim());
                     handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
                     break;
                 }
 
                 case "/ofertar": {
+                    if (user.huntersGame) {
+                        handleProtocol.console("No puedes comerciar dentro de Hunters Game.", "white", 1, 0, ws as CommandClient);
+                        break;
+                    }
                     const [slot, amount] = nextText.trim().split(/\s+/);
                     const result = require("./playerTrade").offerItem(String(clientId), slot, Number(amount || 1));
                     handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
@@ -3204,12 +3340,20 @@ const command: CommandApi = {
                 }
 
                 case "/ofertaroro": {
+                    if (user.huntersGame) {
+                        handleProtocol.console("No puedes comerciar dentro de Hunters Game.", "white", 1, 0, ws as CommandClient);
+                        break;
+                    }
                     const result = require("./playerTrade").offerGold(String(clientId), Number(nextText.trim() || 0));
                     handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
                     break;
                 }
 
                 case "/aceptarcomercio": {
+                    if (user.huntersGame) {
+                        handleProtocol.console("No puedes comerciar dentro de Hunters Game.", "white", 1, 0, ws as CommandClient);
+                        break;
+                    }
                     const result = require("./playerTrade").acceptTrade(String(clientId));
                     handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
                     break;

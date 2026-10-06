@@ -134,7 +134,11 @@ export function cloneTile(tile: EditorTile): EditorTile {
   };
 }
 
-/** GRH grid for a stamp reference (row-major). Safe for client + server. */
+/**
+ * Grilla de un índice de paleta, igual que World Editor.
+ * El GRH 1 queda arriba a la izquierda y sigue por filas:
+ * 1 2 3 4 / 5 6 7 8 / 9 10 11 12 / 13 14 15 16.
+ */
 export function expandStampGrhs(ref: IndexReferencia): number[][] {
   const grid: number[][] = [];
   for (let dy = 0; dy < ref.alto; dy++) {

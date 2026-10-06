@@ -1291,6 +1291,7 @@ function resetFuerzaAgilidadBuffs(user: GameCharacter, client?: RuntimeClient) {
 function isArenaCombat(user: GameCharacter | undefined, userAttacked: GameCharacter | undefined): boolean {
     return Boolean(
         (user?.pvpChar && userAttacked?.pvpChar && user.arenaRoomId && user.arenaRoomId === userAttacked.arenaRoomId) ||
+        getHuntersGame().isHuntersCombat(user?.id, userAttacked?.id) ||
         (user?.rankedMatchId &&
             userAttacked?.rankedMatchId &&
             user.rankedMatchId === userAttacked.rankedMatchId &&
@@ -1318,6 +1319,10 @@ function getChallengeManager() {
 
 function getFactionWars() {
     return require("./factionWars") as typeof import("./factionWars");
+}
+
+function getHuntersGame() {
+    return require("./huntersGame") as typeof import("./huntersGame");
 }
 
 function isUnsafeArenaTile(character: Pick<GameCharacter, "map" | "pos">): boolean {
@@ -1349,6 +1354,14 @@ function isBlockedBySafeZone(user: GameCharacter, userAttacked: GameCharacter): 
 }
 
 function applyOpenWorldAttackRules(user: GameCharacter, userAttacked: GameCharacter, arenaCombat: boolean): boolean {
+    const huntersDeniedReason = getHuntersGame().getAttackDeniedReason(user, userAttacked);
+    if (huntersDeniedReason) {
+        withUserClient(user.id, (userClient) => {
+            handleProtocol.console(huntersDeniedReason, "white", 1, 0, userClient);
+        });
+        return false;
+    }
+
     if (arenaCombat) {
         return true;
     }
@@ -4212,6 +4225,11 @@ function serializeInventory(record: InventoryRecord): SerializedInventoryItem[] 
     }));
 }
 
+function getPersistableInventoryRecord(user: GameCharacter): InventoryRecord {
+    const backup = user.huntersInventoryBackup as { inv?: InventoryRecord } | undefined;
+    return backup?.inv ?? user.inv;
+}
+
 function serializeBank(record: InventoryRecord): SerializedBankItem[] {
     return Object.entries(record).map(([idPos, item]) => ({
         idPos,
@@ -4283,7 +4301,7 @@ async function persistSharedVaultAndCharacterState(
         };
 
         if (options.characterItems) {
-            body.characterItems = serializeInventory(user.inv);
+            body.characterItems = serializeInventory(getPersistableInventoryRecord(user));
         }
 
         if (options.characterGold) {
@@ -4555,7 +4573,7 @@ async function persistCharacterStoragePatch(
         }
 
         if (options.items) {
-            body.items = serializeInventory(user.inv);
+            body.items = serializeInventory(getPersistableInventoryRecord(user));
         }
 
         if (options.bankItems) {
@@ -4620,7 +4638,7 @@ function buildCharacterSnapshotPayload(
         attrFuerza: persistedAttrFuerza,
         attrAgilidad: persistedAttrAgilidad,
         spells: serializeSpells(user.spells),
-        items: serializeInventory(user.inv),
+        items: serializeInventory(getPersistableInventoryRecord(user)),
         bankItems: serializeBank(user.bank ?? {}),
         updatedAt: new Date(),
     };
@@ -5461,6 +5479,11 @@ function Game(this: GameApi) {
                 return;
             }
 
+            if (obj.eventOnly === "HUNTERS_GAME" && !user.huntersGame) {
+                handleProtocol.console("Este item solo se puede usar en Hunters Game.", "white", 0, 0, ws);
+                return;
+            }
+
             if (user.dead && obj.objType !== vars.objType.barcos) {
                 handleProtocol.console("Los muertos no pueden usar items.", "white", 0, 0, ws);
                 return;
@@ -5922,6 +5945,11 @@ function Game(this: GameApi) {
                 return;
             }
 
+            if (user.huntersGame) {
+                handleProtocol.console("En Hunters Game solo puedes obtener items desde cofres del evento.", "white", 0, 0, ws);
+                return;
+            }
+
             if (game.hayObj(user.map, user.pos)) {
                 const item = game.objMap(user.map, user.pos)!;
                 const datObj = vars.datObj[item.objIndex];
@@ -6172,6 +6200,11 @@ function Game(this: GameApi) {
                 return;
             }
 
+            if (user.huntersGame) {
+                handleProtocol.console("No puedes tirar items dentro de Hunters Game.", "white", 0, 0, ws);
+                return;
+            }
+
             const item = user.inv[idPos];
 
             if (cant < 1) {
@@ -6199,7 +6232,7 @@ function Game(this: GameApi) {
                 return;
             }
 
-            if (vars.datObj[idItem].newbie || user.pvpChar) {
+            if (vars.datObj[idItem].newbie || user.pvpChar || vars.datObj[idItem].eventOnly === "HUNTERS_GAME") {
                 handleProtocol.console("No puedes tirar este item.", "white", 0, 0, ws);
                 return;
             }
@@ -6392,6 +6425,11 @@ function Game(this: GameApi) {
         const npc = vars.npcs[idNpc] as GameNpc | undefined;
 
         if (!user || !client || !npc || npc.npcType !== vars.npcType.banquero || user.dead) {
+            return false;
+        }
+
+        if (user.huntersGame) {
+            handleProtocol.console("No puedes usar el banco dentro de Hunters Game.", "white", 1, 0, client);
             return false;
         }
 
@@ -6657,6 +6695,9 @@ function Game(this: GameApi) {
         }
         if (objectData.newbie) {
             return { ok: false, message: "Los items newbie no se pueden subastar." };
+        }
+        if (objectData.eventOnly === "HUNTERS_GAME") {
+            return { ok: false, message: "Este item solo se puede usar en Hunters Game." };
         }
 
         const previousInventory = cloneInventoryRecord(user.inv);
@@ -7012,6 +7053,11 @@ function Game(this: GameApi) {
             return false;
         }
 
+        if (user.huntersGame) {
+            handleProtocol.console("No puedes usar subastas dentro de Hunters Game.", "white", 1, 0, client);
+            return false;
+        }
+
         if (!isMarketEnabled()) {
             handleProtocol.console("Las subastas se encuentran deshabilitadas.", "white", 1, 0, client);
             return false;
@@ -7216,7 +7262,7 @@ function Game(this: GameApi) {
                     expectedQuantity: expected?.quantity,
                     expectedPrice: expected?.price,
                     characterGold: nextGold,
-                    characterItems: serializeInventory(user.inv),
+                    characterItems: serializeInventory(getPersistableInventoryRecord(user)),
                 }),
                 headers: {
                     "Content-Type": "application/json",
@@ -7899,6 +7945,16 @@ function Game(this: GameApi) {
                 return;
             }
 
+            if (
+                user.huntersGame &&
+                typeof require("./huntersGame").isArenaMap === "function" &&
+                !require("./huntersGame").isArenaMap(Number(numMap))
+            ) {
+                handleProtocol.console("No puedes salir de la arena de Hunters Game.", "white", 0, 0, ws);
+                handleProtocol.actPositionServer(user.map, user.pos, user.heading, ws);
+                return;
+            }
+
             const deniedPortalMessage = getFactionPortalDeniedMessage(user, numMap, posX, posY);
 
             if (deniedPortalMessage) {
@@ -8225,6 +8281,7 @@ function Game(this: GameApi) {
             require("./summonRoom").scheduleDeadUserExit(idUser);
             require("./bloodCastle").onUserDied(String(idUser));
             require("./hungerGames").onUserDied(String(idUser));
+            require("./huntersGame").onUserDied(String(idUser));
             require("./tournamentAuto").onUserDied(String(idUser));
             require("./rankedArena").onUserDied(String(idUser));
             require("./factionWars").onUserDied(String(idUser));
@@ -9177,6 +9234,13 @@ function Game(this: GameApi) {
             const isOffensiveSpell = idUser !== idUserAttacked && isOffensiveSpellData(datSpell);
             const factionWars = getFactionWars();
             const isSupportSpellCast = idUser !== idUserAttacked && isSupportSpell(datSpell);
+            const huntersDeniedReason = isOffensiveSpell ? getHuntersGame().getAttackDeniedReason(user, userAttacked) : null;
+            if (huntersDeniedReason) {
+                withUserClient(idUser, (userClient) => {
+                    handleProtocol.console(huntersDeniedReason, "white", 0, 0, userClient);
+                });
+                return 0;
+            }
 
             if (
                 vars.mapData[user.map].pk &&
@@ -9212,7 +9276,7 @@ function Game(this: GameApi) {
                 return 0;
             }
 
-            if (challengeCombatRelation === "ally" && isOffensiveSpell) {
+            if (!arenaCombat && challengeCombatRelation === "ally" && isOffensiveSpell) {
                 withUserClient(idUser, (userClient) => {
                     handleProtocol.console(
                         "[Retos] No puedes atacar a tu compañero de equipo.",
@@ -10011,6 +10075,13 @@ function Game(this: GameApi) {
 
             const arenaCombat = isArenaCombat(user, userAttacked);
             const challengeCombatRelation = getChallengeManager().getCombatRelation(user, userAttacked);
+            const huntersDeniedReason = getHuntersGame().getAttackDeniedReason(user, userAttacked);
+            if (huntersDeniedReason) {
+                withUserClient(idUser, (userClient) => {
+                    handleProtocol.console(huntersDeniedReason, "white", 0, 0, userClient);
+                });
+                return 0;
+            }
 
             if (idUser == idUserAttacked) {
                 withUserClient(idUser, (userClient) => {
@@ -10019,7 +10090,7 @@ function Game(this: GameApi) {
                 return 0;
             }
 
-            if (challengeCombatRelation === "ally") {
+            if (!arenaCombat && challengeCombatRelation === "ally") {
                 withUserClient(idUser, (userClient) => {
                     handleProtocol.console(
                         "[Retos] No puedes atacar a tu compañero de equipo.",
@@ -10032,11 +10103,9 @@ function Game(this: GameApi) {
                 return 0;
             }
 
-            const friendlyFireReason = getFriendlyFireBlockReason(
-                idUser,
-                idUserAttacked,
-                challengeCombatRelation,
-            );
+            const friendlyFireReason = !arenaCombat
+                ? getFriendlyFireBlockReason(idUser, idUserAttacked, challengeCombatRelation)
+                : null;
             if (friendlyFireReason) {
                 withUserClient(idUser, (userClient) => {
                     handleProtocol.console(friendlyFireReason, "white", 0, 0, userClient);
@@ -11133,6 +11202,13 @@ function Game(this: GameApi) {
                 return;
             }
 
+            if (user.huntersGame) {
+                withUserClient(idUser, (userClient) => {
+                    handleProtocol.console("No puedes comerciar con NPCs dentro de Hunters Game.", "white", 0, 0, userClient);
+                });
+                return;
+            }
+
             if (user.dead) {
                 withUserClient(idUser, (userClient) => {
                     handleProtocol.console(
@@ -11348,6 +11424,13 @@ function Game(this: GameApi) {
                 return;
             }
 
+            if (user.huntersGame) {
+                withUserClient(idUser, (userClient) => {
+                    handleProtocol.console("No puedes comerciar con NPCs dentro de Hunters Game.", "white", 0, 0, userClient);
+                });
+                return;
+            }
+
             if (user.dead) {
                 withUserClient(idUser, (userClient) => {
                     handleProtocol.console(
@@ -11422,6 +11505,21 @@ function Game(this: GameApi) {
                             user.tradeMode === "bank"
                                 ? "No puedes guardar items de montura en la boveda."
                                 : "No puedes comerciar items de montura.",
+                            "white",
+                            0,
+                            0,
+                            userClient,
+                        );
+                    });
+                    return;
+                }
+
+                if (vars.datObj[itemUser.idItem]?.eventOnly === "HUNTERS_GAME") {
+                    withUserClient(idUser, (userClient) => {
+                        handleProtocol.console(
+                            user.tradeMode === "bank"
+                                ? "No puedes guardar items de Hunters Game en la boveda."
+                                : "Este item solo se puede usar en Hunters Game.",
                             "white",
                             0,
                             0,
@@ -11685,6 +11783,7 @@ function Game(this: GameApi) {
             require("./rankedArena").onUserLeft(String(idUser));
             require("./playerTrade").onUserLeft(String(idUser));
             require("./hungerGames").onUserDied(String(idUser));
+            require("./huntersGame").onUserDied(String(idUser));
             require("./tournamentAuto").onUserDied(String(idUser));
             require("./factionWars").onUserLeft(String(idUser));
             const client = getClientById(idUser);

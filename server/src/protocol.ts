@@ -46,6 +46,7 @@ const harvesting = require("./harvesting");
 const crafting = require("./crafting");
 const smelting = require("./smelting");
 const challengeManager = require("./challengeManager");
+const huntersGame = require("./huntersGame") as typeof import("./huntersGame");
 const LOGOUT_CANCELLED_MESSAGE = "[Servidor] La salida se canceló porque te moviste.";
 const MAX_PENDING_MOVE_QUEUE_LENGTH = 8;
 const REVIVE_CAST_MS = 10000;
@@ -2358,9 +2359,25 @@ function eventClick(ws: RuntimeClient) {
         let objMap: MapObjectInfo | null = null,
             obj: DataObject | null = null;
 
+        const tryOpenHuntersChest = (targetPos: Position, targetObjMap: MapObjectInfo | null): boolean => {
+            if (targetObjMap?.objIndex !== huntersGame.HUNTERS_ITEM_IDS.chest) {
+                return false;
+            }
+
+            const result = huntersGame.openChestAt(String(clientId), targetMap, targetPos.x, targetPos.y);
+            if (!result.ok) {
+                handleProtocol.console(result.message, "white", 1, 0, ws);
+            }
+            return true;
+        };
+
         if (game.hayObj(targetMap, pos)) {
             objMap = game.objMap(targetMap, pos) as MapObjectInfo;
             obj = (vars.datObj[objMap.objIndex] as DataObject | undefined) ?? null;
+
+            if (tryOpenHuntersChest(pos, objMap)) {
+                return;
+            }
 
             if (targetMap === user.map && obj && obj.objType == vars.objType.puerta) {
                 game.openDoor(clientId, pos, objMap, obj);
@@ -2379,6 +2396,10 @@ function eventClick(ws: RuntimeClient) {
             }) as MapObjectInfo;
 
             obj = (vars.datObj[objMap.objIndex] as DataObject | undefined) ?? null;
+
+            if (tryOpenHuntersChest({ x: pos.x + 1, y: pos.y }, objMap)) {
+                return;
+            }
 
             if (targetMap === user.map && obj && obj.objType == vars.objType.puerta) {
                 game.openDoor(
@@ -2405,6 +2426,10 @@ function eventClick(ws: RuntimeClient) {
             }) as MapObjectInfo;
             obj = (vars.datObj[objMap.objIndex] as DataObject | undefined) ?? null;
 
+            if (tryOpenHuntersChest({ x: pos.x + 1, y: pos.y + 1 }, objMap)) {
+                return;
+            }
+
             if (targetMap === user.map && obj && obj.objType == vars.objType.puerta) {
                 game.openDoor(
                     ws.id,
@@ -2429,6 +2454,10 @@ function eventClick(ws: RuntimeClient) {
                 y: pos.y + 1,
             }) as MapObjectInfo;
             obj = (vars.datObj[objMap.objIndex] as DataObject | undefined) ?? null;
+
+            if (tryOpenHuntersChest({ x: pos.x, y: pos.y + 1 }, objMap)) {
+                return;
+            }
 
             if (targetMap === user.map && obj && obj.objType == vars.objType.puerta) {
                 game.openDoor(
@@ -2914,6 +2943,11 @@ function equiparItem(ws: RuntimeClient) {
                 return;
             }
 
+            if (item.eventOnly === "HUNTERS_GAME" && !user.huntersGame && !itemInventary.equipped) {
+                handleProtocol.console("Este item solo se puede usar en Hunters Game.", "white", 0, 0, ws);
+                return;
+            }
+
             if (
                 Array.isArray(item.clasesNoPermitidas) &&
                 item.clasesNoPermitidas.includes(user.idClase) &&
@@ -3336,6 +3370,11 @@ function dialog(ws: RuntimeClient) {
 
         if (!isClearDialogMessage && msg[0] == "/") {
             command.msg(msg, ws);
+            return;
+        }
+
+        if (!isClearDialogMessage && user.huntersGame) {
+            handleProtocol.console("No puedes hablar durante Hunters Game.", "white", 0, 0, ws);
             return;
         }
 

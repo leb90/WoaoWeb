@@ -681,6 +681,7 @@ function trackClientActivity(ws: RuntimeClient, packageID: number) {
     require("./mounts").initialize();
     require("./bloodCastle").initialize();
     require("./hungerGames").initialize();
+    require("./huntersGame").initialize();
     require("./tournamentAuto").initialize();
     require("./rankedArena").initialize();
     require("./cityConquest").initialize();

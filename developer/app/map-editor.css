@@ -214,8 +214,8 @@
   position: absolute;
   right: 10px;
   bottom: 10px;
-  width: 140px;
-  height: 140px;
+  width: 200px;
+  height: 200px;
   border: 1px solid var(--me-border);
   border-radius: 4px;
   background: #121820;

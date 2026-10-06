@@ -13,6 +13,7 @@ export type OverlayPrefs = {
   grid: boolean;
   coordinates: boolean;
   grhIds: boolean;
+  neighbors: boolean;
 };
 
 export type LayerPrefs = {
@@ -56,6 +57,7 @@ export const DEFAULT_PREFS: MapEditorPrefs = {
     grid: true,
     coordinates: false,
     grhIds: false,
+    neighbors: true,
   },
   layers: {
     visible: [true, true, true, true],

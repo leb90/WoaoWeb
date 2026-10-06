@@ -2,13 +2,16 @@
 
 import "@/app/map-editor.css";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GrhPreview } from "@/components/ui/GrhPreview";
 import {
   findCoveringGraphics,
+  paintMinimapGraphics,
   renderMapFrame,
   renderMinimap,
   type GrhMeta,
+  type NeighborOverlay,
 } from "@/lib/maps/mapCanvasRenderer";
 import {
   DEFAULT_PREFS,
@@ -28,6 +31,7 @@ import type {
   IndexReferencia,
   MapTool,
   MapViewMode,
+  TileExit,
 } from "@/lib/maps/types";
 import { TILE_SIZE, expandStampGrhs, tileKey } from "@/lib/maps/types";
 
@@ -44,13 +48,38 @@ type CatalogNpc = {
 type CatalogObj = { id: number; name: string; grhIndex: number };
 type PlaceMode = "blocked" | "npc" | "object" | "exit" | "trigger" | null;
 type RightTab = "tile" | "palette" | "npcs" | "objects" | "triggers";
+type ClipSpecial = {
+  npc?: number;
+  object?: { objIndex: number; amount: number };
+  exit?: TileExit;
+  trigger?: number;
+};
+
 type TileClipboard = {
   width: number;
   height: number;
   tiles: EditorTile[][];
+  specials: ClipSpecial[][];
 };
 
+type SelectionRect = { x1: number; y1: number; x2: number; y2: number };
+
 const ZOOM_LEVELS = [0.25, 0.5, 0.75, 1, 1.5, 2] as const;
+
+function exitDestination(
+  exit: TileExit | undefined,
+): { map: number; x: number; y: number } | null {
+  if (!exit || typeof exit !== "object") return null;
+  const raw = "destinations" in exit ? exit.destinations?.[0] : exit;
+  if (!raw || typeof raw.map !== "number" || raw.map < 1) return null;
+  const x = Number(raw.x);
+  const y = Number(raw.y);
+  return {
+    map: raw.map,
+    x: Number.isFinite(x) ? x : 1,
+    y: Number.isFinite(y) ? y : 1,
+  };
+}
 
 const BASE_TOOLS: Array<{ id: MapTool; label: string; ico: string }> = [
   { id: "select", label: "Seleccionar", ico: "⬚" },
@@ -63,10 +92,15 @@ const BASE_TOOLS: Array<{ id: MapTool; label: string; ico: string }> = [
 ];
 
 export function MapEditor({ mapId }: { mapId: number }) {
+  const router = useRouter();
   const [prefs, setPrefs] = useState<MapEditorPrefs>(() =>
     typeof window !== "undefined" ? loadMapEditorPrefs() : DEFAULT_PREFS,
   );
   const [state, setState] = useState<EditorMapState | null>(null);
+  const [neighbors, setNeighbors] = useState<NeighborOverlay[]>([]);
+  const [neighborInterior, setNeighborInterior] = useState<
+    { minX: number; maxX: number; minY: number; maxY: number } | undefined
+  >();
   const [baseline, setBaseline] = useState("");
   const [hints, setHints] = useState<string[]>([]);
   const [npcs, setNpcs] = useState<CatalogNpc[]>([]);
@@ -98,14 +132,7 @@ export function MapEditor({ mapId }: { mapId: number }) {
   const [indicesQ, setIndicesQ] = useState("");
   const [npcQ, setNpcQ] = useState("");
   const [objQ, setObjQ] = useState("");
-  const [spaceDown, setSpaceDown] = useState(false);
-  const [massSelectMode, setMassSelectMode] = useState(false);
-  const [selectionRect, setSelectionRect] = useState<{
-    x1: number;
-    y1: number;
-    x2: number;
-    y2: number;
-  } | null>(null);
+  const [selectionRect, setSelectionRect] = useState<SelectionRect | null>(null);
   const [clipboard, setClipboard] = useState<TileClipboard | null>(null);
   const [borderModalOpen, setBorderModalOpen] = useState(false);
   const [borderForm, setBorderForm] = useState({
@@ -122,13 +149,21 @@ export function MapEditor({ mapId }: { mapId: number }) {
   const stateRef = useRef<EditorMapState | null>(null);
   stateRef.current = state;
   const shapeStartRef = useRef<{ x0: number; y0: number } | null>(null);
-  const massSelectStartRef = useRef<{ x: number; y: number } | null>(null);
+  const selectionStartRef = useRef<{ x: number; y: number } | null>(null);
+  const selectionRectRef = useRef<SelectionRect | null>(null);
+  selectionRectRef.current = selectionRect;
+  const stampAnchorRef = useRef<{ x0: number; y0: number } | null>(null);
+  const lastPaintKeyRef = useRef<string | null>(null);
+  const dirtyAtClickRef = useRef(false);
+  const focusTileRef = useRef<{ x: number; y: number } | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const miniRef = useRef<HTMLCanvasElement>(null);
+  const miniBaseRef = useRef<HTMLCanvasElement | null>(null);
+  const [miniRev, setMiniRev] = useState(0);
   const dragRef = useRef<{
-    mode: "pan" | "paint" | null;
+    mode: "pan" | "paint" | "select" | null;
     lastX: number;
     lastY: number;
   }>({ mode: null, lastX: 0, lastY: 0 });
@@ -207,9 +242,54 @@ export function MapEditor({ mapId }: { mapId: number }) {
         if (data.catalogs.npcs[0]) setSelectedNpcId(data.catalogs.npcs[0].id);
         if (data.catalogs.objects[0])
           setSelectedObjId(data.catalogs.objects[0].id);
+        const params = new URLSearchParams(window.location.search);
+        const fx = Number(params.get("x"));
+        const fy = Number(params.get("y"));
+        if (Number.isInteger(fx) && Number.isInteger(fy) && fx > 0 && fy > 0) {
+          setSelected({ x: fx, y: fy });
+          focusTileRef.current = { x: fx, y: fy };
+        }
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Error"))
       .finally(() => setLoading(false));
+  }, [mapId]);
+
+  useEffect(() => {
+    const focus = focusTileRef.current;
+    const wrap = wrapRef.current;
+    if (!state || loading || !focus || !wrap) return;
+    focusTileRef.current = null;
+    const z = prefs.zoom;
+    setPan({
+      x: wrap.clientWidth / 2 - (focus.x - 0.5) * TILE_SIZE * z,
+      y: wrap.clientHeight / 2 - (focus.y - 0.5) * TILE_SIZE * z,
+    });
+  }, [state, loading, mapId, prefs.zoom]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/maps/${mapId}/neighbors`)
+      .then(async (r) => {
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error ?? "Error");
+        return data as {
+          neighbors: NeighborOverlay[];
+          interior?: { minX: number; maxX: number; minY: number; maxY: number };
+        };
+      })
+      .then((data) => {
+        if (cancelled) return;
+        setNeighbors(data.neighbors ?? []);
+        setNeighborInterior(data.interior);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setNeighbors([]);
+        setNeighborInterior(undefined);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [mapId]);
 
   useEffect(() => {
@@ -291,8 +371,24 @@ export function MapEditor({ mapId }: { mapId: number }) {
       for (const row of expandStampGrhs(selectedStamp))
         for (const g of row) need.add(g);
     }
+    if (prefs.overlays.neighbors) {
+      for (const neighbor of neighbors) {
+        for (const tile of neighbor.tiles) {
+          for (const g of tile.layers) if (g > 0) need.add(g);
+        }
+      }
+    }
     void ensureGrhs([...need]);
-  }, [state, objects, npcs, selectedGrh, selectedStamp, ensureGrhs]);
+  }, [
+    state,
+    objects,
+    npcs,
+    selectedGrh,
+    selectedStamp,
+    ensureGrhs,
+    neighbors,
+    prefs.overlays.neighbors,
+  ]);
 
   const screenToTile = useCallback(
     (clientX: number, clientY: number) => {
@@ -329,14 +425,21 @@ export function MapEditor({ mapId }: { mapId: number }) {
         return;
       }
       if (mode === "fill") {
+        const pattern = selectedStamp ? expandStampGrhs(selectedStamp) : undefined;
+        const fillLayer =
+          selectedStamp && selectedStamp.capa >= 1 && selectedStamp.capa <= 4
+            ? ((selectedStamp.capa - 1) as 0 | 1 | 2 | 3)
+            : layer;
+        if (prefs.layers.locked[fillLayer]) return;
         floodFillLayer(
           next.tiles,
           next.width,
           next.height,
           x0,
           y0,
-          layer,
+          fillLayer,
           selectedGrh,
+          pattern,
         );
         return;
       }
@@ -346,7 +449,7 @@ export function MapEditor({ mapId }: { mapId: number }) {
           for (let dx = 0; dx < grid[dy]!.length; dx++) {
             const tx = x0 + dx;
             const ty = y0 + dy;
-            if (tx >= next.width || ty >= next.height) continue;
+            if (tx < 0 || ty < 0 || tx >= next.width || ty >= next.height) continue;
             const t = next.tiles[ty]![tx]!;
             const L =
               selectedStamp.capa >= 1 && selectedStamp.capa <= 4
@@ -366,7 +469,7 @@ export function MapEditor({ mapId }: { mapId: number }) {
           for (let dx = 0; dx < grid[dy]!.length; dx++) {
             const tx = x0 + dx;
             const ty = y0 + dy;
-            if (tx >= next.width || ty >= next.height) continue;
+            if (tx < 0 || ty < 0 || tx >= next.width || ty >= next.height) continue;
             if (prefs.layers.locked[layer]) continue;
             next.tiles[ty]![tx]!.layers[layer] = grid[dy]![dx]!;
           }
@@ -422,6 +525,30 @@ export function MapEditor({ mapId }: { mapId: number }) {
       prefs.tool,
       paintTerrainAt,
     ],
+  );
+
+  const paintFromCursor = useCallback(
+    (x0: number, y0: number) => {
+      let px = x0;
+      let py = y0;
+      const stamp = selectedStamp;
+      const anchor = stampAnchorRef.current;
+      const tiled =
+        !!stamp &&
+        (stamp.ancho > 1 || stamp.alto > 1) &&
+        (prefs.tool === "stamp" || prefs.tool === "brush") &&
+        !placeMode &&
+        !!anchor;
+      if (tiled && stamp && anchor) {
+        px = anchor.x0 + Math.floor((x0 - anchor.x0) / stamp.ancho) * stamp.ancho;
+        py = anchor.y0 + Math.floor((y0 - anchor.y0) / stamp.alto) * stamp.alto;
+      }
+      const key = `${px},${py}`;
+      if (lastPaintKeyRef.current === key) return;
+      lastPaintKeyRef.current = key;
+      applyAt(px, py);
+    },
+    [applyAt, placeMode, prefs.tool, selectedStamp],
   );
 
   const fillShape = useCallback(
@@ -488,8 +615,27 @@ export function MapEditor({ mapId }: { mapId: number }) {
     [beginStroke, endStroke],
   );
 
+  const readClipSpecial = useCallback(
+    (cur: EditorMapState, x: number, y: number): ClipSpecial => {
+      const key = tileKey(x, y);
+      const cell: ClipSpecial = {};
+      if (cur.specials.npcs[key] != null) cell.npc = cur.specials.npcs[key];
+      if (cur.specials.objects[key]) {
+        cell.object = { ...cur.specials.objects[key] };
+      }
+      if (cur.specials.exits[key]) {
+        cell.exit = structuredClone(cur.specials.exits[key]);
+      }
+      if (cur.specials.triggers[key] != null) {
+        cell.trigger = cur.specials.triggers[key];
+      }
+      return cell;
+    },
+    [],
+  );
+
   const copySelectionToClipboard = useCallback(
-    (rect: { x1: number; y1: number; x2: number; y2: number }) => {
+    (rect: SelectionRect) => {
       const cur = stateRef.current;
       if (!cur) return;
       const minX = Math.min(rect.x1, rect.x2);
@@ -497,28 +643,92 @@ export function MapEditor({ mapId }: { mapId: number }) {
       const minY = Math.min(rect.y1, rect.y2);
       const maxY = Math.max(rect.y1, rect.y2);
       const tiles: EditorTile[][] = [];
+      const specials: ClipSpecial[][] = [];
       for (let y = minY; y <= maxY; y++) {
         const row: EditorTile[] = [];
+        const specialRow: ClipSpecial[] = [];
         for (let x = minX; x <= maxX; x++) {
-          const t = cur.tiles[y - 1]![x - 1]!;
-          row.push({
-            layers: [...t.layers] as [number, number, number, number],
-            blocked: t.blocked,
-          });
+          const t = cur.tiles[y - 1]?.[x - 1];
+          row.push(
+            t
+              ? {
+                  layers: [...t.layers] as [number, number, number, number],
+                  blocked: t.blocked,
+                }
+              : { layers: [0, 0, 0, 0], blocked: false },
+          );
+          specialRow.push(readClipSpecial(cur, x, y));
         }
         tiles.push(row);
+        specials.push(specialRow);
       }
       setClipboard({
         width: maxX - minX + 1,
         height: maxY - minY + 1,
         tiles,
+        specials,
       });
       setMessage(
-        `Copiado ${maxX - minX + 1}×${maxY - minY + 1} tiles (Ctrl+V para pegar)`,
+        `Copiado ${maxX - minX + 1}×${maxY - minY + 1} (Ctrl+V pega en el cursor)`,
       );
     },
-    [],
+    [readClipSpecial],
   );
+
+  const clearSelectionTiles = useCallback((next: EditorMapState, rect: SelectionRect) => {
+    const minX = Math.min(rect.x1, rect.x2);
+    const maxX = Math.max(rect.x1, rect.x2);
+    const minY = Math.min(rect.y1, rect.y2);
+    const maxY = Math.max(rect.y1, rect.y2);
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        const tile = next.tiles[y - 1]?.[x - 1];
+        if (tile) {
+          tile.layers = [0, 0, 0, 0];
+          tile.blocked = false;
+        }
+        const key = tileKey(x, y);
+        delete next.specials.npcs[key];
+        delete next.specials.objects[key];
+        delete next.specials.exits[key];
+        delete next.specials.triggers[key];
+      }
+    }
+  }, []);
+
+  const cutSelection = useCallback(
+    (rect: SelectionRect) => {
+      copySelectionToClipboard(rect);
+      beginStroke();
+      setState((prev) => {
+        if (!prev) return prev;
+        const next = cloneEditorState(prev);
+        clearSelectionTiles(next, rect);
+        return next;
+      });
+      endStroke();
+      setMessage("Cortado. Ctrl+V pega en el cursor");
+    },
+    [beginStroke, clearSelectionTiles, copySelectionToClipboard, endStroke],
+  );
+
+  const writeClipSpecial = (
+    next: EditorMapState,
+    x: number,
+    y: number,
+    cell: ClipSpecial | undefined,
+  ) => {
+    const key = tileKey(x, y);
+    delete next.specials.npcs[key];
+    delete next.specials.objects[key];
+    delete next.specials.exits[key];
+    delete next.specials.triggers[key];
+    if (!cell) return;
+    if (cell.npc != null) next.specials.npcs[key] = cell.npc;
+    if (cell.object) next.specials.objects[key] = { ...cell.object };
+    if (cell.exit) next.specials.exits[key] = structuredClone(cell.exit);
+    if (cell.trigger != null) next.specials.triggers[key] = cell.trigger;
+  };
 
   const pasteClipboardAt = useCallback(
     (x1: number, y1: number) => {
@@ -530,8 +740,10 @@ export function MapEditor({ mapId }: { mapId: number }) {
         const next = cloneEditorState(prev);
         for (let dy = 0; dy < clipboard.height; dy++) {
           for (let dx = 0; dx < clipboard.width; dx++) {
-            const tx = x1 - 1 + dx;
-            const ty = y1 - 1 + dy;
+            const x = x1 + dx;
+            const y = y1 + dy;
+            const tx = x - 1;
+            const ty = y - 1;
             if (tx < 0 || ty < 0 || tx >= next.width || ty >= next.height)
               continue;
             const src = clipboard.tiles[dy]![dx]!;
@@ -539,11 +751,13 @@ export function MapEditor({ mapId }: { mapId: number }) {
               layers: [...src.layers] as [number, number, number, number],
               blocked: src.blocked,
             };
+            writeClipSpecial(next, x, y, clipboard.specials[dy]?.[dx]);
           }
         }
         return next;
       });
       endStroke();
+      setMessage(`Pegado ${clipboard.width}×${clipboard.height}`);
     },
     [clipboard, beginStroke, endStroke],
   );
@@ -560,18 +774,14 @@ export function MapEditor({ mapId }: { mapId: number }) {
       west: parse(borderForm.west),
       replaceExisting: borderForm.replaceExisting,
     };
-    if (!form.north && !form.south && !form.east && !form.west) {
-      setMessage("Indicá al menos un mapa vecino");
-      return;
-    }
     const cur = stateRef.current;
     if (!cur) return;
     beginStroke();
-    const { state: next, placed, cleared } = applyBorderExits(cur, form);
+    const { state: next, placed, cleared, blocked } = applyBorderExits(cur, form);
     setState(next);
     setMessage(
-      `Bordes: ${placed} traslados` +
-        (cleared ? ` (${cleared} previos reemplazados)` : ""),
+      `Bordes: ${placed} traslados y ${blocked} bloqueos` +
+        (cleared ? ` (${cleared} traslados previos reemplazados)` : ""),
     );
     endStroke();
     setBorderModalOpen(false);
@@ -580,7 +790,6 @@ export function MapEditor({ mapId }: { mapId: number }) {
   const placementPreview = useMemo(() => {
     if (!cursor) return null;
     if (placeMode) return null;
-    if (massSelectMode) return null;
     if (
       prefs.tool !== "brush" &&
       prefs.tool !== "stamp" &&
@@ -630,7 +839,6 @@ export function MapEditor({ mapId }: { mapId: number }) {
   }, [
     cursor,
     placeMode,
-    massSelectMode,
     prefs.tool,
     prefs.activeLayer,
     selectedStamp,
@@ -673,6 +881,9 @@ export function MapEditor({ mapId }: { mapId: number }) {
       npcs,
       grhCache: grhCache.current,
       imageCache: imageCache.current,
+      neighbors,
+      showNeighbors: prefs.overlays.neighbors,
+      neighborInterior,
     });
 
     // rulers / debug overlay text on selected
@@ -709,17 +920,43 @@ export function MapEditor({ mapId }: { mapId: number }) {
     objects,
     npcs,
     cacheTick,
+    neighbors,
+    neighborInterior,
   ]);
 
-  // Minimap
+  // Minimap graphics (debounced so painting doesn't redraw every tile)
+  useEffect(() => {
+    if (!state || !prefs.showMinimap) return;
+    const timer = window.setTimeout(() => {
+      const base = miniBaseRef.current ?? document.createElement("canvas");
+      miniBaseRef.current = base;
+      if (base.width !== state.width || base.height !== state.height) {
+        base.width = state.width;
+        base.height = state.height;
+      }
+      const bctx = base.getContext("2d");
+      if (!bctx) return;
+      paintMinimapGraphics(
+        bctx,
+        state,
+        grhCache.current,
+        imageCache.current,
+      );
+      setMiniRev((n) => n + 1);
+    }, 150);
+    return () => window.clearTimeout(timer);
+  }, [state, cacheTick, prefs.showMinimap]);
+
+  // Minimap viewport frame
   useEffect(() => {
     const mini = miniRef.current;
     const wrap = wrapRef.current;
     if (!mini || !wrap || !state || !prefs.showMinimap) return;
     const ctx = mini.getContext("2d");
     if (!ctx) return;
-    mini.width = 140;
-    mini.height = 140;
+    const size = 200;
+    mini.width = size;
+    mini.height = size;
     renderMinimap(
       ctx,
       state,
@@ -727,10 +964,11 @@ export function MapEditor({ mapId }: { mapId: number }) {
       prefs.zoom,
       wrap.clientWidth,
       wrap.clientHeight,
-      140,
-      140,
+      size,
+      size,
+      miniBaseRef.current,
     );
-  }, [state, pan, prefs.zoom, prefs.showMinimap]);
+  }, [state, pan, prefs.zoom, prefs.showMinimap, miniRev]);
 
   async function save() {
     const current = stateRef.current;
@@ -797,7 +1035,6 @@ export function MapEditor({ mapId }: { mapId: number }) {
           target.isContentEditable);
       if (typing) return;
 
-      if (e.code === "Space") setSpaceDown(true);
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
         if (e.repeat) return;
         e.preventDefault();
@@ -815,19 +1052,32 @@ export function MapEditor({ mapId }: { mapId: number }) {
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "c") {
         e.preventDefault();
-        setMassSelectMode(true);
-        setPlaceMode(null);
-        setPrefs((p) => ({ ...p, tool: "select" }));
-        setMessage("Selección en masa: arrastrá un rectángulo (Ctrl+V pega)");
+        const rect = selectionRectRef.current;
+        if (!rect) {
+          setMessage("Seleccioná con Shift o Ctrl y arrastrá. Después Ctrl+C.");
+          return;
+        }
+        copySelectionToClipboard(rect);
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "x") {
+        e.preventDefault();
+        const rect = selectionRectRef.current;
+        if (!rect) {
+          setMessage("Seleccioná con Shift o Ctrl y arrastrá. Después Ctrl+X.");
+          return;
+        }
+        cutSelection(rect);
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "v") {
-        if (!clipboard || !cursor) return;
         e.preventDefault();
+        if (!clipboard || !cursor) {
+          setMessage(clipboard ? "Pará el cursor donde querés pegar" : "Nada en el portapapeles");
+          return;
+        }
         pasteClipboardAt(cursor.x, cursor.y);
       }
       if (e.key === "Escape") {
         setPlaceMode(null);
-        setMassSelectMode(false);
         setSelectionRect(null);
         setBorderModalOpen(false);
         setPrefs((p) => ({ ...p, tool: "select" }));
@@ -866,17 +1116,12 @@ export function MapEditor({ mapId }: { mapId: number }) {
         fitMap();
       }
     }
-    function onKeyUp(e: KeyboardEvent) {
-      if (e.code === "Space") setSpaceDown(false);
-    }
     window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("keyup", onKeyUp);
     return () => {
       window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("keyup", onKeyUp);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [undo, redo, clipboard, cursor, pasteClipboardAt]);
+  }, [undo, redo, clipboard, cursor, pasteClipboardAt, copySelectionToClipboard, cutSelection]);
 
   // Panel resize
   useEffect(() => {
@@ -935,6 +1180,7 @@ export function MapEditor({ mapId }: { mapId: number }) {
       ? state.tiles[selected.y - 1]?.[selected.x - 1]
       : null;
   const selKey = selected ? tileKey(selected.x, selected.y) : "";
+  const selectedExit = state ? exitDestination(state.specials.exits[selKey]) : null;
   // cacheTick: recompute when GRH sizes finish loading
   const covering = useMemo(() => {
     if (!state || !selected) return [];
@@ -1028,19 +1274,16 @@ export function MapEditor({ mapId }: { mapId: number }) {
         <button
           className="me-btn"
           onClick={() => {
-            setMassSelectMode(true);
-            setPlaceMode(null);
-            setPrefs((p) => ({ ...p, tool: "select" }));
-            setMessage("Selección en masa: arrastrá un rectángulo");
+            const rect = selectionRectRef.current;
+            if (!rect) {
+              setMessage("Mantené Shift o Ctrl y arrastrá con el click izquierdo");
+              return;
+            }
+            copySelectionToClipboard(rect);
           }}
-          title="Ctrl+C — selección en masa"
-          style={
-            massSelectMode
-              ? { outline: "1px solid var(--me-accent, #3d8bfd)" }
-              : undefined
-          }
+          title="Shift/Ctrl + arrastrar selecciona. Ctrl+C copia, Ctrl+X corta"
         >
-          Selección
+          Copiar selección
         </button>
         <button
           className="me-btn"
@@ -1095,7 +1338,9 @@ export function MapEditor({ mapId }: { mapId: number }) {
                   onClick={() => {
                     setPlaceMode(null);
                     setPrefs((p) => ({ ...p, tool: t.id }));
-                    if (t.id !== "stamp") setSelectedStamp(null);
+                    if (t.id !== "stamp" && t.id !== "fill" && t.id !== "brush") {
+                      setSelectedStamp(null);
+                    }
                   }}
                   title={t.label}
                 >
@@ -1283,6 +1528,7 @@ export function MapEditor({ mapId }: { mapId: number }) {
                 ["grid", "Grilla", "G"],
                 ["coordinates", "Coordenadas", ""],
                 ["grhIds", "GRH IDs", ""],
+                ["neighbors", "Mapas vecinos", ""],
               ] as const
             ).map(([key, label, shortcut]) => (
               <label key={key} className="me-check">
@@ -1322,6 +1568,7 @@ export function MapEditor({ mapId }: { mapId: number }) {
                       grid: true,
                       coordinates: true,
                       grhIds: true,
+                      neighbors: true,
                     },
                   }))
                 }
@@ -1345,6 +1592,7 @@ export function MapEditor({ mapId }: { mapId: number }) {
                       grid: false,
                       coordinates: false,
                       grhIds: false,
+                      neighbors: false,
                     },
                   }))
                 }
@@ -1425,12 +1673,8 @@ export function MapEditor({ mapId }: { mapId: number }) {
             }}
             onPointerDown={(e) => {
               canvasRef.current?.setPointerCapture(e.pointerId);
-              if (
-                e.button === 1 ||
-                e.button === 2 ||
-                spaceDown ||
-                (e.button === 0 && e.shiftKey)
-              ) {
+              if (e.button === 1) {
+                e.preventDefault();
                 dragRef.current = {
                   mode: "pan",
                   lastX: e.clientX,
@@ -1441,35 +1685,59 @@ export function MapEditor({ mapId }: { mapId: number }) {
               if (e.button !== 0) return;
               const t = screenToTile(e.clientX, e.clientY);
               if (!t) return;
-
-              if (massSelectMode) {
-                massSelectStartRef.current = { x: t.x, y: t.y };
-                setSelectionRect({ x1: t.x, y1: t.y, x2: t.x, y2: t.y });
-                dragRef.current = {
-                  mode: "paint",
-                  lastX: e.clientX,
-                  lastY: e.clientY,
-                };
-                return;
+              if (e.detail <= 1) dirtyAtClickRef.current = dirty;
+              if (e.detail >= 2) {
+                const dest = exitDestination(
+                  stateRef.current?.specials.exits[tileKey(t.x, t.y)],
+                );
+                if (dest) {
+                  e.preventDefault();
+                  if (
+                    dirtyAtClickRef.current &&
+                    !confirm("Hay cambios sin guardar. ¿Ir al mapa destino igual?")
+                  ) {
+                    return;
+                  }
+                  if (dest.map === mapId) {
+                    setSelected({ x: dest.x, y: dest.y });
+                    const wrap = wrapRef.current;
+                    if (wrap) {
+                      setPan({
+                        x: wrap.clientWidth / 2 - (dest.x - 0.5) * TILE_SIZE * prefs.zoom,
+                        y: wrap.clientHeight / 2 - (dest.y - 0.5) * TILE_SIZE * prefs.zoom,
+                      });
+                    }
+                    return;
+                  }
+                  router.push(`/maps/${dest.map}?x=${dest.x}&y=${dest.y}`);
+                  return;
+                }
               }
 
-              if (prefs.tool === "select" && !placeMode) {
+              if (e.shiftKey || e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+                selectionStartRef.current = { x: t.x, y: t.y };
+                setSelectionRect({ x1: t.x, y1: t.y, x2: t.x, y2: t.y });
                 setSelected({ x: t.x, y: t.y });
                 dragRef.current = {
-                  mode: "pan",
+                  mode: "select",
                   lastX: e.clientX,
                   lastY: e.clientY,
                 };
                 return;
               }
 
+              setSelectionRect(null);
               setSelected({ x: t.x, y: t.y });
+              if (prefs.tool === "select" && !placeMode) return;
               if (prefs.tool === "rect" || prefs.tool === "line") {
                 shapeStartRef.current = { x0: t.x0, y0: t.y0 };
                 return;
               }
+              stampAnchorRef.current = { x0: t.x0, y0: t.y0 };
+              lastPaintKeyRef.current = null;
               beginStroke();
-              applyAt(t.x0, t.y0);
+              paintFromCursor(t.x0, t.y0);
               dragRef.current = {
                 mode: "paint",
                 lastX: e.clientX,
@@ -1487,15 +1755,10 @@ export function MapEditor({ mapId }: { mapId: number }) {
                 drag.lastX = e.clientX;
                 drag.lastY = e.clientY;
                 setPan((p) => ({ x: p.x + dx, y: p.y + dy }));
-              } else if (
-                drag.mode === "paint" &&
-                massSelectMode &&
-                massSelectStartRef.current &&
-                t
-              ) {
+              } else if (drag.mode === "select" && selectionStartRef.current && t) {
                 setSelectionRect({
-                  x1: massSelectStartRef.current.x,
-                  y1: massSelectStartRef.current.y,
+                  x1: selectionStartRef.current.x,
+                  y1: selectionStartRef.current.y,
                   x2: t.x,
                   y2: t.y,
                 });
@@ -1507,26 +1770,23 @@ export function MapEditor({ mapId }: { mapId: number }) {
                   prefs.tool === "stamp" ||
                   placeMode)
               ) {
-                applyAt(t.x0, t.y0);
+                paintFromCursor(t.x0, t.y0);
               }
             }}
             onPointerUp={(e) => {
-              if (massSelectMode && massSelectStartRef.current) {
+              if (dragRef.current.mode === "select" && selectionStartRef.current) {
                 const t = screenToTile(e.clientX, e.clientY);
-                const start = massSelectStartRef.current;
+                const start = selectionStartRef.current;
                 const end = t ? { x: t.x, y: t.y } : start;
-                const rect = {
+                setSelectionRect({
                   x1: start.x,
                   y1: start.y,
                   x2: end.x,
                   y2: end.y,
-                };
-                setSelectionRect(rect);
-                copySelectionToClipboard(rect);
-                massSelectStartRef.current = null;
-                setMassSelectMode(false);
+                });
+                selectionStartRef.current = null;
                 dragRef.current.mode = null;
-                endStroke();
+                setMessage("Selección lista. Ctrl+C copia, Ctrl+X corta, Ctrl+V pega");
                 return;
               }
               if (
@@ -1548,14 +1808,19 @@ export function MapEditor({ mapId }: { mapId: number }) {
                 shapeStartRef.current = null;
               }
               dragRef.current.mode = null;
+              stampAnchorRef.current = null;
+              lastPaintKeyRef.current = null;
               endStroke();
             }}
             onPointerLeave={() => {
               setCursor(null);
               setHoverScreen(null);
-              dragRef.current.mode = null;
-              endStroke();
+              if (dragRef.current.mode !== "select") {
+                dragRef.current.mode = null;
+                endStroke();
+              }
             }}
+            onAuxClick={(e) => e.preventDefault()}
             onWheel={(e) => {
               e.preventDefault();
               // Ctrl+rueda = zoom; rueda sola = pan vertical; Shift = pan horizontal
@@ -1875,12 +2140,19 @@ export function MapEditor({ mapId }: { mapId: number }) {
                     onEdit={() => setPlaceMode("exit")}
                     onClear={() => eraseSpecialAt(selected.x, selected.y)}
                   />
-                  {state.specials.exits[selKey] &&
-                    "map" in (state.specials.exits[selKey] as object) && (
+                  {selectedExit && (
                       <Link
                         className="me-btn"
-                        href={`/maps/${(state.specials.exits[selKey] as { map: number }).map}`}
+                        href={`/maps/${selectedExit.map}?x=${selectedExit.x}&y=${selectedExit.y}`}
                         style={{ display: "inline-block", marginTop: 6 }}
+                        onClick={(e) => {
+                          if (
+                            dirty &&
+                            !confirm("Hay cambios sin guardar. ¿Ir al mapa destino igual?")
+                          ) {
+                            e.preventDefault();
+                          }
+                        }}
                       >
                         Ir al destino
                       </Link>
@@ -2124,6 +2396,14 @@ export function MapEditor({ mapId }: { mapId: number }) {
           Zoom: <strong>{Math.round(prefs.zoom * 100)}%</strong>
         </span>
         <span>
+          Vecinos:{" "}
+          <strong>
+            {prefs.overlays.neighbors && neighbors.length
+              ? neighbors.map((n) => `#${n.id}`).join(" ")
+              : "—"}
+          </strong>
+        </span>
+        <span>
           Cambios: <strong>{changeCount}</strong>
         </span>
         {selTile && selected && (
@@ -2146,9 +2426,10 @@ export function MapEditor({ mapId }: { mapId: number }) {
             </span>
           </>
         )}
-        {massSelectMode && (
+        {selectionRect && (
           <span style={{ color: "#7dd3fc" }}>
-            Selección en masa activa — arrastrá
+            Selección {Math.abs(selectionRect.x2 - selectionRect.x1) + 1}×
+            {Math.abs(selectionRect.y2 - selectionRect.y1) + 1} — Ctrl+C / Ctrl+X
           </span>
         )}
         {clipboard && (
@@ -2194,10 +2475,13 @@ export function MapEditor({ mapId }: { mapId: number }) {
                 lineHeight: 1.4,
               }}
             >
-              Escribí el ID del mapa vecino en cada lado (vacío = no tocar).
-              Usa el layout clásico AO: N y={AO_BORDER.northY}→{AO_BORDER.northDestY},
-              S y={AO_BORDER.southY}→{AO_BORDER.southDestY}, O x={AO_BORDER.westX}→
-              {AO_BORDER.westDestX}, E x={AO_BORDER.eastX}→{AO_BORDER.eastDestX}.
+              Escribí el ID del mapa vecino solo en los lados con salida.
+              Los cuatro bordes se bloquean. El lado vacío queda cerrado, sin
+              traslado. El lado con mapa deja libre la línea de salida. Layout
+              clásico AO: N y=
+              {AO_BORDER.northY}→{AO_BORDER.northDestY}, S y={AO_BORDER.southY}→
+              {AO_BORDER.southDestY}, O x={AO_BORDER.westX}→{AO_BORDER.westDestX}, E
+              x={AO_BORDER.eastX}→{AO_BORDER.eastDestX}.
             </p>
             {(
               [
@@ -2265,7 +2549,7 @@ export function MapEditor({ mapId }: { mapId: number }) {
                 className="me-btn primary"
                 onClick={applyAutoBorders}
               >
-                Colocar traslados
+                Colocar bordes
               </button>
             </div>
           </div>

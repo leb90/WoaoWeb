@@ -1,5 +1,5 @@
 import type { EditorMapState, IndexReferencia, MapViewMode } from "./types";
-import { TILE_SIZE } from "./types";
+import { TILE_SIZE, parseTileKey } from "./types";
 import type { OverlayPrefs } from "./mapEditorPrefs";
 import { triggerColor } from "./triggerCatalog";
 
@@ -811,6 +811,21 @@ export function renderMinimap(
   if (graphics && graphics.width > 0) {
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(graphics, 0, 0, mapW, mapH);
+  }
+
+  const dotRadius = Math.max(2.2, Math.min(scaleX, scaleY) * 0.85);
+  for (const key of Object.keys(state.specials.npcs)) {
+    const tile = parseTileKey(key);
+    if (!tile) continue;
+    const cx = (tile.x - 0.5) * scaleX;
+    const cy = (tile.y - 0.5) * scaleY;
+    ctx.beginPath();
+    ctx.arc(cx, cy, dotRadius, 0, Math.PI * 2);
+    ctx.fillStyle = "#f5c518";
+    ctx.fill();
+    ctx.lineWidth = 0.6;
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.7)";
+    ctx.stroke();
   }
 
   const vx = (-pan.x / zoom / TILE_SIZE) * scaleX;

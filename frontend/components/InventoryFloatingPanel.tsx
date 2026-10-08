@@ -12,6 +12,7 @@ import {
     Settings,
     Settings2,
     Volume2,
+    Sparkles,
     Keyboard,
     X,
     Crown,
@@ -80,8 +81,10 @@ type InventoryFloatingPanelProps = {
     hotkeySettings: HotkeySettings;
     useItemRepeatMs: number;
     soundVolume: number;
+    auraOpacity: number;
     onHotkeySettingsChange: (settings: HotkeySettings) => void;
     onSoundVolumeChange: (volume: number) => void;
+    onAuraOpacityChange: (opacity: number) => void;
     onSelectSpell: (slot: number | null) => void;
     onCastSpell: (spell: SpellEntry) => void;
     onMoveSpell?: (slot: number, direction: "up" | "down") => void;
@@ -1225,8 +1228,10 @@ export default function InventoryFloatingPanel({
     hotkeySettings,
     useItemRepeatMs,
     soundVolume,
+    auraOpacity,
     onHotkeySettingsChange,
     onSoundVolumeChange,
+    onAuraOpacityChange,
     onSelectSpell,
     onCastSpell,
     onMoveSpell,
@@ -4435,6 +4440,51 @@ export default function InventoryFloatingPanel({
                                     <div className="mt-2 flex justify-between text-[10px] uppercase tracking-[0.2em] text-stone-500">
                                         <span>Silencio</span>
                                         <span>Máximo</span>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section className="rounded-[22px] border border-[#4f3926] bg-[#19110d]/92 p-4">
+                                <div className="flex items-start gap-3">
+                                    <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-amber-300/15 bg-black/25 text-amber-100">
+                                        <Sparkles
+                                            className="h-4.5 w-4.5"
+                                            strokeWidth={1.8}
+                                        />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-[11px] uppercase tracking-[0.26em] text-amber-200/78">
+                                            Aura
+                                        </p>
+                                        <p className="mt-1 text-sm text-stone-300">
+                                            Qué tan visible queda el aura en el
+                                            suelo. Más bajo, más transparente.
+                                        </p>
+                                    </div>
+                                    <div className="rounded-full border border-amber-300/20 bg-black/30 px-3 py-1 text-sm font-semibold text-amber-100">
+                                        {Math.round(auraOpacity * 100)}%
+                                    </div>
+                                </div>
+
+                                <div className="mt-4">
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max="100"
+                                        step="1"
+                                        value={Math.round(auraOpacity * 100)}
+                                        onChange={(event) =>
+                                            onAuraOpacityChange(
+                                                Number(event.target.value) /
+                                                    100,
+                                            )
+                                        }
+                                        className="h-2 w-full cursor-pointer appearance-none rounded-full bg-amber-200/15 accent-amber-400"
+                                        aria-label="Opacidad del aura"
+                                    />
+                                    <div className="mt-2 flex justify-between text-[10px] uppercase tracking-[0.2em] text-stone-500">
+                                        <span>Invisible</span>
+                                        <span>Intensa</span>
                                     </div>
                                 </div>
                             </section>

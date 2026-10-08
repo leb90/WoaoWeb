@@ -90,17 +90,30 @@ export function getMountEquipmentLift(headOffsetY = 0): number {
     }
 }
 
+/** Norte: el cuerpo tapa el arma y el escudo que quedan detrás. */
+export function getEquipmentLayerZIndex(heading: number): {
+    weapon: number;
+    shield: number;
+} {
+    if (heading === 1) {
+        return { weapon: 0.12, shield: 0.13 };
+    }
+    return { weapon: 0.4, shield: 0.5 };
+}
+
 export function getEquipmentSpritePosition(
     kind: "weapon" | "shield",
     texture: Texture,
     headOffsetY = 0,
+    equipmentOffset: { offsetX?: number; offsetY?: number } = {},
 ): { x: number; y: number } {
     return {
-        x: 16 - Math.floor((texture.width * 16) / 32),
+        x: 16 - Math.floor((texture.width * 16) / 32) + (equipmentOffset.offsetX || 0),
         y:
             (kind === "weapon" ? 28 : 32) -
             Math.floor((texture.height * 32) / 32) -
-            getMountEquipmentLift(headOffsetY),
+            getMountEquipmentLift(headOffsetY) +
+            (equipmentOffset.offsetY || 0),
     };
 }
 

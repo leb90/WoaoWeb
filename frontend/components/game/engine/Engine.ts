@@ -96,6 +96,7 @@ import {
     syncDisplayObjectToEntityFXRow,
 } from "../rendering/rowLayerContainers";
 import { destroyWeatherFx, updateWeatherFx } from "../rendering/weatherFx";
+import { updateEquipmentAuras } from "../rendering/equipmentAuras";
 
 const TREE_FADE_ALPHA = 0.25;
 const WATER_ANIMATION_SPEED_MULTIPLIER = 10;
@@ -2455,6 +2456,7 @@ export class Engine {
         this.updateRoofVisibility();
         this.updateTreeTransparency();
         updateWeatherFx(this, this.delta);
+        updateEquipmentAuras(this);
     };
 
     updateCulling(): void {

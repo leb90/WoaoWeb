@@ -749,10 +749,12 @@ export function getTexturePath(graphicData: GraphicData): string {
     if (
         fileNumber === 320160 ||
         fileNumber === 320161 ||
-        fileNumber === 320168 ||
         fileNumber === 320169
     ) {
         return `/graphics/${fileNumber}.png?v=5`;
+    }
+    if (fileNumber === 320168) {
+        return `/graphics/${fileNumber}.png?v=6`;
     }
     return `/graphics/${fileNumber}.png`;
 }
@@ -860,8 +862,8 @@ export async function loadShieldsDB(): Promise<ShieldsDB> {
 
 export async function loadHelmetsDB(): Promise<HelmetsDB> {
     return await fetchJsonWithFallback<HelmetsDB>(
-        "/init/cascos.json?v=3.4",
-        "/init/cascos.json?v=3.4",
+        "/init/cascos.json?v=3.5",
+        "/init/cascos.json?v=3.5",
         "Helmets database",
     );
 }

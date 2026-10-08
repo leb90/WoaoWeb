@@ -66,7 +66,8 @@ export type SpriteImportResult = {
 };
 
 const WALK_SPEED = 1000 / 18;
-const DIRECTION_ORDER: DirectionId[] = ["2", "1", "3", "4"];
+// Sur, este, norte, oeste: frente, derecha, espalda, izquierda.
+const DIRECTION_ORDER: DirectionId[] = ["2", "3", "1", "4"];
 const HELMET_FRAME_ORDER: DirectionId[] = ["2", "3", "1", "4"];
 const JOB_DIR = path.join(PATHS.data(), "sprite-jobs");
 

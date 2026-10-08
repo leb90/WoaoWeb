@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { GrhPreview } from "@/components/ui/GrhPreview";
+import { MannequinPreview } from "@/components/sprites/MannequinPreview";
 import { ObjectTypeBadge } from "./ObjectTypeBadge";
 import {
   ALL_CLASS_IDS,
@@ -39,6 +40,14 @@ type MetaPayload = {
 type Props =
   | { mode: "edit"; id: number }
   | { mode: "create" };
+
+function previewKind(objType: number, subtipo: number): "body" | "helmet" | "shield" | "weapon" | null {
+  if (objType === OBJ_TYPE.armas) return "weapon";
+  if (objType === OBJ_TYPE.cascos || (objType === OBJ_TYPE.armaduras && subtipo === 1)) return "helmet";
+  if (objType === OBJ_TYPE.escudos || (objType === OBJ_TYPE.armaduras && subtipo === 2)) return "shield";
+  if (objType === OBJ_TYPE.armaduras) return "body";
+  return null;
+}
 
 export function ObjectEditor(props: Props) {
   const router = useRouter();
@@ -818,6 +827,14 @@ export function ObjectEditor(props: Props) {
           <div style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "center" }}>
             GRH: {Number(data.grhIndex ?? 0)} | Anim: {Number(data.anim ?? 0)}
           </div>
+          {previewKind(objType, Number(data.subtipo ?? 0)) && Number(data.anim ?? 0) > 0 ? (
+            <div style={{ marginTop: 12 }}>
+              <MannequinPreview
+                kind={previewKind(objType, Number(data.subtipo ?? 0))!}
+                anim={Number(data.anim ?? 0)}
+              />
+            </div>
+          ) : null}
         </div>
         <div className="obj-side-card">
           <h3>Resumen del objeto</h3>

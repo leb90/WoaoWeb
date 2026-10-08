@@ -2907,6 +2907,10 @@ export default function InventoryFloatingPanel({
 
     const isItemBlockedForClass = React.useCallback(
         (item: InventoryItem) => {
+            if (hud?.privileges === 1 || hud?.privileges === 2) {
+                return false;
+            }
+
             const classId = hud?.idClase;
             const objectData = objectsDB?.[item.idItem.toString()];
 
@@ -2916,7 +2920,7 @@ export default function InventoryFloatingPanel({
                 objectData.clasesNoPermitidas.includes(classId)
             );
         },
-        [hud?.idClase, objectsDB],
+        [hud?.idClase, hud?.privileges, objectsDB],
     );
 
     const currentClassLabel =

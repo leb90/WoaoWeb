@@ -2949,6 +2949,8 @@ function equiparItem(ws: RuntimeClient) {
             }
 
             if (
+                user.privileges !== 1 &&
+                user.privileges !== 2 &&
                 Array.isArray(item.clasesNoPermitidas) &&
                 item.clasesNoPermitidas.includes(user.idClase) &&
                 !ignoresClassRestrictionForItem(idItem)

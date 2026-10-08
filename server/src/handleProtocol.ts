@@ -638,8 +638,12 @@ function itemValidUser(idUser: EntityId, idItem: number) {
         return isBoatValidForUser(user, obj) ? 1 : 0;
     }
 
+    const ignoresClassRestriction =
+        Number(user.privileges ?? 0) === 1 || Number(user.privileges ?? 0) === 2;
+
     if (
-        (idItem !== DRAGON_SLAYER_SWORD_ITEM_ID &&
+        (!ignoresClassRestriction &&
+            idItem !== DRAGON_SLAYER_SWORD_ITEM_ID &&
             Array.isArray(obj.clasesNoPermitidas) &&
             obj.clasesNoPermitidas.includes(user.idClase)) ||
         (getRequiredFactionForItem(idItem) !== "none" && user.faction !== getRequiredFactionForItem(idItem)) ||

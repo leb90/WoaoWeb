@@ -1,4 +1,4 @@
-import { Container, Point, type ICanvas } from "pixi.js";
+import { Assets, Container, Sprite, Texture } from "pixi.js";
 
 export type EquippedPieces = {
     body: number;
@@ -26,23 +26,7 @@ type AuraSet = {
 
 type BodyBox = { x: number; y: number; width: number; height: number };
 
-type AuraRenderer = {
-    resolution: number;
-    extract: {
-        canvas: (options: {
-            target: Container;
-            clearColor: number[];
-            antialias: boolean;
-        }) => ICanvas;
-    };
-};
-
 type AuraHost = {
-    app?: {
-        canvas?: HTMLCanvasElement;
-        screen?: { width: number; height: number };
-        renderer?: AuraRenderer;
-    } | null;
     isDestroyed?: boolean;
 };
 
@@ -70,42 +54,27 @@ export const AURA_OPACITY_STORAGE_KEY = "ao-play-aura-opacity";
 /** 0 invisible, 1 la intensidad de las capas. Por defecto queda suave. */
 export const DEFAULT_AURA_OPACITY = 0.4;
 
-const STYLE_ID = "equipment-aura-style";
-const AURA_STYLE = `
-.eq-aura-surface {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-`;
-
-type AuraImages = {
-    base: HTMLImageElement;
-    glow: HTMLImageElement;
-    energy: HTMLImageElement;
-};
+/** Debajo del cuerpo (0.2), la cabeza y el equipo. */
+const AURA_Z_INDEX = 0.05;
 
 type AuraRig = {
-    container: Container;
+    owner: Container;
+    root: Container;
+    glow: Sprite;
+    base: Sprite;
+    energy: Sprite;
     setId: string;
-    localX: number;
-    localY: number;
-    worldSpan: number;
-    images: AuraImages;
+    size: number;
     hidden: boolean;
 };
 
 const rigs = new Set<AuraRig>();
 const rigByContainer = new WeakMap<Container, AuraRig>();
-const imageCache = new Map<string, HTMLImageElement>();
-const scratchIn = new Point();
-const scratchOut = new Point();
-let overlay: HTMLDivElement | null = null;
-let surface: HTMLCanvasElement | null = null;
+const textureCache = new Map<string, Texture>();
+const textureLoads = new Map<string, Promise<Texture | null>>();
 let auraOpacity = DEFAULT_AURA_OPACITY;
 let opacityLoaded = false;
+let legacyOverlayRemoved = false;
 
 function clampOpacity(value: number): number {
     if (!Number.isFinite(value)) return DEFAULT_AURA_OPACITY;
@@ -152,59 +121,67 @@ export function resolveEquipmentAura(gear: EquippedPieces): AuraSet | null {
     );
 }
 
-function ensureStyle(): void {
-    if (typeof document === "undefined" || document.getElementById(STYLE_ID)) {
+function loadTexture(src: string, apply: (texture: Texture) => void): void {
+    const cached = textureCache.get(src);
+    if (cached) {
+        apply(cached);
         return;
     }
-    const style = document.createElement("style");
-    style.id = STYLE_ID;
-    style.textContent = AURA_STYLE;
-    document.head.appendChild(style);
+
+    let pending = textureLoads.get(src);
+    if (!pending) {
+        pending = Assets.load<Texture>(src)
+            .then((texture) => {
+                texture.source.scaleMode = "linear";
+                textureCache.set(src, texture);
+                return texture;
+            })
+            .catch(() => null);
+        textureLoads.set(src, pending);
+    }
+
+    void pending.then((texture) => {
+        if (texture) apply(texture);
+    });
 }
 
-function getImage(src: string): HTMLImageElement {
-    const cached = imageCache.get(src);
-    if (cached) return cached;
-    const image = new Image();
-    image.decoding = "async";
-    image.src = src;
-    imageCache.set(src, image);
-    return image;
+function createLayer(src: string): Sprite {
+    const sprite = new Sprite(Texture.EMPTY);
+    sprite.anchor.set(0.5, 0.5);
+    sprite.eventMode = "none";
+    loadTexture(src, (texture) => {
+        if (sprite.destroyed) return;
+        sprite.texture = texture;
+    });
+    return sprite;
 }
 
-function ensureOverlay(canvas: HTMLCanvasElement): HTMLCanvasElement | null {
-    const host = canvas.parentElement;
-    if (!host) return null;
-    if (getComputedStyle(host).position === "static") {
-        host.style.position = "relative";
-    }
-    if (!overlay || overlay.parentElement !== host) {
-        overlay?.remove();
-        overlay = document.createElement("div");
-        overlay.style.position = "absolute";
-        overlay.style.inset = "0";
-        overlay.style.overflow = "hidden";
-        overlay.style.pointerEvents = "none";
-        overlay.style.zIndex = "3";
-        surface = document.createElement("canvas");
-        surface.className = "eq-aura-surface";
-        overlay.appendChild(surface);
-        host.appendChild(overlay);
-    }
-    return surface;
+function removeLegacyOverlay(): void {
+    if (legacyOverlayRemoved || typeof document === "undefined") return;
+    legacyOverlayRemoved = true;
+    document.querySelectorAll(".eq-aura-surface").forEach((node) => {
+        node.parentElement?.remove();
+    });
+}
+
+function destroyRig(rig: AuraRig): void {
+    rigs.delete(rig);
+    rigByContainer.delete(rig.owner);
+    rig.root.parent?.removeChild(rig.root);
+    rig.root.destroy({ children: true });
 }
 
 function removeRig(container: Container): void {
     const rig = rigByContainer.get(container);
     if (!rig) return;
-    rigs.delete(rig);
-    rigByContainer.delete(container);
+    destroyRig(rig);
 }
 
 function placeRig(rig: AuraRig, body: BodyBox, widthScale: number): void {
-    rig.localX = body.x + body.width / 2;
-    rig.localY = body.y + body.height - 2;
-    rig.worldSpan = Math.max(12, body.width * widthScale);
+    // Centro del sigilo en los pies. El cuerpo se dibuja encima.
+    rig.root.position.set(body.x + body.width / 2, body.y + body.height - 2);
+    rig.size = Math.max(12, body.width * widthScale);
+    rig.root.zIndex = AURA_Z_INDEX;
 }
 
 export function syncEquipmentAura(
@@ -220,138 +197,52 @@ export function syncEquipmentAura(
     }
 
     let rig = rigByContainer.get(container);
-    if (!rig || rig.setId !== set.id) {
+    if (!rig || rig.setId !== set.id || rig.root.destroyed) {
         removeRig(container);
+        const root = new Container();
+        root.label = "equipmentAura";
+        root.eventMode = "none";
+        root.interactiveChildren = false;
+        root.sortableChildren = false;
+        const glow = createLayer(set.layers.glow);
+        const base = createLayer(set.layers.base);
+        const energy = createLayer(set.layers.energy);
+        glow.zIndex = 0;
+        base.zIndex = 1;
+        energy.zIndex = 2;
+        root.addChild(glow, base, energy);
+        container.addChild(root);
         rig = {
-            container,
+            owner: container,
+            root,
+            glow,
+            base,
+            energy,
             setId: set.id,
-            localX: 0,
-            localY: 0,
-            worldSpan: 0,
-            images: {
-                glow: getImage(set.layers.glow),
-                base: getImage(set.layers.base),
-                energy: getImage(set.layers.energy),
-            },
+            size: 0,
             hidden: !visible,
         };
         rigs.add(rig);
         rigByContainer.set(container, rig);
+    } else if (rig.root.parent !== container) {
+        container.addChild(rig.root);
     }
 
     rig.hidden = !visible;
+    rig.root.visible = visible;
     placeRig(rig, body, set.widthScale);
 }
 
-function drawLayer(
-    ctx: CanvasRenderingContext2D,
-    image: HTMLImageElement,
-    cx: number,
-    cy: number,
-    size: number,
-    rotation: number,
-    alpha: number,
-    scale: number,
-): void {
-    if (!image.complete || image.naturalWidth <= 0 || alpha <= 0.01) return;
-    const draw = size * scale;
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(rotation);
-    ctx.globalAlpha = alpha;
-    ctx.drawImage(image, -draw / 2, -draw / 2, draw, draw);
-    ctx.restore();
-}
-
-function punchCharacter(
-    ctx: CanvasRenderingContext2D,
-    renderer: AuraRenderer,
-    container: Container,
-    originX: number,
-    originY: number,
-    scaleX: number,
-    scaleY: number,
-): void {
-    const bounds = container.getLocalBounds();
-    const minX = bounds.minX;
-    const minY = bounds.minY;
-    const width = bounds.maxX - bounds.minX;
-    const height = bounds.maxY - bounds.minY;
-    if (!(width > 1) || !(height > 1)) return;
-
-    let extracted: ICanvas;
-    try {
-        extracted = renderer.extract.canvas({
-            target: container,
-            clearColor: [0, 0, 0, 0],
-            antialias: false,
-        });
-    } catch {
-        return;
-    }
-
-    scratchIn.set(minX, minY);
-    container.toGlobal(scratchIn, scratchOut);
-    const charX = scratchOut.x;
-    const charY = scratchOut.y;
-    scratchIn.set(minX + width, minY + height);
-    container.toGlobal(scratchIn, scratchOut);
-    const left = originX + charX * scaleX;
-    const top = originY + charY * scaleY;
-    const drawW = (scratchOut.x - charX) * scaleX;
-    const drawH = (scratchOut.y - charY) * scaleY;
-    if (!(drawW > 1) || !(drawH > 1)) return;
-
-    ctx.save();
-    ctx.globalCompositeOperation = "destination-out";
-    ctx.imageSmoothingEnabled = false;
-    const source = extracted as CanvasImageSource;
-    // Un píxel de más para que el borde pixelado no deje el aura encima del sprite.
-    for (const [dx, dy] of [
-        [-1, 0],
-        [1, 0],
-        [0, -1],
-        [0, 1],
-        [0, 0],
-    ] as const) {
-        ctx.drawImage(source, left + dx, top + dy, drawW, drawH);
-    }
-    ctx.restore();
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = "high";
+function layoutLayer(sprite: Sprite, size: number): void {
+    sprite.width = size;
+    sprite.height = size;
 }
 
 export function updateEquipmentAuras(host: AuraHost): void {
     ensureOpacityLoaded();
-    const canvas = host.app?.canvas;
-    const renderer = host.app?.renderer;
-    const screen = host.app?.screen;
-    if (!canvas || !renderer || !screen || host.isDestroyed) return;
+    removeLegacyOverlay();
+    if (host.isDestroyed) return;
 
-    const layer = ensureOverlay(canvas);
-    if (!layer) return;
-    const ctx = layer.getContext("2d");
-    if (!ctx || !overlay) return;
-
-    const cssW = Math.max(1, overlay.clientWidth);
-    const cssH = Math.max(1, overlay.clientHeight);
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const bufferW = Math.max(1, Math.round(cssW * dpr));
-    const bufferH = Math.max(1, Math.round(cssH * dpr));
-    if (layer.width !== bufferW || layer.height !== bufferH) {
-        layer.width = bufferW;
-        layer.height = bufferH;
-    }
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, cssW, cssH);
-    if (rigs.size === 0 || auraOpacity <= 0.001) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const hostRect = overlay.getBoundingClientRect();
-    const scaleX = rect.width / Math.max(1, screen.width);
-    const scaleY = rect.height / Math.max(1, screen.height);
-    const originX = rect.left - hostRect.left;
-    const originY = rect.top - hostRect.top;
     const now = performance.now();
     const baseRot = ((now % 8000) / 8000) * Math.PI * 2;
     const energyRot = -((now % 6500) / 6500) * Math.PI * 2;
@@ -360,51 +251,31 @@ export function updateEquipmentAuras(host: AuraHost): void {
     const glowAlpha = (0.42 + 0.36 * pulse) * auraOpacity;
     const baseAlpha = 0.82 * auraOpacity;
     const energyAlpha = 0.72 * auraOpacity;
+    const hiddenByOpacity = auraOpacity <= 0.001;
 
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = "high";
-
-    const visible: AuraRig[] = [];
     for (const rig of rigs) {
-        if (rig.container.destroyed || !rig.container.parent) {
-            removeRig(rig.container);
+        if (rig.owner.destroyed || rig.root.destroyed || !rig.root.parent) {
+            destroyRig(rig);
             continue;
         }
+
         const shown =
-            !rig.hidden && rig.container.visible && rig.container.alpha > 0.05;
+            !hiddenByOpacity &&
+            !rig.hidden &&
+            rig.owner.visible &&
+            rig.owner.alpha > 0.05;
+        rig.root.visible = shown;
         if (!shown) continue;
-        visible.push(rig);
 
-        scratchIn.set(rig.localX, rig.localY);
-        rig.container.toGlobal(scratchIn, scratchOut);
-        const size = Math.max(24, rig.worldSpan * scaleX);
-        const cx = originX + scratchOut.x * scaleX;
-        const cy = originY + scratchOut.y * scaleY;
-        const fade = Math.min(1, rig.container.alpha);
-        drawLayer(
-            ctx,
-            rig.images.glow,
-            cx,
-            cy,
-            size,
-            0,
-            glowAlpha * fade,
-            glowScale,
-        );
-        drawLayer(ctx, rig.images.base, cx, cy, size, baseRot, baseAlpha * fade, 1);
-        drawLayer(
-            ctx,
-            rig.images.energy,
-            cx,
-            cy,
-            size,
-            energyRot,
-            energyAlpha * fade,
-            1,
-        );
-    }
-
-    for (const rig of visible) {
-        punchCharacter(ctx, renderer, rig.container, originX, originY, scaleX, scaleY);
+        const fade = Math.min(1, rig.owner.alpha);
+        layoutLayer(rig.glow, rig.size * glowScale);
+        layoutLayer(rig.base, rig.size);
+        layoutLayer(rig.energy, rig.size);
+        rig.glow.alpha = glowAlpha * fade;
+        rig.base.alpha = baseAlpha * fade;
+        rig.energy.alpha = energyAlpha * fade;
+        rig.base.rotation = baseRot;
+        rig.energy.rotation = energyRot;
+        rig.glow.rotation = 0;
     }
 }

@@ -554,8 +554,8 @@ export async function loadGraphicsDB(): Promise<GraphicsDB> {
     try {
         const optimizedGraphicsDb =
             await fetchJsonWithFallback<CompactGraphicsDB>(
-                "/init/graficos_optimized.json?v=3.10",
-                "/init/graficos_optimized.json?v=3.10",
+                "/init/graficos_optimized.json?v=3.12",
+                "/init/graficos_optimized.json?v=3.12",
                 "optimized graphics database",
                 { preferLocal: PREFER_LOCAL_GRAPHICS },
             );
@@ -756,6 +756,16 @@ export function getTexturePath(graphicData: GraphicData): string {
     if (fileNumber === 320168) {
         return `/graphics/${fileNumber}.png?v=6`;
     }
+    if (fileNumber === 320170 || fileNumber === 320172 || fileNumber === 320173) {
+        return `/graphics/${fileNumber}.png?v=8`;
+    }
+    if (
+        fileNumber === 320171 ||
+        fileNumber === 320174 ||
+        fileNumber === 320175
+    ) {
+        return `/graphics/${fileNumber}.png?v=7`;
+    }
     return `/graphics/${fileNumber}.png`;
 }
 
@@ -817,8 +827,8 @@ export async function loadNPCsDB(): Promise<NPCsDB> {
 export async function loadBodiesDB(): Promise<BodiesDB> {
     try {
         return await fetchJsonWithFallback<BodiesDB>(
-            "/init/bodies.json?v=3.4",
-            "/init/bodies.json?v=3.4",
+            "/init/bodies.json?v=3.5",
+            "/init/bodies.json?v=3.5",
             "Bodies database",
             { preferLocal: PREFER_LOCAL_BODIES },
         );
@@ -846,16 +856,16 @@ export async function loadHeadsDB(): Promise<HeadsDB> {
 
 export async function loadWeaponsDB(): Promise<WeaponsDB> {
     return await fetchJsonWithFallback<WeaponsDB>(
-        "/init/armas.json?v=3.3",
-        "/init/armas.json?v=3.3",
+        "/init/armas.json?v=3.5",
+        "/init/armas.json?v=3.5",
         "Weapons database",
     );
 }
 
 export async function loadShieldsDB(): Promise<ShieldsDB> {
     return await fetchJsonWithFallback<ShieldsDB>(
-        "/init/escudos.json?v=3.9",
-        "/init/escudos.json?v=3.9",
+        "/init/escudos.json?v=3.10",
+        "/init/escudos.json?v=3.10",
         "Shields database",
     );
 }

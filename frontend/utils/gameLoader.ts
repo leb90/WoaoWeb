@@ -554,8 +554,8 @@ export async function loadGraphicsDB(): Promise<GraphicsDB> {
     try {
         const optimizedGraphicsDb =
             await fetchJsonWithFallback<CompactGraphicsDB>(
-                "/init/graficos_optimized.json?v=3.14",
-                "/init/graficos_optimized.json?v=3.14",
+                "/init/graficos_optimized.json?v=3.15",
+                "/init/graficos_optimized.json?v=3.15",
                 "optimized graphics database",
                 { preferLocal: PREFER_LOCAL_GRAPHICS },
             );
@@ -766,8 +766,11 @@ export function getTexturePath(graphicData: GraphicData): string {
     ) {
         return `/graphics/${fileNumber}.png?v=7`;
     }
-    if (fileNumber === 320176 || fileNumber === 320177 || fileNumber === 320178 || fileNumber === 320179) {
+    if (fileNumber === 320176 || fileNumber === 320177) {
         return `/graphics/${fileNumber}.png?v=2`;
+    }
+    if (fileNumber === 320178 || fileNumber === 320179) {
+        return `/graphics/${fileNumber}.png?v=3`;
     }
     return `/graphics/${fileNumber}.png`;
 }
@@ -859,8 +862,8 @@ export async function loadHeadsDB(): Promise<HeadsDB> {
 
 export async function loadWeaponsDB(): Promise<WeaponsDB> {
     return await fetchJsonWithFallback<WeaponsDB>(
-        "/init/armas.json?v=3.7",
-        "/init/armas.json?v=3.7",
+        "/init/armas.json?v=3.8",
+        "/init/armas.json?v=3.8",
         "Weapons database",
     );
 }

@@ -770,7 +770,7 @@ export function getTexturePath(graphicData: GraphicData): string {
         return `/graphics/${fileNumber}.png?v=2`;
     }
     if (fileNumber === 320178 || fileNumber === 320179) {
-        return `/graphics/${fileNumber}.png?v=3`;
+        return `/graphics/${fileNumber}.png?v=4`;
     }
     return `/graphics/${fileNumber}.png`;
 }

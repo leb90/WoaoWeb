@@ -554,8 +554,8 @@ export async function loadGraphicsDB(): Promise<GraphicsDB> {
     try {
         const optimizedGraphicsDb =
             await fetchJsonWithFallback<CompactGraphicsDB>(
-                "/init/graficos_optimized.json?v=3.12",
-                "/init/graficos_optimized.json?v=3.12",
+                "/init/graficos_optimized.json?v=3.13",
+                "/init/graficos_optimized.json?v=3.13",
                 "optimized graphics database",
                 { preferLocal: PREFER_LOCAL_GRAPHICS },
             );
@@ -589,8 +589,8 @@ export async function loadGraphicsDB(): Promise<GraphicsDB> {
 export async function loadObjectsDB(): Promise<ObjectsDB> {
     try {
         return await fetchJsonWithFallback<ObjectsDB>(
-            "/init/objs.json?v=3.2",
-            "/init/objs.json?v=3.2",
+            "/init/objs.json?v=3.3",
+            "/init/objs.json?v=3.3",
             "objects database",
         );
     } catch (error) {
@@ -827,8 +827,8 @@ export async function loadNPCsDB(): Promise<NPCsDB> {
 export async function loadBodiesDB(): Promise<BodiesDB> {
     try {
         return await fetchJsonWithFallback<BodiesDB>(
-            "/init/bodies.json?v=3.5",
-            "/init/bodies.json?v=3.5",
+            "/init/bodies.json?v=3.6",
+            "/init/bodies.json?v=3.6",
             "Bodies database",
             { preferLocal: PREFER_LOCAL_BODIES },
         );
@@ -856,24 +856,24 @@ export async function loadHeadsDB(): Promise<HeadsDB> {
 
 export async function loadWeaponsDB(): Promise<WeaponsDB> {
     return await fetchJsonWithFallback<WeaponsDB>(
-        "/init/armas.json?v=3.5",
-        "/init/armas.json?v=3.5",
+        "/init/armas.json?v=3.6",
+        "/init/armas.json?v=3.6",
         "Weapons database",
     );
 }
 
 export async function loadShieldsDB(): Promise<ShieldsDB> {
     return await fetchJsonWithFallback<ShieldsDB>(
-        "/init/escudos.json?v=3.10",
-        "/init/escudos.json?v=3.10",
+        "/init/escudos.json?v=3.11",
+        "/init/escudos.json?v=3.11",
         "Shields database",
     );
 }
 
 export async function loadHelmetsDB(): Promise<HelmetsDB> {
     return await fetchJsonWithFallback<HelmetsDB>(
-        "/init/cascos.json?v=3.5",
-        "/init/cascos.json?v=3.5",
+        "/init/cascos.json?v=3.6",
+        "/init/cascos.json?v=3.6",
         "Helmets database",
     );
 }

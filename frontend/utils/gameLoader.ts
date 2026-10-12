@@ -830,8 +830,8 @@ export async function loadNPCsDB(): Promise<NPCsDB> {
 export async function loadBodiesDB(): Promise<BodiesDB> {
     try {
         return await fetchJsonWithFallback<BodiesDB>(
-            "/init/bodies.json?v=3.6",
-            "/init/bodies.json?v=3.6",
+            "/init/bodies.json?v=3.9",
+            "/init/bodies.json?v=3.9",
             "Bodies database",
             { preferLocal: PREFER_LOCAL_BODIES },
         );
@@ -867,8 +867,8 @@ export async function loadWeaponsDB(): Promise<WeaponsDB> {
 
 export async function loadShieldsDB(): Promise<ShieldsDB> {
     return await fetchJsonWithFallback<ShieldsDB>(
-        "/init/escudos.json?v=3.11",
-        "/init/escudos.json?v=3.11",
+        "/init/escudos.json?v=3.12",
+        "/init/escudos.json?v=3.12",
         "Shields database",
     );
 }

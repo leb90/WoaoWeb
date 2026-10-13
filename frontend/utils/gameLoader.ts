@@ -836,8 +836,8 @@ export async function loadNPCsDB(): Promise<NPCsDB> {
 export async function loadBodiesDB(): Promise<BodiesDB> {
     try {
         return await fetchJsonWithFallback<BodiesDB>(
-            "/init/bodies.json?v=3.13",
-            "/init/bodies.json?v=3.13",
+            "/init/bodies.json?v=3.15",
+            "/init/bodies.json?v=3.15",
             "Bodies database",
             { preferLocal: PREFER_LOCAL_BODIES },
         );

@@ -877,8 +877,8 @@ export async function loadHeadsDB(): Promise<HeadsDB> {
 
 export async function loadWeaponsDB(): Promise<WeaponsDB> {
     return await fetchJsonWithFallback<WeaponsDB>(
-        "/init/armas.json?v=3.12",
-        "/init/armas.json?v=3.12",
+        "/init/armas.json?v=3.13",
+        "/init/armas.json?v=3.13",
         "Weapons database",
     );
 }

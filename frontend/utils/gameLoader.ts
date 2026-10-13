@@ -554,8 +554,8 @@ export async function loadGraphicsDB(): Promise<GraphicsDB> {
     try {
         const optimizedGraphicsDb =
             await fetchJsonWithFallback<CompactGraphicsDB>(
-                "/init/graficos_optimized.json?v=3.20",
-                "/init/graficos_optimized.json?v=3.20",
+                "/init/graficos_optimized.json?v=3.21",
+                "/init/graficos_optimized.json?v=3.21",
                 "optimized graphics database",
                 { preferLocal: PREFER_LOCAL_GRAPHICS },
             );
@@ -782,11 +782,12 @@ export function getTexturePath(graphicData: GraphicData): string {
         fileNumber === 320200 ||
         fileNumber === 320201 ||
         fileNumber === 320204 ||
-        fileNumber === 320205 ||
-        fileNumber === 320206 ||
-        fileNumber === 320207
+        fileNumber === 320205
     ) {
         return `/graphics/${fileNumber}.png?v=2`;
+    }
+    if (fileNumber === 320206 || fileNumber === 320207) {
+        return `/graphics/${fileNumber}.png?v=3`;
     }
     return `/graphics/${fileNumber}.png`;
 }

@@ -881,8 +881,8 @@ export async function loadShieldsDB(): Promise<ShieldsDB> {
 
 export async function loadHelmetsDB(): Promise<HelmetsDB> {
     return await fetchJsonWithFallback<HelmetsDB>(
-        "/init/cascos.json?v=3.7",
-        "/init/cascos.json?v=3.7",
+        "/init/cascos.json?v=3.9",
+        "/init/cascos.json?v=3.9",
         "Helmets database",
     );
 }

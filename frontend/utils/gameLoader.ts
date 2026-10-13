@@ -868,16 +868,16 @@ export async function loadHeadsDB(): Promise<HeadsDB> {
 
 export async function loadWeaponsDB(): Promise<WeaponsDB> {
     return await fetchJsonWithFallback<WeaponsDB>(
-        "/init/armas.json?v=3.10",
-        "/init/armas.json?v=3.10",
+        "/init/armas.json?v=3.11",
+        "/init/armas.json?v=3.11",
         "Weapons database",
     );
 }
 
 export async function loadShieldsDB(): Promise<ShieldsDB> {
     return await fetchJsonWithFallback<ShieldsDB>(
-        "/init/escudos.json?v=3.14",
-        "/init/escudos.json?v=3.14",
+        "/init/escudos.json?v=3.16",
+        "/init/escudos.json?v=3.16",
         "Shields database",
     );
 }

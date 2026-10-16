@@ -1,5 +1,11 @@
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import {
+    ChevronDown,
+    ChevronLeft,
+    ChevronRight,
+    Search,
+    SlidersHorizontal,
+} from "lucide-react";
 import type { WikiSearchParams } from "@/lib/wiki-query";
 import { withQuery } from "@/lib/wiki-query";
 
@@ -77,8 +83,8 @@ export function WikiCatalogToolbar({
     placeholder: string;
 }) {
     return (
-        <form action={action} className="mt-5 grid gap-3 border border-amber-200/15 bg-[#0a0806] p-3 lg:grid-cols-[minmax(240px,1fr)_auto]">
-            <label className="flex h-11 items-center border border-stone-700 bg-black/45 focus-within:border-amber-300/60">
+        <form action={action} className="mt-5 border border-amber-200/15 bg-[#0a0806] p-3">
+            <label className="flex h-12 items-center border border-stone-700 bg-black/45 transition focus-within:border-amber-300/60 focus-within:bg-amber-300/[0.035]">
                 <Search className="ml-3 h-4 w-4 shrink-0 text-amber-300/65" />
                 <input
                     type="search"
@@ -88,9 +94,10 @@ export function WikiCatalogToolbar({
                     className="h-full min-w-0 flex-1 bg-transparent px-3 text-sm text-stone-100 outline-none placeholder:text-stone-600"
                 />
             </label>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="mt-3 flex flex-wrap items-center gap-2">
                 {children}
-                <button className="h-11 border border-amber-300/50 bg-amber-300/12 px-5 text-xs font-bold uppercase tracking-[0.12em] text-amber-100 hover:bg-amber-300/20">
+                <button className="inline-flex h-12 items-center justify-center gap-2 border border-amber-300/50 bg-amber-300/12 px-5 text-xs font-bold uppercase tracking-[0.12em] text-amber-100 transition hover:bg-amber-300/20 max-sm:w-full">
+                    <SlidersHorizontal className="h-4 w-4" aria-hidden />
                     Filtrar
                 </button>
             </div>
@@ -110,15 +117,23 @@ export function WikiSelect({
     options: Array<{ value: string; label: string }>;
 }) {
     return (
-        <label className="flex h-11 items-center gap-2 border border-stone-700 bg-black/45 px-3 text-xs text-stone-400">
-            <span className="hidden sm:inline">{label}</span>
-            <select name={name} defaultValue={value} className="bg-transparent text-stone-100 outline-none">
+        <label className="group relative flex h-12 min-w-[154px] items-center border border-stone-700 bg-black/45 transition focus-within:border-amber-300/60 focus-within:bg-amber-300/[0.035] max-sm:w-full">
+            <span className="ml-3 shrink-0 text-[9px] font-bold uppercase tracking-[0.16em] text-amber-300/55">
+                {label}
+            </span>
+            <select
+                name={name}
+                defaultValue={value}
+                aria-label={label}
+                className="h-full min-w-0 flex-1 cursor-pointer appearance-none bg-transparent py-0 pl-2 pr-8 text-sm font-medium text-stone-100 outline-none"
+            >
                 {options.map((option) => (
                     <option key={option.value} value={option.value} className="bg-[#0a0806]">
                         {option.label}
                     </option>
                 ))}
             </select>
+            <ChevronDown className="pointer-events-none absolute right-3 h-4 w-4 text-stone-500 transition group-focus-within:text-amber-300" aria-hidden />
         </label>
     );
 }

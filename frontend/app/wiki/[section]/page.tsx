@@ -3,6 +3,8 @@ import Link from "next/link";
 import { ArrowRight, BookOpen } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import WikiBreadcrumbs from "@/components/wiki/WikiBreadcrumbs";
+import WikiPersonajesProgresion from "@/components/wiki/WikiPersonajesProgresion";
+import WikiPrimerosPasos from "@/components/wiki/WikiPrimerosPasos";
 import { WikiPageHeader, WikiSection } from "@/components/wiki/WikiUi";
 import { buildPageMetadata } from "@/lib/seo";
 import { getWikiCategory } from "@/lib/wiki-sections";
@@ -59,6 +61,9 @@ export default async function WikiSectionPage({ params }: PageProps) {
             <WikiBreadcrumbs items={[{ label: category.label }]} />
             <WikiPageHeader eyebrow="Guía" title={category.label} description={category.description} />
 
+            {category.slug === "primeros-pasos" ? <WikiPrimerosPasos /> : null}
+            {category.slug === "personajes" ? <WikiPersonajesProgresion /> : null}
+
             {catalogs.length ? (
                 <div className="mt-6 grid gap-3 md:grid-cols-2">
                     {catalogs.map((catalog) => (
@@ -73,6 +78,7 @@ export default async function WikiSectionPage({ params }: PageProps) {
                 </div>
             ) : null}
 
+            {category.slug === "primeros-pasos" || category.slug === "personajes" ? null : (
             <WikiSection title="Contenido manual" className="mt-6">
                 <div className="flex min-h-44 flex-col items-center justify-center text-center">
                     <BookOpen className="h-8 w-8 text-amber-300/35" />
@@ -82,6 +88,7 @@ export default async function WikiSectionPage({ params }: PageProps) {
                     </p>
                 </div>
             </WikiSection>
+            )}
         </div>
     );
 }

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight, BookOpen } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import WikiBreadcrumbs from "@/components/wiki/WikiBreadcrumbs";
+import WikiCraftingGuide from "@/components/wiki/WikiCraftingGuide";
 import WikiPersonajesProgresion from "@/components/wiki/WikiPersonajesProgresion";
 import WikiPrimerosPasos from "@/components/wiki/WikiPrimerosPasos";
 import { WikiPageHeader, WikiSection } from "@/components/wiki/WikiUi";
@@ -24,7 +25,6 @@ const CATALOGS: Partial<Record<string, Array<{ href: string; label: string; desc
         { href: "/wiki/objetos", label: "Objetos", description: "Equipamiento, consumibles, materiales y otros objetos públicos." },
         { href: "/wiki/hechizos", label: "Hechizos", description: "Requisitos, mana, poder y formas de obtenerlos." },
     ],
-    crafting: [{ href: "/wiki/recetas", label: "Recetas", description: "Niveles, materiales, costo y probabilidad de obtención." }],
     enciclopedia: [
         { href: "/wiki/objetos", label: "Objetos", description: "Catálogo completo de objetos públicos." },
         { href: "/wiki/npcs", label: "NPC", description: "Criaturas y comerciantes presentes en mapas públicos." },
@@ -63,6 +63,7 @@ export default async function WikiSectionPage({ params }: PageProps) {
 
             {category.slug === "primeros-pasos" ? <WikiPrimerosPasos /> : null}
             {category.slug === "personajes" ? <WikiPersonajesProgresion /> : null}
+            {category.slug === "crafting" ? <WikiCraftingGuide /> : null}
 
             {catalogs.length ? (
                 <div className="mt-6 grid gap-3 md:grid-cols-2">
@@ -78,7 +79,7 @@ export default async function WikiSectionPage({ params }: PageProps) {
                 </div>
             ) : null}
 
-            {category.slug === "primeros-pasos" || category.slug === "personajes" ? null : (
+            {category.slug === "primeros-pasos" || category.slug === "personajes" || category.slug === "crafting" ? null : (
             <WikiSection title="Contenido manual" className="mt-6">
                 <div className="flex min-h-44 flex-col items-center justify-center text-center">
                     <BookOpen className="h-8 w-8 text-amber-300/35" />

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import WikiBreadcrumbs from "@/components/wiki/WikiBreadcrumbs";
 import WikiItemSprite from "@/components/wiki/WikiItemSprite";
 import { WikiDefinitionList, WikiPageHeader, WikiSection, WikiTag } from "@/components/wiki/WikiUi";
+import { getCraftingRecipeDropRule } from "@/lib/crafting-rules";
 import { buildPageMetadata } from "@/lib/seo";
 import { getWikiData } from "@/lib/wiki-data";
 import { formatPercent, formatWikiNumber, getEntityId } from "@/lib/wiki-query";
@@ -24,6 +25,7 @@ export default async function WikiRecipePage({ params }: PageProps) {
     if (!recipe) notFound();
     const objectById = new Map(wiki.objects.map((item) => [item.id, item]));
     const recipeItem = objectById.get(recipe.recipeItemId);
+    const dropRule = getCraftingRecipeDropRule(recipe.level);
 
     return (
         <div>
@@ -39,7 +41,8 @@ export default async function WikiRecipePage({ params }: PageProps) {
                         { label: "Nivel requerido", value: recipe.level },
                         { label: "Categoría", value: recipe.category },
                         { label: "Oro", value: formatWikiNumber(recipe.goldCost) },
-                        { label: "Drop de receta", value: formatPercent(recipe.dropChancePercent) },
+                        { label: "Drop del nivel", value: formatPercent(recipe.dropChancePercent) },
+                        { label: "Vida máxima del NPC", value: dropRule ? `Más de ${formatWikiNumber(dropRule.minNpcMaxHpExclusive)}` : "-" },
                     ]} />
                 </WikiSection>
                 <div className="space-y-5">
@@ -62,7 +65,7 @@ export default async function WikiRecipePage({ params }: PageProps) {
                         </WikiSection>
                     ) : null}
                     <WikiSection title="Regla de obtención">
-                        <p className="text-sm leading-6 text-stone-400">Las recetas de nivel <WikiTag>{recipe.level}</WikiTag> tienen una probabilidad base de drop de <strong className="text-amber-200">{formatPercent(recipe.dropChancePercent)}</strong>. El NPC concreto puede variar de forma aleatoria según el sistema vigente.</p>
+                        <p className="text-sm leading-6 text-stone-400">El grupo de recetas de nivel <WikiTag>{recipe.level}</WikiTag> se habilita al derrotar un NPC hostil con <strong className="text-emerald-300">más de {formatWikiNumber(dropRule?.minNpcMaxHpExclusive ?? 0)} de vida máxima</strong> y tiene una probabilidad base de drop de <strong className="text-amber-200">{formatPercent(recipe.dropChancePercent)}</strong>. Si el sorteo acierta, el servidor elige al azar una receta de ese nivel; el porcentaje no corresponde a este objeto individual.</p>
                     </WikiSection>
                 </div>
             </div>

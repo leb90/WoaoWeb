@@ -9,12 +9,12 @@ export type CraftingRecipeDrop = {
     chancePercent: number;
 };
 
-const RECIPE_DROP_TIERS = [
-    { level: 10, minNpcExp: 1, chancePercent: 5 },
-    { level: 20, minNpcExp: 1_000, chancePercent: 2 },
-    { level: 30, minNpcExp: 10_000, chancePercent: 1 },
-    { level: 40, minNpcExp: 50_000, chancePercent: 0.5 },
-    { level: 50, minNpcExp: 150_000, chancePercent: 0.1 },
+export const CRAFTING_RECIPE_DROP_TIERS = [
+    { level: 10, minNpcMaxHpExclusive: 300, chancePercent: 5 },
+    { level: 20, minNpcMaxHpExclusive: 1_500, chancePercent: 2 },
+    { level: 30, minNpcMaxHpExclusive: 4_000, chancePercent: 1 },
+    { level: 40, minNpcMaxHpExclusive: 10_000, chancePercent: 0.5 },
+    { level: 50, minNpcMaxHpExclusive: 25_000, chancePercent: 0.1 },
 ] as const;
 
 function getRecipeLevel(recipe: CraftingRecipe) {
@@ -52,17 +52,28 @@ function getRecipePoolsByLevel() {
     return pools;
 }
 
-export function rollCraftingRecipeDrops(npc: RuntimeNpc): CraftingRecipeDrop[] {
+export function getEligibleCraftingRecipeLevels(npc: RuntimeNpc): number[] {
     if (!isHostileNpc(npc)) {
         return [];
     }
 
-    const npcExp = Math.floor(Number(npc.exp ?? 0));
+    const npcMaxHp = Math.floor(Number(npc.maxHp ?? 0));
+    return CRAFTING_RECIPE_DROP_TIERS
+        .filter((tier) => npcMaxHp > tier.minNpcMaxHpExclusive)
+        .map((tier) => tier.level);
+}
+
+export function rollCraftingRecipeDrops(npc: RuntimeNpc): CraftingRecipeDrop[] {
+    const eligibleLevels = new Set(getEligibleCraftingRecipeLevels(npc));
+    if (eligibleLevels.size === 0) {
+        return [];
+    }
+
     const poolsByLevel = getRecipePoolsByLevel();
     const drops: CraftingRecipeDrop[] = [];
 
-    for (const tier of RECIPE_DROP_TIERS) {
-        if (npcExp < tier.minNpcExp || Math.random() * 100 >= tier.chancePercent) {
+    for (const tier of CRAFTING_RECIPE_DROP_TIERS) {
+        if (!eligibleLevels.has(tier.level) || Math.random() * 100 >= tier.chancePercent) {
             continue;
         }
 

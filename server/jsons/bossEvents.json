@@ -1,9 +1,6 @@
 {
   "mummyPharaoh": {
-    "nextSpawnAt": 0,
-    "activeNpcId": 1792169073714,
-    "spawnedAt": 1792169073714,
-    "despawnAt": 0
+    "nextSpawnAt": 1792194639456
   },
   "gollum": {
     "nextSpawnAt": 1792185273788

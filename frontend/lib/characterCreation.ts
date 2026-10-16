@@ -173,9 +173,56 @@ const characterClassOptionsWithLegacyWorkers: CharacterClassOption[] = [
 
 const LEGACY_WORKER_CLASS_KEYS = new Set<CharacterClassKey>(["pescador", "herrero", "lenador", "minero", "carpintero"]);
 
+/** No se pueden crear personajes de estas clases. Siguen existiendo en el juego. */
+export const CREATION_CLOSED_CLASS_KEYS = new Set<CharacterClassKey>([
+    "ladron",
+    "bandido",
+    "ermitano",
+    "domador",
+]);
+
 export const characterClassOptions: CharacterClassOption[] = characterClassOptionsWithLegacyWorkers.filter(
-    (option) => !LEGACY_WORKER_CLASS_KEYS.has(option.key),
+    (option) =>
+        !LEGACY_WORKER_CLASS_KEYS.has(option.key) &&
+        !CREATION_CLOSED_CLASS_KEYS.has(option.key),
 );
+
+/** 1 Norte, 2 Sur, 3 Este, 4 Oeste. El ciclo de la vista empieza de frente. */
+export const PREVIEW_HEADING_CYCLE = ["2", "3", "1", "4"] as const;
+export type PreviewHeading = (typeof PREVIEW_HEADING_CYCLE)[number];
+
+export const PREVIEW_HEADING_LABEL: Record<PreviewHeading, string> = {
+    "1": "Norte",
+    "2": "Sur",
+    "3": "Este",
+    "4": "Oeste",
+};
+
+export const STARTING_ZONE_NAME = "Dungeon Newbie";
+export const BASE_ATTRIBUTE = 18;
+
+export const ATTRIBUTE_GUIDE: Record<keyof RaceBonus, { label: string; hint: string }> = {
+    fuerza: {
+        label: "Fuerza",
+        hint: "Sube el daño con armas y con proyectiles.",
+    },
+    agilidad: {
+        label: "Agilidad",
+        hint: "Sube el acierto y la evasión.",
+    },
+    inteligencia: {
+        label: "Inteligencia",
+        hint: "Define el maná con el que empieza el personaje.",
+    },
+    carisma: {
+        label: "Carisma",
+        hint: "Modificador racial. No cambia el daño, el acierto ni la vida de esta pantalla.",
+    },
+    constitucion: {
+        label: "Constitución",
+        hint: "Define la vida con la que empieza el personaje.",
+    },
+};
 
 const classProgressByKey: Record<CharacterClassKey, ClassProgress> = {
     mago: { vida: 7.5, manaInicial: 8.33, multMana: 2.65, hitPre36: 1, hitPost36: 1 },

@@ -3,15 +3,18 @@ export const CHARACTER_CLASSES = [
     "clerigo",
     "guerrero",
     "asesino",
-    "ladron",
     "bardo",
     "druida",
-    "bandido",
     "paladin",
     "cazador",
     "pirata",
-    "ermitano",
     "arquero",
+] as const;
+
+export const CLOSED_CREATION_CLASSES = [
+    "ladron",
+    "bandido",
+    "ermitano",
     "domador",
 ] as const;
 export const CHARACTER_RACES = [
@@ -92,16 +95,12 @@ export const CLASS_ID_MAP: Record<CharacterClassKey, number> = {
     clerigo: 2,
     guerrero: 3,
     asesino: 4,
-    ladron: 5,
     bardo: 6,
     druida: 7,
     paladin: 8,
     cazador: 9,
-    bandido: 12,
     pirata: 18,
-    ermitano: 19,
     arquero: 20,
-    domador: 21,
 };
 
 export const RACE_ID_MAP: Record<RaceKey, number> = {

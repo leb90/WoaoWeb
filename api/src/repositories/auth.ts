@@ -5,6 +5,7 @@ import pool from "../db";
 import config from "../config";
 import {
     CHARACTER_CLASSES,
+    CLOSED_CREATION_CLASSES,
     CHARACTER_GENDERS,
     CHARACTER_RACES,
     CLASS_ID_MAP,
@@ -195,27 +196,34 @@ function getStarterLoadout(
         { idItem: getStarterClothesId(raceKey, genderKey), amount: 1, equipped: true },
     ];
 
-    if (
-        [
-            "arquero",
-            "cazador",
-            "lenador",
-            "minero",
-            "pescador",
-            "ermitano",
-            "domador",
-            "carpintero",
-            "herrero",
-        ].includes(classKey)
-    ) {
+    const rangedOrWorker = new Set<string>([
+        "arquero",
+        "cazador",
+        "lenador",
+        "minero",
+        "pescador",
+        "ermitano",
+        "domador",
+        "carpintero",
+        "herrero",
+    ]);
+    if (rangedOrWorker.has(classKey)) {
         items.push({ idItem: 1280, amount: 1 });
         items.push({ idItem: 1281, amount: 500 });
     }
 
-    const casterClasses = ["mago", "clerigo", "bardo", "druida", "paladin", "asesino", "ermitano"];
+    const casterClasses = new Set<string>([
+        "mago",
+        "clerigo",
+        "bardo",
+        "druida",
+        "paladin",
+        "asesino",
+        "ermitano",
+    ]);
     return {
         items,
-        spells: casterClasses.includes(classKey) ? [2] : [],
+        spells: casterClasses.has(classKey) ? [2] : [],
     };
 }
 
@@ -476,6 +484,17 @@ export async function createCharacterForSession(
 
     if (!session) {
         return null;
+    }
+
+    if (
+        payload &&
+        typeof payload === "object" &&
+        "class" in payload &&
+        CLOSED_CREATION_CLASSES.includes(
+            (payload as { class?: string }).class as (typeof CLOSED_CREATION_CLASSES)[number],
+        )
+    ) {
+        throw new Error("Esa clase no esta disponible para crear personajes.");
     }
 
     const parsed = createCharacterSchema.parse(payload);

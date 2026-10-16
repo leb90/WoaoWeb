@@ -27,6 +27,7 @@ import {
     loadShieldsDB,
     loadWeaponsDB,
 } from "../utils/gameLoader";
+import { getEquipmentLayerZIndex } from "./game/rendering/characterLayout";
 
 type CharacterSpritePreviewProps = {
     bodyId: number;
@@ -37,6 +38,10 @@ type CharacterSpritePreviewProps = {
     scale?: number;
     className?: string;
     mode?: "full" | "head";
+    /** 1 Norte, 2 Sur, 3 Este, 4 Oeste. */
+    direction?: "1" | "2" | "3" | "4";
+    /** Marco decorativo. La creación de personaje lo apaga. */
+    framed?: boolean;
 };
 
 type SpritePosition = {
@@ -258,6 +263,8 @@ export default function CharacterSpritePreview({
     scale = 2.1,
     className,
     mode = "full",
+    direction = FRONT_DIRECTION,
+    framed = true,
 }: CharacterSpritePreviewProps) {
     const previewWidth = roundToEven(
         (mode === "head" ? HEAD_VIEW_WIDTH : VIEW_WIDTH) * scale,
@@ -340,6 +347,7 @@ export default function CharacterSpritePreview({
             app.canvas.style.display = "block";
             app.canvas.style.width = `${previewWidth}px`;
             app.canvas.style.height = `${previewHeight}px`;
+            app.canvas.style.imageRendering = "pixelated";
 
             app.stage.sortableChildren = true;
             appRef.current = app;
@@ -402,31 +410,32 @@ export default function CharacterSpritePreview({
 
             const bodyGraphic = resolveGraphicFrame(
                 graphicsDB,
-                bodyData[FRONT_DIRECTION],
-                FRONT_DIRECTION,
+                bodyData[direction],
+                direction,
             );
             const headGraphic = resolveGraphicFrame(
                 graphicsDB,
-                headData[FRONT_DIRECTION],
-                FRONT_DIRECTION,
+                headData[direction],
+                direction,
             );
             const weaponGraphic = resolveDirectionalGraphicFrame(
                 graphicsDB,
                 weaponId > 0 ? weaponsDB[weaponId.toString()] : undefined,
-                FRONT_DIRECTION,
+                direction,
             );
             const shieldGraphic = resolveDirectionalGraphicFrame(
                 graphicsDB,
                 shieldId > 0 ? shieldsDB[shieldId.toString()] : undefined,
-                FRONT_DIRECTION,
+                direction,
             );
             const helmetData =
                 helmetId > 0 ? helmetsDB[helmetId.toString()] : undefined;
             const helmetGraphic = resolveDirectionalGraphicFrame(
                 graphicsDB,
                 helmetData,
-                FRONT_DIRECTION,
+                direction,
             );
+            const equipmentLayer = getEquipmentLayerZIndex(Number(direction));
 
             if (!bodyGraphic || !headGraphic) {
                 return;
@@ -570,7 +579,7 @@ export default function CharacterSpritePreview({
                         (shieldPosition.y + offsetY) * scale,
                     );
                     shieldSprite.scale.set(scale);
-                    shieldSprite.zIndex = 0.5;
+                    shieldSprite.zIndex = equipmentLayer.shield;
                     characterContainer.addChild(shieldSprite);
                 }
 
@@ -583,7 +592,7 @@ export default function CharacterSpritePreview({
                         (weaponPosition.y + offsetY) * scale,
                     );
                     weaponSprite.scale.set(scale);
-                    weaponSprite.zIndex = 0.4;
+                    weaponSprite.zIndex = equipmentLayer.weapon;
                     characterContainer.addChild(weaponSprite);
                 }
             }
@@ -660,17 +669,22 @@ export default function CharacterSpritePreview({
         shieldsDB,
         weaponId,
         weaponsDB,
+        direction,
     ]);
 
     return (
         <div
-            className={`relative overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(251,191,36,0.18),rgba(12,10,9,0.95)_58%),linear-gradient(180deg,rgba(120,53,15,0.16),rgba(12,10,9,0))] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] ${className ?? ""}`}
+            className={`relative overflow-hidden ${
+                framed
+                    ? "rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(251,191,36,0.18),rgba(12,10,9,0.95)_58%),linear-gradient(180deg,rgba(120,53,15,0.16),rgba(12,10,9,0))] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+                    : ""
+            } ${className ?? ""}`}
             style={{
                 width: previewWidth,
                 height: previewHeight,
             }}
         >
-            {mode === "full" ? (
+            {framed && mode === "full" ? (
                 <div
                     className="pointer-events-none absolute h-4 rounded-full bg-black/30 blur-md"
                     style={{

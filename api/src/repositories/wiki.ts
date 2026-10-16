@@ -12,144 +12,28 @@ import {
 } from "./gameCraftingRecipes";
 import {
     getCurrentGameSmeltingRecipeVersion,
-    listGameSmeltingRecipeChangesSince,
 } from "./gameSmeltingRecipes";
 import {
     loadAllMapNpcPlacements,
     type MapNpcPlacement,
 } from "../lib/mapNpcStorage";
+import { isWikiMapPublic, isWikiObjectPublic } from "./wiki/wikiVisibility";
+import type {
+    PublicWikiResponse,
+    WikiEquipmentCategory,
+    WikiEquipmentEntry,
+    WikiMapEntry,
+    WikiMapMetadata,
+    WikiNpcEntry,
+    WikiNpcReference,
+    WikiObjectEntry,
+    WikiRecipeEntry,
+    WikiRecipeReference,
+    WikiSpellEntry,
+    WikiSpellSourceReference,
+} from "./wiki/wikiTypes";
 
-type WikiMapMetadata = {
-    id: number;
-    name: string;
-    terreno: string;
-    zona: string;
-    restringir: string;
-    minLevel: number;
-    maxLevel: number;
-    pk: boolean;
-};
-
-type WikiMapReference = {
-    mapId: number;
-    mapName: string;
-    spawns: number;
-};
-
-type WikiItemReference = {
-    itemId: number;
-    itemName: string;
-    quantity: number;
-    chancePercent?: number;
-};
-
-type WikiNpcReference = {
-    npcId: number;
-    npcName: string;
-    quantity: number;
-    chancePercent?: number;
-};
-
-type WikiSpellSourceReference = {
-    itemId: number;
-    itemName: string;
-    soldBy: WikiNpcReference[];
-    droppedBy: WikiNpcReference[];
-};
-
-type WikiNpcEntry = {
-    id: number;
-    name: string;
-    npcType: number;
-    npcTypeLabel: string;
-    description: string;
-    maxHp: number;
-    expReward: number;
-    goldReward: number;
-    minHit: number;
-    maxHit: number;
-    defense: number;
-    expPerHp: number | null;
-    isCombatNpc: boolean;
-    maps: WikiMapReference[];
-    sells: WikiItemReference[];
-    drops: WikiItemReference[];
-    totalSpawns: number;
-    searchIndex: string;
-};
-
-type WikiEquipmentCategory =
-    | "weapon"
-    | "armor"
-    | "shield"
-    | "helmet"
-    | "magic_weapon";
-
-type WikiEquipmentEntry = {
-    id: number;
-    name: string;
-    grhIndex: number;
-    objType: number;
-    objTypeLabel: string;
-    category: WikiEquipmentCategory;
-    categoryLabel: string;
-    value: number;
-    minHit: number;
-    maxHit: number;
-    minDef: number;
-    maxDef: number;
-    tier: number;
-    newbie: boolean;
-    blockedClasses: number[];
-    soldBy: WikiNpcReference[];
-    droppedBy: WikiNpcReference[];
-    searchIndex: string;
-};
-
-type WikiSpellEntry = {
-    id: number;
-    name: string;
-    description: string;
-    type: number;
-    typeLabel: string;
-    minSkill: number;
-    manaRequired: number;
-    target: number;
-    words: string;
-    minPower: number;
-    maxPower: number;
-    sources: WikiSpellSourceReference[];
-    searchIndex: string;
-};
-
-type WikiTrainingMapEntry = WikiMapMetadata & {
-    totalNpcSpawns: number;
-    totalCombatSpawns: number;
-    uniqueCombatNpcs: number;
-    topNpcs: Array<{
-        npcId: number;
-        npcName: string;
-        spawns: number;
-        expReward: number;
-        maxHp: number;
-    }>;
-    searchIndex: string;
-};
-
-export type PublicWikiResponse = {
-    generatedAt: string;
-    stats: {
-        npcCount: number;
-        combatNpcCount: number;
-        equipmentCount: number;
-        spellCount: number;
-        trainingMapCount: number;
-    };
-    npcs: WikiNpcEntry[];
-    equipment: WikiEquipmentEntry[];
-    spells: WikiSpellEntry[];
-    trainingMaps: WikiTrainingMapEntry[];
-};
+export type { PublicWikiResponse } from "./wiki/wikiTypes";
 
 const CURRENT_EXP_MULTIPLIER = 5;
 const CURRENT_GOLD_MULTIPLIER = 3;
@@ -190,6 +74,7 @@ const NPC_TYPE_LABELS: Record<number, string> = {
 };
 
 const OBJECT_TYPE_LABELS: Record<number, string> = {
+    0: "Otros",
     1: "Comida",
     2: "Armas",
     3: "Armaduras",
@@ -207,8 +92,8 @@ const OBJECT_TYPE_LABELS: Record<number, string> = {
     15: "Fogata",
     16: "Escudos",
     17: "Cascos",
-    18: "Anillos",
-    19: "Teleport",
+    18: "Herramientas",
+    19: "Teletransportes",
     20: "Muebles",
     21: "Joyas",
     22: "Yacimientos",
@@ -225,6 +110,27 @@ const OBJECT_TYPE_LABELS: Record<number, string> = {
     33: "Botellas vacias",
     34: "Botellas llenas",
     35: "Manchas",
+    36: "Amuletos",
+    37: "Amuletos",
+    38: "Amuletos",
+    39: "Amuletos",
+    40: "Cofres y regalos",
+    41: "Anillos",
+    42: "Monturas",
+    43: "Huevos de montura",
+    46: "Recetas",
+    50: "Capas",
+    60: "Monturas",
+    62: "Bolsas",
+    63: "Bolsas",
+    64: "Trofeos",
+    65: "Trofeos",
+    66: "Trofeos",
+    67: "Bolsas de oro",
+    68: "Pociones especiales",
+    71: "Materiales especiales",
+    72: "Objetos de clan",
+    77: "Juegos",
 };
 
 function getNpcTypeLabel(npcType: number): string {
@@ -235,10 +141,25 @@ function getObjectTypeLabel(objType: number): string {
     return OBJECT_TYPE_LABELS[objType] ?? `Tipo ${objType}`;
 }
 
-function getEquipmentCategory(objType: number): {
+function getEquipmentCategory(
+    data: Record<string, unknown>,
+    objType: number,
+): {
     key: WikiEquipmentCategory;
     label: string;
 } | null {
+    const normalizedName = normalizeSearchText(String(data.name ?? ""));
+
+    if (objType === 3) {
+        if (/(?:escudo|broquel)/.test(normalizedName)) {
+            return { key: "shield", label: "Escudos" };
+        }
+
+        if (/(?:casco|yelmo|capucha|sombrero|corona|mascara)/.test(normalizedName)) {
+            return { key: "helmet", label: "Cascos" };
+        }
+    }
+
     switch (objType) {
         case 2:
             return { key: "weapon", label: "Armas" };
@@ -317,10 +238,6 @@ function isCombatNpc(data: Record<string, unknown>): boolean {
     );
 }
 
-function isLocalMapName(name: string): boolean {
-    return normalizeSearchText(name).includes("local");
-}
-
 function isTrainingMapCandidate(map: WikiMapMetadata): boolean {
     const normalizedName = normalizeSearchText(map.name);
     return (
@@ -329,6 +246,14 @@ function isTrainingMapCandidate(map: WikiMapMetadata): boolean {
         !normalizedName.includes("local") &&
         !normalizedName.includes("gms")
     );
+}
+
+function getRecipeDropChancePercent(level: number): number {
+    if (level >= 50) return 0.1;
+    if (level >= 40) return 0.5;
+    if (level >= 30) return 1;
+    if (level >= 20) return 2;
+    return 5;
 }
 
 async function readMapNpcSpawns(): Promise<MapNpcPlacement[]> {
@@ -436,14 +361,12 @@ export async function getPublicWiki(): Promise<PublicWikiResponse> {
         npcChanges,
         objectChanges,
         craftingChanges,
-        smeltingChanges,
         mapMetadataById,
         spellsData,
     ] = await Promise.all([
         listGameNpcChangesSince(0),
         listGameObjectChangesSince(0),
         listGameCraftingRecipeChangesSince(0),
-        listGameSmeltingRecipeChangesSince(0),
         readMapMetadata(),
         readSpells(),
     ]);
@@ -463,8 +386,8 @@ export async function getPublicWiki(): Promise<PublicWikiResponse> {
             continue;
         }
 
-        const mapName = mapMetadataById.get(mapId)?.name;
-        if (mapName && isLocalMapName(mapName)) {
+        const metadata = mapMetadataById.get(mapId);
+        if (!metadata || !isWikiMapPublic(metadata)) {
             continue;
         }
 
@@ -481,24 +404,6 @@ export async function getPublicWiki(): Promise<PublicWikiResponse> {
 
     const soldByObject = new Map<number, WikiNpcReference[]>();
     const droppedByObject = new Map<number, WikiNpcReference[]>();
-    const craftResultObjectIds = new Set<number>();
-    const craftMaterialObjectIds = new Set<number>();
-    const smeltingOutputObjectIds = new Set<number>();
-    const smeltingMaterialObjectIds = new Set<number>();
-
-    for (const recipe of craftingChanges.changes) {
-        craftResultObjectIds.add(Number(recipe.data.itemId ?? 0));
-
-        for (const material of recipe.data.materials ?? []) {
-            craftMaterialObjectIds.add(Number(material.itemId ?? 0));
-        }
-    }
-
-    for (const recipe of smeltingChanges.changes) {
-        smeltingMaterialObjectIds.add(Number(recipe.data.mineralItemId ?? 0));
-        smeltingOutputObjectIds.add(Number(recipe.data.ingotItemId ?? 0));
-    }
-
     const npcs: WikiNpcEntry[] = npcChanges.changes
         .filter((entry) => npcIdsInMaps.has(entry.id))
         .map((entry) => {
@@ -593,6 +498,8 @@ export async function getPublicWiki(): Promise<PublicWikiResponse> {
                 npcType,
                 npcTypeLabel: getNpcTypeLabel(npcType),
                 description: String(data.desc ?? ""),
+                headId: toNumber(data.idHead),
+                bodyId: toNumber(data.idBody),
                 maxHp,
                 expReward,
                 goldReward,
@@ -620,14 +527,72 @@ export async function getPublicWiki(): Promise<PublicWikiResponse> {
         })
         .sort((left, right) => left.id - right.id);
 
-    const equipment: WikiEquipmentEntry[] = objectChanges.changes
+    const craftedByObject = new Map<number, WikiRecipeReference[]>();
+    const usedInRecipesByObject = new Map<number, WikiRecipeReference[]>();
+    const recipes: WikiRecipeEntry[] = craftingChanges.changes
+        .filter((entry) => !entry.data.deleted)
+        .map((entry) => {
+            const recipe = entry.data;
+            const itemId = toNumber(recipe.itemId);
+            const item = objectsById.get(itemId) as Record<string, unknown> | undefined;
+            const recipeItemId = toNumber(recipe.recipeItemId);
+            const recipeItem = objectsById.get(recipeItemId) as Record<string, unknown> | undefined;
+            const level = Math.max(1, toNumber(recipe.level) || toNumber(recipe.skill));
+            const reference: WikiRecipeReference = {
+                recipeId: entry.id,
+                itemId,
+                itemName: String(item?.name ?? `Objeto ${itemId}`),
+                level,
+            };
+
+            const craftedReferences = craftedByObject.get(itemId) ?? [];
+            craftedReferences.push(reference);
+            craftedByObject.set(itemId, craftedReferences);
+
+            const materials = (recipe.materials ?? []).map((material) => {
+                const materialItem = objectsById.get(material.itemId) as Record<string, unknown> | undefined;
+                const references = usedInRecipesByObject.get(material.itemId) ?? [];
+                references.push(reference);
+                usedInRecipesByObject.set(material.itemId, references);
+
+                return {
+                    itemId: material.itemId,
+                    itemName: String(materialItem?.name ?? `Objeto ${material.itemId}`),
+                    grhIndex: toNumber(materialItem?.grhIndex),
+                    amount: material.amount,
+                };
+            });
+
+            return {
+                id: entry.id,
+                category: String(recipe.category ?? "Otros"),
+                itemId,
+                itemName: String(item?.name ?? `Objeto ${itemId}`),
+                itemGrhIndex: toNumber(item?.grhIndex),
+                level,
+                recipeItemId,
+                recipeItemName: String(recipeItem?.name ?? `Receta ${entry.id}`),
+                goldCost: Math.max(1, toNumber(item?.valor)),
+                dropChancePercent: getRecipeDropChancePercent(level),
+                materials,
+                searchIndex: buildSearchIndex([
+                    entry.id,
+                    recipe.category,
+                    itemId,
+                    String(item?.name ?? ""),
+                    recipeItemId,
+                    String(recipeItem?.name ?? ""),
+                    materials.map((material) => material.itemName).join(" "),
+                ]),
+            };
+        })
+        .sort((left, right) => left.level - right.level || left.id - right.id);
+
+    const objects: WikiObjectEntry[] = objectChanges.changes
+        .filter((entry) => isWikiObjectPublic(entry.data as Record<string, unknown>))
         .map((entry) => {
             const data = entry.data as Record<string, unknown>;
             const objType = toNumber(data.objType);
-            const defaultCategory = getEquipmentCategory(objType);
-            const category = isMagicWeapon(data, objType)
-                ? { key: "magic_weapon" as const, label: "Armas Mágicas" }
-                : defaultCategory;
             const soldBy = (soldByObject.get(entry.id) ?? []).sort(
                 (left, right) =>
                     right.quantity - left.quantity || left.npcId - right.npcId,
@@ -637,23 +602,23 @@ export async function getPublicWiki(): Promise<PublicWikiResponse> {
                     right.quantity - left.quantity || left.npcId - right.npcId,
             );
 
-            if (!category) {
-                return null;
-            }
-
             return {
                 id: entry.id,
                 name: String(data.name ?? `Objeto ${entry.id}`),
+                description: String(data.desc ?? ""),
                 grhIndex: toNumber(data.grhIndex),
                 objType,
                 objTypeLabel: getObjectTypeLabel(objType),
-                category: category.key,
-                categoryLabel: category.label,
+                category: getObjectTypeLabel(objType),
                 value: toNumber(data.valor),
                 minHit: toNumber(data.minHit),
                 maxHit: toNumber(data.maxHit),
                 minDef: toNumber(data.minDef),
                 maxDef: toNumber(data.maxDef),
+                minDefMag: toNumber(data.minDefMag),
+                maxDefMag: toNumber(data.maxDefMag),
+                magicResistance: toNumber(data.resistenciaMagica),
+                minSkill: toNumber(data.minSkill),
                 tier: toNumber(data.tier),
                 newbie: toNumber(data.newbie) === 1,
                 blockedClasses: Array.isArray(data.clasesNoPermitidas)
@@ -661,23 +626,40 @@ export async function getPublicWiki(): Promise<PublicWikiResponse> {
                           (value): value is number => typeof value === "number",
                       )
                     : [],
+                spellId: toNumber(data.spellIndex),
                 soldBy,
                 droppedBy,
+                craftedBy: craftedByObject.get(entry.id) ?? [],
+                usedInRecipes: usedInRecipesByObject.get(entry.id) ?? [],
                 searchIndex: buildSearchIndex([
                     entry.id,
                     String(data.name ?? ""),
-                    category.label,
                     getObjectTypeLabel(objType),
                     soldBy.map((npc) => npc.npcName).join(" "),
                     droppedBy.map((npc) => npc.npcName).join(" "),
+                    (craftedByObject.get(entry.id) ?? [])
+                        .map((recipe) => recipe.itemName)
+                        .join(" "),
                 ]),
             };
         })
-        .filter((entry): entry is WikiEquipmentEntry => Boolean(entry))
-        .filter(
-            (entry) => entry.soldBy.length > 0 || entry.droppedBy.length > 0,
-        )
         .sort((left, right) => left.id - right.id);
+
+    const equipment: WikiEquipmentEntry[] = objects
+        .map((entry) => {
+            const data = objectsById.get(entry.id) as Record<string, unknown> | undefined;
+            if (!data) return null;
+
+            const defaultCategory = getEquipmentCategory(data, entry.objType);
+            const category = isMagicWeapon(data, entry.objType)
+                ? { key: "magic_weapon" as const, label: "Armas mágicas" }
+                : defaultCategory;
+
+            return category
+                ? { ...entry, category: category.key, categoryLabel: category.label }
+                : null;
+        })
+        .filter((entry): entry is WikiEquipmentEntry => Boolean(entry));
 
     const spellSourcesBySpellId = new Map<number, WikiSpellSourceReference[]>();
 
@@ -719,10 +701,6 @@ export async function getPublicWiki(): Promise<PublicWikiResponse> {
                 (left, right) => left.itemId - right.itemId,
             );
 
-            if (sources.length === 0) {
-                return null;
-            }
-
             const type = toNumber(data.type);
 
             return {
@@ -755,25 +733,15 @@ export async function getPublicWiki(): Promise<PublicWikiResponse> {
                 ]),
             };
         })
-        .filter((entry): entry is WikiSpellEntry => Boolean(entry))
         .sort((left, right) => left.id - right.id);
 
     const npcById = new Map(npcs.map((npc) => [npc.id, npc]));
 
-    const trainingMaps: WikiTrainingMapEntry[] = Array.from(
-        mapNpcCounts.entries(),
-    )
-        .map(([mapId, npcCounts]) => {
-            const metadata = mapMetadataById.get(mapId) ?? {
-                id: mapId,
-                name: `Mapa ${mapId}`,
-                terreno: "-",
-                zona: "-",
-                restringir: "No",
-                minLevel: 0,
-                maxLevel: 0,
-                pk: false,
-            };
+    const maps: WikiMapEntry[] = Array.from(mapMetadataById.values())
+        .filter(isWikiMapPublic)
+        .map((metadata) => {
+            const npcCounts =
+                mapNpcCounts.get(metadata.id) ?? new Map<number, number>();
 
             const topNpcs = Array.from(npcCounts.entries())
                 .map(([npcId, spawnsInMap]) => {
@@ -811,6 +779,7 @@ export async function getPublicWiki(): Promise<PublicWikiResponse> {
                     0,
                 ),
                 uniqueCombatNpcs: combatNpcs.length,
+                npcs: topNpcs,
                 topNpcs: combatNpcs
                     .slice(0, 8)
                     .map(({ isCombatNpc: _isCombatNpc, ...npc }) => npc),
@@ -823,6 +792,9 @@ export async function getPublicWiki(): Promise<PublicWikiResponse> {
                 ]),
             };
         })
+        .sort((left, right) => left.id - right.id);
+
+    const trainingMaps = maps
         .filter(
             (map) =>
                 isTrainingMapCandidate(map) &&
@@ -841,14 +813,20 @@ export async function getPublicWiki(): Promise<PublicWikiResponse> {
         stats: {
             npcCount: npcs.length,
             combatNpcCount: npcs.filter((npc) => npc.isCombatNpc).length,
+            objectCount: objects.length,
             equipmentCount: equipment.length,
             spellCount: spells.length,
+            mapCount: maps.length,
             trainingMapCount: trainingMaps.length,
+            recipeCount: recipes.length,
         },
         npcs,
+        objects,
         equipment,
         spells,
+        maps,
         trainingMaps,
+        recipes,
     };
 
     wikiCache = {

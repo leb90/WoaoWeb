@@ -4,18 +4,20 @@ const rawSiteUrl =
     process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
     process.env.SITE_URL?.trim() ||
     process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim() ||
-    "https://aoweb.app";
+    "https://worldofargentum.io";
 
 const normalizedSiteUrl = rawSiteUrl.startsWith("http")
     ? rawSiteUrl
     : `https://${rawSiteUrl}`;
 
 export const siteUrl = normalizedSiteUrl.replace(/\/+$/, "");
-export const siteName = "AOWeb";
-export const siteTitle = "AOWeb Beta";
+export const siteName = "World of Argentum";
+export const siteTitle = "World of Argentum";
 export const siteDescription =
     "World of AO: un MMORPG 2D de fantasía clásico, jugable gratis desde el navegador, sin descargas.";
 export const siteKeywords = [
+    "World of Argentum",
+    "World of Argentum Wiki",
     "AOWeb",
     "AO Web",
     "MMORPG web",

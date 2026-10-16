@@ -12,6 +12,7 @@ import {
     LogOut,
     MessageCircle,
     Gem,
+    BookOpen,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { AuthErrorResponse, AuthSession } from "@/lib/auth";
@@ -26,6 +27,7 @@ const navItems = [
     { href: "/characters", label: "Personajes", icon: UserRound },
     { href: "/arenas", label: "Arenas", icon: Swords },
     { href: "/ranking", label: "Ranking", icon: Trophy },
+    { href: "/wiki", label: "Wiki", icon: BookOpen },
     { href: "/donaciones", label: "Donaciones", icon: Gem },
     {
         href: "https://discord.gg/YpJ9XrMdg",
@@ -91,7 +93,7 @@ export default function AppChrome({ children }: AppChromeProps) {
     return (
         <>
             <header className="sticky top-0 z-50 border-b border-amber-200/15 bg-[#050302]/95 backdrop-blur-xl md:fixed md:inset-x-0 md:top-4 md:border-b-0 md:bg-transparent md:px-4 md:backdrop-blur-none">
-                <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 md:max-w-6xl md:rounded-full md:border md:border-amber-200/15 md:bg-[#050302]/55 md:px-6 md:py-2.5 md:shadow-[0_10px_35px_rgba(0,0,0,0.45)] md:backdrop-blur-xl">
+                <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-4 px-4 py-3 md:rounded-full md:border md:border-amber-200/15 md:bg-[#050302]/55 md:px-6 md:py-2.5 md:shadow-[0_10px_35px_rgba(0,0,0,0.45)] md:backdrop-blur-xl">
                     <Link href="/" className="flex items-center gap-2.5">
                         <Image
                             src="/static/imgs/woaoicon-192.png"
@@ -108,7 +110,7 @@ export default function AppChrome({ children }: AppChromeProps) {
                         </span>
                     </Link>
 
-                    <nav className="hidden items-center gap-7 md:flex">
+                    <nav className="hidden items-center gap-5 xl:flex xl:gap-7">
                         {navItems.map((item) => {
                             const active = item.external
                                 ? false
@@ -182,8 +184,8 @@ export default function AppChrome({ children }: AppChromeProps) {
                 </div>
             </header>
 
-            <div className="md:hidden border-b border-amber-200/15 bg-[#050302]/95 px-4 py-2 backdrop-blur-xl">
-                <nav className="mx-auto flex max-w-7xl items-center gap-2 overflow-x-auto">
+            <div className="border-b border-amber-200/15 bg-[#050302]/95 px-4 py-2 backdrop-blur-xl xl:hidden">
+                <nav className="mx-auto flex max-w-7xl items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {navItems.map((item) => {
                         const Icon = item.icon;
                         const active = item.external

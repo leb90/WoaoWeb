@@ -423,6 +423,10 @@ app.get("/ranking", async (request, response) => {
 app.get("/wiki", async (_request, response) => {
     try {
         const wiki = await getPublicWiki();
+        response.setHeader(
+            "Cache-Control",
+            "public, max-age=300, stale-while-revalidate=3600",
+        );
         response.json(wiki);
     } catch (error) {
         response.status(500).json({

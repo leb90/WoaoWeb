@@ -13,6 +13,11 @@ import React, {
     useState,
 } from "react";
 import { MapRenderer } from "../../components/game";
+import {
+    DEFAULT_AURA_OPACITY,
+    getEquipmentAuraOpacity,
+    setEquipmentAuraOpacity,
+} from "../../components/game/rendering/equipmentAuras";
 import AdminIntervalsModal from "../../components/AdminIntervalsModal";
 import BuffStatusSidebar from "../../components/BuffStatusSidebar";
 import MacroBar from "../../components/MacroBar";
@@ -1085,6 +1090,7 @@ function HomeContent() {
         setRetosActionKey(null);
     }, [retosState]);
     const [soundVolume, setSoundVolume] = useState(1);
+    const [auraOpacity, setAuraOpacity] = useState(DEFAULT_AURA_OPACITY);
     const hasInitializedSoundVolumeRef = useRef(false);
     const hasSkippedInitialSoundVolumePersistRef = useRef(false);
     const [runtimeTiming, setRuntimeTiming] = useState<RuntimeTimingConfig>(
@@ -2496,6 +2502,7 @@ function HomeContent() {
 
         hasInitializedSoundVolumeRef.current = true;
         setSoundVolume(nextVolume);
+        setAuraOpacity(getEquipmentAuraOpacity());
     }, []);
 
     useEffect(() => {
@@ -4275,8 +4282,13 @@ function HomeContent() {
                                     hotkeySettings={hotkeySettings}
                                     useItemRepeatMs={useItemRepeatMs}
                                     soundVolume={soundVolume}
+                                    auraOpacity={auraOpacity}
                                     onHotkeySettingsChange={setHotkeySettings}
                                     onSoundVolumeChange={setSoundVolume}
+                                    onAuraOpacityChange={(value) => {
+                                        setAuraOpacity(value);
+                                        setEquipmentAuraOpacity(value);
+                                    }}
                                     onSelectSpell={setSelectedSpellSlot}
                                     onCastSpell={(spell) =>
                                         setSpellTargetRequest((current) => ({

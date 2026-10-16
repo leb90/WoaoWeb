@@ -94,10 +94,12 @@ function getEquipmentSpritePosition(
     kind: "weapon" | "shield",
     width: number,
     height: number,
+    offsetX = 0,
+    offsetY = 0,
 ): SpritePosition {
     return {
-        x: 16 - Math.floor((width * 16) / 32),
-        y: (kind === "weapon" ? 28 : 32) - Math.floor((height * 32) / 32),
+        x: 16 - Math.floor((width * 16) / 32) + offsetX,
+        y: (kind === "weapon" ? 28 : 32) - Math.floor((height * 32) / 32) + offsetY,
     };
 }
 
@@ -479,11 +481,15 @@ export default function CharacterSpritePreview({
                 bodyData.headOffsetX,
                 bodyData.headOffsetY,
             );
+            const weaponRecord = weaponId > 0 ? weaponsDB[weaponId.toString()] : undefined;
+            const shieldRecord = shieldId > 0 ? shieldsDB[shieldId.toString()] : undefined;
             const weaponPosition = weaponTexture
                 ? getEquipmentSpritePosition(
                       "weapon",
                       weaponTexture.width,
                       weaponTexture.height,
+                      weaponRecord?.offsetX ?? 0,
+                      weaponRecord?.offsetY ?? 0,
                   )
                 : null;
             const shieldPosition = shieldTexture
@@ -491,6 +497,8 @@ export default function CharacterSpritePreview({
                       "shield",
                       shieldTexture.width,
                       shieldTexture.height,
+                      shieldRecord?.offsetX ?? 0,
+                      shieldRecord?.offsetY ?? 0,
                   )
                 : null;
                 const helmetPosition = helmetTexture

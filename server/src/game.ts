@@ -709,8 +709,13 @@ function isDragonSlayerSword(itemId: number): boolean {
     return itemId === DRAGON_SLAYER_SWORD_ITEM_ID;
 }
 
+function isStaffUser(user: { privileges?: number } | null | undefined): boolean {
+    const privileges = Number(user?.privileges ?? 0);
+    return privileges === 1 || privileges === 2;
+}
+
 function isItemBlockedByClass(user: GameCharacter, obj: DataObject | undefined, itemId: number): boolean {
-    if (!obj || isDragonSlayerSword(itemId)) {
+    if (!obj || isDragonSlayerSword(itemId) || isStaffUser(user)) {
         return false;
     }
 
@@ -5491,7 +5496,7 @@ function Game(this: GameApi) {
 
             switch (safeNumber(obj.objetoEspecial)) {
                 case 50: {
-                    if (!isClass(user, vars.clases.mago)) {
+                    if (!isStaffUser(user) && !isClass(user, vars.clases.mago)) {
                         handleProtocol.console("Solo los Magos pueden usar este objeto.", "white", 0, 0, ws);
                         return;
                     }
@@ -5512,7 +5517,11 @@ function Game(this: GameApi) {
                     return;
                 }
                 case 51: {
-                    if (!isClass(user, vars.clases.mago) && !isClass(user, vars.clases.clerigo)) {
+                    if (
+                        !isStaffUser(user) &&
+                        !isClass(user, vars.clases.mago) &&
+                        !isClass(user, vars.clases.clerigo)
+                    ) {
                         handleProtocol.console("Solo los Clerigos o Magos pueden usar este objeto.", "white", 0, 0, ws);
                         return;
                     }

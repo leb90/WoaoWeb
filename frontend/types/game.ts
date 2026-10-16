@@ -85,6 +85,8 @@ export interface DirectionalGraphicData {
     "2": number;
     "3": number;
     "4": number;
+    offsetX?: number;
+    offsetY?: number;
 }
 
 export interface HelmetData extends DirectionalGraphicData {

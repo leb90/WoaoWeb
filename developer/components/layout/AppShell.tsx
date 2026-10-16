@@ -7,6 +7,7 @@ const NAV = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/maps", label: "Mapas" },
   { href: "/objects", label: "Objetos" },
+  { href: "/sprites", label: "Sprites" },
   { href: "/npcs", label: "NPCs" },
   { href: "/spells", label: "Hechizos" },
   { href: "/crafting", label: "Crafting" },

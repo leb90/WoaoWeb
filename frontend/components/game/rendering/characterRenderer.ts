@@ -26,6 +26,7 @@ import {
 import {
     getBodySpritePosition,
     getDebugPositionLabelPosition,
+    getEquipmentLayerZIndex,
     getEquipmentSpritePosition,
     getHeadSpritePosition,
     getHelmetSpritePosition,
@@ -49,6 +50,7 @@ import {
 } from "./visibility";
 import { getRowZIndex, Z_INDEX_LAYERS } from "./mapLayers";
 import { getMapRowLayerContainer } from "./rowLayerContainers";
+import { syncEquipmentAura } from "./equipmentAuras";
 
 export function shouldRenderHead(
     engine: Engine,
@@ -1190,10 +1192,11 @@ export async function renderRemoteCharacter(
             "weapon",
             weaponTextures[0],
             bodyData.headOffsetY,
+            weaponData,
         );
         weaponSprite.x = Math.round(weaponPosition.x);
         weaponSprite.y = Math.round(weaponPosition.y);
-        weaponSprite.zIndex = 0.4;
+        weaponSprite.zIndex = getEquipmentLayerZIndex(entity.heading).weapon;
         weaponSprite.visible = !hideBody;
     } else {
         removeStoredCharacterChild(
@@ -1215,10 +1218,11 @@ export async function renderRemoteCharacter(
             "shield",
             shieldTextures[0],
             bodyData.headOffsetY,
+            shieldData,
         );
         shieldSprite.x = Math.round(shieldPosition.x);
         shieldSprite.y = Math.round(shieldPosition.y);
-        shieldSprite.zIndex = 0.5;
+        shieldSprite.zIndex = getEquipmentLayerZIndex(entity.heading).shield;
         shieldSprite.visible = !hideBody;
     } else {
         removeStoredCharacterChild(
@@ -1453,6 +1457,17 @@ export async function renderRemoteCharacter(
         characterLayerContainer.addChild(container);
     }
     engine.remoteEntities.set(entity.id, container);
+    syncEquipmentAura(
+        container,
+        {
+            body: entity.idBody,
+            helmet: entity.idHelmet ?? 0,
+            weapon: entity.idWeapon ?? 0,
+            shield: entity.idShield ?? 0,
+        },
+        bodyMetrics,
+        !hideBody && !entity.dead,
+    );
     await deps.syncEntityFX(engine, entity.id);
     deps.syncDialogBubble(engine, entity.id);
 }
@@ -1713,10 +1728,11 @@ export async function renderLocalPlayer(
             "weapon",
             weaponTextures[0],
             bodyData.headOffsetY,
+            weaponData,
         );
         weaponSprite.x = Math.round(weaponPosition.x);
         weaponSprite.y = Math.round(weaponPosition.y);
-        weaponSprite.zIndex = 0.4;
+        weaponSprite.zIndex = getEquipmentLayerZIndex(engine.user.heading).weapon;
     } else {
         removeStoredCharacterChild(
             container,
@@ -1737,10 +1753,11 @@ export async function renderLocalPlayer(
             "shield",
             shieldTextures[0],
             bodyData.headOffsetY,
+            shieldData,
         );
         shieldSprite.x = Math.round(shieldPosition.x);
         shieldSprite.y = Math.round(shieldPosition.y);
-        shieldSprite.zIndex = 0.5;
+        shieldSprite.zIndex = getEquipmentLayerZIndex(engine.user.heading).shield;
     } else {
         removeStoredCharacterChild(
             container,
@@ -1906,6 +1923,17 @@ export async function renderLocalPlayer(
         { isLocalCharacter: true, localClanTag: engine.user?.clan },
     );
 
+    syncEquipmentAura(
+        container,
+        {
+            body: engine.user.idBody,
+            helmet: engine.user.idHelmet ?? 0,
+            weapon: engine.user.idWeapon ?? 0,
+            shield: engine.user.idShield ?? 0,
+        },
+        bodyMetrics,
+        !engine.user.dead,
+    );
     await deps.syncEntityFX(engine, engine.user.id);
     deps.syncDialogBubble(engine, engine.user.id);
 

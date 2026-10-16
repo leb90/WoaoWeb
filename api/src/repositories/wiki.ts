@@ -260,6 +260,38 @@ async function readMapNpcSpawns(): Promise<MapNpcPlacement[]> {
     return loadAllMapNpcPlacements(MAPS_SOURCE_PATH);
 }
 
+async function getMapDataVersion(): Promise<string> {
+    if (!existsSync(MAPS_SOURCE_PATH)) {
+        return "maps-missing";
+    }
+
+    const entries = await fs.readdir(MAPS_SOURCE_PATH, { withFileTypes: true });
+    const mapDirectories = entries
+        .filter(
+            (entry) => entry.isDirectory() && /^mapa_\d+$/.test(entry.name),
+        )
+        .sort((left, right) => left.name.localeCompare(right.name));
+    const fileStats = await Promise.all(
+        mapDirectories.flatMap((entry) =>
+            ["meta.json", "npcs.json"].map(async (fileName) => {
+                const filePath = path.join(
+                    MAPS_SOURCE_PATH,
+                    entry.name,
+                    fileName,
+                );
+                if (!existsSync(filePath)) {
+                    return null;
+                }
+
+                const stats = await fs.stat(filePath);
+                return `${entry.name}/${fileName}:${stats.size}:${stats.mtimeMs}`;
+            }),
+        ),
+    );
+
+    return fileStats.filter(Boolean).join("|");
+}
+
 async function readMapMetadata(): Promise<Map<number, WikiMapMetadata>> {
     const metadata = new Map<number, WikiMapMetadata>();
     if (!existsSync(MAPS_SOURCE_PATH)) {
@@ -337,17 +369,33 @@ type WikiCacheEntry = {
 let wikiCache: WikiCacheEntry | null = null;
 
 async function getWikiVersionSignature(): Promise<string> {
-    const [npcVersion, objectVersion, craftingVersion, smeltingVersion] =
+    const [
+        npcVersion,
+        objectVersion,
+        craftingVersion,
+        smeltingVersion,
+        mapVersion,
+        spellsVersion,
+    ] =
         await Promise.all([
             getCurrentGameNpcVersion(),
             getCurrentGameObjectVersion(),
             getCurrentGameCraftingRecipeVersion(),
             getCurrentGameSmeltingRecipeVersion(),
+            getMapDataVersion(),
+            fs.stat(SPELLS_PATH).then(
+                (stats) => `${stats.size}:${stats.mtimeMs}`,
+            ),
         ]);
 
-    return [npcVersion, objectVersion, craftingVersion, smeltingVersion].join(
-        ":",
-    );
+    return [
+        npcVersion,
+        objectVersion,
+        craftingVersion,
+        smeltingVersion,
+        mapVersion,
+        spellsVersion,
+    ].join(":");
 }
 
 export async function getPublicWiki(): Promise<PublicWikiResponse> {
@@ -378,11 +426,19 @@ export async function getPublicWiki(): Promise<PublicWikiResponse> {
     const npcMapCounts = new Map<number, Map<number, number>>();
     const mapNpcCounts = new Map<number, Map<number, number>>();
     const npcIdsInMaps = new Set<number>();
+    const dynamicMountNpcIds = new Set(
+        npcChanges.changes
+            .filter((entry) => {
+                const data = entry.data as Record<string, unknown>;
+                return toNumber(data.npcType) === 60;
+            })
+            .map((entry) => entry.id),
+    );
 
     for (const spawn of spawns) {
         const npcId = Number(spawn.npcIndex ?? 0);
         const mapId = Number(spawn.mapNum ?? 0);
-        if (!npcId || !mapId) {
+        if (!npcId || !mapId || dynamicMountNpcIds.has(npcId)) {
             continue;
         }
 

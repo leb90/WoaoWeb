@@ -6,9 +6,6 @@
     "despawnAt": 0
   },
   "gollum": {
-    "nextSpawnAt": 0,
-    "activeNpcId": 1792169073721,
-    "spawnedAt": 1792169073721,
-    "despawnAt": 1792170873721
+    "nextSpawnAt": 1792185273788
   }
 }

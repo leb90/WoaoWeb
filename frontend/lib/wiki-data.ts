@@ -11,7 +11,7 @@ import atlasJson from "@/public/init/world-map-atlas.json";
 import questsJson from "@/public/init/quests.json";
 import npcsJson from "@/public/init/npcs.json";
 
-export const WIKI_REVALIDATE_SECONDS = 60 * 60;
+export const WIKI_REVALIDATE_SECONDS = 60;
 
 const QUEST_GIVERS: Record<number, number> = {
     24: 3,
@@ -262,31 +262,46 @@ function normalizeWikiResponse(payload: unknown): PublicWikiResponse {
           : []
     );
     const rawMapById = new Map(rawMaps.map((map) => [map.id, map]));
-    const maps: WikiMap[] = atlasJson.maps.map((atlas) => {
-        const map = rawMapById.get(atlas.id);
+    const atlasMapById = new Map(
+        atlasJson.maps.map((map) => [map.id, map]),
+    );
+    const mapIds = Array.from(
+        new Set([...atlasMapById.keys(), ...rawMapById.keys()]),
+    ).sort((left, right) => left - right);
+    const maps: WikiMap[] = mapIds.map((mapId) => {
+        const atlas = atlasMapById.get(mapId);
+        const map = rawMapById.get(mapId);
         return {
-            id: atlas.id,
-            name: atlas.name || map?.name || `Mapa ${atlas.id}`,
-            terreno: map?.terreno || atlas.type || "-",
-            zona: map?.zona || atlas.type || "-",
+            id: mapId,
+            name: atlas?.name || map?.name || `Mapa ${mapId}`,
+            terreno: map?.terreno || atlas?.type || "-",
+            zona: map?.zona || atlas?.type || "-",
             restringir: map?.restringir ?? "Sin datos actuales",
             minLevel: Number(map?.minLevel ?? 0),
             maxLevel: Number(map?.maxLevel ?? 0),
             pk: Boolean(map?.pk),
-            info: atlas.info ?? "",
-            creatures: atlas.creatures ?? "",
-            hasPreview: Boolean(atlas.hasPreview),
+            info: atlas?.info ?? "",
+            creatures: atlas?.creatures ?? "",
+            hasPreview: Boolean(atlas?.hasPreview),
             totalNpcSpawns: Number(map?.totalNpcSpawns ?? 0),
             totalCombatSpawns: Number(map?.totalCombatSpawns ?? 0),
             uniqueCombatNpcs: Number(map?.uniqueCombatNpcs ?? 0),
             npcs: Array.isArray(map?.npcs) ? map.npcs : [],
             topNpcs: Array.isArray(map?.topNpcs) ? map.topNpcs : [],
             searchIndex: normalizeSearchText(
-                `${map?.searchIndex ?? ""} ${atlas.id} ${atlas.name} ${atlas.type} ${atlas.info} ${atlas.creatures}`,
+                `${map?.searchIndex ?? ""} ${mapId} ${atlas?.name ?? ""} ${atlas?.type ?? ""} ${atlas?.info ?? ""} ${atlas?.creatures ?? ""}`,
             ),
         };
     });
-    const npcs = addQuestNpcs(raw.npcs ?? [], objects);
+    const mapNames = new Map(maps.map((map) => [map.id, map.name]));
+    const normalizedNpcs = (raw.npcs ?? []).map((npc) => ({
+        ...npc,
+        maps: npc.maps.map((map) => ({
+            ...map,
+            mapName: mapNames.get(map.mapId) ?? map.mapName,
+        })),
+    }));
+    const npcs = addQuestNpcs(normalizedNpcs, objects);
     const quests = buildQuests(npcs, objects);
 
     return {
@@ -322,7 +337,7 @@ export const getWikiData = unstable_cache(
         for (const apiBaseUrl of getApiBaseUrlCandidates()) {
             try {
                 const response = await fetch(`${apiBaseUrl}/wiki`, {
-                    next: { revalidate: WIKI_REVALIDATE_SECONDS },
+                    cache: "no-store",
                 });
 
                 if (!response.ok) {
@@ -341,7 +356,7 @@ export const getWikiData = unstable_cache(
         console.error("No se pudo cargar la wiki desde ningun origen.");
         return createEmptyWikiResponse();
     },
-    ["public-wiki-v3"],
+    ["public-wiki-v5"],
     { revalidate: WIKI_REVALIDATE_SECONDS },
 );
 

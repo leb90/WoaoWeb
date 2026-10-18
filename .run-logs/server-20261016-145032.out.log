@@ -1,0 +1,22 @@
+[GAME DATA] Objs cargados desde fuente configurada: 1758.
+[GAME DATA] Crafting cargado desde archivos locales: 101.
+[GAME DATA] Fundicion cargada desde archivos locales: 3.
+Objs Cargados.
+Spells Cargados.
+Recetas de crafting cargadas.
+Recetas de fundicion cargadas.
+Mapas Cargados.
+[GAME DATA] NPC templates cargados desde fuente configurada: 649.
+NPCS Cargados.
+[GAME DATA] Balance hidratado desde DB: 1. Version aplicada: 3811. Personajes refrescados: 0.
+Balance cargado.
+[Quests] Cargadas 31 misiones y 34 NPCs entregadores.
+[Monturas] Cargados 12 tipos de mascota.
+[Conquista] Ciudades cargadas: defaults Alianza
+[Castillos] Dueños cargados: 5
+[Guerras] Automaticas cada 90 minutos.
+[DiaEspecial] Evento del dia: +40% de experiencia global. Bicho destacado: Gigante.
+[MountEggDrops] Cargadas 10 reglas.
+[MountEggDrops] Pool "continent": 45 mapas habilitados (1, 2, 4, 8, 9, 10, 11, 12, 14, 16, 17, 20, 21, 26, 27, 29, 30, 31, 32, 34, 35, 39, 53, 54, 56, 57, 59, 60, 61, 66, 67, 68, 69, 70, 71, 75, 81, 82, 86, 102, 150, 151, 166, 170, 190).
+[MountEggDrops] Spawneados 10 NPCs de huevos en mapas asignados (mapa 14: 1, mapa 30: 1, mapa 39: 1, mapa 61: 2, mapa 68: 1, mapa 75: 1, mapa 81: 1, mapa 102: 1, mapa 170: 1).
+[Servidor] Iniciado en 5641ms.

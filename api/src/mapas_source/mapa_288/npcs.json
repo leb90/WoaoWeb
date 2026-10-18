@@ -1,6 +1,1 @@
-[
-    { "mapNum": 288, "x": 50, "y": 15, "npcIndex": 9573 },
-    { "mapNum": 288, "x": 57, "y": 43, "npcIndex": 9573 },
-    { "mapNum": 288, "x": 92, "y": 76, "npcIndex": 9573 },
-    { "mapNum": 288, "x": 73, "y": 84, "npcIndex": 9573 }
-]
+[{"mapNum":288,"x":10,"y":18,"npcIndex":260},{"mapNum":288,"x":30,"y":18,"npcIndex":260},{"mapNum":288,"x":50,"y":18,"npcIndex":260},{"mapNum":288,"x":70,"y":18,"npcIndex":260},{"mapNum":288,"x":10,"y":34,"npcIndex":260},{"mapNum":288,"x":30,"y":34,"npcIndex":260},{"mapNum":288,"x":50,"y":34,"npcIndex":260},{"mapNum":288,"x":70,"y":34,"npcIndex":260},{"mapNum":288,"x":10,"y":50,"npcIndex":260},{"mapNum":288,"x":30,"y":50,"npcIndex":260},{"mapNum":288,"x":70,"y":50,"npcIndex":260},{"mapNum":288,"x":10,"y":66,"npcIndex":260},{"mapNum":288,"x":30,"y":66,"npcIndex":260},{"mapNum":288,"x":70,"y":66,"npcIndex":260},{"mapNum":288,"x":10,"y":82,"npcIndex":260},{"mapNum":288,"x":30,"y":82,"npcIndex":260},{"mapNum":288,"x":50,"y":82,"npcIndex":260},{"mapNum":288,"x":70,"y":82,"npcIndex":260}]

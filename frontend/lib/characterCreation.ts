@@ -403,7 +403,7 @@ export const raceOptions: RaceOption[] = [
     },
 ];
 
-const MAX_LEVEL = 50;
+export const MAX_LEVEL = 50;
 const LAST_LEGACY_EXP_LEVEL = 46;
 
 export function getAlianzaRaces(): RaceOption[] {
@@ -650,7 +650,7 @@ function clampLevel(level: number): number {
     return Math.max(1, Math.min(MAX_LEVEL, Math.floor(level)));
 }
 
-function getLegacyExpNextLevelForLevel(level: number): number {
+export function getLegacyExpNextLevelForLevel(level: number): number {
     const safeLevel = clampLevel(level);
     const expCurveLevel = Math.min(safeLevel, LAST_LEGACY_EXP_LEVEL);
     let expNextLevel = 300;
@@ -672,7 +672,7 @@ function getLegacyExpNextLevelForLevel(level: number): number {
     return expNextLevel;
 }
 
-function getHitModifierForLevel(classKey: CharacterClassKey, level: number): number {
+export function getHitModifierForLevel(classKey: CharacterClassKey, level: number): number {
     const safeLevel = clampLevel(level);
     const classProgress = classProgressByKey[classKey];
     if (safeLevel <= 1) {
@@ -684,7 +684,7 @@ function getHitModifierForLevel(classKey: CharacterClassKey, level: number): num
     return 35 * classProgress.hitPre36 + (safeLevel - 36) * classProgress.hitPost36;
 }
 
-function getMaxHpForLevel(classKey: CharacterClassKey, constitucion: number, level: number): number {
+export function getMaxHpForLevel(classKey: CharacterClassKey, constitucion: number, level: number): number {
     const safeLevel = clampLevel(level);
     const classProgress = classProgressByKey[classKey];
     const total =
@@ -693,7 +693,7 @@ function getMaxHpForLevel(classKey: CharacterClassKey, constitucion: number, lev
     return Math.round(total);
 }
 
-function getMaxManaForLevel(classKey: CharacterClassKey, inteligencia: number, level: number): number {
+export function getMaxManaForLevel(classKey: CharacterClassKey, inteligencia: number, level: number): number {
     const safeLevel = clampLevel(level);
     const classProgress = classProgressByKey[classKey];
     const total =

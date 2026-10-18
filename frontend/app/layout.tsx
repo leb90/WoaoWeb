@@ -36,15 +36,15 @@ export const metadata: Metadata = {
         twitterImagePath: "/twitter-image",
     }),
     metadataBase: new URL(siteUrl),
-    applicationName: "AOWeb",
+    applicationName: "World of Argentum",
     title: {
         default: siteTitle,
-        template: "%s | AOWeb",
+        template: "%s | World of Argentum",
     },
     description: siteDescription,
     authors: [{ name: "Damian Catanzaro" }],
     creator: "Damian Catanzaro",
-    publisher: "AOWeb",
+    publisher: "World of Argentum",
     category: "games",
     formatDetection: {
         email: false,

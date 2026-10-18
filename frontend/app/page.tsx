@@ -238,6 +238,12 @@ export default function HomePage() {
                     <p className="mt-10 text-xs tracking-wide text-stone-500">
                         World of Argentum Online &middot; Proyecto de fans, sin fines de lucro
                     </p>
+                    <Link
+                        href="/wiki"
+                        className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-amber-200/75 transition hover:text-amber-100"
+                    >
+                        Wiki oficial
+                    </Link>
                 </div>
             </section>
         </main>

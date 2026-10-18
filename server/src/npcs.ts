@@ -27,7 +27,7 @@ import {
 } from "./racialPassives";
 import { getLegacyNpcDropChancePercent, shouldDropNpcItem } from "./npcDrops";
 import { rollCraftingRecipeDrops } from "./craftingRecipeDrops";
-import { rollMountEggDrops } from "./mountEggDrops";
+import { pickMountRespawnMap, rollMountEggDrops } from "./mountEggDrops";
 
 export {};
 
@@ -2612,8 +2612,12 @@ function Npcs(this: NpcsApi) {
             }
 
             // Si murió en el mapa vecino persiguiendo, reaparece en su mapa de
-            // origen y arranca sin correa pendiente.
-            npc.map = Number(npc.spawnMapNum ?? npc.map);
+            // origen y arranca sin correa pendiente. Las mascotas de montura
+            // eligen un mapa válido distinto, nunca una ciudad.
+            const mountRespawnMap = npc.spawnMapNum
+                ? pickMountRespawnMap(Number(npc.templateNpcIndex ?? 0))
+                : null;
+            npc.map = mountRespawnMap || Number(npc.spawnMapNum ?? npc.map);
             npc.leashState = "idle";
             npc.leashHome = undefined;
             npc.leashHomeMap = undefined;
@@ -2626,6 +2630,13 @@ function Npcs(this: NpcsApi) {
 
             npc.pos.x = posNewNpc.posNewX;
             npc.pos.y = posNewNpc.posNewY;
+            if (mountRespawnMap) {
+                npc.spawnMapNum = mountRespawnMap;
+                npc.spawnOrigin = { x: npc.pos.x, y: npc.pos.y };
+                console.log(
+                    `[MountEggDrops] ${npc.nameCharacter || "Mascota"} reaparecio en el mapa ${mountRespawnMap} (${npc.pos.x},${npc.pos.y}).`,
+                );
+            }
             npc.cooldownAtaque = Date.now() + 2000;
             npc.hp = npc.maxHp;
             npc.hitExpAwarded = 0;

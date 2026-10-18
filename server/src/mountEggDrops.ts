@@ -44,6 +44,7 @@ const WORLD_EDGE_BAND = 12;
 
 let entriesByNpcId = new Map<number, MountEggDropEntry[]>();
 let spawnMapsByPool = new Map<string, number[]>();
+const respawnMapsByNpcId = new Map<number, number[]>();
 
 function loadEntries(): MountEggDropEntry[] {
     try {
@@ -87,6 +88,13 @@ function normalizeMapTag(value: unknown): string {
         .replace(/[\u0300-\u036f]/g, "")
         .trim()
         .toUpperCase();
+}
+
+function isCityMap(mapNum: number): boolean {
+    const mapData = vars.mapData?.[mapNum];
+    const terrain = normalizeMapTag(mapData?.terreno);
+    const zone = normalizeMapTag(mapData?.zona);
+    return terrain === "CIUDAD" || zone === "CIUDAD";
 }
 
 function normalizeTileExitDestinations(tileExit: unknown): Array<{ map: number; x: number; y: number }> {
@@ -223,6 +231,7 @@ export function resolveMapPool(poolName: string, pool: MountEggMapPool): number[
         const zone = normalizeMapTag(mapData?.zona);
         const allowed =
             Boolean(mapData) &&
+            !isCityMap(mapNum) &&
             !excludedMapIds.has(mapNum) &&
             !excludedTags.has(terrain) &&
             !excludedTags.has(zone) &&
@@ -232,7 +241,9 @@ export function resolveMapPool(poolName: string, pool: MountEggMapPool): number[
         return allowed;
     };
 
-    if (rootMap <= 0 || !isAllowed(rootMap)) {
+    const canTraverse = (mapNum: number) => Boolean(vars.mapData?.[mapNum]) && (isAllowed(mapNum) || isCityMap(mapNum));
+
+    if (rootMap <= 0 || !canTraverse(rootMap)) {
         console.warn(`[MountEggDrops] El pool de mapas "${poolName}" no tiene un mapa raiz valido.`);
         return [];
     }
@@ -247,7 +258,7 @@ export function resolveMapPool(poolName: string, pool: MountEggMapPool): number[
         }
 
         for (const neighbor of getWorldMapNeighbors(currentMap)) {
-            if (visited.has(neighbor) || !isAllowed(neighbor)) {
+            if (visited.has(neighbor) || !canTraverse(neighbor)) {
                 continue;
             }
 
@@ -256,7 +267,9 @@ export function resolveMapPool(poolName: string, pool: MountEggMapPool): number[
         }
     }
 
-    return Array.from(visited).sort((left, right) => left - right);
+    return Array.from(visited)
+        .filter((mapNum) => isAllowed(mapNum))
+        .sort((left, right) => left - right);
 }
 
 function resolveMapPools(mapPools: Record<string, MountEggMapPool>): Map<string, number[]> {
@@ -310,7 +323,13 @@ function normalizeSpawnEntry(entry: MountEggSpawnEntry): (MountEggSpawnEntry & {
             ...(Array.isArray(entry.maps)
                 ? entry.maps
                       .map((map) => Math.floor(Number(map ?? 0)))
-                      .filter((map) => map > 0 && Boolean(vars.mapData?.[map]) && hasDryNpcSpawnTile(map))
+                      .filter(
+                          (map) =>
+                              map > 0 &&
+                              Boolean(vars.mapData?.[map]) &&
+                              !isCityMap(map) &&
+                              hasDryNpcSpawnTile(map),
+                      )
                 : []),
         ]),
     );
@@ -351,12 +370,15 @@ function spawnConfiguredNpcs() {
     const loader = new LoadNpcs();
     let spawned = 0;
     const spawnedByMap = new Map<number, number>();
+    respawnMapsByNpcId.clear();
 
     for (const rawEntry of spawnConfig.spawns) {
         const entry = normalizeSpawnEntry(rawEntry);
         if (!entry) {
             continue;
         }
+
+        respawnMapsByNpcId.set(entry.npcId, entry.maps);
 
         for (let index = 0; index < (entry.count ?? 1); index++) {
             const mapNum = pickRandom(entry.maps);
@@ -381,6 +403,7 @@ function spawnConfiguredNpcs() {
             if (Object.keys(vars.npcs ?? {}).length > npcsBefore) {
                 spawned++;
                 spawnedByMap.set(mapNum, (spawnedByMap.get(mapNum) ?? 0) + 1);
+                console.log(`[MountEggDrops] ${entry.npcName || `NPC ${entry.npcId}`} aparecio en el mapa ${mapNum}.`);
             }
         }
     }
@@ -410,6 +433,15 @@ export function initialize() {
 
     console.log(`[MountEggDrops] Cargadas ${Array.from(entriesByNpcId.values()).flat().length} reglas.`);
     spawnConfiguredNpcs();
+}
+
+export function pickMountRespawnMap(templateNpcIndex: number): number | null {
+    const maps = respawnMapsByNpcId.get(Math.floor(Number(templateNpcIndex) || 0));
+    if (!maps?.length) {
+        return null;
+    }
+
+    return pickRandom(maps) ?? null;
 }
 
 export function rollMountEggDrops(npc: RuntimeNpc | undefined | null): DropItem[] {

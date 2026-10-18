@@ -71,7 +71,7 @@ function run() {
             excludedTags: ["DUNGEON", "ISLA", "MAR", "EVENTO"],
         });
 
-        assert.deepEqual(maps, [2, 7, 34]);
+        assert.deepEqual(maps, [2, 7]);
     } finally {
         vars.mapa = originalMaps;
         vars.mapData = originalMapData;

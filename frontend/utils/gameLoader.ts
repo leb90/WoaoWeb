@@ -554,8 +554,8 @@ export async function loadGraphicsDB(): Promise<GraphicsDB> {
     try {
         const optimizedGraphicsDb =
             await fetchJsonWithFallback<CompactGraphicsDB>(
-                "/init/graficos_optimized.json?v=3.28",
-                "/init/graficos_optimized.json?v=3.28",
+                "/init/graficos_optimized.json?v=3.31",
+                "/init/graficos_optimized.json?v=3.31",
                 "optimized graphics database",
                 { preferLocal: PREFER_LOCAL_GRAPHICS },
             );
@@ -796,6 +796,12 @@ export function getTexturePath(graphicData: GraphicData): string {
     if (fileNumber === 320210 || fileNumber === 320211) {
         return `/graphics/${fileNumber}.png?v=3`;
     }
+    if (fileNumber === 9895 || fileNumber === 9903) {
+        return `/graphics/${fileNumber}.png?v=2`;
+    }
+    if (fileNumber === 9896) {
+        return `/graphics/${fileNumber}.png?v=4`;
+    }
     return `/graphics/${fileNumber}.png`;
 }
 
@@ -857,8 +863,8 @@ export async function loadNPCsDB(): Promise<NPCsDB> {
 export async function loadBodiesDB(): Promise<BodiesDB> {
     try {
         return await fetchJsonWithFallback<BodiesDB>(
-            "/init/bodies.json?v=3.19",
-            "/init/bodies.json?v=3.19",
+            "/init/bodies.json?v=3.20",
+            "/init/bodies.json?v=3.20",
             "Bodies database",
             { preferLocal: PREFER_LOCAL_BODIES },
         );

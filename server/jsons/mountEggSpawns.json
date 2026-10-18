@@ -3,6 +3,7 @@
         "continent": {
             "rootMap": 34,
             "excludedTags": [
+                "CIUDAD",
                 "DUNGEON",
                 "DEUNGEON",
                 "EVENTO",

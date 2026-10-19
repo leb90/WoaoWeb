@@ -574,6 +574,7 @@ const COMBAT_HIT_FX_ID = 14;
 const COMBAT_SHIELD_BLOCK_FX_ID = 88;
 const COMBAT_STABBING_FX_ID = 89;
 const COMBAT_MISS_FX_ID = 144;
+const LEVEL_UP_FX_ID = 145;
 
 function clampChance(value: number, min = 5, max = 95): number {
     return Math.max(min, Math.min(max, value));
@@ -1630,6 +1631,29 @@ function emitCharacterFxToUserArea(entityId: EntityId, fxId: number) {
         }
 
         handleProtocol.animFX(entityId, fxId, targetClient);
+    });
+}
+
+function emitCharacterSoundToUserArea(entityId: EntityId, soundId: number) {
+    if (!soundId) {
+        return;
+    }
+
+    loopAreaByUserId(entityId, function (target: AreaTarget) {
+        if (target.isNpc) {
+            return;
+        }
+
+        const targetClient = getClientById(target.id);
+        if (!targetClient) {
+            return;
+        }
+
+        if (!canReceiveCharacterEvent(target.id, entityId)) {
+            return;
+        }
+
+        handleProtocol.playSound(entityId, soundId, targetClient);
     });
 }
 
@@ -8878,6 +8902,8 @@ function Game(this: GameApi) {
                     },
                     client,
                 );
+                emitCharacterFxToUserArea(idUser, LEVEL_UP_FX_ID);
+                emitCharacterSoundToUserArea(idUser, vars.arSounds.SND_NIVEL);
                 relocateUserIfCurrentMapLevelDenied(user, client, `checkUserLevel ${user.level}`);
             }
         } catch (err) {

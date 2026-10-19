@@ -8,6 +8,7 @@ const NAV = [
   { href: "/maps", label: "Mapas" },
   { href: "/objects", label: "Objetos" },
   { href: "/sprites", label: "Sprites" },
+  { href: "/fxs", label: "FXs" },
   { href: "/npcs", label: "NPCs" },
   { href: "/spells", label: "Hechizos" },
   { href: "/crafting", label: "Crafting" },

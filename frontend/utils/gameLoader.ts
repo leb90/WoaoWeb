@@ -554,8 +554,8 @@ export async function loadGraphicsDB(): Promise<GraphicsDB> {
     try {
         const optimizedGraphicsDb =
             await fetchJsonWithFallback<CompactGraphicsDB>(
-                "/init/graficos_optimized.json?v=3.32",
-                "/init/graficos_optimized.json?v=3.32",
+                "/init/graficos_optimized.json?v=3.33",
+                "/init/graficos_optimized.json?v=3.33",
                 "optimized graphics database",
                 { preferLocal: PREFER_LOCAL_GRAPHICS },
             );
@@ -917,8 +917,8 @@ export async function loadHelmetsDB(): Promise<HelmetsDB> {
 export async function loadFXsDB(): Promise<FXsDB> {
     try {
         return await fetchJsonWithFallback<FXsDB>(
-            "/init/fxs.json?v=3.3",
-            "/init/fxs.json?v=3.3",
+            "/init/fxs.json?v=3.4",
+            "/init/fxs.json?v=3.4",
             "effects database",
         );
     } catch (error) {

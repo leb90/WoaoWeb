@@ -2990,6 +2990,22 @@ export class Engine {
             // Only update if frame changed to avoid unnecessary redraws
             if (sprite.currentFrame !== frameIndex) {
                 sprite.currentFrame = frameIndex;
+
+                if ((sprite as any).isEntityFX) {
+                    const frameGrhIds = (sprite as any).entityFXFrameGrhIds as
+                        | number[]
+                        | undefined;
+                    const frameGrhId = Number(frameGrhIds?.[frameIndex] ?? 0);
+                    const frameGraphic = frameGrhId
+                        ? this.graphicsDB?.[String(frameGrhId)]
+                        : undefined;
+                    (sprite as any).entityFXFrameOffsetX = Number(
+                        frameGraphic?.offset?.x ?? 0,
+                    );
+                    (sprite as any).entityFXFrameOffsetY = Number(
+                        frameGraphic?.offset?.y ?? 0,
+                    );
+                }
             }
         }
     }

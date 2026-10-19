@@ -219,8 +219,12 @@ export function createEntityOverlays(options: CreateEntityOverlaysOptions) {
             return false;
         }
 
-        const offsetX = Number((effectSprite as any).entityFXOffsetX ?? 0);
-        const offsetY = Number((effectSprite as any).entityFXOffsetY ?? 0);
+        const offsetX =
+            Number((effectSprite as any).entityFXOffsetX ?? 0) +
+            Number((effectSprite as any).entityFXFrameOffsetX ?? 0);
+        const offsetY =
+            Number((effectSprite as any).entityFXOffsetY ?? 0) +
+            Number((effectSprite as any).entityFXFrameOffsetY ?? 0);
         const fxPosition = getFxSpritePosition(
             effectSprite.texture,
             offsetX,
@@ -386,8 +390,25 @@ export function createEntityOverlays(options: CreateEntityOverlaysOptions) {
         effectSprite.alpha = options.entityFxAlpha;
         (effectSprite as any).entityFXOffsetX = effectData.offsetX;
         (effectSprite as any).entityFXOffsetY = effectData.offsetY;
+        (effectSprite as any).entityFXFrameOffsetX = 0;
+        (effectSprite as any).entityFXFrameOffsetY = 0;
         (effectSprite as any).isEntityFX = true;
         (effectSprite as any).entityId = entityId;
+
+        if (graphicData.numFrames > 1 && graphicData.frames) {
+            const frameGrhIds: number[] = [];
+            for (let frameNumber = 1; frameNumber <= graphicData.numFrames; frameNumber++) {
+                frameGrhIds.push(Number(graphicData.frames[String(frameNumber)] ?? 0));
+            }
+            (effectSprite as any).entityFXFrameGrhIds = frameGrhIds;
+            const firstFrameData = engine.graphicsDB?.[String(frameGrhIds[0] ?? "")];
+            (effectSprite as any).entityFXFrameOffsetX = Number(firstFrameData?.offset?.x ?? 0);
+            (effectSprite as any).entityFXFrameOffsetY = Number(firstFrameData?.offset?.y ?? 0);
+        } else {
+            (effectSprite as any).entityFXFrameOffsetX = Number(graphicData.offset?.x ?? 0);
+            (effectSprite as any).entityFXFrameOffsetY = Number(graphicData.offset?.y ?? 0);
+        }
+
         engine.entityEffects.set(entityId, effectSprite);
         engine.entityEffectStartedAt.set(entityId, startedAt);
         positionEntityFX(engine, entityId);

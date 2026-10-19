@@ -13,6 +13,10 @@ export type FxEntry = {
 let fxsCache: Record<string, { grh: number; offsetX: number; offsetY: number }> | null =
   null;
 
+export function invalidateFxsCache() {
+  fxsCache = null;
+}
+
 export function loadFxsDb() {
   if (!fxsCache) {
     const file = path.join(PATHS.frontendInit(), "fxs.json");

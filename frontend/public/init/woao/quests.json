@@ -682,5 +682,139 @@
     "rewardExp": 2800000,
     "rewardPoints": 50,
     "rewardObjs": []
+  },
+  "32": {
+    "id": 32,
+    "name": "Cacería de Golems de Piedra",
+    "desc": "Debes matar 10 Golems de piedra. Recibirás oro, experiencia y lingotes de hierro.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 552,
+        "amount": 10
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 2500,
+    "rewardExp": 35000,
+    "rewardPoints": 6,
+    "rewardObjs": [
+      {
+        "index": 386,
+        "amount": 10
+      }
+    ]
+  },
+  "33": {
+    "id": 33,
+    "name": "Cacería de Golems",
+    "desc": "Debes matar 8 Golems de hierro, 6 Golems de oro y 5 Golems de hielo. Recibirás oro, experiencia y lingotes.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 579,
+        "amount": 8
+      },
+      {
+        "index": 580,
+        "amount": 6
+      },
+      {
+        "index": 659,
+        "amount": 5
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 8000,
+    "rewardExp": 120000,
+    "rewardPoints": 12,
+    "rewardObjs": [
+      {
+        "index": 386,
+        "amount": 8
+      },
+      {
+        "index": 387,
+        "amount": 6
+      },
+      {
+        "index": 388,
+        "amount": 4
+      }
+    ]
+  },
+  "34": {
+    "id": 34,
+    "name": "Cacería de Golems Ancestrales",
+    "desc": "Debes matar 2 Golems Hielo y 1 Golem de Cristal. Recibirás oro, experiencia y lingotes preciosos.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 765,
+        "amount": 2
+      },
+      {
+        "index": 769,
+        "amount": 1
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 15000,
+    "rewardExp": 350000,
+    "rewardPoints": 20,
+    "rewardObjs": [
+      {
+        "index": 388,
+        "amount": 12
+      },
+      {
+        "index": 387,
+        "amount": 8
+      }
+    ]
+  },
+  "35": {
+    "id": 35,
+    "name": "Madera de Treants Jóvenes",
+    "desc": "Debes matar 15 Treants Jóvenes para recibir un cargamento de madera, oro y experiencia.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 762,
+        "amount": 15
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 800,
+    "rewardExp": 12000,
+    "rewardPoints": 4,
+    "rewardObjs": [
+      {
+        "index": 1709,
+        "amount": 600
+      }
+    ]
+  },
+  "36": {
+    "id": 36,
+    "name": "Madera Ancestral",
+    "desc": "Debes matar 12 Treants para recibir un cargamento extra de madera, oro y experiencia.",
+    "requiredLevel": 1,
+    "requiredNpcs": [
+      {
+        "index": 749,
+        "amount": 12
+      }
+    ],
+    "requiredObjs": [],
+    "rewardGold": 3000,
+    "rewardExp": 100000,
+    "rewardPoints": 8,
+    "rewardObjs": [
+      {
+        "index": 1709,
+        "amount": 1100
+      }
+    ]
   }
 }

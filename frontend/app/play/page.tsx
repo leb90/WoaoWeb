@@ -72,6 +72,7 @@ import type {
     MarketPanelState,
     MarketState,
     PlayerHudState,
+    LevelUpNoticePayload,
     QuestProgressNoticePayload,
     RetosState,
     TradeItem,
@@ -424,6 +425,24 @@ type QuestProgressCanvasNotice = QuestProgressNoticePayload & {
     id: number;
     visible: boolean;
 };
+
+type LevelUpCanvasNotice = LevelUpNoticePayload & {
+    id: number;
+    visible: boolean;
+};
+
+const LEVEL_UP_NOTICE_HOLD_MS = 10_000;
+const LEVEL_UP_NOTICE_FADE_MS = 2_000;
+
+function formatLevelUpGain(value: number): string {
+    const amount = Math.round(Number(value) || 0);
+
+    if (amount > 0) {
+        return `+${amount}`;
+    }
+
+    return String(amount);
+}
 
 type ChatTab = Exclude<ChatChannel, "gmbot">;
 type NotifiableChatTab = Extract<ChatTab, "party" | "clan" | "whisper">;
@@ -1005,6 +1024,8 @@ function HomeContent() {
         useState<GlobalCanvasNotice | null>(null);
     const [questProgressNotice, setQuestProgressNotice] =
         useState<QuestProgressCanvasNotice | null>(null);
+    const [levelUpNotice, setLevelUpNotice] =
+        useState<LevelUpCanvasNotice | null>(null);
     const [bailState, setBailState] = useState<BailOffer | null>(null);
     const [craftingState, setCraftingState] = useState<CraftingState | null>(
         null,
@@ -1028,6 +1049,8 @@ function HomeContent() {
     const globalCanvasNoticeTimeoutRef = useRef<number | null>(null);
     const questProgressFadeTimeoutRef = useRef<number | null>(null);
     const questProgressClearTimeoutRef = useRef<number | null>(null);
+    const levelUpFadeTimeoutRef = useRef<number | null>(null);
+    const levelUpClearTimeoutRef = useRef<number | null>(null);
 
     useEffect(() => {
         tradeStateRef.current = tradeState;
@@ -1043,6 +1066,12 @@ function HomeContent() {
             }
             if (questProgressClearTimeoutRef.current !== null) {
                 window.clearTimeout(questProgressClearTimeoutRef.current);
+            }
+            if (levelUpFadeTimeoutRef.current !== null) {
+                window.clearTimeout(levelUpFadeTimeoutRef.current);
+            }
+            if (levelUpClearTimeoutRef.current !== null) {
+                window.clearTimeout(levelUpClearTimeoutRef.current);
             }
         };
     }, []);
@@ -2417,6 +2446,36 @@ function HomeContent() {
         [],
     );
 
+    const handleLevelUpNotice = useCallback((notice: LevelUpNoticePayload) => {
+        if (levelUpFadeTimeoutRef.current !== null) {
+            window.clearTimeout(levelUpFadeTimeoutRef.current);
+            levelUpFadeTimeoutRef.current = null;
+        }
+        if (levelUpClearTimeoutRef.current !== null) {
+            window.clearTimeout(levelUpClearTimeoutRef.current);
+            levelUpClearTimeoutRef.current = null;
+        }
+
+        const id = Date.now();
+        setLevelUpNotice({
+            ...notice,
+            id,
+            visible: true,
+        });
+
+        levelUpFadeTimeoutRef.current = window.setTimeout(() => {
+            setLevelUpNotice((current) =>
+                current?.id === id ? { ...current, visible: false } : current,
+            );
+            levelUpFadeTimeoutRef.current = null;
+        }, LEVEL_UP_NOTICE_HOLD_MS);
+
+        levelUpClearTimeoutRef.current = window.setTimeout(() => {
+            setLevelUpNotice((current) => (current?.id === id ? null : current));
+            levelUpClearTimeoutRef.current = null;
+        }, LEVEL_UP_NOTICE_HOLD_MS + LEVEL_UP_NOTICE_FADE_MS);
+    }, []);
+
     const handleQuestProgressNotice = useCallback(
         (notice: QuestProgressNoticePayload) => {
             const message = notice.message?.trim();
@@ -3484,6 +3543,7 @@ function HomeContent() {
                                     onQuestProgressNotice={
                                         handleQuestProgressNotice
                                     }
+                                    onLevelUpNotice={handleLevelUpNotice}
                                     onTradeStateChange={setTradeState}
                                     onMarketStateChange={setMarketState}
                                     onRetosStateChange={setRetosState}
@@ -3567,6 +3627,40 @@ function HomeContent() {
                                             </div>
                                             <div className="mt-0.5 text-2xl font-semibold leading-none text-cyan-100">
                                                 {challengeOverlayText}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : null}
+
+                                {levelUpNotice ? (
+                                    <div
+                                        role="status"
+                                        aria-live="polite"
+                                        className={`pointer-events-none absolute left-1/2 z-40 w-[min(320px,calc(100%-2rem))] -translate-x-1/2 transition-opacity ease-out ${
+                                            levelUpNotice.visible
+                                                ? "opacity-100"
+                                                : "opacity-0"
+                                        }`}
+                                        style={{
+                                            top: "14%",
+                                            transitionDuration: `${LEVEL_UP_NOTICE_FADE_MS}ms`,
+                                        }}
+                                    >
+                                        <div className="rounded-md border border-amber-200/45 bg-stone-950/88 px-5 py-4 text-center shadow-2xl backdrop-blur-md">
+                                            <div className="text-[10px] uppercase tracking-[0.28em] text-amber-200/80">
+                                                Subiste de nivel
+                                            </div>
+                                            <div className="mt-1 text-2xl font-semibold leading-none text-amber-50">
+                                                Nivel {levelUpNotice.level}
+                                            </div>
+                                            <div className="mt-3 space-y-1 text-sm font-medium text-stone-100">
+                                                <div>Vida {formatLevelUpGain(levelUpNotice.hp)}</div>
+                                                <div>Maná {formatLevelUpGain(levelUpNotice.mana)}</div>
+                                                <div>Golpe {formatLevelUpGain(levelUpNotice.hit)}</div>
+                                                <div>
+                                                    Skillpoints{" "}
+                                                    {formatLevelUpGain(levelUpNotice.skillPoints)}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

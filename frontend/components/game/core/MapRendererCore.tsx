@@ -25,6 +25,7 @@ import {
     type MarketPanelState,
     type PartyHudMember,
     type PlayerHudState,
+    type LevelUpNoticePayload,
     type QuestProgressNoticePayload,
     type RetosState,
     type TradeState,
@@ -221,6 +222,7 @@ interface MapRendererProps {
     onTargetingModeChange?: (mode: TargetingMode | null) => void;
     onGlobalNotice?: (notice: { text: string; durationMs: number }) => void;
     onQuestProgressNotice?: (notice: QuestProgressNoticePayload) => void;
+    onLevelUpNotice?: (notice: LevelUpNoticePayload) => void;
     onTradeStateChange?: (tradeState: TradeState | null) => void;
     onMarketStateChange?: (marketState: MarketPanelState | null) => void;
     onRetosStateChange?: (retosState: RetosState | null) => void;
@@ -684,6 +686,7 @@ export default function MapRenderer({
     onTargetingModeChange,
     onGlobalNotice,
     onQuestProgressNotice,
+    onLevelUpNotice,
     onTradeStateChange,
     onMarketStateChange,
     onRetosStateChange,
@@ -1948,6 +1951,7 @@ export default function MapRenderer({
                 showDialogBubble,
                 onGlobalNotice,
                 onQuestProgressNotice,
+                onLevelUpNotice,
                 renderEntityFX,
                 renderSpellProjectileVisual,
                 renderProjectileVisual,
@@ -1987,6 +1991,7 @@ export default function MapRenderer({
         onConsoleMessage,
         onGlobalNotice,
         onQuestProgressNotice,
+        onLevelUpNotice,
         playStepSound,
         queueTileObjectVisualSync,
         reconcileOwnPositionWithServer,

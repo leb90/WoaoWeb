@@ -255,6 +255,10 @@ export async function handleIncomingUiPacket({
             ctx.onQuestProgressNotice?.(packet.payload);
             return true;
 
+        case "levelUpNotice":
+            ctx.onLevelUpNotice?.(packet.payload);
+            return true;
+
         case "error":
             ctx.setIsSceneReady(false);
             ctx.emitStatus({

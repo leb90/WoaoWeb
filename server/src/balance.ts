@@ -41,6 +41,12 @@ const getMaxHpForLevel = (classId: number, constitucion: number, level: number):
     return Math.round(total);
 };
 
+const getHpAverageDelta = (classId: number, constitucion: number): number => {
+    const classProgress = getClassProgress()[classId] ?? DEFAULT_CLASS_PROGRESS[1];
+    const classAverage = Number(classProgress.vida) || 0;
+    return getHpAveragePerLevel(classId, constitucion) - classAverage;
+};
+
 const getMaxManaForLevel = (classId: number, inteligencia: number, level: number): number => {
     const safeLevel = clampLevel(level);
     const classProgress = getClassProgress()[classId] ?? DEFAULT_CLASS_PROGRESS[1];
@@ -102,6 +108,7 @@ module.exports = {
     clampLevel,
     clampGold,
     getMaxHpForLevel,
+    getHpAverageDelta,
     getMaxManaForLevel,
     getMaxStaForLevel,
     MAX_HAMBRE,

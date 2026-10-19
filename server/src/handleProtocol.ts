@@ -475,6 +475,7 @@ export type HandleProtocolApi = {
     rankedState: (payload: unknown, client: RuntimeClient) => void;
     huntersGameState: (payload: unknown, client: RuntimeClient) => void;
     bossEventState: (payload: unknown, client: RuntimeClient) => void;
+    levelUpNotice: (payload: unknown, client: RuntimeClient) => void;
     selfFlagsDelta: (payload: SelfFlagsDeltaPayload, client: RuntimeClient) => void;
     selfVitalsDelta: (payload: SelfVitalsDeltaPayload, client: RuntimeClient) => void;
     selfMapMetaDelta: (payload: SelfMapMetaDeltaPayload, client: RuntimeClient) => void;
@@ -1488,6 +1489,12 @@ const handleServer: HandleProtocolApi = {
 
     bossEventState(payload, client) {
         pkg.setPackageID(pkg.clientPacketID.bossEventState);
+        pkg.writeString(JSON.stringify(payload));
+        socket.send(client);
+    },
+
+    levelUpNotice(payload, client) {
+        pkg.setPackageID(pkg.clientPacketID.levelUpNotice);
         pkg.writeString(JSON.stringify(payload));
         socket.send(client);
     },

@@ -88,6 +88,7 @@ export const CLIENT_PACKET_ID = {
     rankedState: 90,
     huntersGameState: 91,
     bossEventState: 92,
+    levelUpNotice: 93,
 } as const;
 
 export const CHARACTER_SWING_WEAPON = 1;
@@ -1059,6 +1060,14 @@ export interface BossEventStatePayload {
     events: BossEventStateEntry[];
 }
 
+export interface LevelUpNoticePayload {
+    level: number;
+    hp: number;
+    mana: number;
+    hit: number;
+    skillPoints: number;
+}
+
 const DEFAULT_BOSS_EVENT_STATE: BossEventStatePayload = {
     events: [],
 };
@@ -1312,6 +1321,7 @@ export type ParsedServerPacket =
     | { type: "rankedState"; payload: RankedStatePayload }
     | { type: "huntersGameState"; payload: HuntersGameStatePayload }
     | { type: "bossEventState"; payload: BossEventStatePayload }
+    | { type: "levelUpNotice"; payload: LevelUpNoticePayload }
     | { type: "partyState"; payload: PartyHudStateDelta }
     | { type: "clanState"; payload: ClanHudStateDelta }
     | { type: "startCastBar"; payload: { id: number; durationMs: number } }
@@ -2561,6 +2571,19 @@ function parseServerPacketById(
                     type: "bossEventState",
                     payload: DEFAULT_BOSS_EVENT_STATE,
                 };
+            }
+        }
+
+        case CLIENT_PACKET_ID.levelUpNotice: {
+            const rawPayload = reader.getString();
+
+            try {
+                return {
+                    type: "levelUpNotice",
+                    payload: JSON.parse(rawPayload) as LevelUpNoticePayload,
+                };
+            } catch {
+                return { type: "unknown", payload: { packetId } };
             }
         }
 

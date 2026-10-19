@@ -125,6 +125,7 @@ const clientPacketID = {
     rankedState: 90,
     huntersGameState: 91,
     bossEventState: 92,
+    levelUpNotice: 93,
 } as const;
 
 const serverPacketID = {

@@ -8756,6 +8756,22 @@ function Game(this: GameApi) {
         resetFuerzaAgilidadBuffs(session.user, session.client);
     };
 
+    const formatSignedAverage = (delta: number): string => {
+        const normalized = Math.round(delta * 10) / 10;
+        const magnitude = Math.abs(normalized);
+        const body = Number.isInteger(magnitude) ? String(magnitude) : magnitude.toFixed(1);
+
+        if (normalized > 0) {
+            return `+${body}`;
+        }
+
+        if (normalized < 0) {
+            return `-${body}`;
+        }
+
+        return "+0";
+    };
+
     /**
      * [checkUserLevel description]
      * @param  {[type]} idUser [description]
@@ -8771,6 +8787,10 @@ function Game(this: GameApi) {
             }
 
             const { user, client } = session;
+            let gainedHp = 0;
+            let gainedMana = 0;
+            let gainedHit = 0;
+            let gainedSkillPoints = 0;
 
             normalizeExperienceFields(user);
 
@@ -8808,6 +8828,10 @@ function Game(this: GameApi) {
                 user.maxHit = newMaxHit;
 
                 const skillPointsGained = skills.grantLevelUpSkillPoints(user);
+                gainedHp += aumentoHP;
+                gainedMana += aumentoMana;
+                gainedHit += aumentoHIT;
+                gainedSkillPoints += skillPointsGained;
 
                 handleProtocol.console("¡Has subido a nivel " + user.level + "!", "red", 1, 0, client);
 
@@ -8836,6 +8860,24 @@ function Game(this: GameApi) {
             }
 
             if (leveledUp) {
+                const promedio = balance.getHpAverageDelta(user.idClase, user.attrConstitucion);
+                handleProtocol.console(
+                    "Promedio: " + formatSignedAverage(promedio),
+                    "#f6d98a",
+                    1,
+                    0,
+                    client,
+                );
+                handleProtocol.levelUpNotice(
+                    {
+                        level: user.level,
+                        hp: gainedHp,
+                        mana: gainedMana,
+                        hit: gainedHit,
+                        skillPoints: gainedSkillPoints,
+                    },
+                    client,
+                );
                 relocateUserIfCurrentMapLevelDenied(user, client, `checkUserLevel ${user.level}`);
             }
         } catch (err) {

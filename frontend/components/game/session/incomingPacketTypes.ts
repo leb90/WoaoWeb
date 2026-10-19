@@ -5,6 +5,7 @@ import type {
     PanelSnapshot,
     PanelSnapshotChunk,
     PartyHudStateDelta,
+    LevelUpNoticePayload,
     QuestProgressNoticePayload,
 } from "../../../lib/aowProtocol";
 
@@ -105,6 +106,7 @@ export type IncomingPacketHandlerContext = {
         | ((notice: { text: string; durationMs: number }) => void)
         | undefined;
     onQuestProgressNotice?: ((notice: QuestProgressNoticePayload) => void) | undefined;
+    onLevelUpNotice?: ((notice: LevelUpNoticePayload) => void) | undefined;
     renderEntityFX: (engine: any, id: number, fxGrh: number) => Promise<void>;
     renderSpellProjectileVisual: (
         engine: any,

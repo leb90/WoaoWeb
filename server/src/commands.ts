@@ -3045,12 +3045,20 @@ const command: CommandApi = {
                 }
 
                 case "/questaceptar": {
-                    require("./quests").acceptQuest(String(clientId));
+                    const questId = Number(nextText.trim());
+                    require("./quests").acceptQuest(
+                        String(clientId),
+                        Number.isInteger(questId) && questId > 0 ? questId : undefined,
+                    );
                     break;
                 }
 
                 case "/questentregar": {
-                    require("./quests").turnInQuest(String(clientId));
+                    const questId = Number(nextText.trim());
+                    require("./quests").turnInQuest(
+                        String(clientId),
+                        Number.isInteger(questId) && questId > 0 ? questId : undefined,
+                    );
                     break;
                 }
 

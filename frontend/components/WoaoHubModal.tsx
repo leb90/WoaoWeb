@@ -4,10 +4,12 @@ import Image from "next/image";
 import React from "react";
 import {
     Activity,
+    BookOpen,
     CalendarDays,
     Check,
     Clock3,
     Coins,
+    ExternalLink,
     Gift,
     Info,
     MapPin,
@@ -15,6 +17,7 @@ import {
     Package,
     PawPrint,
     Plus,
+    ScrollText,
     Search,
     Shield,
     ShoppingCart,
@@ -65,7 +68,7 @@ type WoaoHubModalProps = {
     questState?: QuestStatePayload | null;
     mountState?: MountStatePayload | null;
     rankedState?: RankedStatePayload | null;
-    questDialog?: QuestEntryState | null;
+    questDialog?: QuestEntryState[] | null;
     questPoints?: number;
     donationPoints?: number;
     auctionPanel?: React.ReactNode;
@@ -403,6 +406,9 @@ function questStatusLabel(status: QuestEntryState["status"]): string {
     if (status === "done") {
         return "Completada";
     }
+    if (status === "locked") {
+        return "Nivel insuficiente";
+    }
 
     return "Activa";
 }
@@ -474,36 +480,107 @@ const MOUNT_ICON_OFFSETS: Record<number, { x: number; y: number }> = {
     899: { x: 4, y: 0 },
 };
 
+const GOLD_ITEM_ID = 12;
+
+function ObjectGraphicIcon({
+    graphicData,
+    name,
+    size = 42,
+}: {
+    graphicData?: GraphicData;
+    name: string;
+    size?: number;
+}) {
+    if (!graphicData?.numFile) {
+        return null;
+    }
+
+    const scale = Math.min(2.4, (size - 4) / Math.max(graphicData.width, graphicData.height, 1));
+    return (
+        <span
+            aria-label={name}
+            className="relative shrink-0 overflow-hidden"
+            style={{ width: size, height: size }}
+        >
+            <span
+                className="absolute left-1/2 top-1/2 bg-no-repeat [image-rendering:pixelated] drop-shadow-[0_6px_10px_rgba(0,0,0,0.65)]"
+                style={{
+                    width: graphicData.width,
+                    height: graphicData.height,
+                    backgroundImage: `url(${getTexturePath(graphicData)})`,
+                    backgroundPosition: `-${graphicData.sX}px -${graphicData.sY}px`,
+                    transform: `translate(-50%, -50%) scale(${scale})`,
+                    transformOrigin: "center",
+                }}
+            />
+        </span>
+    );
+}
+
+function QuestExpBadge({ size = 42 }: { size?: number }) {
+    const letterSize = Math.max(8, Math.round(size * 0.2));
+    return (
+        <span
+            aria-label="Experiencia"
+            className="relative grid shrink-0 place-items-center"
+            style={{ width: size, height: size }}
+        >
+            <span className="absolute inset-[5px] rounded-full bg-[radial-gradient(circle_at_32%_28%,#9cdcff_0%,#3b8dff_42%,#1554c8_78%,#0b2f7a_100%)] shadow-[0_0_12px_rgba(70,150,255,0.55),inset_0_1px_0_rgba(255,255,255,0.55),inset_0_-4px_6px_rgba(8,30,90,0.45)]" />
+            <span className="absolute inset-[9px] rounded-full border border-white/25" />
+            <span
+                className="relative z-[1] font-black tracking-[0.12em] text-white [text-shadow:0_1px_2px_rgba(8,30,90,0.8)]"
+                style={{ fontSize: letterSize }}
+            >
+                XP
+            </span>
+        </span>
+    );
+}
+
+function QuestPointsBadge({ size = 42 }: { size?: number }) {
+    const letterSize = Math.max(13, Math.round(size * 0.36));
+    return (
+        <span
+            aria-label="Puntos de canje"
+            className="relative grid shrink-0 place-items-center"
+            style={{ width: size, height: size }}
+        >
+            <span className="absolute inset-[4px] rounded-full bg-[radial-gradient(circle_at_32%_26%,#ffe9a8_0%,#e2b34a_46%,#b07818_100%)] shadow-[0_6px_12px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-3px_5px_rgba(90,50,0,0.35)]" />
+            <span className="absolute inset-[7px] rounded-full border border-[#8a5a12]/50" />
+            <span
+                className="relative z-[1] font-serif font-black text-[#5d3a0c] [text-shadow:0_1px_0_rgba(255,255,255,0.45)]"
+                style={{ fontSize: letterSize }}
+            >
+                P
+            </span>
+        </span>
+    );
+}
+
 function QuestRewardIcon({
     reward,
     objectsDB,
     graphicsDB,
+    size = 32,
 }: {
     reward: QuestEntryState["rewards"][number];
     objectsDB: ObjectsDB | null;
     graphicsDB: Record<string, GraphicData> | null;
+    size?: number;
 }) {
-    if (reward.type === "item") {
-        const graphicData = resolveObjectGraphic(reward.index, objectsDB, graphicsDB);
-        if (graphicData?.numFile) {
-            const scale = Math.min(1.7, 30 / Math.max(graphicData.width, graphicData.height, 1));
-            return (
-                <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded border border-amber-200/20 bg-black/35">
-                    <span
-                        aria-label={reward.label}
-                        className="absolute left-1/2 top-1/2 bg-no-repeat drop-shadow-[0_6px_8px_rgba(0,0,0,0.55)]"
-                        style={{
-                            width: graphicData.width,
-                            height: graphicData.height,
-                            backgroundImage: `url(${getTexturePath(graphicData)})`,
-                            backgroundPosition: `-${graphicData.sX}px -${graphicData.sY}px`,
-                            transform: `translate(-50%, -50%) scale(${scale})`,
-                            transformOrigin: "center",
-                        }}
-                    />
-                </span>
-            );
-        }
+    if (reward.type === "exp") {
+        return <QuestExpBadge size={size} />;
+    }
+
+    if (reward.type === "points") {
+        return <QuestPointsBadge size={size} />;
+    }
+
+    const itemId = reward.type === "gold" ? GOLD_ITEM_ID : reward.index;
+    const graphicData = resolveObjectGraphic(itemId, objectsDB, graphicsDB);
+    const graphic = <ObjectGraphicIcon graphicData={graphicData} name={reward.label} size={size} />;
+    if (graphic) {
+        return graphic;
     }
 
     if (reward.type === "gold") {
@@ -543,133 +620,294 @@ function QuestRewardPills({
     );
 }
 
+function questListIcon(quest: QuestEntryState) {
+    if (quest.objectives.some((objective) => objective.type === "item")) {
+        return Package;
+    }
+    if (quest.objectives.length > 1) {
+        return Swords;
+    }
+    if (quest.objectives.some((objective) => objective.type === "npc")) {
+        return Skull;
+    }
+    return ScrollText;
+}
+
+function openQuestNpcsWiki(quest: QuestEntryState) {
+    const npcs = quest.objectives.filter((objective) => objective.type === "npc");
+    const path = npcs.length === 1 ? `/wiki/npcs/${npcs[0].index}` : "/wiki/npcs";
+    window.open(path, "_blank", "noopener,noreferrer");
+}
+
 function QuestNpcDialog({
-    quest,
+    quests,
     objectsDB,
     graphicsDB,
     onClose,
     onSendCommand,
 }: {
-    quest: QuestEntryState;
+    quests: QuestEntryState[];
     objectsDB: ObjectsDB | null;
     graphicsDB: Record<string, GraphicData> | null;
     onClose: () => void;
     onSendCommand?: (message: string) => void;
 }) {
-    const isOffer = quest.status === "available";
-    const isReady = quest.status === "ready";
-    const title = isOffer ? "Aceptar misión" : isReady ? "Entregar misión" : "Consultar misión";
-    const primaryLabel = isOffer ? "Aceptar misión" : isReady ? "Entregar misión" : "";
-    const statusLabel = isReady ? "Lista para entregar" : questStatusLabel(quest.status);
+    const [query, setQuery] = React.useState("");
+    const [selectedQuestId, setSelectedQuestId] = React.useState<number | null>(null);
+    const activeCount = quests.filter((quest) => quest.status === "active" || quest.status === "ready").length;
+    const normalizedQuery = normalizeSearchText(query);
+    const visibleQuests = quests.filter((quest) => {
+        if (!normalizedQuery) {
+            return true;
+        }
+
+        const haystack = normalizeSearchText(
+            [quest.name, quest.desc, quest.npcName ?? "", ...quest.objectives.map((objective) => objective.name)].join(" "),
+        );
+        return haystack.includes(normalizedQuery);
+    });
+    const selectedQuest =
+        visibleQuests.find((quest) => quest.id === selectedQuestId) ??
+        visibleQuests.find((quest) => quest.status !== "locked") ??
+        visibleQuests[0] ??
+        null;
+    const locked = selectedQuest?.status === "locked";
+    const ready = selectedQuest?.status === "ready";
+    const available = selectedQuest?.status === "available";
+    const atCap = activeCount >= 3 && available;
+    const canAccept = Boolean(selectedQuest && available && !atCap);
+    const canTurnIn = Boolean(selectedQuest && ready);
+    const npcObjectives = selectedQuest?.objectives.filter((objective) => objective.type === "npc") ?? [];
+    const primaryLabel = canTurnIn
+        ? "Entregar misión"
+        : atCap
+          ? "Máximo 3 misiones"
+          : locked
+            ? "Nivel insuficiente"
+            : available
+              ? "Aceptar misión"
+              : selectedQuest?.status === "active"
+                ? "En curso"
+                : "";
 
     const handlePrimary = () => {
-        if (isOffer) {
-            onSendCommand?.("/questaceptar");
-            onClose();
+        if (!selectedQuest) {
             return;
         }
 
-        if (isReady) {
-            onSendCommand?.("/quest entregar");
-            onClose();
+        if (canTurnIn) {
+            onSendCommand?.(`/questentregar ${selectedQuest.id}`);
+            return;
+        }
+
+        if (canAccept) {
+            onSendCommand?.(`/questaceptar ${selectedQuest.id}`);
         }
     };
 
     return (
         <div
-            className="fixed inset-0 z-[84] flex items-center justify-center bg-black/55 px-4 backdrop-blur-[4px]"
+            className="fixed inset-0 z-[84] flex items-center justify-center bg-black/75 px-3 py-4"
             onClick={onClose}
         >
             <div
-                className="flex h-[min(620px,calc(100vh-32px))] w-[min(900px,calc(100vw-32px))] flex-col overflow-hidden rounded border border-amber-200/25 bg-[#120c08]/96 text-stone-100 shadow-[0_28px_90px_rgba(0,0,0,0.66)]"
+                className="relative flex h-[min(780px,calc(100vh-20px))] w-[min(1180px,calc(100vw-20px))] flex-col overflow-hidden rounded-[22px] border-[3px] border-[#d7b56a] bg-[#120c08] text-[#f4e7c8] shadow-[0_30px_90px_rgba(0,0,0,0.78),inset_0_0_0_8px_#5a3a1d,inset_0_0_0_10px_#24150c]"
                 onClick={(event) => event.stopPropagation()}
             >
-                <div className="flex items-center justify-between gap-4 border-b border-amber-200/12 bg-[linear-gradient(180deg,rgba(127,78,35,0.32),rgba(18,12,8,0))] px-5 py-3">
-                    <div>
-                        <p className="text-[11px] uppercase tracking-[0.34em] text-amber-300/80">World of AO</p>
-                        <h3 className="mt-1 text-xl font-semibold text-[#f2e5ca]">{title}</h3>
+                <div className="pointer-events-none absolute inset-x-8 top-0 h-[3px] bg-[linear-gradient(90deg,transparent,#f0d48a,transparent)]" />
+                <div className="relative flex items-center justify-between gap-4 border-b border-[#8a6234]/40 bg-[linear-gradient(180deg,#5a3918,#2a170c)] px-6 py-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                        <span className="grid h-11 w-11 place-items-center rounded-full border border-[#f0d48a]/50 bg-[radial-gradient(circle_at_50%_30%,#7a4e22,#3a2412)] text-[#f0d48a] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)]">
+                            <ScrollText aria-hidden="true" className="h-5 w-5" strokeWidth={1.8} />
+                        </span>
+                        <div className="min-w-0">
+                            <h2 className="font-serif text-[28px] font-bold leading-none tracking-wide text-[#f0d48a] [text-shadow:0_2px_0_#3a2412]">
+                                Misiones
+                            </h2>
+                            <p className="mt-1 truncate text-xs text-[#d7c4a2]/80">
+                                Acepta misiones, completa los objetivos y reclama tus recompensas.
+                            </p>
+                        </div>
                     </div>
                     <button
                         type="button"
                         onClick={onClose}
-                        className="flex h-11 w-11 items-center justify-center rounded-full border border-stone-700 bg-black/20 text-stone-300 transition hover:border-stone-500 hover:text-white"
-                        aria-label="Cerrar misión"
+                        className="flex h-9 w-9 items-center justify-center rounded-md border border-[#f0c27a] bg-[linear-gradient(180deg,#b33a32,#6e1d1a)] text-[#f8e7c4] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)]"
+                        aria-label="Cerrar misiones"
                     >
-                        <X aria-hidden="true" className="h-5 w-5" strokeWidth={1.8} />
+                        <X aria-hidden="true" className="h-4 w-4" strokeWidth={2.6} />
                     </button>
                 </div>
 
-                <div className="min-h-0 overflow-y-auto p-4">
-                    <div className="grid gap-4 md:grid-cols-[196px_minmax(0,1fr)]">
-                        <aside className="rounded border border-amber-300/25 bg-black/32 p-3">
-                            <div className="flex aspect-square max-h-[176px] items-center justify-center rounded border border-amber-200/20 bg-[radial-gradient(circle_at_50%_35%,rgba(245,158,11,0.18),rgba(0,0,0,0.22)_58%)]">
-                                <span className="text-6xl font-bold text-amber-200/75">?</span>
-                            </div>
-                            <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-200">
-                                NPC
-                            </p>
-                            <p className="mt-1 text-lg font-semibold text-stone-50">
-                                {quest.npcName ?? "Misión"}
-                            </p>
-                            <div className="mt-4 h-px bg-amber-200/10" />
-                            <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-200">
-                                Nivel
-                            </p>
-                            <p className="mt-1 text-sm text-stone-200">Requiere nivel {quest.requiredLevel}</p>
-                        </aside>
+                <div className="grid min-h-0 flex-1 grid-cols-1 gap-0 md:grid-cols-[320px_minmax(0,1fr)]">
+                    <aside className="flex min-h-0 flex-col border-r border-[#5c3d22] bg-[#0d0907] p-3">
+                        <label className="flex items-center gap-2 rounded-md border border-[#5c4630] bg-[#16100c] px-3 py-2 text-sm text-[#b7a48a] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+                            <Search aria-hidden="true" className="h-4 w-4 shrink-0" strokeWidth={1.8} />
+                            <input
+                                value={query}
+                                onChange={(event) => setQuery(event.target.value)}
+                                placeholder="Buscar misión, monstruo o NPC..."
+                                className="w-full bg-transparent text-[#f4e7c8] outline-none placeholder:text-[#8d7b66]"
+                            />
+                            {query ? (
+                                <button type="button" onClick={() => setQuery("")} aria-label="Limpiar búsqueda">
+                                    <X aria-hidden="true" className="h-3.5 w-3.5 text-[#8d7b66]" strokeWidth={2.2} />
+                                </button>
+                            ) : null}
+                        </label>
+                        <div className="mt-3 min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
+                            {visibleQuests.length ? (
+                                visibleQuests.map((quest) => {
+                                    const isLocked = quest.status === "locked";
+                                    const isSelected = selectedQuest?.id === quest.id;
+                                    const Icon = questListIcon(quest);
+                                    return (
+                                        <button
+                                            key={quest.id}
+                                            type="button"
+                                            onClick={() => setSelectedQuestId(quest.id)}
+                                            className={`flex w-full items-center gap-3 rounded-md px-2 py-2.5 text-left ${
+                                                isSelected
+                                                    ? "bg-[linear-gradient(180deg,#2a5f9a,#1a3f6e)] shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]"
+                                                    : "hover:bg-white/[0.04]"
+                                            }`}
+                                        >
+                                            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-[#6b4a28]/70 bg-black/35 text-[#f0d48a]">
+                                                <Icon aria-hidden="true" className="h-4 w-4" strokeWidth={1.8} />
+                                            </span>
+                                            <span className="min-w-0 flex-1">
+                                                <span className={`block truncate text-sm font-semibold ${isLocked ? "text-[#ff8b8b]" : "text-[#f4e7c8]"}`}>
+                                                    {quest.name}
+                                                </span>
+                                                <span className={`mt-0.5 block text-[11px] ${isLocked ? "text-[#ff8b8b]/80" : "text-[#cbb896]/80"}`}>
+                                                    Nivel {quest.requiredLevel}
+                                                </span>
+                                            </span>
+                                        </button>
+                                    );
+                                })
+                            ) : (
+                                <p className="px-2 py-6 text-center text-sm text-[#b7a48a]">No hay misiones para mostrar.</p>
+                            )}
+                        </div>
+                    </aside>
 
-                        <section className="rounded border border-amber-200/12 bg-black/24 p-4">
-                            <div className="flex items-start justify-between gap-4">
-                                <div className="min-w-0">
-                                    <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-amber-200">
-                                        Misión
-                                    </p>
-                                    <h2 className="mt-1 text-2xl font-semibold leading-tight text-stone-50">
-                                        {quest.name}
-                                    </h2>
+                    <section className="flex min-h-0 flex-col bg-[radial-gradient(1200px_420px_at_80%_0%,rgba(184,138,64,0.12),transparent_58%),linear-gradient(180deg,#1b130e,#100c09)]">
+                        {selectedQuest ? (
+                            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+                                <div className="flex items-start justify-between gap-4">
+                                    <h3 className={`min-w-0 font-serif text-[34px] font-bold leading-tight ${locked ? "text-[#ff8b8b]" : "text-[#f0d48a]"} [text-shadow:0_2px_0_#2a1a10]`}>
+                                        {selectedQuest.name}
+                                    </h3>
+                                    <span className="shrink-0 rounded-sm bg-[linear-gradient(180deg,#b4332c,#7a1c18)] px-3 py-1 text-xs font-bold tracking-wide text-[#f8e7c4] shadow-[0_8px_16px_rgba(0,0,0,0.35)] [clip-path:polygon(8px_0,100%_0,100%_100%,8px_100%,0_50%)]">
+                                        Nivel mínimo: {selectedQuest.requiredLevel}
+                                    </span>
                                 </div>
-                                <span className="shrink-0 rounded border border-stone-500/40 bg-white/[0.04] px-3 py-1.5 text-sm text-stone-200">
-                                    {statusLabel}
-                                </span>
+
+                                <div className="mt-5">
+                                    <p className="flex items-center gap-2 text-sm font-bold text-[#f0d48a]">
+                                        <BookOpen aria-hidden="true" className="h-4 w-4" strokeWidth={1.8} />
+                                        Descripción
+                                    </p>
+                                    <p className="mt-2 max-w-[58ch] text-sm leading-7 text-[#d7c4a2]">{selectedQuest.desc}</p>
+                                </div>
+
+                                <div className="mt-6">
+                                    <p className="flex items-center gap-2 text-sm font-bold text-[#f0d48a]">
+                                        <Target aria-hidden="true" className="h-4 w-4" strokeWidth={1.8} />
+                                        Requisitos
+                                    </p>
+                                    <div className="mt-3 max-w-[420px] space-y-2">
+                                        {selectedQuest.objectives.length ? (
+                                            selectedQuest.objectives.map((objective) => {
+                                                const complete = objective.current >= objective.amount;
+                                                return (
+                                                    <div key={`${objective.type}-${objective.index}`} className="flex items-center justify-between gap-3 text-sm">
+                                                        <span className="flex min-w-0 items-center gap-2 text-[#e8d7b5]">
+                                                            {objective.type === "npc" ? (
+                                                                <Skull aria-hidden="true" className="h-4 w-4 shrink-0 text-[#cbb896]" strokeWidth={1.8} />
+                                                            ) : (
+                                                                <Package aria-hidden="true" className="h-4 w-4 shrink-0 text-[#cbb896]" strokeWidth={1.8} />
+                                                            )}
+                                                            <span className="truncate">{objective.name}</span>
+                                                        </span>
+                                                        <span className={`font-semibold tabular-nums ${complete ? "text-emerald-300" : "text-[#f0d48a]"}`}>
+                                                            {formatAmount(objective.current)} / {formatAmount(objective.amount)}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })
+                                        ) : (
+                                            <p className="text-sm text-[#b7a48a]">No hay requisitos listados para esta misión.</p>
+                                        )}
+                                    </div>
+                                    {npcObjectives.length ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => openQuestNpcsWiki(selectedQuest)}
+                                            className="mt-3 inline-flex items-center gap-2 rounded-md border border-[#8a6234]/80 bg-black/25 px-3 py-1.5 text-xs font-semibold text-[#f0d48a] transition hover:border-[#f0d48a] hover:bg-black/40"
+                                        >
+                                            <MapPin aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={2} />
+                                            Dónde encontrar estos NPCs
+                                            <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={2} />
+                                        </button>
+                                    ) : null}
+                                </div>
+
+                                <div className="mt-6">
+                                    <p className="flex items-center gap-2 text-sm font-bold text-[#f0d48a]">
+                                        <Gift aria-hidden="true" className="h-4 w-4" strokeWidth={1.8} />
+                                        Recompensa
+                                    </p>
+                                    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+                                        {selectedQuest.rewards.map((reward, index) => (
+                                            <div
+                                                key={`${reward.type}-${reward.index ?? index}`}
+                                                className="flex min-h-[118px] flex-col items-center justify-center rounded-md border border-[#8a6234]/70 bg-[linear-gradient(180deg,rgba(48,32,18,0.92),rgba(16,10,7,0.96))] px-2 py-3 text-center shadow-[inset_0_1px_0_rgba(240,212,138,0.12)]"
+                                            >
+                                                <QuestRewardIcon
+                                                    reward={reward}
+                                                    objectsDB={objectsDB}
+                                                    graphicsDB={graphicsDB}
+                                                    size={46}
+                                                />
+                                                <p className="mt-2 text-sm font-bold text-[#f8e7c4]">{formatAmount(reward.amount)}</p>
+                                                <p className="text-[11px] text-[#cbb896]">{reward.label}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
-
-                            <p className="mt-3 text-sm leading-6 text-stone-200">{quest.desc}</p>
-
-                            <div className="my-4 h-px bg-[linear-gradient(90deg,transparent,rgba(245,158,11,0.5),transparent)]" />
-
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-amber-200">
-                                Objetivos
-                            </p>
-                            <div className="mt-3 rounded border border-white/5 bg-white/[0.025] p-3">
-                                <QuestProgressRows quest={quest} />
+                        ) : (
+                            <div className="flex flex-1 items-center justify-center px-6 text-center text-sm text-[#b7a48a]">
+                                No quedan misiones pendientes.
                             </div>
-
-                            <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.34em] text-amber-200">
-                                Recompensas
-                            </p>
-                            <QuestRewardPills quest={quest} objectsDB={objectsDB} graphicsDB={graphicsDB} />
-                        </section>
-                    </div>
-                </div>
-
-                <div className="flex flex-wrap justify-end gap-3 border-t border-amber-200/10 px-5 py-3">
-                    {primaryLabel ? (
-                        <button
-                            type="button"
-                            onClick={handlePrimary}
-                            className="flex min-h-[48px] min-w-[178px] items-center justify-center gap-3 rounded border border-amber-300/70 bg-[linear-gradient(180deg,#f7c84f,#a96512)] px-5 text-base font-bold text-stone-950 shadow-[0_0_24px_rgba(245,158,11,0.22)] transition hover:brightness-110"
-                        >
-                            <Check aria-hidden="true" className="h-5 w-5" strokeWidth={2} />
-                            {primaryLabel}
-                        </button>
-                    ) : null}
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="min-h-[48px] min-w-[130px] rounded border border-stone-600/70 px-5 text-base font-semibold text-stone-100 transition hover:border-stone-400 hover:text-white"
-                    >
-                        Cerrar
-                    </button>
+                        )}
+                        <div className="flex items-center justify-between gap-3 border-t border-[#5c3d22] bg-[#140e0a] px-5 py-3">
+                            <p className="text-xs font-semibold text-[#cbb896]">Misiones activas: {activeCount}/3</p>
+                            <div className="flex gap-2">
+                                {primaryLabel ? (
+                                    <button
+                                        type="button"
+                                        disabled={!canAccept && !canTurnIn}
+                                        onClick={handlePrimary}
+                                        className="flex min-h-[42px] min-w-[176px] items-center justify-center gap-2 rounded-md border border-[#b6f0c4] bg-[linear-gradient(180deg,#3ec45c,#1f8a3a)] px-4 text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] disabled:cursor-not-allowed disabled:border-[#6d6d6d] disabled:bg-[#4a4a4a] disabled:bg-none disabled:text-[#cfcfcf]"
+                                    >
+                                        <Check aria-hidden="true" className="h-4 w-4" strokeWidth={2.4} />
+                                        {primaryLabel}
+                                    </button>
+                                ) : null}
+                                <button
+                                    type="button"
+                                    onClick={onClose}
+                                    className="flex min-h-[42px] min-w-[118px] items-center justify-center gap-2 rounded-md border border-[#f0c2c2] bg-[linear-gradient(180deg,#c4473e,#7a1f1c)] px-4 text-sm font-bold text-white"
+                                >
+                                    <X aria-hidden="true" className="h-4 w-4" strokeWidth={2.4} />
+                                    Cerrar
+                                </button>
+                            </div>
+                        </div>
+                    </section>
                 </div>
             </div>
         </div>
@@ -1506,7 +1744,7 @@ export default function WoaoHubModal({
     if (tab === "misiones" && questDialog) {
         return (
             <QuestNpcDialog
-                quest={questDialog}
+                quests={questDialog}
                 objectsDB={objectsDB}
                 graphicsDB={graphicsDB}
                 onClose={onClose}
@@ -1649,7 +1887,7 @@ export default function WoaoHubModal({
                                             {selectedQuest.status === "ready" ? (
                                                 <button
                                                     type="button"
-                                                    onClick={() => onSendCommand?.("/quest")}
+                                                    onClick={() => onSendCommand?.(`/questentregar ${selectedQuest.id}`)}
                                                     className="rounded border border-amber-300/40 bg-amber-300/15 px-4 py-2 text-sm font-semibold text-amber-100 transition hover:bg-amber-300/25"
                                                 >
                                                 Entregar

@@ -339,7 +339,7 @@ export type QuestEntryState = {
     id: number;
     name: string;
     desc: string;
-    status: "available" | "active" | "ready" | "done";
+    status: "available" | "active" | "ready" | "done" | "locked";
     npcId?: number;
     npcName?: string;
     requiredLevel: number;
@@ -350,6 +350,8 @@ export type QuestEntryState = {
 export type QuestStatePayload = {
     active: QuestEntryState[];
     offer?: QuestEntryState | null;
+    board?: QuestEntryState[] | null;
+    openBoard?: boolean;
     completedQuestId?: number;
 };
 

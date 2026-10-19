@@ -31,6 +31,22 @@ export function findGiversForQuest(questId: number): QuestGiverInfo[] {
     });
   }
 
+  const specificIds = Object.entries(givers)
+    .filter(([, qid]) => Number(qid) === questId)
+    .map(([npcIdStr]) => Number(npcIdStr));
+  if (specificIds.length > 0) {
+    for (const npcId of specificIds) push(npcId);
+    return out.sort((a, b) => a.npcId - b.npcId);
+  }
+
+  const universalIds = Object.entries(givers)
+    .filter(([, qid]) => Number(qid) === -1)
+    .map(([npcIdStr]) => Number(npcIdStr));
+  if (universalIds.length > 0) {
+    for (const npcId of universalIds) push(npcId);
+    return out.sort((a, b) => a.npcId - b.npcId);
+  }
+
   for (const [npcIdStr, qid] of Object.entries(givers)) {
     if (Number(qid) === questId) push(Number(npcIdStr));
   }

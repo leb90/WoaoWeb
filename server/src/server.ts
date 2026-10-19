@@ -122,6 +122,8 @@ function handleSocketClosed(ws: RuntimeClient) {
         return;
     }
 
+    fishing.cancelFishing(ws.id, "La pesca se canceló al desconectarte.");
+
     if (user.dead || isInSafeZone(user)) {
         socket.closePj(ws);
         return;

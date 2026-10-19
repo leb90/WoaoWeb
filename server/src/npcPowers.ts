@@ -3,7 +3,7 @@ import type { EntityId, Position, RuntimeClient, RuntimeNpc } from "./types/runt
 export {};
 
 const vars = require("./vars");
-const funct = require("./funct");
+const funct = require("./functions");
 const socket = require("./socket");
 
 const DARK_KNIGHT_TEMPLATE = 726;

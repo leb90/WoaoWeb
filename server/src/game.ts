@@ -574,6 +574,7 @@ const COMBAT_HIT_FX_ID = 14;
 const COMBAT_SHIELD_BLOCK_FX_ID = 88;
 const COMBAT_STABBING_FX_ID = 89;
 const COMBAT_MISS_FX_ID = 144;
+const LEVEL_UP_FX_ID = 145;
 
 function clampChance(value: number, min = 5, max = 95): number {
     return Math.max(min, Math.min(max, value));
@@ -8878,6 +8879,7 @@ function Game(this: GameApi) {
                     },
                     client,
                 );
+                emitCharacterFxToUserArea(idUser, LEVEL_UP_FX_ID);
                 relocateUserIfCurrentMapLevelDenied(user, client, `checkUserLevel ${user.level}`);
             }
         } catch (err) {

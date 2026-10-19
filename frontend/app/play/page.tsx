@@ -431,8 +431,8 @@ type LevelUpCanvasNotice = LevelUpNoticePayload & {
     visible: boolean;
 };
 
-const LEVEL_UP_NOTICE_HOLD_MS = 10_000;
-const LEVEL_UP_NOTICE_FADE_MS = 2_000;
+const LEVEL_UP_NOTICE_HOLD_MS = 5_500;
+const LEVEL_UP_NOTICE_FADE_MS = 1_200;
 
 function formatLevelUpGain(value: number): string {
     const amount = Math.round(Number(value) || 0);
@@ -3636,31 +3636,46 @@ function HomeContent() {
                                     <div
                                         role="status"
                                         aria-live="polite"
-                                        className={`pointer-events-none absolute left-1/2 z-40 w-[min(320px,calc(100%-2rem))] -translate-x-1/2 transition-opacity ease-out ${
+                                        className={`pointer-events-none absolute left-1/2 z-40 w-[min(560px,calc(100%-1.5rem))] -translate-x-1/2 transition-all ease-out ${
                                             levelUpNotice.visible
-                                                ? "opacity-100"
-                                                : "opacity-0"
+                                                ? "translate-y-0 opacity-100"
+                                                : "-translate-y-2 opacity-0"
                                         }`}
                                         style={{
-                                            top: "14%",
+                                            top: activeFactionWarState
+                                                ? "74px"
+                                                : challengeOverlayText
+                                                  ? "88px"
+                                                  : "12px",
                                             transitionDuration: `${LEVEL_UP_NOTICE_FADE_MS}ms`,
                                         }}
                                     >
-                                        <div className="rounded-md border border-amber-200/45 bg-stone-950/88 px-5 py-4 text-center shadow-2xl backdrop-blur-md">
-                                            <div className="text-[10px] uppercase tracking-[0.28em] text-amber-200/80">
-                                                Subiste de nivel
-                                            </div>
-                                            <div className="mt-1 text-2xl font-semibold leading-none text-amber-50">
+                                        <div className="flex items-center justify-center gap-x-3 gap-y-1 rounded-md border border-amber-200/40 bg-stone-950/78 px-3 py-1.5 text-center shadow-lg backdrop-blur-md sm:gap-x-4">
+                                            <div className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200/90">
                                                 Nivel {levelUpNotice.level}
                                             </div>
-                                            <div className="mt-3 space-y-1 text-sm font-medium text-stone-100">
-                                                <div>Vida {formatLevelUpGain(levelUpNotice.hp)}</div>
-                                                <div>Maná {formatLevelUpGain(levelUpNotice.mana)}</div>
-                                                <div>Golpe {formatLevelUpGain(levelUpNotice.hit)}</div>
-                                                <div>
-                                                    Skillpoints{" "}
-                                                    {formatLevelUpGain(levelUpNotice.skillPoints)}
-                                                </div>
+                                            <div className="flex min-w-0 flex-wrap items-center justify-center gap-x-2.5 gap-y-0.5 text-[11px] font-medium leading-none text-stone-100/95 sm:text-xs">
+                                                <span>
+                                                    Vida{" "}
+                                                    {formatLevelUpGain(levelUpNotice.hp)}
+                                                </span>
+                                                <span className="text-amber-200/35">·</span>
+                                                <span>
+                                                    Maná{" "}
+                                                    {formatLevelUpGain(levelUpNotice.mana)}
+                                                </span>
+                                                <span className="text-amber-200/35">·</span>
+                                                <span>
+                                                    Golpe{" "}
+                                                    {formatLevelUpGain(levelUpNotice.hit)}
+                                                </span>
+                                                <span className="text-amber-200/35">·</span>
+                                                <span>
+                                                    Skills{" "}
+                                                    {formatLevelUpGain(
+                                                        levelUpNotice.skillPoints,
+                                                    )}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>

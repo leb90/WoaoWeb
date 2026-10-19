@@ -35,6 +35,7 @@ import type {
     InventoryItem,
     MountStateEntry,
     PlayerHudState,
+    QuestEntryState,
     SpellEntry,
 } from "../lib/aowProtocol";
 import type { GraphicData, ObjectsDB, SpellData } from "../types/game";
@@ -1279,6 +1280,7 @@ export default function InventoryFloatingPanel({
     const [isClanModalOpen, setIsClanModalOpen] = React.useState(false);
     const [woaoHubTab, setWoaoHubTab] = React.useState<WoaoHubTab | null>(null);
     const [isQuestNpcDialogOpen, setIsQuestNpcDialogOpen] = React.useState(false);
+    const [questBoard, setQuestBoard] = React.useState<QuestEntryState[] | null>(null);
     const [clanOverview, setClanOverview] = React.useState<ClanOverview | null>(
         null,
     );
@@ -1534,15 +1536,17 @@ export default function InventoryFloatingPanel({
     }, [onRangeAttackRequest]);
 
     React.useEffect(() => {
-        const offer = hud?.questState?.offer;
-        if (!offer) {
-            setIsQuestNpcDialogOpen(false);
+        const state = hud?.questState;
+        if (!state?.board) {
             return;
         }
 
-        setIsQuestNpcDialogOpen(true);
-        setWoaoHubTab("misiones");
-    }, [hud?.questState?.offer]);
+        setQuestBoard(state.board);
+        if (state.openBoard) {
+            setIsQuestNpcDialogOpen(true);
+            setWoaoHubTab("misiones");
+        }
+    }, [hud?.questState]);
 
     React.useEffect(() => {
         onUseItemURequestRef.current = onUseItemURequest;
@@ -4588,7 +4592,7 @@ export default function InventoryFloatingPanel({
                           questState={hud?.questState}
                           mountState={hud?.mountState}
                           rankedState={hud?.rankedState}
-                          questDialog={isQuestNpcDialogOpen ? hud?.questState?.offer ?? null : null}
+                          questDialog={isQuestNpcDialogOpen ? questBoard : null}
                           questPoints={hud?.puntosCanje ?? 0}
                           donationPoints={hud?.puntosDonacion ?? 0}
                           auctionPanel={auctionPanel}

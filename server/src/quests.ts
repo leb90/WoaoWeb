@@ -44,7 +44,7 @@ type QuestEntryState = {
     id: number;
     name: string;
     desc: string;
-    status: "available" | "active" | "ready" | "done";
+    status: "available" | "active" | "ready" | "done" | "locked";
     npcId?: number;
     npcName?: string;
     requiredLevel: number;
@@ -54,6 +54,7 @@ type QuestEntryState = {
 
 const quests = new Map<number, QuestDefinition>();
 const questGivers = new Map<number, number>();
+const STARTER_QUEST_IDS = new Set([1, 19]);
 
 function tell(idUser: string, message: string) {
     const client = vars.clients[idUser];
@@ -262,21 +263,38 @@ function sendAreaNpcQuestSnapshot(idUser: string) {
     handleProtocol.areaNpcsSnapshot(visibleNpcs, client);
 }
 
-export function sendQuestState(idUser: string, offer?: QuestEntryState | null, completedQuestId?: number) {
+export function sendQuestState(
+    idUser: string,
+    offer?: QuestEntryState | null,
+    completedQuestId?: number,
+    openBoard = false,
+) {
     const user = vars.personajes[idUser];
     const client = vars.clients[idUser];
     if (!user || !client) {
         return;
     }
 
-    handleProtocol.questState(
-        {
-            active: getActiveQuestStates(user),
-            offer: offer ?? null,
-            completedQuestId,
-        },
-        client,
-    );
+    const payload: {
+        active: QuestEntryState[];
+        offer: QuestEntryState | null;
+        completedQuestId?: number;
+        board?: QuestEntryState[];
+        openBoard?: boolean;
+    } = {
+        active: getActiveQuestStates(user),
+        offer: offer ?? null,
+        completedQuestId,
+    };
+    const boardNpc = getNearbyQuestNpc(idUser);
+    if (boardNpc && getNpcQuestNumber(boardNpc) !== 0) {
+        payload.board = buildQuestBoard(user, boardNpc);
+        if (openBoard) {
+            payload.openBoard = true;
+        }
+    }
+
+    handleProtocol.questState(payload, client);
 }
 
 function getNearbyQuestNpc(idUser: string) {
@@ -318,12 +336,88 @@ function getNearbyQuestNpc(idUser: string) {
 }
 
 export function getNpcQuestNumber(npc: { templateNpcIndex?: number; questNumber?: number }): number {
-    const fromNpc = Number(npc?.questNumber ?? 0);
-    if (fromNpc > 0) {
-        return fromNpc;
+    const mapped = questGivers.get(Number(npc?.templateNpcIndex ?? 0)) ?? 0;
+    if (mapped === -1 || mapped > 0) {
+        return mapped;
     }
 
-    return questGivers.get(Number(npc?.templateNpcIndex ?? 0)) ?? 0;
+    return 0;
+}
+
+function getUniversalQuestMarker(user: any): number {
+    const progress = getProgress(user);
+    const level = Number(user.level ?? 1);
+    let hasReady = false;
+    let hasActive = false;
+    let hasAvailable = false;
+
+    for (const quest of quests.values()) {
+        if (STARTER_QUEST_IDS.has(quest.id)) {
+            continue;
+        }
+
+        const slot = findQuestSlot(progress.quests, quest.id);
+        if (slot >= 0) {
+            if (isQuestReady(user, quest, progress.quests[slot])) {
+                hasReady = true;
+            } else {
+                hasActive = true;
+            }
+            continue;
+        }
+
+        if (level >= quest.requiredLevel && progress.quests.length < MAX_QUESTS) {
+            hasAvailable = true;
+        }
+    }
+
+    if (hasReady) {
+        return 3;
+    }
+    if (hasAvailable) {
+        return 1;
+    }
+    if (hasActive) {
+        return 2;
+    }
+
+    return 0;
+}
+
+function buildQuestBoard(user: any, npc: any): QuestEntryState[] {
+    const progress = getProgress(user);
+    const level = Number(user.level ?? 1);
+    const entries: QuestEntryState[] = [];
+    const questNumber = getNpcQuestNumber(npc);
+    const source =
+        questNumber > 0
+            ? [quests.get(questNumber)].filter((quest): quest is QuestDefinition => Boolean(quest))
+            : Array.from(quests.values()).filter((quest) => !STARTER_QUEST_IDS.has(quest.id));
+    const sorted = source.sort(
+        (left, right) => left.requiredLevel - right.requiredLevel || left.id - right.id,
+    );
+
+    for (const quest of sorted) {
+        const slot = findQuestSlot(progress.quests, quest.id);
+        let status: QuestEntryState["status"] = "available";
+        let entry: QuestProgress | undefined;
+        if (slot >= 0) {
+            entry = progress.quests[slot];
+            status = isQuestReady(user, quest, entry) ? "ready" : "active";
+        } else if (level < quest.requiredLevel) {
+            status = "locked";
+        }
+
+        entries.push(
+            buildQuestEntryState(user, quest, status, {
+                npcId: npc.id,
+                npcName: getNpcDisplayName(npc),
+                progress: entry,
+            }),
+        );
+    }
+
+    return entries;
 }
 
 export function getNpcQuestStatusForUser(idUser: string, npc: { templateNpcIndex?: number; questNumber?: number }): number {
@@ -333,16 +427,16 @@ export function getNpcQuestStatusForUser(idUser: string, npc: { templateNpcIndex
     }
 
     const questNumber = getNpcQuestNumber(npc);
+    if (questNumber === -1) {
+        return getUniversalQuestMarker(user);
+    }
+
     const quest = quests.get(questNumber);
     if (!quest) {
         return 0;
     }
 
     const progress = getProgress(user);
-    if (progress.done.includes(questNumber)) {
-        return 0;
-    }
-
     const slot = findQuestSlot(progress.quests, questNumber);
     if (slot >= 0) {
         const entry = progress.quests[slot];
@@ -406,6 +500,15 @@ export function handleQuest(idUser: string) {
     }
 
     const questNumber = getNpcQuestNumber(npc);
+    if (questNumber === -1 || questNumber > 0) {
+        sendQuestState(idUser, null, undefined, true);
+        sendAreaNpcQuestSnapshot(idUser);
+        if (!buildQuestBoard(user, npc).length) {
+            npcTalk(idUser, npc.id, "Ya completaste todas las misiones que tenia para ti.");
+        }
+        return;
+    }
+
     if (!questNumber) {
         npcTalk(idUser, npc.id, "No tengo ninguna mision para ti.");
         return;
@@ -423,12 +526,6 @@ export function handleQuest(idUser: string) {
     }
 
     const progress = getProgress(user);
-    if (progress.done.includes(questNumber)) {
-        sendQuestState(idUser, null);
-        npcTalk(idUser, npc.id, "Ya has completado esta mision.");
-        return;
-    }
-
     const slot = findQuestSlot(progress.quests, questNumber);
     if (slot >= 0) {
         const entry = progress.quests[slot];
@@ -450,7 +547,7 @@ export function handleQuest(idUser: string) {
     }
 
     if (progress.quests.length >= MAX_QUESTS) {
-        npcTalk(idUser, npc.id, "Estas haciendo demasiadas misiones. Vuelve cuando hayas completado alguna.");
+        npcTalk(idUser, npc.id, "Estas haciendo demasiadas misiones. El maximo es 3. Vuelve cuando hayas completado alguna.");
         return;
     }
 
@@ -463,17 +560,22 @@ export function handleQuest(idUser: string) {
     tell(idUser, "Escribe /questaceptar para tomar esta mision.");
 }
 
-export function acceptQuest(idUser: string) {
+export function acceptQuest(idUser: string, requestedId?: number) {
     const user = vars.personajes[idUser];
     if (!user) {
         return;
     }
 
     const progress = getProgress(user);
-    const questNumber = progress.lastQuestOffer;
+    const questNumber = requestedId || progress.lastQuestOffer;
     const quest = quests.get(questNumber);
     if (!quest) {
         tell(idUser, "No hay una mision ofrecida. Habla con un NPC de mision y usa /quest.");
+        return;
+    }
+
+    if (Number(user.level ?? 1) < quest.requiredLevel) {
+        tell(idUser, `Debes ser por lo menos nivel ${quest.requiredLevel} para emprender esta mision.`);
         return;
     }
 
@@ -483,7 +585,7 @@ export function acceptQuest(idUser: string) {
     }
 
     if (progress.quests.length >= MAX_QUESTS) {
-        tell(idUser, "No te quedan espacios de mision.");
+        tell(idUser, "No te quedan espacios de mision. El maximo es 3.");
         return;
     }
 
@@ -519,7 +621,7 @@ export function abandonQuest(idUser: string, questNumber: number) {
     tell(idUser, `Abandonaste la mision "${quest?.name ?? questNumber}".`);
 }
 
-export function turnInQuest(idUser: string) {
+export function turnInQuest(idUser: string, requestedId?: number) {
     const user = vars.personajes[idUser];
     const npc = getNearbyQuestNpc(idUser);
 
@@ -528,7 +630,13 @@ export function turnInQuest(idUser: string) {
         return;
     }
 
-    const questNumber = getNpcQuestNumber(npc);
+    const mappedQuest = getNpcQuestNumber(npc);
+    const questNumber = mappedQuest === -1 ? Number(requestedId ?? 0) : mappedQuest;
+    if (mappedQuest === -1 && !questNumber) {
+        sendQuestState(idUser, null, undefined, true);
+        return;
+    }
+
     const quest = quests.get(questNumber);
     if (!quest) {
         npcTalk(idUser, npc.id, "No tengo ninguna mision para recibir.");

@@ -32,7 +32,7 @@ export type WoaoProgress = {
 };
 
 const DATA_PATH = path.resolve(__dirname, "../data/woaoProgress.json");
-const MAX_QUESTS = 15;
+const MAX_QUESTS = 3;
 
 const store = new Map<string, WoaoProgress>();
 let loaded = false;

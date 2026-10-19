@@ -54,7 +54,7 @@ export function emptyQuest(id: number, partial?: Partial<QuestData>): QuestData 
     name: "",
     desc: "",
     requiredLevel: 1,
-    repeatable: false,
+    repeatable: true,
     requiredNpcs: [],
     requiredObjs: [],
     rewardGold: 0,

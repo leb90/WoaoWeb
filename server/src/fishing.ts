@@ -21,14 +21,13 @@ type FishingUser = RuntimeCharacter & {
     navegando?: number | boolean;
     level?: number;
     idClase?: number;
+    hambre?: number;
+    sed?: number;
+    cerrado?: boolean;
     inv: Record<string, { idItem: number; cant: number; equipped?: number | boolean }>;
     idItemWeapon?: number | string;
+    idItemRing?: number | string;
     fishing?: FishingState;
-};
-
-type FishingReward = {
-    itemId: number;
-    weight: number;
 };
 
 export type FishingApi = {
@@ -112,29 +111,62 @@ function hasInvalidFishingTrigger(idMap: number, pos: Position) {
 }
 
 function getEquippedFishingRod(user: FishingUser) {
-    const weaponSlot = Number(user.idItemWeapon ?? 0);
+    const slots = [Number(user.idItemRing ?? 0), Number(user.idItemWeapon ?? 0)];
 
-    if (!weaponSlot) {
-        return null;
+    for (const slot of slots) {
+        if (!slot) {
+            continue;
+        }
+
+        const item = user.inv?.[slot];
+        if (!item || !item.equipped || !fishing.isFishingRod(item.idItem)) {
+            continue;
+        }
+
+        return {
+            slot,
+            itemId: item.idItem,
+            power: fishing.getRodPower(item.idItem),
+        };
     }
 
-    const item = user.inv?.[weaponSlot];
-
-    if (!item || !item.equipped || !fishing.isFishingRod(item.idItem)) {
-        return null;
-    }
-
-    return {
-        slot: weaponSlot,
-        itemId: item.idItem,
-        power: fishing.getRodPower(item.idItem),
-    };
+    return null;
 }
 
-function getRewardsForPower(power: number): FishingReward[] {
-    const rewardsByPower = vars.fishing.fishByPower?.[power] as FishingReward[] | undefined;
+function getSurvivalStopReason(user: FishingUser, starting = false) {
+    if (Number(user.hambre ?? 0) <= 0) {
+        return starting
+            ? "No puedes pescar sin comida."
+            : "La pesca se detuvo porque te quedaste sin comida.";
+    }
 
-    return rewardsByPower ?? vars.fishing.fishByPower?.[1] ?? [];
+    if (Number(user.sed ?? 0) <= 0) {
+        return starting
+            ? "No puedes pescar sin agua."
+            : "La pesca se detuvo porque te quedaste sin agua.";
+    }
+
+    return null;
+}
+
+function pickOldFishingCatch() {
+    const roll = Math.floor(Math.random() * 10) + 1;
+    if (roll === 1) {
+        return 1531;
+    }
+    if (roll === 2) {
+        return 1534;
+    }
+    if (roll === 3) {
+        return 1535;
+    }
+    if (roll === 4) {
+        return 1532;
+    }
+    if (roll === 5) {
+        return 1533;
+    }
+    return 1536;
 }
 
 function getFishingSkill(user: FishingUser) {
@@ -143,27 +175,6 @@ function getFishingSkill(user: FishingUser) {
 
 function getFishingRewardAmount(user: FishingUser) {
     return workProfessions.getFishingCatchAmount(user);
-}
-
-function pickWeightedReward(power: number) {
-    const rewards = getRewardsForPower(power);
-
-    if (!rewards.length) {
-        return null;
-    }
-
-    const totalWeight = rewards.reduce((sum, reward) => sum + reward.weight, 0);
-    let roll = Math.floor(Math.random() * totalWeight) + 1;
-
-    for (const reward of rewards) {
-        roll -= reward.weight;
-
-        if (roll <= 0) {
-            return reward;
-        }
-    }
-
-    return rewards[rewards.length - 1];
 }
 
 function addRewardToInventory(user: FishingUser, itemId: number, amount: number) {
@@ -251,12 +262,7 @@ const fishing: FishingApi = {
             return false;
         }
 
-        if (vars.disableLegacyWorkerGathering !== false) {
-            handleProtocol.console("La pesca de oficio fue deshabilitada. Los materiales se obtendran matando NPCs.", "#fcd34d", 0, 0, ws);
-            return true;
-        }
-
-        if (!item.equipped || Number(user.idItemWeapon ?? 0) !== Number(idPos)) {
+        if (!item.equipped) {
             handleProtocol.console("Debes equiparte la caña de pescar para usarla.", "white", 0, 0, ws);
             return true;
         }
@@ -282,6 +288,12 @@ const fishing: FishingApi = {
 
         if (!user || !state?.pendingTarget) {
             return false;
+        }
+
+        const hungerError = getSurvivalStopReason(user, true);
+        if (hungerError) {
+            handleProtocol.console(hungerError, "white", 0, 0, ws);
+            return true;
         }
 
         const validationError = validateFishingStart(user, { x, y });
@@ -339,11 +351,22 @@ const fishing: FishingApi = {
                 continue;
             }
 
+            if (!getClientById(idUser) || user.cerrado) {
+                this.cancelFishing(idUser);
+                continue;
+            }
+
             if (workingLock.shouldCancelForSameIpConflict(idUser)) {
                 this.cancelFishing(
                     idUser,
                     "La pesca se canceló porque ya tienes otro personaje trabajando desde esta IP.",
                 );
+                continue;
+            }
+
+            const survivalStop = getSurvivalStopReason(user);
+            if (survivalStop) {
+                this.cancelFishing(idUser, survivalStop);
                 continue;
             }
 
@@ -376,15 +399,10 @@ const fishing: FishingApi = {
                 continue;
             }
 
-            const reward = pickWeightedReward(equippedRod.power);
-
-            if (!reward) {
-                continue;
-            }
-
+            const rewardItemId = pickOldFishingCatch();
             const rewardAmount = getFishingRewardAmount(user);
 
-            if (!addRewardToInventory(user, reward.itemId, rewardAmount)) {
+            if (!addRewardToInventory(user, rewardItemId, rewardAmount)) {
                 withUserClient(idUser, (userClient) => {
                     handleProtocol.console("Tienes el inventario lleno.", "white", 0, 0, userClient);
                 });
@@ -396,7 +414,7 @@ const fishing: FishingApi = {
 
             withUserClient(idUser, (userClient) => {
                 handleProtocol.console(
-                    `Has pescado ${rewardAmount} ${vars.datObj[reward.itemId].name}.`,
+                    `Has pescado ${rewardAmount} ${vars.datObj[rewardItemId]?.name ?? "pez"}.`,
                     "#86efac",
                     0,
                     0,

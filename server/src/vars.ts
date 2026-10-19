@@ -673,9 +673,12 @@ function Vars(this: any) {
         },
         fishByPower: {
             1: [
-                { itemId: 139, weight: 24326 },
-                { itemId: 544, weight: 256 },
-                { itemId: 545, weight: 6 },
+                { itemId: 1531, weight: 1 },
+                { itemId: 1534, weight: 1 },
+                { itemId: 1535, weight: 1 },
+                { itemId: 1532, weight: 1 },
+                { itemId: 1533, weight: 1 },
+                { itemId: 1536, weight: 5 },
             ],
         },
     };

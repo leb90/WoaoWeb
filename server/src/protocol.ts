@@ -3097,6 +3097,13 @@ function equiparItem(ws: RuntimeClient) {
                     }
 
                     syncInventorySlots(user, [previousRingSlot, idPos]);
+
+                    const previousRingItemId = Number(
+                        previousRingSlot && user.inv[previousRingSlot] ? user.inv[previousRingSlot].idItem : 0,
+                    );
+                    if (fishing.isFishingRod(previousRingItemId) || fishing.isFishingRod(idItem)) {
+                        fishing.cancelFishing(clientId, "La pesca se canceló porque cambiaste tu caña equipada.");
+                    }
                     break;
 
                 case vars.objType.flechas: //Flechas

@@ -1634,6 +1634,29 @@ function emitCharacterFxToUserArea(entityId: EntityId, fxId: number) {
     });
 }
 
+function emitCharacterSoundToUserArea(entityId: EntityId, soundId: number) {
+    if (!soundId) {
+        return;
+    }
+
+    loopAreaByUserId(entityId, function (target: AreaTarget) {
+        if (target.isNpc) {
+            return;
+        }
+
+        const targetClient = getClientById(target.id);
+        if (!targetClient) {
+            return;
+        }
+
+        if (!canReceiveCharacterEvent(target.id, entityId)) {
+            return;
+        }
+
+        handleProtocol.playSound(entityId, soundId, targetClient);
+    });
+}
+
 const CHARACTER_SWING_SHIELD = 2;
 
 function emitCharacterSwingToUserArea(entityId: EntityId, flags: number) {
@@ -8880,6 +8903,7 @@ function Game(this: GameApi) {
                     client,
                 );
                 emitCharacterFxToUserArea(idUser, LEVEL_UP_FX_ID);
+                emitCharacterSoundToUserArea(idUser, vars.arSounds.SND_NIVEL);
                 relocateUserIfCurrentMapLevelDenied(user, client, `checkUserLevel ${user.level}`);
             }
         } catch (err) {

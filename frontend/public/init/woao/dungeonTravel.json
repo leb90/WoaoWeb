@@ -1,0 +1,90 @@
+[
+  {
+    "key": "84",
+    "name": "Dungeon Atlantis",
+    "map": 84,
+    "x": 75,
+    "y": 39,
+    "cost": 10
+  },
+  {
+    "key": "79",
+    "name": "Dungeon Tenebroso",
+    "map": 79,
+    "x": 41,
+    "y": 50,
+    "cost": 10
+  },
+  {
+    "key": "102",
+    "name": "Isla Extraña",
+    "map": 102,
+    "x": 41,
+    "y": 56,
+    "cost": 10
+  },
+  {
+    "key": "21",
+    "name": "Pirámides",
+    "map": 21,
+    "x": 49,
+    "y": 30,
+    "cost": 10
+  },
+  {
+    "key": "26",
+    "name": "Aldea Hobbit",
+    "map": 26,
+    "x": 48,
+    "y": 48,
+    "cost": 10
+  },
+  {
+    "key": "90",
+    "name": "Dungeon Helado",
+    "map": 90,
+    "x": 37,
+    "y": 55,
+    "cost": 10
+  },
+  {
+    "key": "112",
+    "name": "Bosque del Terror",
+    "map": 112,
+    "x": 82,
+    "y": 21,
+    "cost": 10
+  },
+  {
+    "key": "110",
+    "name": "Sala de Invocación",
+    "map": 110,
+    "x": 43,
+    "y": 54,
+    "cost": 10
+  },
+  {
+    "key": "139",
+    "name": "Dungeon Veriil",
+    "map": 139,
+    "x": 52,
+    "y": 55,
+    "cost": 10
+  },
+  {
+    "key": "47",
+    "name": "Isla Veleta",
+    "map": 47,
+    "x": 69,
+    "y": 23,
+    "cost": 10
+  },
+  {
+    "key": "160",
+    "name": "Dungeon Dragon",
+    "map": 160,
+    "x": 43,
+    "y": 56,
+    "cost": 10
+  }
+]

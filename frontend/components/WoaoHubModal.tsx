@@ -60,7 +60,20 @@ type TravelRoute = {
     key: string;
     map: number;
     cost: number;
+    boat?: boolean;
 };
+
+type DungeonTravelRoute = {
+    key: string;
+    name: string;
+    map: number;
+    cost: number;
+};
+
+function formatCityName(key: string) {
+    const lower = key.toLowerCase();
+    return lower.charAt(0).toUpperCase() + lower.slice(1);
+}
 
 type WoaoHubModalProps = {
     tab: WoaoHubTab;
@@ -1040,30 +1053,30 @@ function MountGraphic({
     compact?: boolean;
 }) {
     const graphicData = resolveObjectGraphic(mount.itemId, objectsDB, graphicsDB);
-    const targetSize = compact ? 38 : 96;
-    const iconOffset = MOUNT_ICON_OFFSETS[Number(mount.itemId)] ?? { x: 0, y: 0 };
-    const offsetScale = compact ? 0.6 : 1;
+    const targetSize = compact ? 30 : 96;
+    const iconOffset = compact ? { x: 0, y: 0 } : (MOUNT_ICON_OFFSETS[Number(mount.itemId)] ?? { x: 0, y: 0 });
+    const frameClass = compact ? "h-full w-full" : "h-full min-h-[72px] w-full";
 
     if (!graphicData?.numFile) {
         return (
-            <div className="flex h-full min-h-[72px] w-full items-center justify-center rounded border border-amber-300/15 bg-black/30 text-amber-200/60">
-                <PawPrint aria-hidden="true" className={compact ? "h-7 w-7" : "h-12 w-12"} strokeWidth={1.6} />
+            <div className={`flex items-center justify-center rounded border border-amber-300/15 bg-black/30 text-amber-200/60 ${frameClass}`}>
+                <PawPrint aria-hidden="true" className={compact ? "h-5 w-5" : "h-12 w-12"} strokeWidth={1.6} />
             </div>
         );
     }
 
-    const scale = Math.min(compact ? 1.35 : 2.45, targetSize / Math.max(graphicData.width, graphicData.height, 1));
+    const scale = Math.min(compact ? 1 : 2.45, targetSize / Math.max(graphicData.width, graphicData.height, 1));
     return (
-        <div className="relative h-full min-h-[72px] w-full overflow-hidden rounded border border-amber-300/18 bg-[radial-gradient(circle_at_50%_45%,rgba(245,186,71,0.16),rgba(0,0,0,0.32)_60%)]">
+        <div className={`relative overflow-hidden rounded border border-amber-300/18 bg-[radial-gradient(circle_at_50%_45%,rgba(245,186,71,0.16),rgba(0,0,0,0.32)_60%)] ${frameClass}`}>
             <div
                 aria-label={mount.name}
-                className="absolute left-1/2 top-1/2 bg-no-repeat drop-shadow-[0_12px_18px_rgba(0,0,0,0.58)]"
+                className={`absolute left-1/2 top-1/2 bg-no-repeat [image-rendering:pixelated] ${compact ? "" : "drop-shadow-[0_12px_18px_rgba(0,0,0,0.58)]"}`}
                 style={{
                     width: graphicData.width,
                     height: graphicData.height,
                     backgroundImage: `url(${getTexturePath(graphicData)})`,
                     backgroundPosition: `-${graphicData.sX}px -${graphicData.sY}px`,
-                    transform: `translate(calc(-50% + ${iconOffset.x * offsetScale}px), calc(-50% + ${iconOffset.y * offsetScale}px)) scale(${scale})`,
+                    transform: `translate(calc(-50% + ${iconOffset.x}px), calc(-50% + ${iconOffset.y}px)) scale(${scale})`,
                     transformOrigin: "center",
                 }}
             />
@@ -1187,7 +1200,7 @@ function MountHubTab({
                                                 : "border-transparent bg-white/[0.03] hover:border-stone-600/70 hover:bg-white/[0.06]"
                                         }`}
                                     >
-                                        <div className="h-[38px]">
+                                        <div className="h-[38px] w-[38px] overflow-hidden">
                                             <MountGraphic mount={mount} objectsDB={objectsDB} graphicsDB={graphicsDB} compact />
                                         </div>
                                         <div className="min-w-0 self-center">
@@ -1416,6 +1429,8 @@ export default function WoaoHubModal({
     const [premios, setPremios] = React.useState<PremioDef[]>([]);
     const [donacionPremios, setDonacionPremios] = React.useState<PremioDef[]>([]);
     const [routes, setRoutes] = React.useState<TravelRoute[]>([]);
+    const [dungeonRoutes, setDungeonRoutes] = React.useState<DungeonTravelRoute[]>([]);
+    const [travelSection, setTravelSection] = React.useState<"ciudades" | "dungeons">("ciudades");
     const [graphicsDB, setGraphicsDB] = React.useState<Record<string, GraphicData> | null>(null);
     const [objectsDB, setObjectsDB] = React.useState<ObjectsDB | null>(null);
     const [premioCurrency, setPremioCurrency] = React.useState<PremioCurrency>("quest");
@@ -1435,10 +1450,11 @@ export default function WoaoHubModal({
         let cancelled = false;
 
         const load = async () => {
-            const [premioRes, donacionRes, travelRes] = await Promise.all([
+            const [premioRes, donacionRes, travelRes, dungeonRes] = await Promise.all([
                 fetch("/init/woao/premios.json").then((res) => res.json()).catch(() => ({})),
                 fetch("/init/woao/donaciones.json").then((res) => res.json()).catch(() => ({})),
                 fetch("/init/woao/fastTravel.json").then((res) => res.json()).catch(() => []),
+                fetch("/init/woao/dungeonTravel.json").then((res) => res.json()).catch(() => []),
             ]);
 
             if (cancelled) {
@@ -1448,6 +1464,7 @@ export default function WoaoHubModal({
             setPremios(Object.values(premioRes ?? {}) as PremioDef[]);
             setDonacionPremios(Object.values(donacionRes ?? {}) as PremioDef[]);
             setRoutes(Array.isArray(travelRes) ? travelRes : []);
+            setDungeonRoutes(Array.isArray(dungeonRes) ? dungeonRes : []);
         };
 
         void load();
@@ -1723,6 +1740,8 @@ export default function WoaoHubModal({
               ? "h-[min(820px,calc(100vh-24px))]"
             : tab === "montura"
               ? "h-[min(680px,calc(100vh-32px))]"
+            : tab === "viajes"
+              ? "h-[min(680px,calc(100vh-32px))]"
               : "h-[min(620px,calc(100vh-32px))]";
     const hubWidthClass =
         tab === "eventos"
@@ -1737,9 +1756,11 @@ export default function WoaoHubModal({
                 ? "md:w-[min(1220px,calc(100vw-32px))]"
                 : tab === "misiones"
                   ? ""
+                : tab === "viajes"
+                  ? "md:w-[min(860px,calc(100vw-32px))]"
                   : "md:w-[min(620px,calc(100vw-32px))]";
     const contentOverflowClass =
-        tab === "premios" || tab === "ranked" || tab === "montura" || tab === "eventos" || tab === "subastas" ? "overflow-hidden" : "overflow-y-auto";
+        tab === "premios" || tab === "ranked" || tab === "montura" || tab === "eventos" || tab === "subastas" || tab === "viajes" ? "overflow-hidden" : "overflow-y-auto";
 
     if (tab === "misiones" && questDialog) {
         return (
@@ -2496,27 +2517,92 @@ export default function WoaoHubModal({
                     ) : null}
 
                     {tab === "viajes" ? (
-                        <div className="space-y-3">
-                            {availableRoutes.length ? (
-                                availableRoutes.map((route) => (
-                                    <button
-                                        key={`${route.fromMap}-${route.key}`}
-                                        type="button"
-                                        onClick={() => onSendCommand?.(`/viaje ${route.key}`)}
-                                        className="flex w-full items-center justify-between rounded-[12px] border border-amber-200/10 bg-black/20 p-3 text-left"
-                                    >
-                                        <span className="font-semibold">{route.key}</span>
-                                        <span className="text-xs text-stone-300">
-                                            mapa {route.map}
-                                            {route.cost ? ` · ${route.cost} oro` : ""}
-                                        </span>
-                                    </button>
-                                ))
-                            ) : (
-                                <p className="text-sm text-stone-300">
-                                    Desde este mapa no hay viajes rapidos. Ve a un viajero en una ciudad.
+                        <div className="flex h-full min-h-0 flex-col gap-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setTravelSection("ciudades")}
+                                    aria-pressed={travelSection === "ciudades"}
+                                    className={`flex min-h-[42px] items-center gap-2 rounded border px-4 text-sm font-semibold transition ${
+                                        travelSection === "ciudades"
+                                            ? "border-amber-400/80 bg-amber-500/15 text-amber-100"
+                                            : "border-amber-200/12 bg-black/28 text-stone-300 hover:border-amber-300/40 hover:text-white"
+                                    }`}
+                                >
+                                    <MapPin aria-hidden="true" className="h-4 w-4" strokeWidth={1.8} />
+                                    Ciudades
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setTravelSection("dungeons")}
+                                    aria-pressed={travelSection === "dungeons"}
+                                    className={`flex min-h-[42px] items-center gap-2 rounded border px-4 text-sm font-semibold transition ${
+                                        travelSection === "dungeons"
+                                            ? "border-amber-400/80 bg-amber-500/15 text-amber-100"
+                                            : "border-amber-200/12 bg-black/28 text-stone-300 hover:border-amber-300/40 hover:text-white"
+                                    }`}
+                                >
+                                    <Skull aria-hidden="true" className="h-4 w-4" strokeWidth={1.8} />
+                                    Dungeons
+                                </button>
+                                <p className="ml-auto text-sm text-stone-300">
+                                    {travelSection === "ciudades"
+                                        ? "100 monedas de oro por mapa de distancia"
+                                        : `${formatAmount(donationPoints)} puntos de donación`}
                                 </p>
-                            )}
+                            </div>
+
+                            <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+                                {travelSection === "ciudades" ? (
+                                    availableRoutes.length ? (
+                                        availableRoutes.map((route) => (
+                                            <button
+                                                key={`${route.fromMap}-${route.key}`}
+                                                type="button"
+                                                onClick={() => onSendCommand?.(`/viaje ${route.key}`)}
+                                                className="flex w-full items-center justify-between gap-3 rounded border border-amber-200/12 bg-black/25 px-4 py-3 text-left transition hover:border-amber-300/55 hover:bg-amber-300/8"
+                                            >
+                                                <span className="min-w-0">
+                                                    <span className="block truncate text-base font-semibold text-stone-50">
+                                                        {formatCityName(route.key)}
+                                                    </span>
+                                                    <span className="text-xs text-stone-400">
+                                                        Mapa {route.map}
+                                                        {route.boat ? " · requiere barco" : ""}
+                                                    </span>
+                                                </span>
+                                                <span className="flex shrink-0 items-center gap-1.5 text-sm font-semibold text-amber-200">
+                                                    <Coins aria-hidden="true" className="h-4 w-4" strokeWidth={1.8} />
+                                                    {formatAmount(route.cost)}
+                                                </span>
+                                            </button>
+                                        ))
+                                    ) : (
+                                        <p className="rounded border border-amber-200/10 bg-black/20 px-4 py-6 text-sm text-stone-300">
+                                            Desde este mapa no hay viajes a ciudades. Andá a un viajero en una ciudad.
+                                        </p>
+                                    )
+                                ) : (
+                                    dungeonRoutes.map((route) => (
+                                        <button
+                                            key={route.key}
+                                            type="button"
+                                            onClick={() => onSendCommand?.(`/dungeon ${route.key}`)}
+                                            className="flex w-full items-center justify-between gap-3 rounded border border-amber-200/12 bg-black/25 px-4 py-3 text-left transition hover:border-amber-300/55 hover:bg-amber-300/8"
+                                        >
+                                            <span className="min-w-0">
+                                                <span className="block truncate text-base font-semibold text-stone-50">
+                                                    {route.name}
+                                                </span>
+                                                <span className="text-xs text-stone-400">Entrada · mapa {route.map}</span>
+                                            </span>
+                                            <span className="shrink-0 text-sm font-semibold text-amber-200">
+                                                {formatAmount(route.cost)} pts
+                                            </span>
+                                        </button>
+                                    ))
+                                )}
+                            </div>
                         </div>
                     ) : null}
 

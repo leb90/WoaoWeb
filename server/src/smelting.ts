@@ -49,8 +49,20 @@ function getMiningSkill(user: SmeltingUser) {
     return require("./skills").getSkill(user, require("./skills").SKILLS.mineria);
 }
 
+const MENA_CONVERT: Record<number, { ingotItemId: number; menasPerIngot: number }> = {
+    1710: { ingotItemId: 386, menasPerIngot: 50 },
+    1714: { ingotItemId: 387, menasPerIngot: 75 },
+    1713: { ingotItemId: 388, menasPerIngot: 100 },
+    1711: { ingotItemId: 1707, menasPerIngot: 50 },
+    1712: { ingotItemId: 1708, menasPerIngot: 50 },
+};
+
 function getConfig(itemId: number) {
     return getSmeltingRecipesByMineral()[itemId] ?? null;
+}
+
+function getMenaConvert(itemId: number) {
+    return MENA_CONVERT[itemId] ?? null;
 }
 
 function getForgeObject(user: SmeltingUser, target: Position) {
@@ -95,6 +107,89 @@ function canReceiveIngots(user: SmeltingUser, itemId: number, amount: number) {
     return Object.keys(user.inv).length < 21;
 }
 
+function canReceiveIngotsAfterConvert(
+    user: SmeltingUser,
+    slotKey: string,
+    remainingMenas: number,
+    ingotItemId: number,
+    ingotAmount: number,
+) {
+    for (const [key, item] of Object.entries(user.inv)) {
+        if (key === slotKey) {
+            continue;
+        }
+
+        if (item.idItem === ingotItemId && item.cant + ingotAmount <= 10000) {
+            return true;
+        }
+    }
+
+    if (remainingMenas <= 0) {
+        return true;
+    }
+
+    return Object.keys(user.inv).length < 21;
+}
+
+function convertMenasFromSlot(ws: RuntimeClient, user: SmeltingUser, idPos: number | string) {
+    const slotKey = String(idPos);
+    const item = user.inv[slotKey];
+    const convert = item ? getMenaConvert(item.idItem) : null;
+
+    if (!item || !convert) {
+        return false;
+    }
+
+    if (user.dead) {
+        handleProtocol.console("Los muertos no pueden transformar menas.", "white", 0, 0, ws);
+        return true;
+    }
+
+    const have = Number(item.cant ?? 0);
+    const ingotAmount = Math.floor(have / convert.menasPerIngot);
+
+    if (ingotAmount < 1) {
+        handleProtocol.console(
+            `Necesitas ${convert.menasPerIngot} menas para hacer un lingote.`,
+            "white",
+            0,
+            0,
+            ws,
+        );
+        return true;
+    }
+
+    const consumed = ingotAmount * convert.menasPerIngot;
+    const remaining = have - consumed;
+
+    if (!canReceiveIngotsAfterConvert(user, slotKey, remaining, convert.ingotItemId, ingotAmount)) {
+        handleProtocol.console("No tienes espacio en el inventario para recibir los lingotes.", "white", 0, 0, ws);
+        return true;
+    }
+
+    const game = require("./game") as {
+        quitarUserInvItem: (idUser: EntityId, idPos: number | string, cant: number) => void;
+        persistCharacterItemsById: (idUser: EntityId) => Promise<void>;
+    };
+
+    game.quitarUserInvItem(user.id, slotKey, consumed);
+    addIngotsToInventory(user, convert.ingotItemId, ingotAmount);
+    void game.persistCharacterItemsById(user.id).catch((error: unknown) => {
+        console.error(error);
+    });
+
+    const menaName = vars.datObj[item.idItem]?.name ?? "menas";
+    const ingotName = vars.datObj[convert.ingotItemId]?.name ?? "lingotes";
+    handleProtocol.console(
+        `Has transformado ${consumed} ${menaName} en ${ingotAmount} ${ingotName}.`,
+        "#86efac",
+        0,
+        0,
+        ws,
+    );
+    return true;
+}
+
 const smelting: SmeltingApi = {
     isSmeltingMineral(idItem) {
         return Boolean(getConfig(idItem));
@@ -105,6 +200,10 @@ const smelting: SmeltingApi = {
 
         if (!user) {
             return false;
+        }
+
+        if (convertMenasFromSlot(ws, user, idPos)) {
+            return true;
         }
 
         const item = user.inv[String(idPos)];

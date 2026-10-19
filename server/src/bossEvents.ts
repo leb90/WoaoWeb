@@ -15,7 +15,7 @@ const STATE_PATH = path.resolve(__dirname, "../jsons/bossEvents.json");
 const HOUR_MS = 60 * 60 * 1000;
 const MINUTE_MS = 60 * 1000;
 
-type BossEventKey = "mummyPharaoh" | "gollum";
+type BossEventKey = "mummyPharaoh" | "iceKnight" | "darkKnight" | "gollum";
 
 type BossEventConfig = {
     key: BossEventKey;
@@ -27,6 +27,7 @@ type BossEventConfig = {
     despawnMs?: number;
     spawnMessage: string;
     despawnMessage?: string;
+    displayName?: string;
 };
 
 type BossEventState = {
@@ -44,10 +45,30 @@ const BOSS_EVENTS: Record<BossEventKey, BossEventConfig> = {
         label: "Momia Faraon",
         npcIndex: 611,
         expectedTemplateNames: ["Momia Faraon", "Momia Faraón"],
-        intervalMs: 6 * HOUR_MS,
+        intervalMs: 2 * HOUR_MS,
         defaultSpawn: { map: 182, x: 47, y: 30 },
         spawnMessage:
             "Se ha invocado el Faraon en las piramides. Deberas superar el laberinto para llegar a el.",
+    },
+    iceKnight: {
+        key: "iceKnight",
+        label: "Caballero Helado",
+        npcIndex: 633,
+        expectedTemplateNames: ["Caballero Helado"],
+        intervalMs: 4 * HOUR_MS,
+        defaultSpawn: { map: 92, x: 50, y: 60 },
+        spawnMessage:
+            "Se ha invocado el Caballero Helado en las cavernas del mapa 90. Recupera el Santo Grial.",
+    },
+    darkKnight: {
+        key: "darkKnight",
+        label: "Caballero Oscuro",
+        npcIndex: 726,
+        expectedTemplateNames: ["Caballero De la Muerte", "Caballero de la Muerte"],
+        intervalMs: 8 * HOUR_MS,
+        defaultSpawn: { map: 279, x: 49, y: 34 },
+        spawnMessage:
+            "Se ha invocado el Caballero Oscuro. Sus esbirros lo protegeran.",
     },
     gollum: {
         key: "gollum",
@@ -68,6 +89,13 @@ const bossAliases: Record<string, BossEventKey> = {
     mummy: "mummyPharaoh",
     mummypharaoh: "mummyPharaoh",
     momiafaraon: "mummyPharaoh",
+    helado: "iceKnight",
+    caballerohelado: "iceKnight",
+    iceknight: "iceKnight",
+    oscuro: "darkKnight",
+    caballerooscuro: "darkKnight",
+    caballerodelamuerte: "darkKnight",
+    darkknight: "darkKnight",
     gollum: "gollum",
 };
 
@@ -75,6 +103,8 @@ let initialized = false;
 let canonicalNpcTemplates: Record<string, any> | null = null;
 let state: BossEventsState = {
     mummyPharaoh: { nextSpawnAt: 0 },
+    iceKnight: { nextSpawnAt: 0 },
+    darkKnight: { nextSpawnAt: 0 },
     gollum: { nextSpawnAt: 0 },
 };
 
@@ -146,41 +176,96 @@ function createInitialEventState(config: BossEventConfig, currentTime = now()): 
     return { nextSpawnAt: currentTime + config.intervalMs };
 }
 
+function normalizeEventState(
+    config: BossEventConfig,
+    raw: BossEventState | undefined,
+    currentTime: number,
+): BossEventState {
+    const nextSpawnAt = Number(raw?.nextSpawnAt ?? 0);
+
+    if (raw?.activeNpcId && nextSpawnAt === 0) {
+        return {
+            nextSpawnAt: 0,
+            activeNpcId: raw.activeNpcId,
+            spawnedAt: raw.spawnedAt,
+            despawnAt: raw.despawnAt,
+        };
+    }
+
+    if (nextSpawnAt > currentTime && nextSpawnAt - currentTime <= config.intervalMs) {
+        return { nextSpawnAt };
+    }
+
+    return createInitialEventState(config, currentTime);
+}
+
 function normalizeState(raw: Partial<BossEventsState> | null | undefined): BossEventsState {
     const currentTime = now();
 
     return {
-        mummyPharaoh: {
-            ...createInitialEventState(BOSS_EVENTS.mummyPharaoh, currentTime),
-            ...(raw?.mummyPharaoh ?? {}),
-        },
-        gollum: {
-            ...createInitialEventState(BOSS_EVENTS.gollum, currentTime),
-            ...(raw?.gollum ?? {}),
-        },
+        mummyPharaoh: normalizeEventState(BOSS_EVENTS.mummyPharaoh, raw?.mummyPharaoh, currentTime),
+        iceKnight: normalizeEventState(BOSS_EVENTS.iceKnight, raw?.iceKnight, currentTime),
+        darkKnight: normalizeEventState(BOSS_EVENTS.darkKnight, raw?.darkKnight, currentTime),
+        gollum: normalizeEventState(BOSS_EVENTS.gollum, raw?.gollum, currentTime),
     };
+}
+
+function getClientPayload() {
+    return {
+        events: Object.values(BOSS_EVENTS).map((config) => {
+            const eventState = state[config.key];
+            const active = Boolean(getActiveBoss(config));
+
+            return {
+                key: config.key,
+                label: config.label,
+                active,
+                nextSpawnAt: active ? null : Number(eventState?.nextSpawnAt ?? 0) || null,
+                map: config.defaultSpawn.map,
+            };
+        }),
+    };
+}
+
+function broadcastClientState() {
+    try {
+        const payload = getClientPayload();
+
+        for (const client of Object.values(vars.clients ?? {}) as RuntimeClient[]) {
+            if (!client || client.readyState !== client.OPEN) {
+                continue;
+            }
+
+            handleProtocol.bossEventState(payload, client);
+        }
+    } catch (error) {
+        console.warn(
+            `[BOSS EVENTS] No se pudo avisar el estado: ${error instanceof Error ? error.message : "error desconocido"}.`,
+        );
+    }
 }
 
 function persistState() {
     fs.mkdirSync(path.dirname(STATE_PATH), { recursive: true });
     fs.writeFileSync(STATE_PATH, JSON.stringify(state, null, 2));
+    broadcastClientState();
 }
 
 function loadState() {
     try {
         if (!fs.existsSync(STATE_PATH)) {
             state = normalizeState(null);
-            persistState();
-            return;
+        } else {
+            state = normalizeState(JSON.parse(fs.readFileSync(STATE_PATH, "utf8")) as Partial<BossEventsState>);
         }
-
-        state = normalizeState(JSON.parse(fs.readFileSync(STATE_PATH, "utf8")) as Partial<BossEventsState>);
     } catch (error) {
         console.warn(
             `[BOSS EVENTS] No se pudo leer bossEvents.json: ${error instanceof Error ? error.message : "error desconocido"}.`,
         );
         state = normalizeState(null);
     }
+
+    persistState();
 }
 
 function getActiveBoss(config: BossEventConfig): RuntimeNpc | undefined {
@@ -312,7 +397,7 @@ function spawnBoss(config: BossEventConfig, options?: { map?: number; pos?: Posi
     npc.spawnOrigin = { ...spawn.pos };
     npc.map = spawn.map;
     npc.pos = { ...spawn.pos };
-    npc.nameCharacter = datNpc.name;
+    npc.nameCharacter = config.displayName ?? datNpc.name;
     npc.color = "white";
     npc.isNpc = true;
     npc.idBody = datNpc.idBody;
@@ -470,6 +555,8 @@ function tick() {
     }
 
     tickEvent(BOSS_EVENTS.mummyPharaoh);
+    tickEvent(BOSS_EVENTS.iceKnight);
+    tickEvent(BOSS_EVENTS.darkKnight);
     tickEvent(BOSS_EVENTS.gollum);
 }
 
@@ -532,6 +619,14 @@ function getSnapshot() {
     });
 }
 
+function sendState(client: RuntimeClient | undefined) {
+    if (!client || client.readyState !== client.OPEN) {
+        return;
+    }
+
+    handleProtocol.bossEventState(getClientPayload(), client);
+}
+
 module.exports = {
     initialize,
     tick,
@@ -541,4 +636,5 @@ module.exports = {
     forceDespawn,
     resetTimer,
     getSnapshot,
+    sendState,
 };

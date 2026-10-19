@@ -2303,6 +2303,7 @@ function Npcs(this: NpcsApi) {
             let result: number | "¡Fallas!" = "¡Fallas!";
 
             game.markNpcAggressor(target.id, attacker.id);
+            let killAttacker = false;
 
             if (impacto) {
                 let dmg =
@@ -2313,7 +2314,9 @@ function Npcs(this: NpcsApi) {
                     dmg = 1;
                 }
 
+                const hpBeforeHit = Number(target.hp ?? 0);
                 target.hp -= dmg;
+                killAttacker = require("./npcPowers").onDamagedByNpc(target, attacker, hpBeforeHit);
                 broadcastNpcVitalsDelta(target);
                 result = dmg;
 
@@ -2356,6 +2359,10 @@ function Npcs(this: NpcsApi) {
                     handleProtocol.dialog(attacker.id, String(result), "", "red", 0, nearbyClient);
                 });
             });
+
+            if (killAttacker) {
+                this.muereNpc(attacker.id);
+            }
 
             if (target.hp > 0) {
                 return;
@@ -2576,6 +2583,12 @@ function Npcs(this: NpcsApi) {
                 return;
             }
 
+            if (Number(npc.ephemeralSummon ?? 0) === 1) {
+                delete vars.npcs[idNpc];
+                delete vars.areaNpc[idNpc];
+                return;
+            }
+
             const castleDeath = require("./clanCastles").onCastleNpcRuntimeDeath(npc);
             if (castleDeath?.handled) {
                 if (castleDeath.removeNpc) {
@@ -2759,6 +2772,10 @@ function Npcs(this: NpcsApi) {
                 clearNpcTarget(npc);
                 removeUserFromNpcArea(idNpc, userTarget.id);
                 return;
+            }
+
+            if (userTarget) {
+                require("./npcPowers").onChaseUser(npc, userTarget);
             }
 
             if (npc.paralizado || npc.inmovilizado) {
@@ -3187,6 +3204,7 @@ function Npcs(this: NpcsApi) {
 
             this.npcToArea(idNpc, moveHeading);
             syncNpcVisibilityForUser(npc, ghost);
+            require("./npcPowers").onNpcMoved(npc);
         } catch (err) {
             funct.dumpError(err);
         }

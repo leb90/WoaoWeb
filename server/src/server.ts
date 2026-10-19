@@ -930,6 +930,11 @@ function processCrowdControlTick(now: number) {
             continue;
         }
 
+        if (require("./npcPowers").tryBreakParalysis(npc)) {
+            broadcastNpcSnapshot(game, handleProtocol, npc);
+            continue;
+        }
+
         if (now - cooldownParalizado < vars.timing.statusDurations.crowdControlNpcMs) {
             continue;
         }

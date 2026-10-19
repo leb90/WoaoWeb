@@ -172,6 +172,9 @@ export function useHudStateController({
                       ...(!hud.huntersGameState && previousHud?.huntersGameState
                           ? { huntersGameState: previousHud.huntersGameState }
                           : {}),
+                      ...(!hud.bossEventState && previousHud?.bossEventState
+                          ? { bossEventState: previousHud.bossEventState }
+                          : {}),
                   }
                 : hud;
 

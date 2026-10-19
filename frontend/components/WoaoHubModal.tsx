@@ -35,6 +35,7 @@ import type {
     QuestStatePayload,
     RankedMode,
     RankedStatePayload,
+    BossEventStatePayload,
 } from "../lib/aowProtocol";
 import {
     getRankFromElo,
@@ -81,6 +82,7 @@ type WoaoHubModalProps = {
     questState?: QuestStatePayload | null;
     mountState?: MountStatePayload | null;
     rankedState?: RankedStatePayload | null;
+    bossEventState?: BossEventStatePayload | null;
     questDialog?: QuestEntryState[] | null;
     questPoints?: number;
     donationPoints?: number;
@@ -134,6 +136,9 @@ type AutomaticEvent = {
     actionData?: AutomaticEventActionData;
     disabledReason?: string;
     allowJoinWhileRunning?: boolean;
+    bossKey?: string;
+    worldBossActive?: boolean;
+    worldBossKnown?: boolean;
 };
 
 type AutomaticEventDefinition = Omit<AutomaticEvent, "startsAt"> & {
@@ -232,37 +237,50 @@ const AUTOMATIC_EVENT_DEFINITIONS: AutomaticEventDefinition[] = [
     {
         id: "mummy_pharaoh",
         name: "Momia Faraón",
-        description: "Boss automático de las pirámides.",
+        description: "Reaparece en las pirámides 2 horas después de morir.",
         category: "boss",
-        startsInMinutes: 240,
-        locationLabel: "Mapa 182",
+        locationLabel: "Pirámides · 182",
         mapId: 182,
         status: "upcoming",
-        actionLabel: "Detalles",
+        actionLabel: "Activo",
         actionType: "details",
-        actionData: {
-            details: [
-                "Aparece automáticamente en la zona de pirámides cuando llega su contador.",
-                "Al activarse, el server anuncia la invasión por consola global.",
-            ],
-        },
+        bossKey: "mummyPharaoh",
     },
     {
         id: "ice_knight",
         name: "Caballero Helado",
-        description: "Boss automático de zona helada.",
+        description: "Reaparece en las cavernas 4 horas después de morir.",
         category: "boss",
-        startsInMinutes: 300,
-        locationLabel: "Zona helada",
+        locationLabel: "Cavernas · 92",
+        mapId: 92,
         status: "upcoming",
-        actionLabel: "Detalles",
+        actionLabel: "Activo",
         actionType: "details",
-        actionData: {
-            details: [
-                "Evento preparado para sumarse al calendario automático.",
-                "Cuando el sistema esté conectado al server, esta fila podrá mostrar su estado real.",
-            ],
-        },
+        bossKey: "iceKnight",
+    },
+    {
+        id: "dark_knight",
+        name: "Caballero Oscuro",
+        description: "Reaparece 8 horas después de morir. Invoca esbirros al perder vida.",
+        category: "boss",
+        locationLabel: "Mapa 279",
+        mapId: 279,
+        status: "upcoming",
+        actionLabel: "Activo",
+        actionType: "details",
+        bossKey: "darkKnight",
+    },
+    {
+        id: "gollum",
+        name: "Gollum",
+        description: "Aparece 4 horas después de morir y permanece 30 minutos.",
+        category: "boss",
+        locationLabel: "Mapa 175",
+        mapId: 175,
+        status: "upcoming",
+        actionLabel: "Activo",
+        actionType: "details",
+        bossKey: "gollum",
     },
 ];
 
@@ -370,8 +388,32 @@ function formatEventCountdown(startsAt: number, now: number): string {
     return `${String(hours).padStart(2, "0")}hs ${String(minutes).padStart(2, "0")}min`;
 }
 
-function buildAutomaticEvents(anchorTime: number, now: number): AutomaticEvent[] {
+function buildAutomaticEvents(
+    anchorTime: number,
+    now: number,
+    bossEventState?: BossEventStatePayload | null,
+): AutomaticEvent[] {
     return AUTOMATIC_EVENT_DEFINITIONS.map(({ startsInMinutes, schedule, ...event }) => {
+        if (event.bossKey) {
+            const live = bossEventState?.events.find((entry) => entry.key === event.bossKey);
+
+            if (!live) {
+                return {
+                    ...event,
+                    startsAt: now,
+                    worldBossActive: false,
+                    worldBossKnown: false,
+                };
+            }
+
+            return {
+                ...event,
+                startsAt: live.active ? now : (live.nextSpawnAt ?? now),
+                worldBossActive: live.active,
+                worldBossKnown: true,
+            };
+        }
+
         if (schedule) {
             const window = resolveScheduledWindow(schedule, now);
 
@@ -390,6 +432,10 @@ function buildAutomaticEvents(anchorTime: number, now: number): AutomaticEvent[]
 }
 
 function resolveEventStatus(event: AutomaticEvent, now: number): EventStatus {
+    if (event.bossKey) {
+        return event.worldBossActive ? "running" : "upcoming";
+    }
+
     if (event.status === "closed") {
         return "closed";
     }
@@ -1417,6 +1463,7 @@ export default function WoaoHubModal({
     questState,
     mountState,
     rankedState,
+    bossEventState,
     questDialog,
     questPoints = 0,
     donationPoints = 0,
@@ -1616,8 +1663,8 @@ export default function WoaoHubModal({
               }
             : null);
     const automaticEvents = React.useMemo(
-        () => buildAutomaticEvents(eventScheduleAnchor, eventClockNow),
-        [eventClockNow, eventScheduleAnchor],
+        () => buildAutomaticEvents(eventScheduleAnchor, eventClockNow, bossEventState),
+        [bossEventState, eventClockNow, eventScheduleAnchor],
     );
     const visibleAutomaticEvents = React.useMemo(() => {
         return automaticEvents
@@ -2666,8 +2713,18 @@ export default function WoaoHubModal({
                                                     ? "La inscripción ya cerró."
                                                     : "El registro todavía no abrió."
                                                 : undefined);
-                                        const countdown =
-                                            status === "running" ? "EN CURSO" : formatEventCountdown(event.startsAt, eventClockNow);
+                                        const isWorldBoss = Boolean(event.bossKey);
+                                        const worldBossWaiting =
+                                            isWorldBoss && event.worldBossKnown && !event.worldBossActive && event.startsAt > eventClockNow;
+                                        const countdown = isWorldBoss
+                                            ? event.worldBossActive || (event.worldBossKnown && !worldBossWaiting)
+                                                ? "00hs 00min"
+                                                : worldBossWaiting
+                                                  ? formatEventCountdown(event.startsAt, eventClockNow)
+                                                  : "--"
+                                            : status === "running"
+                                              ? "EN CURSO"
+                                              : formatEventCountdown(event.startsAt, eventClockNow);
 
                                         return (
                                             <article
@@ -2678,7 +2735,15 @@ export default function WoaoHubModal({
                                                     <div className="h-px w-full max-w-[70px] bg-[linear-gradient(90deg,transparent,rgba(245,158,11,0.5),transparent)]" />
                                                     <p className="mt-1.5 text-lg font-bold leading-none text-amber-100">{countdown}</p>
                                                     <p className="mt-1 text-xs text-stone-300">
-                                                        {status === "running" ? "Ahora" : "Comienza en"}
+                                                        {isWorldBoss
+                                                            ? event.worldBossActive
+                                                                ? "Vivo"
+                                                                : worldBossWaiting
+                                                                  ? "Reaparece en"
+                                                                  : "Ahora"
+                                                            : status === "running"
+                                                              ? "Ahora"
+                                                              : "Comienza en"}
                                                     </p>
                                                     <div className="mt-1.5 h-px w-full max-w-[70px] bg-[linear-gradient(90deg,transparent,rgba(245,158,11,0.28),transparent)]" />
                                                 </div>
@@ -2709,19 +2774,29 @@ export default function WoaoHubModal({
                                                 </div>
 
                                                 <div className="flex items-center justify-center border-l border-amber-200/10 px-3 py-2 max-[820px]:border-l-0">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleEventAction(event)}
-                                                        disabled={disabled}
-                                                        title={disabledTitle}
-                                                        className={`min-h-[42px] w-full rounded border px-4 text-sm font-bold transition ${
-                                                            disabled
-                                                                ? "cursor-not-allowed border-stone-700 bg-stone-900/80 text-stone-500"
-                                                                : "border-amber-300/70 bg-[linear-gradient(180deg,#f4c449,#986015)] text-stone-950 shadow-[0_0_22px_rgba(245,158,11,0.18)] hover:brightness-110"
-                                                        }`}
-                                                    >
-                                                        {event.actionLabel}
-                                                    </button>
+                                                    {isWorldBoss ? (
+                                                        <span
+                                                            className={`text-base font-bold ${
+                                                                event.worldBossActive ? "text-emerald-400" : "text-stone-400"
+                                                            }`}
+                                                        >
+                                                            {event.worldBossActive ? "Activo" : "Inactivo"}
+                                                        </span>
+                                                    ) : (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleEventAction(event)}
+                                                            disabled={disabled}
+                                                            title={disabledTitle}
+                                                            className={`min-h-[42px] w-full rounded border px-4 text-sm font-bold transition ${
+                                                                disabled
+                                                                    ? "cursor-not-allowed border-stone-700 bg-stone-900/80 text-stone-500"
+                                                                    : "border-amber-300/70 bg-[linear-gradient(180deg,#f4c449,#986015)] text-stone-950 shadow-[0_0_22px_rgba(245,158,11,0.18)] hover:brightness-110"
+                                                            }`}
+                                                        >
+                                                            {event.actionLabel}
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </article>
                                         );

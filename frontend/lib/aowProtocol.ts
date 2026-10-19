@@ -87,6 +87,7 @@ export const CLIENT_PACKET_ID = {
     factionWarState: 89,
     rankedState: 90,
     huntersGameState: 91,
+    bossEventState: 92,
 } as const;
 
 export const CHARACTER_SWING_WEAPON = 1;
@@ -736,6 +737,7 @@ export interface PlayerHudState {
     factionWarState?: FactionWarStatePayload;
     rankedState?: RankedStatePayload;
     huntersGameState?: HuntersGameStatePayload;
+    bossEventState?: BossEventStatePayload;
     partyMembers: PartyHudMember[];
     clanMembers: ClanHudMember[];
 }
@@ -1045,6 +1047,22 @@ export interface HuntersGameStatePayload {
     killFeed: HuntersGameKillFeedEntry[];
 }
 
+export interface BossEventStateEntry {
+    key: string;
+    label: string;
+    active: boolean;
+    nextSpawnAt: number | null;
+    map: number;
+}
+
+export interface BossEventStatePayload {
+    events: BossEventStateEntry[];
+}
+
+const DEFAULT_BOSS_EVENT_STATE: BossEventStatePayload = {
+    events: [],
+};
+
 const DEFAULT_HUNTERS_GAME_STATE: HuntersGameStatePayload = {
     active: false,
     phase: "CLOSED",
@@ -1293,6 +1311,7 @@ export type ParsedServerPacket =
     | { type: "factionWarState"; payload: FactionWarStatePayload }
     | { type: "rankedState"; payload: RankedStatePayload }
     | { type: "huntersGameState"; payload: HuntersGameStatePayload }
+    | { type: "bossEventState"; payload: BossEventStatePayload }
     | { type: "partyState"; payload: PartyHudStateDelta }
     | { type: "clanState"; payload: ClanHudStateDelta }
     | { type: "startCastBar"; payload: { id: number; durationMs: number } }
@@ -2525,6 +2544,22 @@ function parseServerPacketById(
                 return {
                     type: "huntersGameState",
                     payload: DEFAULT_HUNTERS_GAME_STATE,
+                };
+            }
+        }
+
+        case CLIENT_PACKET_ID.bossEventState: {
+            const rawPayload = reader.getString();
+
+            try {
+                return {
+                    type: "bossEventState",
+                    payload: JSON.parse(rawPayload) as BossEventStatePayload,
+                };
+            } catch {
+                return {
+                    type: "bossEventState",
+                    payload: DEFAULT_BOSS_EVENT_STATE,
                 };
             }
         }

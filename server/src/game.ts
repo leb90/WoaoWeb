@@ -2762,7 +2762,8 @@ function isAreaNpcImmune(npc: GameNpc): boolean {
             Number(npc.attackable ?? 1) === 0 ||
             npc.summonedByUserId ||
             Number(npc.raid ?? 0) > 0 ||
-            Number(npc.hp ?? 0) <= 0,
+            Number(npc.hp ?? 0) <= 0 ||
+            require("./npcPowers").hasSpecialPower(npc, 2),
     );
 }
 
@@ -2958,9 +2959,11 @@ function applyAreaSpellDamageToNpcs(
         }
 
         markNpcAggressor(occupant.id, user.id);
+        const previousHp = Number(occupant.npc.hp ?? 0);
         const extraDmg = applyNpcSpellDamage(user, occupant.npc, datSpell);
         rememberSpellAreaTarget(occupant.id);
         notifyNpcSpellDamage(user, occupant.npc, extraDmg);
+        require("./npcPowers").onDamagedByUser(occupant.npc, user, previousHp);
     });
 }
 
@@ -9032,6 +9035,7 @@ function Game(this: GameApi) {
 
             let dmg = 0;
             let spellEffect: "Paraliza" | "Inmoviliza" | "Envenena" | null = null;
+            const hpBeforeSpell = Number(npc.hp ?? 0);
 
             if (isHostileSpell) {
                 markNpcAggressor(idNpc, idUser);
@@ -9120,10 +9124,16 @@ function Game(this: GameApi) {
                         }
                     }
 
-                    dmg = applyNpcSpellDamage(user, npc, datSpell);
+                    const areaSpell = Number(datSpell.subeHp) === 3 || Number(datSpell.subeHp) === 4;
 
-                    if (Number(datSpell.subeHp) === 3 || Number(datSpell.subeHp) === 4) {
+                    if (areaSpell && require("./npcPowers").hasSpecialPower(npc, 2)) {
                         applyAreaSpellDamageToNpcs(user, datSpell, npc.id);
+                    } else {
+                        dmg = applyNpcSpellDamage(user, npc, datSpell);
+
+                        if (areaSpell) {
+                            applyAreaSpellDamageToNpcs(user, datSpell, npc.id);
+                        }
                     }
                 } else if (Number(datSpell.envenena ?? 0) > 0) {
                     npc.envenenado = Number(datSpell.envenena);
@@ -9187,6 +9197,10 @@ function Game(this: GameApi) {
                         userClient,
                     );
                 });
+            }
+
+            if (Number(npc.hp ?? 0) < hpBeforeSpell) {
+                require("./npcPowers").onDamagedByUser(npc, user, hpBeforeSpell);
             }
 
             if (dmg !== 0) {
@@ -9909,6 +9923,7 @@ function Game(this: GameApi) {
             const userImpacto = funct.randomIntFromInterval(1, 100) <= probExito;
 
             if (userImpacto) {
+                const hpBeforeHit = Number(npc.hp ?? 0);
                 const weaponItem = getInventoryItem(user, user.idItemWeapon);
                 const weaponItemId = Number(weaponItem?.idItem ?? 0);
                 const isDragonSlayerHit =
@@ -10025,6 +10040,7 @@ function Game(this: GameApi) {
                 });
 
                 game.calcularExp(idUser, idNpc, totalDamage);
+                require("./npcPowers").onDamagedByUser(npc, user, hpBeforeHit);
                 broadcastNpcVitalsDelta(npc);
                 trainCharacterSkill(user, getAttackTrainSkillId(user));
 

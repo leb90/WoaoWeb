@@ -995,6 +995,7 @@ function Login(this: LoginApi) {
                     require("./mounts").sendMountState(String(ws.id));
                     require("./quests").sendQuestState(String(ws.id), null);
                     void require("./rankedArena").sendRankedState(String(ws.id));
+                    require("./bossEvents").sendState(ws);
                     sendWelcomeConsoleMessage(ws);
                     require("./skills").sendSkillsState(personajeWS);
                     const initialEnvironment = require("./environment").getEnvironmentForMap(personajeWS.map);
@@ -1349,6 +1350,7 @@ function Login(this: LoginApi) {
             require("./clanCastles").sendCastleState(ws);
             require("./quests").sendQuestState(String(ws.id), null);
             void require("./rankedArena").sendRankedState(String(ws.id));
+            require("./bossEvents").sendState(ws);
             sendWelcomeConsoleMessage(ws);
             handleProtocol.console(
                 `WOAO> Canje ${newCharacter.puntosCanje ?? 0} | ELO ${newCharacter.elo ?? 300} | Remort ${newCharacter.remorted || "no"} | /woao`,

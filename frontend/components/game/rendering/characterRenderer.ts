@@ -8,11 +8,7 @@ import {
     Texture,
 } from "pixi.js";
 import type { RefObject } from "react";
-import type {
-    DirectionalGraphicData,
-    HelmetData,
-    GraphicData,
-} from "../../../types/game";
+import type { HelmetData, GraphicData } from "../../../types/game";
 import type {
     CharacterSnapshot,
     PlayerHudState,
@@ -1015,7 +1011,7 @@ export async function renderRemoteCharacter(
 
     if (weaponData) {
         const weaponGraphicId =
-            weaponData[direction as keyof DirectionalGraphicData];
+            weaponData[direction as "1" | "2" | "3" | "4"];
         const weaponGraphicData = engine.graphicsDB[weaponGraphicId.toString()];
         if (weaponGraphicData) {
             weaponTextures = engine.animatedTextureCache.get(
@@ -1043,7 +1039,7 @@ export async function renderRemoteCharacter(
 
     if (shieldData) {
         const shieldGraphicId =
-            shieldData[direction as keyof DirectionalGraphicData];
+            shieldData[direction as "1" | "2" | "3" | "4"];
         const shieldGraphicData = engine.graphicsDB[shieldGraphicId.toString()];
         if (shieldGraphicData) {
             shieldTextures = engine.animatedTextureCache.get(
@@ -1579,7 +1575,7 @@ export async function renderLocalPlayer(
 
     if (weaponData) {
         const weaponGraphicId =
-            weaponData[direction as keyof DirectionalGraphicData];
+            weaponData[direction as "1" | "2" | "3" | "4"];
         const weaponGraphicData = engine.graphicsDB[weaponGraphicId.toString()];
 
         if (weaponGraphicData) {
@@ -1606,7 +1602,7 @@ export async function renderLocalPlayer(
 
     if (shieldData) {
         const shieldGraphicId =
-            shieldData[direction as keyof DirectionalGraphicData];
+            shieldData[direction as "1" | "2" | "3" | "4"];
         const shieldGraphicData = engine.graphicsDB[shieldGraphicId.toString()];
 
         if (shieldGraphicData) {

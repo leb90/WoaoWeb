@@ -4542,7 +4542,7 @@ const command: CommandApi = {
 
                     if (!bossKey && action !== "status" && args[0]?.toLocaleLowerCase("es-AR") !== "status") {
                         handleProtocol.console(
-                            "[INFO] Uso: /boss status | /boss momia spawn | /boss gollum spawn aqui | /boss gollum despawn | /boss momia reset",
+                            "[INFO] Uso: /boss status | /boss momia|helado|oscuro|gollum spawn | /boss oscuro despawn | /boss momia reset",
                             "#E69500",
                             0,
                             0,

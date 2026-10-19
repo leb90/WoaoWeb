@@ -124,6 +124,7 @@ const clientPacketID = {
     factionWarState: 89,
     rankedState: 90,
     huntersGameState: 91,
+    bossEventState: 92,
 } as const;
 
 const serverPacketID = {

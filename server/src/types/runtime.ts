@@ -247,6 +247,12 @@ export type NpcSpellSlot = {
     lastUsedAt?: number;
 };
 
+export type PyramidChallengeState = {
+    riddleId: number;
+    answerItemId: number;
+    startedAt: number;
+};
+
 export type RuntimeCharacter = {
     id: EntityId;
     _id?: string;
@@ -391,6 +397,7 @@ export type RuntimeCharacter = {
     harvesting?: HarvestingState;
     smelting?: SmeltingState;
     craftingTarget?: CraftingTargetState;
+    pyramidChallenge?: PyramidChallengeState | null;
     useObj?: UseItemTracker;
     spell?: SpellTracker;
     hit?: HitTracker;

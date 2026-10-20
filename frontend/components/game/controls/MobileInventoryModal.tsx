@@ -114,11 +114,17 @@ export function MobileInventoryModal({
             : 0;
         const total = Math.max(MIN_SLOTS, highest - startSlot + 1);
 
+        // Lo equipado se ve solo en el panel de equipo (en el server sigue
+        // ocupando su lugar del inventario).
         return Array.from({ length: total }, (_, index) => ({
             slot: index + startSlot,
             item: bySlot.get(index + startSlot),
-        }));
-    }, [items, startSlot]);
+        })).filter(
+            ({ item }) =>
+                !item?.equipped ||
+                !getInventoryItemEquipmentKind(item, objectsDB),
+        );
+    }, [items, objectsDB, startSlot]);
 
     const selectedItem =
         selectedSlot !== null

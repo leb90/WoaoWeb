@@ -2914,13 +2914,21 @@ export default function InventoryFloatingPanel({
         [activateItem],
     );
 
+    // Lo equipado se ve solo en el panel de equipo. En el server sigue
+    // ocupando su lugar del inventario (cuenta para los 21), así que la
+    // grilla muestra los lugares restantes, cada uno con su número real.
     const slotItems = React.useMemo(() => {
         const itemsBySlot = new Map(items.map((item) => [item.slot, item]));
 
-        return Array.from({ length: totalSlots }, (_, index) =>
-            itemsBySlot.get(index + inventoryStartSlot),
+        return Array.from({ length: totalSlots }, (_, index) => {
+            const slot = index + inventoryStartSlot;
+            return { slot, item: itemsBySlot.get(slot) };
+        }).filter(
+            ({ item }) =>
+                !item?.equipped ||
+                !getInventoryItemEquipmentKind(item, objectsDB),
         );
-    }, [inventoryStartSlot, items, totalSlots]);
+    }, [inventoryStartSlot, items, objectsDB, totalSlots]);
 
     const isItemBlockedForClass = React.useCallback(
         (item: InventoryItem) => {
@@ -3321,9 +3329,7 @@ export default function InventoryFloatingPanel({
                                 <div className="mt-2 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
                                     <div className="bg-[#120c09] p-1">
                                         <div className="grid grid-cols-6 gap-px">
-                                            {slotItems.map((item, index) => {
-                                                const slotNumber =
-                                                    index + inventoryStartSlot;
+                                            {slotItems.map(({ slot: slotNumber, item }) => {
                                                 const graphicData = item
                                                     ? graphicsDB?.[
                                                           item.grhIndex.toString()
@@ -3338,7 +3344,7 @@ export default function InventoryFloatingPanel({
 
                                                 return (
                                                     <button
-                                                        key={`slot-${index}`}
+                                                        key={`slot-${slotNumber}`}
                                                         type="button"
                                                         data-inventory-slot={
                                                             slotNumber

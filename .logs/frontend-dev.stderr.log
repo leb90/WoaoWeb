@@ -1,0 +1,1 @@
+$ next dev --turbopack --hostname 0.0.0.0

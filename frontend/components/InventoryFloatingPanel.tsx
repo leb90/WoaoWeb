@@ -3336,7 +3336,7 @@ export default function InventoryFloatingPanel({
                             </div>
 
                             {activeTab === "inventory" ? (
-                                <div className="mt-2 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+                                <div className="mt-2 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                                     <div className="bg-[#120c09] p-1">
                                         <div className="grid grid-cols-6 gap-px">
                                             {slotItems.map(({ slot: slotNumber, item }) => {

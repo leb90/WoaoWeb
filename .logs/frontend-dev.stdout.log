@@ -1,0 +1,11 @@
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://0.0.0.0:3000
+- Environments: .env.local
+✓ Ready in 571ms
+Creating turbopack project {
+  dir: 'C:\\Programación\\Proyectos\\WoaoWeb\\frontend',
+  testMode: true
+}
+
+ GET /play 200 in 1967ms (next.js: 655ms, application-code: 1312ms)

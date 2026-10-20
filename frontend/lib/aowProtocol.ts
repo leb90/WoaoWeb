@@ -762,6 +762,9 @@ export interface PlayerHudState {
     pos: { x: number; y: number };
     idHead?: number;
     idBody?: number;
+    idHelmet?: number;
+    idWeapon?: number;
+    idShield?: number;
     privileges?: number;
     navegando?: boolean;
     dead?: boolean;
@@ -3132,6 +3135,9 @@ export function toPlayerHudState(snapshot: CharacterSnapshot): PlayerHudState {
         pos: snapshot.pos,
         idHead: snapshot.idHead,
         idBody: snapshot.idBody,
+        idHelmet: snapshot.idHelmet,
+        idWeapon: snapshot.idWeapon,
+        idShield: snapshot.idShield,
         privileges: snapshot.privileges,
         idClase: snapshot.idClase,
         color: snapshot.color,

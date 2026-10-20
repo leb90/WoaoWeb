@@ -22,6 +22,8 @@ type SourceObject = {
     objetoEspecial?: number;
     mataHobbits?: number;
     subtipo?: number;
+    cosmetico?: number;
+    disfraz?: number;
     clasesNoPermitidas?: number[];
 };
 
@@ -44,6 +46,8 @@ type ClientObject = {
     objetoEspecial?: number;
     mataHobbits?: number;
     subtipo?: number;
+    cosmetico?: number;
+    disfraz?: number;
     clasesNoPermitidas?: number[];
 };
 
@@ -97,6 +101,9 @@ function toClientObject(source: SourceObject): ClientObject {
     addOptionalNumber(clientObject, "objetoEspecial", source.objetoEspecial);
     addOptionalNumber(clientObject, "mataHobbits", source.mataHobbits);
     addOptionalNumber(clientObject, "subtipo", source.subtipo);
+    // Objetos de apariencia: el cliente no los ofrece para equipar.
+    addOptionalNumber(clientObject, "cosmetico", source.cosmetico);
+    addOptionalNumber(clientObject, "disfraz", source.disfraz);
 
     if (Array.isArray(source.clasesNoPermitidas) && source.clasesNoPermitidas.length > 0) {
         clientObject.clasesNoPermitidas = source.clasesNoPermitidas;

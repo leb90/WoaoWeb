@@ -1,10 +1,18 @@
 import {
     useCallback,
+    useEffect,
+    useRef,
     type Dispatch,
     type RefObject,
     type SetStateAction,
 } from "react";
 import { OBJECT_TYPE } from "../../../lib/aowProtocol";
+import {
+    getEquipmentKindForPacketObjectType,
+    getInventoryItemEquipmentKind,
+} from "../../../lib/equipmentKinds";
+import { loadObjectsDB } from "../../../utils/gameLoader";
+import type { ObjectsDB } from "../../../types/game";
 import type {
     BailOffer,
     CraftingState,
@@ -350,6 +358,24 @@ export function useHudStateController({
         ],
     );
 
+    // Base de objetos para saber el lugar de equipo real de cada ítem (el
+    // inventario trae el objType crudo: un casco "armadura subtipo 1" no es una
+    // armadura).
+    const objectsDBRef = useRef<ObjectsDB | null>(null);
+    useEffect(() => {
+        let cancelled = false;
+        void loadObjectsDB()
+            .then((db) => {
+                if (!cancelled) {
+                    objectsDBRef.current = db;
+                }
+            })
+            .catch(() => undefined);
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
     const updateEquippedInventoryByType = useCallback(
         (objType: number, equippedSlot: number | null) => {
             const currentHud = playerHudRef.current;
@@ -357,18 +383,26 @@ export function useHudStateController({
                 return;
             }
 
+            const targetKind = getEquipmentKindForPacketObjectType(objType);
+
             emitHud({
                 ...currentHud,
-                inventory: currentHud.inventory.map((item) =>
-                    item.objType === objType
-                        ? {
-                              ...item,
-                              equipped:
-                                  equippedSlot !== null &&
-                                  item.slot === equippedSlot,
-                          }
-                        : item,
-                ),
+                inventory: currentHud.inventory.map((item) => {
+                    // El ítem que el server dice que quedó equipado siempre
+                    // lleva la marca, aunque no se pueda clasificar.
+                    if (equippedSlot !== null && item.slot === equippedSlot) {
+                        return { ...item, equipped: true };
+                    }
+
+                    const kind = targetKind
+                        ? getInventoryItemEquipmentKind(item, objectsDBRef.current)
+                        : null;
+                    const sameSlot = targetKind
+                        ? kind === targetKind
+                        : item.objType === objType;
+
+                    return sameSlot ? { ...item, equipped: false } : item;
+                }),
             });
         },
         [emitHud, playerHudRef],

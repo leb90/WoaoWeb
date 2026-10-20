@@ -63,6 +63,7 @@ import {
 } from "../lib/hardware-acceleration";
 import WoaoHubModal, { type WoaoHubTab } from "./WoaoHubModal";
 import TransmogModal from "./transmog/TransmogModal";
+import EquipmentPanel, { getInventoryItemEquipmentKind } from "./EquipmentPanel";
 import DonationShopModal from "./transmog/DonationShopModal";
 import SkillsModal from "./SkillsModal";
 import type { SkillsState } from "../lib/aowProtocol";
@@ -1277,7 +1278,14 @@ export default function InventoryFloatingPanel({
     );
     const [draggedInventoryItem, setDraggedInventoryItem] =
         React.useState<InventoryItem | null>(null);
+    // De dónde salió el arrastre: un lugar del inventario o el panel de equipo.
+    const [dragSource, setDragSource] = React.useState<"inventory" | "equipment">(
+        "inventory",
+    );
     const [dragPointer, setDragPointer] = React.useState({ x: 0, y: 0 });
+    // Arrastre con click izquierdo: arranca recién cuando el mouse se mueve
+    // unos píxeles, así un click o un doble click siguen funcionando igual.
+    const pendingDragCleanupRef = React.useRef<(() => void) | null>(null);
     const [isSpellInfoOpen, setIsSpellInfoOpen] = React.useState(false);
     const [isPartyModalOpen, setIsPartyModalOpen] = React.useState(false);
     const [isClanModalOpen, setIsClanModalOpen] = React.useState(false);
@@ -2958,31 +2966,130 @@ export default function InventoryFloatingPanel({
         setHoveredItem(null);
     };
 
+    const startInventoryDrag = React.useCallback(
+        (
+            item: InventoryItem,
+            clientX: number,
+            clientY: number,
+            source: "inventory" | "equipment",
+        ) => {
+            clearTooltip();
+            setSelectedSlot(item.slot);
+            const panelScale = getPanelScale();
+            setDragSource(source);
+            setDraggedInventoryItem(item);
+            setDragPointer({
+                x: clientX / panelScale,
+                y: clientY / panelScale,
+            });
+        },
+        [getPanelScale],
+    );
+
+    const beginPendingDrag = React.useCallback(
+        (
+            item: InventoryItem,
+            event: React.MouseEvent<HTMLElement>,
+            source: "inventory" | "equipment",
+        ) => {
+            pendingDragCleanupRef.current?.();
+            const startX = event.clientX;
+            const startY = event.clientY;
+
+            const handleMove = (moveEvent: MouseEvent) => {
+                if (Math.hypot(moveEvent.clientX - startX, moveEvent.clientY - startY) < 6) {
+                    return;
+                }
+
+                cleanup();
+                startInventoryDrag(item, moveEvent.clientX, moveEvent.clientY, source);
+            };
+            const cleanup = () => {
+                window.removeEventListener("mousemove", handleMove);
+                window.removeEventListener("mouseup", cleanup);
+                pendingDragCleanupRef.current = null;
+            };
+
+            window.addEventListener("mousemove", handleMove);
+            window.addEventListener("mouseup", cleanup);
+            pendingDragCleanupRef.current = cleanup;
+        },
+        [startInventoryDrag],
+    );
+
+    React.useEffect(() => () => pendingDragCleanupRef.current?.(), []);
+
+    // En el panel de equipo el doble click siempre saca el ítem (en el
+    // inventario, el doble click sobre un arco equipado dispara).
+    const lastEquipmentClickRef = React.useRef<{ slot: number; at: number } | null>(null);
+    const handleEquipmentSlotClick = React.useCallback(
+        (item: InventoryItem) => {
+            setSelectedSlot(item.slot);
+            const now = performance.now();
+            const last = lastEquipmentClickRef.current;
+
+            if (last?.slot === item.slot && now - last.at <= DOUBLE_ACTIVATE_WINDOW_MS) {
+                lastEquipmentClickRef.current = null;
+                if (item.equipped) {
+                    onEquipRequest?.(item.slot);
+                }
+                return;
+            }
+
+            lastEquipmentClickRef.current = { slot: item.slot, at: now };
+        },
+        [onEquipRequest],
+    );
+
     const finishInventoryDrag = React.useCallback(
         (clientX: number, clientY: number) => {
             if (!draggedInventoryItem) {
                 return;
             }
 
-            const dropTarget = document
-                .elementFromPoint(clientX, clientY)
-                ?.closest("[data-inventory-slot]");
+            const elementUnderPointer = document.elementFromPoint(clientX, clientY);
+            const dropTarget = elementUnderPointer?.closest("[data-inventory-slot]");
+            const equipmentTarget = elementUnderPointer?.closest(
+                "[data-equipment-panel]",
+            );
             const slotAttribute = dropTarget?.getAttribute(
                 "data-inventory-slot",
             );
             const targetSlot = slotAttribute ? Number(slotAttribute) : NaN;
+            const dragged = draggedInventoryItem;
 
-            if (
+            if (dragSource === "equipment") {
+                // Del equipo al inventario: se lo saca, y si lo soltaste en un
+                // lugar vacío distinto, además se mueve ahí.
+                if (Number.isFinite(targetSlot) && dragged.equipped) {
+                    onEquipRequest?.(dragged.slot);
+                    const targetOccupied = items.some((entry) => entry.slot === targetSlot);
+                    if (targetSlot !== dragged.slot && !targetOccupied) {
+                        onMoveInventoryItem?.(dragged.slot, targetSlot);
+                        setSelectedSlot(targetSlot);
+                    }
+                }
+            } else if (equipmentTarget) {
+                // Del inventario al equipo: se equipa (el server lo ubica en su
+                // lugar según el tipo; si ya estaba equipado no se toca).
+                if (
+                    !dragged.equipped &&
+                    getInventoryItemEquipmentKind(dragged, objectsDB)
+                ) {
+                    onEquipRequest?.(dragged.slot);
+                }
+            } else if (
                 Number.isFinite(targetSlot) &&
-                targetSlot !== draggedInventoryItem.slot
+                targetSlot !== dragged.slot
             ) {
-                onMoveInventoryItem?.(draggedInventoryItem.slot, targetSlot);
+                onMoveInventoryItem?.(dragged.slot, targetSlot);
                 setSelectedSlot(targetSlot);
             }
 
             setDraggedInventoryItem(null);
+            setDragSource("inventory");
         },
-        [draggedInventoryItem, onMoveInventoryItem],
+        [draggedInventoryItem, dragSource, items, objectsDB, onEquipRequest, onMoveInventoryItem],
     );
 
     React.useEffect(() => {
@@ -3211,7 +3318,7 @@ export default function InventoryFloatingPanel({
                             </div>
 
                             {activeTab === "inventory" ? (
-                                <div className="mt-2 flex min-h-0 flex-1 flex-col gap-2">
+                                <div className="mt-2 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
                                     <div className="bg-[#120c09] p-1">
                                         <div className="grid grid-cols-6 gap-px">
                                             {slotItems.map((item, index) => {
@@ -3258,24 +3365,25 @@ export default function InventoryFloatingPanel({
                                                                 item
                                                             ) {
                                                                 event.preventDefault();
-                                                                clearTooltip();
-                                                                setSelectedSlot(
-                                                                    item.slot,
-                                                                );
-                                                                const panelScale =
-                                                                    getPanelScale();
-                                                                setDraggedInventoryItem(
+                                                                startInventoryDrag(
                                                                     item,
+                                                                    event.clientX,
+                                                                    event.clientY,
+                                                                    "inventory",
                                                                 );
-                                                                setDragPointer({
-                                                                    x:
-                                                                        event.clientX /
-                                                                        panelScale,
-                                                                    y:
-                                                                        event.clientY /
-                                                                        panelScale,
-                                                                });
                                                                 return;
+                                                            }
+
+                                                            if (
+                                                                event.button ===
+                                                                    0 &&
+                                                                item
+                                                            ) {
+                                                                beginPendingDrag(
+                                                                    item,
+                                                                    event,
+                                                                    "inventory",
+                                                                );
                                                             }
 
                                                             event.preventDefault();
@@ -3346,6 +3454,56 @@ export default function InventoryFloatingPanel({
                                             })}
                                         </div>
                                     </div>
+
+                                    <EquipmentPanel
+                                        items={items}
+                                        objectsDB={objectsDB}
+                                        graphicsDB={graphicsDB}
+                                        appearance={
+                                            hud?.idBody
+                                                ? {
+                                                      head: hud.idHead ?? 0,
+                                                      body: hud.idBody,
+                                                      helmet: hud.idHelmet ?? 0,
+                                                      weapon: hud.idWeapon ?? 0,
+                                                      shield: hud.idShield ?? 0,
+                                                  }
+                                                : null
+                                        }
+                                        draggingKind={getInventoryItemEquipmentKind(
+                                            draggedInventoryItem,
+                                            objectsDB,
+                                        )}
+                                        draggingFromEquipment={
+                                            dragSource === "equipment"
+                                        }
+                                        isBlocked={(entry) =>
+                                            !entry.validForUser ||
+                                            isItemBlockedForClass(entry)
+                                        }
+                                        onSlotMouseDown={(entry, event) => {
+                                            event.preventDefault();
+                                            if (event.button === 2) {
+                                                startInventoryDrag(
+                                                    entry,
+                                                    event.clientX,
+                                                    event.clientY,
+                                                    "equipment",
+                                                );
+                                                return;
+                                            }
+                                            if (event.button === 0) {
+                                                beginPendingDrag(
+                                                    entry,
+                                                    event,
+                                                    "equipment",
+                                                );
+                                            }
+                                        }}
+                                        onSlotClick={handleEquipmentSlotClick}
+                                        onHover={showTooltipWithDelay}
+                                        onLeave={clearTooltip}
+                                    />
 
                                     {hoveredItem ? (
                                         <div className="bg-black/45 px-3 py-2 text-[11px] leading-4 text-stone-200">

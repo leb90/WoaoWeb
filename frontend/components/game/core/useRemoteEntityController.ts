@@ -432,13 +432,19 @@ export function useRemoteEntityController(
             Object.assign(entity, patch);
 
             if (engine.user?.id === entityId) {
-                options.mergeHud({
-                    idBody: patch.idBody,
-                    idHead: patch.idHead,
-                    idHelmet: patch.idHelmet,
-                    idWeapon: patch.idWeapon,
-                    idShield: patch.idShield,
-                });
+                // Solo los campos que vienen en el paquete: un cambio de casco
+                // no tiene que borrar el cuerpo ni la cabeza del HUD.
+                options.mergeHud(
+                    Object.fromEntries(
+                        Object.entries({
+                            idBody: patch.idBody,
+                            idHead: patch.idHead,
+                            idHelmet: patch.idHelmet,
+                            idWeapon: patch.idWeapon,
+                            idShield: patch.idShield,
+                        }).filter(([, value]) => value !== undefined),
+                    ),
+                );
                 await options.preloadGraphicIds(
                     engine,
                     collectCharacterGraphicIds(engine, {

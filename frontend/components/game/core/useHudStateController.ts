@@ -175,6 +175,12 @@ export function useHudStateController({
                       ...(!hud.bossEventState && previousHud?.bossEventState
                           ? { bossEventState: previousHud.bossEventState }
                           : {}),
+                      ...(!hud.transmogState && previousHud?.transmogState
+                          ? { transmogState: previousHud.transmogState }
+                          : {}),
+                      ...(!hud.shopState && previousHud?.shopState
+                          ? { shopState: previousHud.shopState }
+                          : {}),
                   }
                 : hud;
 

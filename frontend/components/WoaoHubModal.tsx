@@ -90,6 +90,8 @@ type WoaoHubModalProps = {
     onTabChange: (tab: WoaoHubTab) => void;
     onClose: () => void;
     onOpenAuctionHouse?: () => void;
+    // Los puntos de donación se gastan en la Tienda (incluye este catálogo).
+    onOpenShop?: () => void;
     onSendCommand?: (message: string) => void;
 };
 
@@ -1471,6 +1473,7 @@ export default function WoaoHubModal({
     onTabChange,
     onClose,
     onOpenAuctionHouse,
+    onOpenShop,
     onSendCommand,
 }: WoaoHubModalProps) {
     const [premios, setPremios] = React.useState<PremioDef[]>([]);
@@ -2020,7 +2023,7 @@ export default function WoaoHubModal({
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() => setPremioCurrency("donation")}
+                                        onClick={() => (onOpenShop ? onOpenShop() : setPremioCurrency("donation"))}
                                         className={`flex items-center justify-center gap-3 rounded border px-5 py-3 text-sm font-semibold transition ${
                                             premioCurrency === "donation"
                                                 ? "border-amber-300/80 bg-amber-400/18 text-amber-100 shadow-[0_0_22px_rgba(245,158,11,0.18)]"
@@ -2028,7 +2031,7 @@ export default function WoaoHubModal({
                                         }`}
                                     >
                                         <Coins aria-hidden="true" className="h-5 w-5" strokeWidth={1.7} />
-                                        Canjes Donaciones
+                                        {onOpenShop ? "Tienda de Donaciones" : "Canjes Donaciones"}
                                     </button>
                                 </div>
 
@@ -2054,7 +2057,7 @@ export default function WoaoHubModal({
                                     {premioCurrency === "donation" ? (
                                         <button
                                             type="button"
-                                            onClick={() => undefined}
+                                            onClick={() => window.open("/donaciones", "_blank", "noopener,noreferrer")}
                                             className="h-10 rounded border border-amber-300/55 bg-amber-500/12 px-4 text-sm font-semibold text-amber-100 transition hover:bg-amber-500/20"
                                         >
                                             Comprar Puntos

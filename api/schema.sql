@@ -292,6 +292,11 @@ ALTER TABLE characters
 ALTER TABLE characters
     ADD COLUMN IF NOT EXISTS faction_treachery INTEGER NOT NULL DEFAULT 0;
 
+-- Transfiguracion (tienda de donaciones): aspecto visual elegido por slot.
+-- Forma: { "casco"?: idItem, "escudo"?: idItem, "arma"?: idItem, "cuerpo"?: idItem }
+ALTER TABLE characters
+    ADD COLUMN IF NOT EXISTS transmog JSONB NOT NULL DEFAULT '{}'::jsonb;
+
 ALTER TABLE characters
     ALTER COLUMN gold TYPE INTEGER USING LEAST(GREATEST(gold, 0), 2147483647)::INTEGER;
 
@@ -851,3 +856,35 @@ CREATE TABLE IF NOT EXISTS gm_tickets (
 CREATE INDEX IF NOT EXISTS idx_gm_tickets_status_created_at ON gm_tickets(status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_gm_tickets_reporter_character_id ON gm_tickets(reporter_character_id);
 CREATE INDEX IF NOT EXISTS idx_gm_tickets_target_character_id ON gm_tickets(target_character_id);
+
+-- Pedidos de diseño personalizado (tienda de donaciones). El jugador paga con
+-- puntos de donacion (que viven en el game server) y el staff crea el item a
+-- mano y se lo entrega. 'awaiting_payment' es transitorio: la fila se crea
+-- antes de cobrar para tener un id que mandarle al game server, y si el cobro
+-- falla se borra.
+CREATE TABLE IF NOT EXISTS custom_design_requests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    character_id UUID NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+    account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    character_name TEXT NOT NULL,
+    product_id TEXT NOT NULL,
+    slot TEXT NOT NULL CHECK (slot IN ('casco', 'escudo', 'arma', 'cuerpo')),
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    image_mime TEXT,
+    image_data BYTEA,
+    points INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'awaiting_payment' CHECK (
+        status IN ('awaiting_payment', 'pending', 'in_progress', 'delivered', 'rejected')
+    ),
+    staff_note TEXT,
+    delivered_obj_index INTEGER,
+    handled_by TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_custom_design_requests_character_created
+    ON custom_design_requests(character_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_custom_design_requests_status_created
+    ON custom_design_requests(status, created_at DESC);

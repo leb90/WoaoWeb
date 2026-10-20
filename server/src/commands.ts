@@ -3386,6 +3386,44 @@ const command: CommandApi = {
                     break;
                 }
 
+                case "/tienda": {
+                    require("./donationShop").handleShopCommand(String(clientId), "abrir", []);
+                    break;
+                }
+
+                case "/tiendacomprar": {
+                    require("./donationShop").handleShopCommand(
+                        String(clientId),
+                        "comprar",
+                        nextText.trim().split(/\s+/).filter(Boolean),
+                    );
+                    break;
+                }
+
+                case "/transmog":
+                case "/transfigurar": {
+                    require("./transmogActions").handleTransmogCommand(String(clientId), "estado", []);
+                    break;
+                }
+
+                case "/transmogponer": {
+                    require("./transmogActions").handleTransmogCommand(
+                        String(clientId),
+                        "poner",
+                        nextText.trim().split(/\s+/).filter(Boolean),
+                    );
+                    break;
+                }
+
+                case "/transmogquitar": {
+                    require("./transmogActions").handleTransmogCommand(
+                        String(clientId),
+                        "quitar",
+                        nextText.trim().split(/\s+/).filter(Boolean),
+                    );
+                    break;
+                }
+
                 case "/gm": {
                     require("./gmBot").handleCommand(String(clientId), nextText);
                     break;

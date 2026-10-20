@@ -13,6 +13,7 @@ import type {
     CharacterCraftingRecipeRecord,
     CharacterRecord,
     CharacterSpellRecord,
+    CharacterTransmog,
 } from "../types";
 
 const lookupSchema = z.object({
@@ -160,6 +161,13 @@ const characterPatchSchema = z
         learnedCraftingRecipes: z.array(z.coerce.number().int().positive()).optional(),
         skills: z.array(z.coerce.number().int()).optional(),
         skillPts: z.coerce.number().int().optional(),
+        // Transfiguracion: { casco?: idItem, escudo?: idItem, arma?: idItem,
+        // cuerpo?: idItem }. Un null (o 0) en un slot significa "sin
+        // transfiguracion" y no se guarda (ver normalizeTransmog). Se acepta el
+        // 0 para que un slot vacio no haga fallar el guardado entero.
+        transmog: z
+            .record(z.string(), z.number().int().nonnegative().nullable())
+            .optional(),
     })
     .passthrough();
 
@@ -228,10 +236,30 @@ const fieldMap = [
     ["factionTreachery", "faction_treachery"],
     ["skills", "skills"],
     ["skillPts", "skill_pts"],
+    ["transmog", "transmog"],
     ["jailMinutes", "jail_minutes"],
     ["jailReason", "jail_reason"],
     ["connected", "connected"],
 ] as const;
+
+// Deja solo los slots con un idItem valido. Sirve tanto para lo que viene del
+// game server (puede mandar null para limpiar un slot) como para lo que sale de
+// la DB (filas viejas o JSON raro: siempre se devuelve un objeto).
+function normalizeTransmog(value: unknown): CharacterTransmog {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+        return {};
+    }
+
+    const transmog: CharacterTransmog = {};
+
+    for (const [slot, idItem] of Object.entries(value)) {
+        if (typeof idItem === "number" && Number.isInteger(idItem) && idItem > 0) {
+            transmog[slot] = idItem;
+        }
+    }
+
+    return transmog;
+}
 
 function toCharacterResponse(
     character: CharacterRecord,
@@ -307,6 +335,7 @@ function toCharacterResponse(
         factionTreachery: character.faction_treachery,
         skills: Array.isArray(character.skills) ? character.skills : null,
         skillPts: character.skill_pts ?? null,
+        transmog: normalizeTransmog(character.transmog),
         jailMinutes: character.jail_minutes,
         jailReason: character.jail_reason,
         connected: character.connected,
@@ -1177,10 +1206,14 @@ export async function patchCharacter(
                 continue;
             }
 
+            // node-postgres convierte los arrays en arrays de Postgres (no en
+            // JSON), asi que las columnas JSONB se mandan ya serializadas.
             const nextValue =
                 apiField === "skills" && Array.isArray(parsed[apiField])
                     ? JSON.stringify(parsed[apiField])
-                    : parsed[apiField];
+                    : apiField === "transmog"
+                      ? JSON.stringify(normalizeTransmog(parsed[apiField]))
+                      : parsed[apiField];
             values.push(nextValue);
             assignments.push(`${dbField} = $${values.length}`);
         }

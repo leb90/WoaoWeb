@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import express from "express";
+import { z } from "zod";
 import config from "./config";
 import pool from "./db";
 import { requireAuth } from "./middleware/auth";
@@ -10,7 +11,26 @@ import {
     isMercadoPagoConfigured,
     usdToArs,
 } from "./lib/mercadopago";
-import { creditDonationPoints } from "./lib/gameServerClient";
+import {
+    chargeCustomDesign,
+    creditDonationPoints,
+} from "./lib/gameServerClient";
+import { decodeImageDataUrl, type DecodedImage } from "./lib/imageDataUrl";
+import {
+    CUSTOM_DESIGN_LIST_FILTERS,
+    createAwaitingPaymentCustomDesign,
+    deleteAwaitingPaymentCustomDesign,
+    deliverCustomDesign,
+    getCustomDesignImage,
+    listCustomDesigns,
+    listCustomDesignsForCharacter,
+    markCustomDesignPaid,
+    rejectCustomDesign,
+    startCustomDesign,
+    type CustomDesignListFilter,
+    type CustomDesignTransitionResult,
+} from "./repositories/customDesigns";
+import type { PublicAuthSessionWithSelection } from "./types";
 import {
     claimDonationPaymentForCredit,
     createPendingDonationPayment,
@@ -263,6 +283,22 @@ async function requireAdminEmailSession(
     return authorized;
 }
 
+// Se consulta fresco contra la DB en vez de confiar en el payload de sesion:
+// privileges puede haber cambiado desde que se emitio el token.
+async function isGmAccount(accountId: string): Promise<boolean> {
+    const result = await pool.query<{ exists: boolean }>(
+        `
+            SELECT EXISTS (
+                SELECT 1 FROM characters
+                WHERE account_id = $1 AND privileges IN (1, 2) AND deleted_at IS NULL
+            ) AS exists
+        `,
+        [accountId],
+    );
+
+    return Boolean(result.rows[0]?.exists);
+}
+
 async function requireGmSession(
     request: express.Request,
     response: express.Response,
@@ -274,24 +310,22 @@ async function requireGmSession(
         return null;
     }
 
-    // Se consulta fresco contra la DB en vez de confiar en el payload de sesion:
-    // privileges puede haber cambiado desde que se emitio el token.
-    const result = await pool.query<{ exists: boolean }>(
-        `
-            SELECT EXISTS (
-                SELECT 1 FROM characters
-                WHERE account_id = $1 AND privileges IN (1, 2) AND deleted_at IS NULL
-            ) AS exists
-        `,
-        [authorized.session.account._id],
-    );
-
-    if (!result.rows[0]?.exists) {
+    if (!(await isGmAccount(authorized.session.account._id))) {
         response.status(403).json({ error: "No autorizado." });
         return null;
     }
 
     return authorized;
+}
+
+// Nombre con el que firma el staff: el personaje seleccionado o, si no hay,
+// el nombre de la cuenta.
+function getStaffDisplayName(session: PublicAuthSessionWithSelection): string {
+    return (
+        session.characters.find(
+            (character) => character._id === session.selectedCharacterId,
+        )?.name ?? session.account.name
+    );
 }
 
 async function ensurePgStatStatements(): Promise<void> {
@@ -3259,6 +3293,314 @@ app.patch("/gm-tickets/:id/resolve", async (request, response) => {
         }
 
         response.json(ticket);
+    } catch (error) {
+        response.status(500).json({
+            error: error instanceof Error ? error.message : "Unexpected error",
+        });
+    }
+});
+
+// ---------------------------------------------------------------------------
+// Diseños personalizados (tienda de donaciones)
+// ---------------------------------------------------------------------------
+
+const CUSTOM_DESIGN_IMAGE_MAX_BYTES = 1024 * 1024;
+
+const createCustomDesignSchema = z.object({
+    productId: z
+        .string({ error: "Elegí un producto." })
+        .trim()
+        .min(1, "Elegí un producto.")
+        .max(64, "Producto inválido."),
+    title: z
+        .string({ error: "El título es obligatorio." })
+        .trim()
+        .min(3, "El título debe tener entre 3 y 60 caracteres.")
+        .max(60, "El título debe tener entre 3 y 60 caracteres."),
+    description: z
+        .string({ error: "La descripción es obligatoria." })
+        .trim()
+        .min(10, "La descripción debe tener entre 10 y 1000 caracteres.")
+        .max(1000, "La descripción debe tener entre 10 y 1000 caracteres."),
+    image: z.string({ error: "Imagen inválida." }).nullable().optional(),
+});
+
+const gmCustomDesignPatchSchema = z.object({
+    action: z.enum(["in_progress", "deliver", "reject"], {
+        error: "Acción inválida.",
+    }),
+    objIndex: z.preprocess(
+        (value) => (value === null || value === "" ? undefined : value),
+        z.coerce
+            .number({ error: "El número de objeto tiene que ser un entero mayor a 0." })
+            .int("El número de objeto tiene que ser un entero mayor a 0.")
+            .positive("El número de objeto tiene que ser un entero mayor a 0.")
+            .optional(),
+    ),
+    note: z
+        .string({ error: "Nota inválida." })
+        .trim()
+        .max(500, "La nota no puede superar los 500 caracteres.")
+        .nullable()
+        .optional(),
+});
+
+function getRouteId(request: express.Request): string {
+    const rawId = request.params.id;
+    return String(Array.isArray(rawId) ? rawId[0] : (rawId ?? ""));
+}
+
+function getFirstIssueMessage(error: z.ZodError): string {
+    return error.issues[0]?.message ?? "Datos inválidos.";
+}
+
+app.post("/custom-designs", async (request, response) => {
+    try {
+        const authorized = await getAuthorizedSession(request);
+
+        if (!authorized) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        const { session } = authorized;
+        const character = session.characters.find(
+            (candidate) => candidate._id === session.selectedCharacterId,
+        );
+
+        if (!session.selectedCharacterId || !character) {
+            response
+                .status(400)
+                .json({ error: "Seleccioná un personaje antes de pedir un diseño." });
+            return;
+        }
+
+        const parsed = createCustomDesignSchema.safeParse(request.body ?? {});
+
+        if (!parsed.success) {
+            response.status(400).json({ error: getFirstIssueMessage(parsed.error) });
+            return;
+        }
+
+        let image: DecodedImage | null = null;
+
+        if (parsed.data.image && parsed.data.image.trim()) {
+            const decoded = decodeImageDataUrl(
+                parsed.data.image,
+                CUSTOM_DESIGN_IMAGE_MAX_BYTES,
+            );
+
+            if (!decoded.ok) {
+                response.status(400).json({ error: decoded.error });
+                return;
+            }
+
+            image = decoded.image;
+        }
+
+        // Primero se crea la fila (sin cobrar) para tener un id que mandarle
+        // al game server; si el cobro falla se borra.
+        const pendingRequest = await createAwaitingPaymentCustomDesign({
+            characterId: session.selectedCharacterId,
+            accountId: session.account._id,
+            characterName: character.name,
+            productId: parsed.data.productId,
+            title: parsed.data.title,
+            description: parsed.data.description,
+            image,
+        });
+
+        const charge = await chargeCustomDesign({
+            characterId: session.selectedCharacterId,
+            productId: parsed.data.productId,
+            requestId: pendingRequest.id,
+        }).catch(async (error: unknown) => {
+            await deleteAwaitingPaymentCustomDesign(pendingRequest.id).catch(
+                () => undefined,
+            );
+            throw error;
+        });
+
+        if (!charge.ok) {
+            if (charge.charged) {
+                // El game server cobro pero no entendimos la respuesta: la
+                // fila queda en 'awaiting_payment' para conciliar a mano.
+                console.error(
+                    `[API][custom-designs] Pedido ${pendingRequest.id} cobrado sin confirmar; queda en awaiting_payment`,
+                );
+            } else {
+                await deleteAwaitingPaymentCustomDesign(pendingRequest.id);
+            }
+
+            response.status(charge.status).json({ error: charge.error });
+            return;
+        }
+
+        const paidRequest = await markCustomDesignPaid({
+            id: pendingRequest.id,
+            points: charge.points,
+            slot: charge.slot,
+        });
+
+        if (!paidRequest) {
+            console.error(
+                `[API][custom-designs] Pedido ${pendingRequest.id} cobrado (${charge.points} pts) pero no se pudo pasar a pending`,
+            );
+            response.status(500).json({
+                error: "No pudimos confirmar tu pedido. Avisale al staff para que lo revise.",
+            });
+            return;
+        }
+
+        response.status(201).json({
+            ...paidRequest,
+            productName: charge.productName,
+            balance: charge.balance,
+        });
+    } catch (error) {
+        response.status(500).json({
+            error: error instanceof Error ? error.message : "Unexpected error",
+        });
+    }
+});
+
+app.get("/custom-designs/mine", async (request, response) => {
+    try {
+        const authorized = await getAuthorizedSession(request);
+
+        if (!authorized) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        const { selectedCharacterId } = authorized.session;
+
+        if (!selectedCharacterId) {
+            response.status(400).json({ error: "Seleccioná un personaje." });
+            return;
+        }
+
+        response.json(await listCustomDesignsForCharacter(selectedCharacterId));
+    } catch (error) {
+        response.status(500).json({
+            error: error instanceof Error ? error.message : "Unexpected error",
+        });
+    }
+});
+
+// Imagen de referencia de un pedido. La puede ver la cuenta que lo hizo o el
+// staff (la pagina /gm/disenos la usa tal cual).
+app.get("/custom-designs/:id/image", async (request, response) => {
+    try {
+        const authorized = await getAuthorizedSession(request);
+
+        if (!authorized) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        const image = await getCustomDesignImage(getRouteId(request));
+
+        if (!image) {
+            response.status(404).json({ error: "Imagen no encontrada." });
+            return;
+        }
+
+        const accountId = authorized.session.account._id;
+
+        if (image.accountId !== accountId && !(await isGmAccount(accountId))) {
+            response.status(403).json({ error: "No autorizado." });
+            return;
+        }
+
+        response.setHeader("Content-Type", image.mime);
+        response.setHeader("Content-Length", String(image.data.length));
+        response.setHeader("Cache-Control", "private, max-age=3600");
+        response.setHeader("X-Content-Type-Options", "nosniff");
+        response.setHeader("Content-Security-Policy", "default-src 'none'");
+        response.end(image.data);
+    } catch (error) {
+        response.status(500).json({
+            error: error instanceof Error ? error.message : "Unexpected error",
+        });
+    }
+});
+
+app.get("/gm/custom-designs", async (request, response) => {
+    const authorized = await requireGmSession(request, response);
+    if (!authorized) {
+        return;
+    }
+
+    try {
+        const rawStatus =
+            typeof request.query.status === "string" && request.query.status
+                ? request.query.status
+                : "open";
+
+        if (!(CUSTOM_DESIGN_LIST_FILTERS as readonly string[]).includes(rawStatus)) {
+            response.status(400).json({ error: "Estado inválido." });
+            return;
+        }
+
+        response.json(await listCustomDesigns(rawStatus as CustomDesignListFilter));
+    } catch (error) {
+        response.status(500).json({
+            error: error instanceof Error ? error.message : "Unexpected error",
+        });
+    }
+});
+
+app.patch("/gm/custom-designs/:id", async (request, response) => {
+    const authorized = await requireGmSession(request, response);
+    if (!authorized) {
+        return;
+    }
+
+    try {
+        const parsed = gmCustomDesignPatchSchema.safeParse(request.body ?? {});
+
+        if (!parsed.success) {
+            response.status(400).json({ error: getFirstIssueMessage(parsed.error) });
+            return;
+        }
+
+        const id = getRouteId(request);
+        const handledBy = getStaffDisplayName(authorized.session);
+        const note = parsed.data.note?.trim() || null;
+        let result: CustomDesignTransitionResult;
+
+        if (parsed.data.action === "in_progress") {
+            result = await startCustomDesign({ id, handledBy, note });
+        } else if (parsed.data.action === "deliver") {
+            if (!parsed.data.objIndex) {
+                response
+                    .status(400)
+                    .json({ error: "Indicá el número de objeto a entregar." });
+                return;
+            }
+
+            result = await deliverCustomDesign({
+                id,
+                objIndex: parsed.data.objIndex,
+                note,
+                handledBy,
+            });
+        } else {
+            if (!note) {
+                response.status(400).json({ error: "Indicá el motivo del rechazo." });
+                return;
+            }
+
+            result = await rejectCustomDesign({ id, note, handledBy });
+        }
+
+        if (!result.ok) {
+            response.status(result.status).json({ error: result.error });
+            return;
+        }
+
+        response.json(result.request);
     } catch (error) {
         response.status(500).json({
             error: error instanceof Error ? error.message : "Unexpected error",

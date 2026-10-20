@@ -89,6 +89,8 @@ export const CLIENT_PACKET_ID = {
     huntersGameState: 91,
     bossEventState: 92,
     levelUpNotice: 93,
+    transmogState: 94,
+    shopState: 95,
 } as const;
 
 export const CHARACTER_SWING_WEAPON = 1;
@@ -390,6 +392,77 @@ export type MountHatchPoolEntry = {
     name: string;
     bodyId: number;
     eggItemId: number;
+};
+
+export type TransmogSlotKey = "casco" | "escudo" | "arma" | "cuerpo";
+
+export type AppearanceIds = {
+    head: number;
+    body: number;
+    helmet: number;
+    weapon: number;
+    shield: number;
+};
+
+export type TransmogSlotPayload = {
+    idItem: number;
+    name: string;
+    grhIndex: number;
+    graphic: number;
+    cosmetic: boolean;
+};
+
+export type TransmogCandidatePayload = {
+    invSlot: number;
+    idItem: number;
+    name: string;
+    grhIndex: number;
+    slot: TransmogSlotKey;
+    graphic: number;
+    cosmetic: boolean;
+    blockedReason: string | null;
+};
+
+export type TransmogStatePayload = {
+    slots: Record<TransmogSlotKey, TransmogSlotPayload | null>;
+    bodyLocked: boolean;
+    suppressedReason: string | null;
+    appearance: { base: AppearanceIds; preview: AppearanceIds };
+    candidates: TransmogCandidatePayload[];
+};
+
+export type ShopCategoryPayload = { key: string; name: string; desc?: string };
+
+export type ShopProductPayload = {
+    id: string;
+    category: string;
+    subcategory: string | null;
+    kind: "item" | "levelUp" | "customDesign";
+    name: string;
+    desc: string;
+    price: number;
+    objIndex: number | null;
+    amount: number;
+    grhIndex: number;
+    transmogSlot: TransmogSlotKey | null;
+    graphic: number;
+    levels: number | null;
+    maxLevel: number | null;
+    slot: TransmogSlotKey | null;
+    featured: boolean;
+    badge: string | null;
+    setName: string | null;
+    unavailableReason: string | null;
+};
+
+export type ShopStatePayload = {
+    points: number;
+    categories: ShopCategoryPayload[];
+    products: ShopProductPayload[];
+    appearance: { base: AppearanceIds; preview: AppearanceIds };
+    level: number;
+    pendingDeliveries: number;
+    lastResult: { ok: boolean; message: string; productId?: string; at: number } | null;
 };
 
 export type MountStatePayload = {
@@ -734,6 +807,8 @@ export interface PlayerHudState {
     spells: SpellEntry[];
     questState?: QuestStatePayload;
     mountState?: MountStatePayload;
+    transmogState?: TransmogStatePayload;
+    shopState?: ShopStatePayload;
     castleState?: CastleStatePayload;
     factionWarState?: FactionWarStatePayload;
     rankedState?: RankedStatePayload;
@@ -1316,6 +1391,8 @@ export type ParsedServerPacket =
     | { type: "questState"; payload: QuestStatePayload }
     | { type: "questProgressNotice"; payload: QuestProgressNoticePayload }
     | { type: "mountState"; payload: MountStatePayload }
+    | { type: "transmogState"; payload: TransmogStatePayload }
+    | { type: "shopState"; payload: ShopStatePayload }
     | { type: "castleState"; payload: CastleStatePayload }
     | { type: "factionWarState"; payload: FactionWarStatePayload }
     | { type: "rankedState"; payload: RankedStatePayload }
@@ -2485,6 +2562,32 @@ function parseServerPacketById(
                     type: "mountState",
                     payload: { maxOwned: null, mounts: [], hatchPool: [] },
                 };
+            }
+        }
+
+        case CLIENT_PACKET_ID.transmogState: {
+            const rawPayload = reader.getString();
+
+            try {
+                return {
+                    type: "transmogState",
+                    payload: JSON.parse(rawPayload) as TransmogStatePayload,
+                };
+            } catch {
+                return { type: "unknown", payload: { packetId } };
+            }
+        }
+
+        case CLIENT_PACKET_ID.shopState: {
+            const rawPayload = reader.getString();
+
+            try {
+                return {
+                    type: "shopState",
+                    payload: JSON.parse(rawPayload) as ShopStatePayload,
+                };
+            } catch {
+                return { type: "unknown", payload: { packetId } };
             }
         }
 

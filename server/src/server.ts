@@ -234,9 +234,11 @@ function handleCreditDonationPoints(request: any, response: any) {
             const body = JSON.parse(rawBody || "{}") as {
                 characterId?: string;
                 points?: number;
+                message?: string;
             };
             const characterId = String(body.characterId ?? "");
             const points = Math.floor(Number(body.points ?? 0));
+            const customMessage = typeof body.message === "string" ? body.message.trim().slice(0, 300) : "";
 
             if (!characterId || !Number.isFinite(points) || points <= 0) {
                 response.statusCode = 400;
@@ -249,13 +251,16 @@ function handleCreditDonationPoints(request: any, response: any) {
             progress.puntosDonacion = Number(progress.puntosDonacion ?? 0) + points;
             woaoProgress.saveProgress({ _id: characterId });
 
-            const onlineUser = vars.personajes[characterId];
-            const client = vars.clients[characterId];
+            // En memoria los personajes conectados se indexan por un id propio de
+            // la sesión, no por el de la DB: hay que buscarlo.
+            const onlineId = require("./donationShop").findOnlineIdByCharacterId(characterId);
+            const onlineUser = onlineId ? vars.personajes[onlineId] : null;
+            const client = onlineId ? vars.clients[onlineId] : null;
             if (onlineUser) {
                 onlineUser.puntosDonacion = progress.puntosDonacion;
                 if (client) {
                     handleProtocol.console(
-                        `¡Gracias por tu donación! Recibiste ${points} puntos de donación.`,
+                        customMessage || `¡Gracias por tu donación! Recibiste ${points} puntos de donación.`,
                         "#E69500",
                         1,
                         0,
@@ -277,9 +282,75 @@ function handleCreditDonationPoints(request: any, response: any) {
     });
 }
 
+function readInternalJson(request: any, response: any, handler: (body: Record<string, unknown>) => { status: number; body: unknown }) {
+    if (request.headers.authorization !== vars.tokenAuth) {
+        response.statusCode = 401;
+        response.setHeader("Content-Type", "application/json; charset=utf-8");
+        response.end(JSON.stringify({ error: "Unauthorized" }));
+        return;
+    }
+
+    let rawBody = "";
+    request.on("data", (chunk: Buffer) => {
+        rawBody += chunk.toString("utf8");
+    });
+
+    request.on("end", () => {
+        let result: { status: number; body: unknown };
+        try {
+            result = handler(JSON.parse(rawBody || "{}") as Record<string, unknown>);
+        } catch (error) {
+            result = { status: 500, body: { error: error instanceof Error ? error.message : "Unexpected error" } };
+        }
+
+        response.statusCode = result.status;
+        response.setHeader("Content-Type", "application/json; charset=utf-8");
+        response.end(JSON.stringify(result.body));
+    });
+}
+
+// Tienda de donaciones: cobro de diseños personalizados (lo llama la api al
+// recibir el pedido) y entrega de objetos (cuando el staff entrega un diseño).
+function handleChargeCustomDesign(request: any, response: any) {
+    readInternalJson(request, response, (body) => {
+        const characterId = String(body.characterId ?? "");
+        const productId = String(body.productId ?? "");
+
+        if (!characterId || !productId) {
+            return { status: 400, body: { error: "characterId y productId son requeridos" } };
+        }
+
+        return require("./donationShop").chargeCustomDesign(characterId, productId, String(body.requestId ?? ""));
+    });
+}
+
+function handleDeliverItem(request: any, response: any) {
+    readInternalJson(request, response, (body) => {
+        const characterId = String(body.characterId ?? "");
+        const objIndex = Math.floor(Number(body.objIndex ?? 0));
+        const amount = Math.floor(Number(body.amount ?? 1));
+
+        if (!characterId || !Number.isFinite(objIndex) || objIndex <= 0) {
+            return { status: 400, body: { error: "characterId y objIndex son requeridos" } };
+        }
+
+        return require("./donationShop").deliverItem(characterId, objIndex, amount, String(body.reason ?? ""));
+    });
+}
+
 function handleHttpRequest(request: any, response: any) {
     if (request.method === "POST" && request.url === "/internal/credit-donation-points") {
         handleCreditDonationPoints(request, response);
+        return;
+    }
+
+    if (request.method === "POST" && request.url === "/internal/donation-shop/charge-design") {
+        handleChargeCustomDesign(request, response);
+        return;
+    }
+
+    if (request.method === "POST" && request.url === "/internal/deliver-item") {
+        handleDeliverItem(request, response);
         return;
     }
 

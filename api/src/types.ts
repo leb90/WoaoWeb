@@ -81,6 +81,15 @@ export type UserOnlineStatRecord = {
 
 export type CharacterFaction = "none" | "armada" | "caos";
 
+// Slots de la transfiguracion (tienda de donaciones) y de los diseños
+// personalizados. Los nombres son los que usa el game server.
+export type TransmogSlot = "casco" | "escudo" | "arma" | "cuerpo";
+
+// Aspecto visual elegido por slot: { casco?: idItem, escudo?: idItem, ... }.
+// Se tipa abierto (string) porque el game server es el dueño de las claves;
+// las esperadas son las de TransmogSlot.
+export type CharacterTransmog = Record<string, number>;
+
 export type CharacterRecord = {
     id: string;
     account_id: string;
@@ -149,6 +158,7 @@ export type CharacterRecord = {
     faction_treachery: number;
     skills: number[] | null;
     skill_pts: number | null;
+    transmog: CharacterTransmog | null;
     jail_minutes: number;
     jail_reason: string | null;
     connected: boolean;
@@ -297,6 +307,7 @@ export type CharacterApiResponse = {
     factionTreachery: number;
     skills: number[] | null;
     skillPts: number | null;
+    transmog: CharacterTransmog;
     jailMinutes: number;
     jailReason: string | null;
     connected: boolean;

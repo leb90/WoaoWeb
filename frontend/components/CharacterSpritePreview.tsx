@@ -395,11 +395,14 @@ export default function CharacterSpritePreview({
 
         void (async () => {
             const bodyData = bodiesDB?.[bodyId.toString()];
-            const headData = headsDB?.[headId.toString()];
+            // Cuerpos completos (disfraces, NPC) traen la cabeza dibujada:
+            // con headId 0 se dibuja solo el cuerpo.
+            const headless = headId <= 0 && mode === "full";
+            const headData = headless ? undefined : headsDB?.[headId.toString()];
 
             if (
                 !bodyData ||
-                !headData ||
+                (!headData && !headless) ||
                 !graphicsDB ||
                 !weaponsDB ||
                 !shieldsDB ||
@@ -413,11 +416,9 @@ export default function CharacterSpritePreview({
                 bodyData[direction],
                 direction,
             );
-            const headGraphic = resolveGraphicFrame(
-                graphicsDB,
-                headData[direction],
-                direction,
-            );
+            const headGraphic = headData
+                ? resolveGraphicFrame(graphicsDB, headData[direction], direction)
+                : null;
             const weaponGraphic = resolveDirectionalGraphicFrame(
                 graphicsDB,
                 weaponId > 0 ? weaponsDB[weaponId.toString()] : undefined,
@@ -437,12 +438,12 @@ export default function CharacterSpritePreview({
             );
             const equipmentLayer = getEquipmentLayerZIndex(Number(direction));
 
-            if (!bodyGraphic || !headGraphic) {
+            if (!bodyGraphic || (!headGraphic && !headless)) {
                 return;
             }
 
             const bodyTexture = await loadGraphicTexture(bodyGraphic);
-            const headTexture = await loadGraphicTexture(headGraphic);
+            const headTexture = headGraphic ? await loadGraphicTexture(headGraphic) : null;
             const weaponTexture = weaponGraphic
                 ? await loadGraphicTexture(weaponGraphic)
                 : null;
@@ -455,14 +456,17 @@ export default function CharacterSpritePreview({
 
             if (cancelled) {
                 bodyTexture.destroy();
-                headTexture.destroy();
+                headTexture?.destroy();
                 weaponTexture?.destroy();
                 shieldTexture?.destroy();
                 helmetTexture?.destroy();
                 return;
             }
 
-            disposableTextures.push(bodyTexture, headTexture);
+            disposableTextures.push(bodyTexture);
+            if (headTexture) {
+                disposableTextures.push(headTexture);
+            }
             if (weaponTexture) {
                 disposableTextures.push(weaponTexture);
             }
@@ -481,15 +485,18 @@ export default function CharacterSpritePreview({
                 bodyTexture.width,
                 bodyTexture.height,
             );
-            const headPosition = getHeadSpritePosition(
-                bodyPosition,
-                bodyTexture.width,
-                bodyTexture.height,
-                headTexture.width,
-                headTexture.height,
-                bodyData.headOffsetX,
-                bodyData.headOffsetY,
-            );
+            const headPosition = headTexture
+                ? getHeadSpritePosition(
+                      bodyPosition,
+                      bodyTexture.width,
+                      bodyTexture.height,
+                      headTexture.width,
+                      headTexture.height,
+                      bodyData.headOffsetX,
+                      bodyData.headOffsetY,
+                  )
+                : bodyPosition;
+            const headHeight = headTexture?.height ?? 0;
             const weaponRecord = weaponId > 0 ? weaponsDB[weaponId.toString()] : undefined;
             const shieldRecord = shieldId > 0 ? shieldsDB[shieldId.toString()] : undefined;
             const weaponPosition = weaponTexture
@@ -538,10 +545,10 @@ export default function CharacterSpritePreview({
                       );
             const maxY =
                 mode === "head"
-                    ? headPosition.y + headTexture.height
+                    ? headPosition.y + headHeight
                     : Math.max(
                           bodyPosition.y + bodyTexture.height,
-                          headPosition.y + headTexture.height,
+                          headPosition.y + headHeight,
                           weaponPosition && weaponTexture
                               ? weaponPosition.y + weaponTexture.height
                               : Number.NEGATIVE_INFINITY,
@@ -597,12 +604,14 @@ export default function CharacterSpritePreview({
                 }
             }
 
-            const headSprite = new Sprite(headTexture);
-            headSprite.x = Math.round((headPosition.x + offsetX) * scale);
-            headSprite.y = Math.round((headPosition.y + offsetY) * scale);
-            headSprite.scale.set(scale);
-            headSprite.zIndex = 0.25;
-            characterContainer.addChild(headSprite);
+            if (headTexture) {
+                const headSprite = new Sprite(headTexture);
+                headSprite.x = Math.round((headPosition.x + offsetX) * scale);
+                headSprite.y = Math.round((headPosition.y + offsetY) * scale);
+                headSprite.scale.set(scale);
+                headSprite.zIndex = 0.25;
+                characterContainer.addChild(headSprite);
+            }
 
             if (mode === "full" && helmetTexture && helmetPosition) {
                 const helmetSprite = new Sprite(helmetTexture);

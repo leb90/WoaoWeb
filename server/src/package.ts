@@ -126,6 +126,8 @@ const clientPacketID = {
     huntersGameState: 91,
     bossEventState: 92,
     levelUpNotice: 93,
+    transmogState: 94,
+    shopState: 95,
 } as const;
 
 const serverPacketID = {

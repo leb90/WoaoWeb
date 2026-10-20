@@ -470,6 +470,8 @@ export type HandleProtocolApi = {
     questState: (payload: QuestStatePayload, client: RuntimeClient) => void;
     questProgressNotice: (payload: QuestProgressNoticePayload, client: RuntimeClient) => void;
     mountState: (payload: unknown, client: RuntimeClient) => void;
+    transmogState: (payload: unknown, client: RuntimeClient) => void;
+    shopState: (payload: unknown, client: RuntimeClient) => void;
     castleState: (payload: unknown, client: RuntimeClient) => void;
     factionWarState: (payload: FactionWarStatePayload, client: RuntimeClient) => void;
     rankedState: (payload: unknown, client: RuntimeClient) => void;
@@ -661,6 +663,14 @@ function dataObj(idItem: number) {
     try {
         const obj = getObject(idItem);
 
+        if (Number(obj.disfraz ?? 0) > 0) {
+            return "Disfraz de cuerpo completo. Ponelo en Transfigurar para cambiar tu aspecto.";
+        }
+
+        if (Number(obj.cosmetico ?? 0) === 1) {
+            return "Objeto de apariencia. Ponelo en Transfigurar para cambiar tu aspecto.";
+        }
+
         let data = "";
         const itemTier = Number(obj.tier ?? 0);
 
@@ -813,8 +823,28 @@ function writeInmoPayload(idUser: EntityId, movementRestriction: number | boolea
     return true;
 }
 
+// Apariencia que ven los clientes: el equipo real con la transfiguración
+// aplicada encima (transmog.ts). Todos los paquetes que dibujan al personaje
+// pasan por acá.
+function getVisibleAppearance(character: ProtocolCharacter) {
+    return require("./transmog").getVisibleAppearance(character) as {
+        head: number;
+        body: number;
+        helmet: number;
+        weapon: number;
+        shield: number;
+    };
+}
+
+function hasActiveTransmog(idUser: EntityId): boolean {
+    const user = getCharacter(idUser);
+    const transmog = require("./transmog");
+    return Boolean(user && transmog.hasTransmog(user) && !transmog.getTransmogSuppressedReason(user));
+}
+
 function writeCharacterPayload(character: ProtocolCharacter, viewerId?: EntityId, includeExtendedVitals = true) {
     const huntersAnonymous = shouldAnonymizeHuntersCharacter(viewerId, character);
+    const appearance = getVisibleAppearance(character);
 
     pkg.writeDouble(character.id);
     pkg.writeString(huntersAnonymous ? "Jugador" : character.nameCharacter);
@@ -822,11 +852,11 @@ function writeCharacterPayload(character: ProtocolCharacter, viewerId?: EntityId
     pkg.writeShort(character.map);
     pkg.writeByte(character.pos.x);
     pkg.writeByte(character.pos.y);
-    pkg.writeShort(character.idHead);
-    pkg.writeShort(character.idHelmet);
-    pkg.writeShort(character.idWeapon);
-    pkg.writeShort(character.idShield);
-    pkg.writeShort(character.idBody);
+    pkg.writeShort(appearance.head);
+    pkg.writeShort(appearance.helmet);
+    pkg.writeShort(appearance.weapon);
+    pkg.writeShort(appearance.shield);
+    pkg.writeShort(appearance.body);
     pkg.writeByte(character.privileges);
     pkg.writeByte(character.heading);
     pkg.writeString(huntersAnonymous ? "#D8C7A1" : character.color);
@@ -933,6 +963,17 @@ function writeSelfMapMetaDeltaPayload(payload: SelfMapMetaDeltaPayload) {
     }
 }
 
+/**
+ * Los paquetes de cambio de equipo llevan el gráfico real porque el cliente
+ * deduce de ahí la marca "E" del inventario. Si el personaje tiene una
+ * transfiguración activa, detrás va la apariencia visible completa.
+ */
+function followWithVisibleAppearance(idUser: EntityId, client: RuntimeClient) {
+    if (hasActiveTransmog(idUser)) {
+        handleServer.changeBody(idUser, client);
+    }
+}
+
 const handleServer: HandleProtocolApi = {
     changeHeading(idUser, heading, client) {
         pkg.setPackageID(pkg.clientPacketID.changeHeading);
@@ -967,6 +1008,7 @@ const handleServer: HandleProtocolApi = {
         pkg.writeShort(idHelmet);
         pkg.writeByte(idPos);
         socket.send(client);
+        followWithVisibleAppearance(idUser, client);
     },
 
     changeRopa(idUser, idBody, idPos, client) {
@@ -975,6 +1017,7 @@ const handleServer: HandleProtocolApi = {
         pkg.writeShort(idBody);
         pkg.writeByte(idPos);
         socket.send(client);
+        followWithVisibleAppearance(idUser, client);
     },
 
     changeWeapon(idUser, idWeapon, idPos, client) {
@@ -983,6 +1026,7 @@ const handleServer: HandleProtocolApi = {
         pkg.writeShort(idWeapon);
         pkg.writeByte(idPos);
         socket.send(client);
+        followWithVisibleAppearance(idUser, client);
     },
 
     changeArrow(idUser, idPos, client) {
@@ -998,6 +1042,7 @@ const handleServer: HandleProtocolApi = {
         pkg.writeShort(idShield);
         pkg.writeByte(idPos);
         socket.send(client);
+        followWithVisibleAppearance(idUser, client);
     },
 
     inmo(idUser, movementRestriction, client) {
@@ -1258,6 +1303,7 @@ const handleServer: HandleProtocolApi = {
             ? getInvisibilitySpellRemainingMs(character.cooldownInvisibleSpell)
             : 0;
         const huntersAnonymous = shouldAnonymizeHuntersCharacter(character.id, character);
+        const appearance = getVisibleAppearance(character);
 
         pkg.setPackageID(pkg.clientPacketID.getMyCharacter);
         pkg.writeDouble(character.id);
@@ -1266,11 +1312,11 @@ const handleServer: HandleProtocolApi = {
         pkg.writeShort(character.map);
         pkg.writeByte(character.pos.x);
         pkg.writeByte(character.pos.y);
-        pkg.writeShort(character.idHead);
-        pkg.writeShort(character.idHelmet);
-        pkg.writeShort(character.idWeapon);
-        pkg.writeShort(character.idShield);
-        pkg.writeShort(character.idBody);
+        pkg.writeShort(appearance.head);
+        pkg.writeShort(appearance.helmet);
+        pkg.writeShort(appearance.weapon);
+        pkg.writeShort(appearance.shield);
+        pkg.writeShort(appearance.body);
         pkg.writeShort(character.hp);
         pkg.writeShort(character.hp);
         pkg.writeShort(character.maxHp);
@@ -1464,6 +1510,18 @@ const handleServer: HandleProtocolApi = {
         socket.send(client);
     },
 
+    transmogState(payload, client) {
+        pkg.setPackageID(pkg.clientPacketID.transmogState);
+        pkg.writeString(JSON.stringify(payload));
+        socket.send(client);
+    },
+
+    shopState(payload, client) {
+        pkg.setPackageID(pkg.clientPacketID.shopState);
+        pkg.writeString(JSON.stringify(payload));
+        socket.send(client);
+    },
+
     castleState(payload, client) {
         pkg.setPackageID(pkg.clientPacketID.castleState);
         pkg.writeString(JSON.stringify(payload));
@@ -1607,11 +1665,17 @@ const handleServer: HandleProtocolApi = {
             return;
         }
 
+        const appearance = getVisibleAppearance(user);
+
         pkg.setPackageID(pkg.clientPacketID.revivirUsuario);
         pkg.writeDouble(idUser);
-        pkg.writeShort(user.idHead);
-        pkg.writeShort(user.idBody);
+        pkg.writeShort(appearance.head);
+        pkg.writeShort(appearance.body);
         socket.send(client);
+
+        if (hasActiveTransmog(idUser)) {
+            handleServer.changeBody(idUser, client);
+        }
     },
 
     startCastBar(idUser, durationMs, client) {
@@ -1856,13 +1920,15 @@ const handleServer: HandleProtocolApi = {
             return;
         }
 
+        const appearance = getVisibleAppearance(user);
+
         pkg.setPackageID(pkg.clientPacketID.changeBody);
         pkg.writeDouble(idUser);
-        pkg.writeShort(user.idHead);
-        pkg.writeShort(user.idBody);
-        pkg.writeShort(user.idHelmet);
-        pkg.writeShort(user.idWeapon);
-        pkg.writeShort(user.idShield);
+        pkg.writeShort(appearance.head);
+        pkg.writeShort(appearance.body);
+        pkg.writeShort(appearance.helmet);
+        pkg.writeShort(appearance.weapon);
+        pkg.writeShort(appearance.shield);
         socket.send(client);
     },
 

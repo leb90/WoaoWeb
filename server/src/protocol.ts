@@ -2760,6 +2760,24 @@ function eventClick(ws: RuntimeClient) {
     }
 }
 
+/**
+ * Los objetos de apariencia (cosméticos y disfraces) no se equipan ni se usan:
+ * con doble click van directo a su espacio de Transfigurar.
+ */
+function tryPlaceAppearanceItem(ws: RuntimeClient, idPos: number): boolean {
+    const user = getCharacterById(ws.id!) as any;
+    const item = user?.inv?.[String(idPos)];
+    const obj = item ? vars.datObj[item.idItem] : null;
+
+    if (!obj || (Number(obj.cosmetico ?? 0) !== 1 && Number(obj.disfraz ?? 0) <= 0)) {
+        return false;
+    }
+
+    const result = require("./transmogActions").placeItem(ws.id!, idPos);
+    handleProtocol.console(result.message, result.ok ? "#E69500" : "white", 0, 0, ws);
+    return true;
+}
+
 function useItemClick(ws: RuntimeClient) {
     try {
         if (!pkg.canReadBytes(4)) {
@@ -2767,6 +2785,10 @@ function useItemClick(ws: RuntimeClient) {
         }
 
         const idPos = pkg.getInt();
+
+        if (tryPlaceAppearanceItem(ws, idPos)) {
+            return;
+        }
 
         game.useItem(ws, idPos);
     } catch (err) {
@@ -2815,6 +2837,10 @@ function useItemU(ws: RuntimeClient) {
         }
 
         const idPos = pkg.getInt();
+
+        if (tryPlaceAppearanceItem(ws, idPos)) {
+            return;
+        }
 
         game.useItem(ws, idPos);
     } catch (err) {
@@ -2940,6 +2966,10 @@ function equiparItem(ws: RuntimeClient) {
 
             if (item.newbie && !game.isNewbieCharacter(user)) {
                 handleProtocol.console("Solo los personajes newbie pueden equipar este item.", "white", 0, 0, ws);
+                return;
+            }
+
+            if (tryPlaceAppearanceItem(ws, idPos)) {
                 return;
             }
 
@@ -3339,6 +3369,13 @@ function position(ws: RuntimeClient) {
     }
 }
 
+const UI_PANEL_COMMAND_COOLDOWN_MS = 200;
+const UI_PANEL_COMMANDS = new Set(["/transmog", "/transfigurar", "/transmogponer", "/transmogquitar", "/tienda", "/tiendacomprar"]);
+
+function isUiPanelCommand(message: string): boolean {
+    return UI_PANEL_COMMANDS.has(message.split(/\s+/, 1)[0]?.toLowerCase() ?? "");
+}
+
 function dialog(ws: RuntimeClient) {
     try {
         if (!game.existPjOrClose(ws)) {
@@ -3353,10 +3390,6 @@ function dialog(ws: RuntimeClient) {
         }
         const now = Date.now();
 
-        if ((user.nextDialogAt ?? 0) > now) {
-            return;
-        }
-
         if (!pkg.canReadBytes(2)) {
             return;
         }
@@ -3364,6 +3397,43 @@ function dialog(ws: RuntimeClient) {
         const rawMsg = pkg.getString();
         const isClearDialogMessage = rawMsg.trim().length === 0;
         let msg = isClearDialogMessage ? " " : rawMsg.trim();
+
+        // Los paneles de Transfigurar y Tienda mandan sus acciones como
+        // comandos: no comparten el antispam del chat (500 ms) porque dos
+        // clics seguidos perderían el segundo en silencio. Tienen su propio
+        // límite, más corto.
+        if (isUiPanelCommand(msg)) {
+            const waitMs = Number(user.nextUiCommandAt ?? 0) - now;
+
+            if (waitMs <= 0) {
+                user.nextUiCommandAt = now + UI_PANEL_COMMAND_COOLDOWN_MS;
+                command.msg(msg, ws);
+                return;
+            }
+
+            // Una acción dentro del límite no se pierde: queda en espera (como
+            // máximo una por jugador) y se procesa apenas se cumple el límite.
+            if (user.queuedUiCommand) {
+                handleProtocol.console("Esperá un momento antes de la próxima acción.", "white", 0, 0, ws);
+                return;
+            }
+
+            user.queuedUiCommand = msg;
+            user.nextUiCommandAt = now + waitMs + UI_PANEL_COMMAND_COOLDOWN_MS;
+            setTimeout(() => {
+                const queued = user.queuedUiCommand;
+                user.queuedUiCommand = undefined;
+
+                if (queued && getCharacterById(clientId) === user) {
+                    command.msg(queued, ws);
+                }
+            }, waitMs);
+            return;
+        }
+
+        if ((user.nextDialogAt ?? 0) > now) {
+            return;
+        }
 
         const date = new Date();
 

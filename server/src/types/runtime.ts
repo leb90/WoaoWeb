@@ -327,6 +327,8 @@ export type RuntimeCharacter = {
     idItemHelmet?: number | string;
     idItemArrow?: number | string;
     idItemRing?: number | string;
+    // Transfiguración: objeto puesto en cada espacio cosmético (ver transmog.ts).
+    transmog?: Partial<Record<"casco" | "escudo" | "arma" | "cuerpo", number>>;
     attrFuerza?: number;
     attrAgilidad?: number;
     attrInteligencia?: number;
@@ -379,6 +381,8 @@ export type RuntimeCharacter = {
     pvpMapChangeBlockedUntil?: number;
     disconnectOnDeath?: boolean;
     nextDialogAt?: number;
+    nextUiCommandAt?: number;
+    queuedUiCommand?: string;
     nextMeleeAt?: number;
     nextRangeAt?: number;
     nextSpellAt?: number;

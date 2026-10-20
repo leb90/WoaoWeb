@@ -15,6 +15,15 @@ export type MountProgress = {
     name: string;
 };
 
+// Objeto que hay que entregarle al personaje la próxima vez que entre o
+// tenga lugar en el inventario (por ejemplo un diseño personalizado).
+export type PendingDelivery = {
+    objIndex: number;
+    amount: number;
+    reason: string;
+    createdAt: number;
+};
+
 export type WoaoProgress = {
     puntosCanje: number;
     puntosDonacion: number;
@@ -29,6 +38,10 @@ export type WoaoProgress = {
     elo: number;
     pClan: number;
     houseKeys: number[];
+    pendingDeliveries: PendingDelivery[];
+    // Cobros de diseños personalizados por id de pedido: si la api reintenta
+    // el mismo pedido no se cobra dos veces.
+    designCharges?: Record<string, { points: number; slot: string; productName: string; at: number }>;
 };
 
 const DATA_PATH = path.resolve(__dirname, "../data/woaoProgress.json");
@@ -52,6 +65,7 @@ function emptyProgress(): WoaoProgress {
         elo: 300,
         pClan: 0,
         houseKeys: [],
+        pendingDeliveries: [],
     };
 }
 
@@ -78,6 +92,7 @@ function loadStore() {
                     typeof value.activeMountInstanceId === "string" ? value.activeMountInstanceId : "",
                 mountMigrationVersion: Number(value.mountMigrationVersion ?? 0),
                 houseKeys: Array.isArray(value.houseKeys) ? value.houseKeys : [],
+                pendingDeliveries: Array.isArray(value.pendingDeliveries) ? value.pendingDeliveries : [],
             });
         }
     } catch {

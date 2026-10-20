@@ -3550,6 +3550,7 @@ export type GameApi = {
     withdrawBankGold: (idUser: EntityId, amount: number) => Promise<void>;
     persistCharacterSnapshot: (user: RuntimeCharacter, options?: CharacterSnapshotPersistOptions) => Promise<void>;
     persistCharacterItemsById: (idUser: EntityId) => Promise<void>;
+    persistCharacterItemsAndTransmogById: (idUser: EntityId) => Promise<void>;
     waitForCharacterPersistence: (characterId?: string) => Promise<void>;
     openMarketTrade: (idUser: EntityId, idNpc: EntityId) => Promise<boolean>;
     getMarketState: (
@@ -4591,6 +4592,7 @@ async function persistCharacterStoragePatch(
         gold?: boolean;
         items?: boolean;
         bankItems?: boolean;
+        transmog?: boolean;
     },
 ): Promise<void> {
     if (!user._id || user.pvpChar) {
@@ -4610,6 +4612,13 @@ async function persistCharacterStoragePatch(
 
         if (options.bankItems) {
             body.bankItems = serializeBank(user.bank ?? {});
+        }
+
+        if (options.transmog) {
+            // Va en el mismo PUT que los ítems: la api lo guarda en una sola
+            // transacción y un objeto nunca queda en el inventario y en la
+            // transfiguración a la vez.
+            body.transmog = require("./transmog").normalizeTransmog(user.transmog);
         }
 
         if (Object.keys(body).length === 0) {
@@ -6209,6 +6218,16 @@ function Game(this: GameApi) {
         }
 
         await persistCharacterItems(user);
+    };
+
+    this.persistCharacterItemsAndTransmogById = async function (idUser: EntityId) {
+        const user = vars.personajes[idUser] as GameCharacter | undefined;
+
+        if (!user) {
+            return;
+        }
+
+        await persistCharacterStoragePatch(user, { items: true, transmog: true });
     };
 
     /**

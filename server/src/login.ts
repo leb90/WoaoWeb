@@ -639,6 +639,7 @@ function Login(this: LoginApi) {
                 personaje.id = String(ws.id);
                 personaje.nameCharacter = personaje.name;
                 personaje.faction = normalizeFaction(personaje.faction);
+                personaje.transmog = require("./transmog").normalizeTransmog(personaje.transmog);
                 personaje.factionScoreArmada = Number(personaje.factionScoreArmada ?? 0);
                 personaje.factionScoreCaos = Number(personaje.factionScoreCaos ?? 0);
                 personaje.factionRankArmada = Number(personaje.factionRankArmada ?? 0);
@@ -993,6 +994,8 @@ function Login(this: LoginApi) {
                     socket.send(ws);
                     require("./clanCastles").sendCastleState(ws);
                     require("./mounts").sendMountState(String(ws.id));
+                    require("./transmogActions").sendTransmogState(String(ws.id));
+                    require("./donationShop").deliverPendingItems(String(ws.id));
                     require("./quests").sendQuestState(String(ws.id), null);
                     void require("./rankedArena").sendRankedState(String(ws.id));
                     require("./bossEvents").sendState(ws);

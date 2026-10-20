@@ -47,6 +47,7 @@ const crafting = require("./crafting");
 const smelting = require("./smelting");
 const challengeManager = require("./challengeManager");
 const huntersGame = require("./huntersGame") as typeof import("./huntersGame");
+const pyramid = require("./pyramid") as typeof import("./pyramid");
 const LOGOUT_CANCELLED_MESSAGE = "[Servidor] La salida se canceló porque te moviste.";
 const MAX_PENDING_MOVE_QUEUE_LENGTH = 8;
 const REVIVE_CAST_MS = 10000;
@@ -2371,11 +2372,26 @@ function eventClick(ws: RuntimeClient) {
             return true;
         };
 
+        const tryHandlePyramidStatue = (
+            targetObjMap: MapObjectInfo | null,
+            targetObject: DataObject | null,
+        ): boolean => {
+            if (!targetObjMap) {
+                return false;
+            }
+
+            return pyramid.handleStatueInteraction(ws, targetMap, targetObjMap.objIndex, targetObject);
+        };
+
         if (game.hayObj(targetMap, pos)) {
             objMap = game.objMap(targetMap, pos) as MapObjectInfo;
             obj = (vars.datObj[objMap.objIndex] as DataObject | undefined) ?? null;
 
             if (tryOpenHuntersChest(pos, objMap)) {
+                return;
+            }
+
+            if (tryHandlePyramidStatue(objMap, obj)) {
                 return;
             }
 
@@ -2398,6 +2414,10 @@ function eventClick(ws: RuntimeClient) {
             obj = (vars.datObj[objMap.objIndex] as DataObject | undefined) ?? null;
 
             if (tryOpenHuntersChest({ x: pos.x + 1, y: pos.y }, objMap)) {
+                return;
+            }
+
+            if (tryHandlePyramidStatue(objMap, obj)) {
                 return;
             }
 
@@ -2430,6 +2450,10 @@ function eventClick(ws: RuntimeClient) {
                 return;
             }
 
+            if (tryHandlePyramidStatue(objMap, obj)) {
+                return;
+            }
+
             if (targetMap === user.map && obj && obj.objType == vars.objType.puerta) {
                 game.openDoor(
                     ws.id,
@@ -2456,6 +2480,10 @@ function eventClick(ws: RuntimeClient) {
             obj = (vars.datObj[objMap.objIndex] as DataObject | undefined) ?? null;
 
             if (tryOpenHuntersChest({ x: pos.x, y: pos.y + 1 }, objMap)) {
+                return;
+            }
+
+            if (tryHandlePyramidStatue(objMap, obj)) {
                 return;
             }
 
@@ -2496,6 +2524,10 @@ function eventClick(ws: RuntimeClient) {
 
             if (selectedNpc) {
                 user.targetNpcId = selectedId;
+            }
+
+            if (selectedNpc && pyramid.handleNpcInteraction(ws, selectedId)) {
+                return;
             }
 
             const selectedNpcIsClassicTournament = selectedNpc

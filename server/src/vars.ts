@@ -225,6 +225,7 @@ function Vars(this: any) {
         sacerdoteNewbie: 9,
         comerciante: 10,
         subastador: 12,
+        estatuaEgipto: 16,
         crafter: 45,
         viajero: 43,
         reyCastillo: 33,
@@ -281,6 +282,7 @@ function Vars(this: any) {
         manchas: 35,
         lingotes: 36,
         recetas: 46,
+        estatuasEgipto: 57,
     };
 
     this.partesCuerpo = {

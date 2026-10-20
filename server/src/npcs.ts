@@ -28,6 +28,11 @@ import {
 import { getLegacyNpcDropChancePercent, shouldDropNpcItem } from "./npcDrops";
 import { rollCraftingRecipeDrops } from "./craftingRecipeDrops";
 import { pickMountRespawnMap, rollMountEggDrops } from "./mountEggDrops";
+import {
+    getNpcSpellEffect,
+    isNpcOffensiveSpell,
+    shouldSkipNpcSpellForTarget,
+} from "./npcSpellLogic";
 
 export {};
 
@@ -482,11 +487,11 @@ function chooseNpcSpell(npc: NpcCharacter, target: PlayerCharacter) {
             return false;
         }
 
-        if ((datSpell.paraliza || datSpell.inmoviliza) && (target.paralizado || target.inmovilizado)) {
+        if (shouldSkipNpcSpellForTarget(datSpell, target)) {
             return false;
         }
 
-        return Boolean(datSpell.paraliza || datSpell.inmoviliza || datSpell.subeHp === 2);
+        return isNpcOffensiveSpell(datSpell);
     });
 
     if (offensiveSpells.length === 0) {
@@ -621,7 +626,9 @@ function tryNpcCastSpell(
     });
 
     return withClientFlushGroups(flushGroupClients, () => {
-        if (datSpell.subeHp === 1) {
+        const spellEffect = getNpcSpellEffect(datSpell);
+
+        if (spellEffect === "heal") {
             const healAmount = Math.min(
                 Math.max(0, npc.maxHp - npc.hp),
                 Math.max(0, funct.randomIntFromInterval(Number(datSpell.minHp ?? 0), Number(datSpell.maxHp ?? 0))),
@@ -647,7 +654,7 @@ function tryNpcCastSpell(
         sendNpcSpellFeedback(npc, target.id, datSpell);
         game.interruptPendingLogoutOnAttack(target.id, "[Servidor] La salida se canceló porque una criatura te atacó.");
 
-        if (datSpell.paraliza) {
+        if (spellEffect === "paraliza") {
             if (shouldAvoidParalysis(target)) {
                 return true;
             }
@@ -663,7 +670,7 @@ function tryNpcCastSpell(
             return true;
         }
 
-        if (datSpell.inmoviliza) {
+        if (spellEffect === "inmoviliza") {
             target.inmovilizado = 1;
             target.cooldownParalizado = now;
 
@@ -676,7 +683,62 @@ function tryNpcCastSpell(
             return true;
         }
 
-        if (datSpell.subeHp === 2) {
+        if (spellEffect === "envenena") {
+            const poisonDamage = Math.max(1, Number(datSpell.envenena ?? 0));
+            target.envenenado = poisonDamage;
+            target.cooldownVeneno = now;
+
+            withUserClient(target.id, (targetClient) => {
+                handleProtocol.console(
+                    `${npc.nameCharacter} te ha envenenado con ${datSpell.name}.`,
+                    "red",
+                    1,
+                    0,
+                    targetClient,
+                );
+            });
+            broadcastCharacterSnapshot(target);
+
+            return true;
+        }
+
+        if (spellEffect === "ceguera") {
+            target.ceguera = 1;
+            target.cooldownCeguera = now;
+
+            withUserClient(target.id, (targetClient) => {
+                handleProtocol.console(
+                    `${npc.nameCharacter} te ha causado ceguera con ${datSpell.name}.`,
+                    "red",
+                    1,
+                    0,
+                    targetClient,
+                );
+            });
+            broadcastCharacterSnapshot(target);
+
+            return true;
+        }
+
+        if (spellEffect === "estupidez") {
+            target.estupidez = 1;
+            target.cooldownEstupidez = now;
+
+            withUserClient(target.id, (targetClient) => {
+                handleProtocol.console(
+                    `${npc.nameCharacter} te ha afectado con estupidez mediante ${datSpell.name}.`,
+                    "red",
+                    1,
+                    0,
+                    targetClient,
+                );
+            });
+            broadcastCharacterSnapshot(target);
+
+            return true;
+        }
+
+        if (spellEffect === "damage") {
             if (shouldIgnoreHarmfulSpell(target)) {
                 return true;
             }

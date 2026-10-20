@@ -64,6 +64,7 @@ import {
 import WoaoHubModal, { type WoaoHubTab } from "./WoaoHubModal";
 import TransmogModal from "./transmog/TransmogModal";
 import EquipmentPanel, { getInventoryItemEquipmentKind } from "./EquipmentPanel";
+import { getEquippedItemAction } from "../lib/equipmentKinds";
 import DonationShopModal from "./transmog/DonationShopModal";
 import SkillsModal from "./SkillsModal";
 import type { SkillsState } from "../lib/aowProtocol";
@@ -3027,8 +3028,8 @@ export default function InventoryFloatingPanel({
 
     React.useEffect(() => () => pendingDragCleanupRef.current?.(), []);
 
-    // En el panel de equipo el doble click siempre saca el ítem (en el
-    // inventario, el doble click sobre un arco equipado dispara).
+    // En el panel de equipo el click selecciona (para usarlo con U) y el
+    // doble click dispara el arco, usa la herramienta o saca lo demás.
     const lastEquipmentClickRef = React.useRef<{ slot: number; at: number } | null>(null);
     const handleEquipmentSlotClick = React.useCallback(
         (item: InventoryItem) => {
@@ -3038,7 +3039,16 @@ export default function InventoryFloatingPanel({
 
             if (last?.slot === item.slot && now - last.at <= DOUBLE_ACTIVATE_WINDOW_MS) {
                 lastEquipmentClickRef.current = null;
-                if (item.equipped) {
+                if (!item.equipped) {
+                    return;
+                }
+
+                const action = getEquippedItemAction(item, objectsDB);
+                if (action === "disparar") {
+                    onRangeAttackRequest?.();
+                } else if (action === "usar") {
+                    onUseItemClickRequest?.(item.slot);
+                } else {
                     onEquipRequest?.(item.slot);
                 }
                 return;
@@ -3046,7 +3056,7 @@ export default function InventoryFloatingPanel({
 
             lastEquipmentClickRef.current = { slot: item.slot, at: now };
         },
-        [onEquipRequest],
+        [objectsDB, onEquipRequest, onRangeAttackRequest, onUseItemClickRequest],
     );
 
     const finishInventoryDrag = React.useCallback(
@@ -3476,6 +3486,7 @@ export default function InventoryFloatingPanel({
                                                   }
                                                 : null
                                         }
+                                        selectedSlot={selectedSlot}
                                         draggingKind={getInventoryItemEquipmentKind(
                                             draggedInventoryItem,
                                             objectsDB,

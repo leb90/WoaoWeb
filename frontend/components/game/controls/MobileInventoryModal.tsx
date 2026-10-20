@@ -13,7 +13,10 @@ import { loadGraphicsDB, loadObjectsDB } from "../../../utils/gameLoader";
 import type { GraphicData, ObjectsDB } from "../../../types/game";
 import { ItemGraphic } from "../../MacroBar";
 import EquipmentPanel from "../../EquipmentPanel";
-import { getInventoryItemEquipmentKind } from "../../../lib/equipmentKinds";
+import {
+    getEquippedItemAction,
+    getInventoryItemEquipmentKind,
+} from "../../../lib/equipmentKinds";
 
 const MIN_SLOTS = 21;
 const DOUBLE_TAP_MS = 300;
@@ -131,16 +134,22 @@ export function MobileInventoryModal({
             ? (items.find((item) => item.slot === selectedSlot) ?? null)
             : null;
 
-    const isRangedWeapon = React.useCallback(
-        (item: InventoryItem) =>
-            Boolean(objectsDB?.[item.idItem.toString()]?.proyectil),
-        [objectsDB],
-    );
-
     const activateItem = React.useCallback(
         (item: InventoryItem) => {
-            if (item.equipped && isRangedWeapon(item)) {
+            const equippedAction = item.equipped
+                ? getEquippedItemAction(item, objectsDB)
+                : null;
+
+            if (equippedAction === "disparar") {
                 onRangeAttack();
+                return;
+            }
+
+            // Como con el arco, se cierra para poder elegir el lugar (el
+            // agua, con la caña).
+            if (equippedAction === "usar") {
+                onUse(item.slot);
+                onClose();
                 return;
             }
 
@@ -151,7 +160,7 @@ export function MobileInventoryModal({
 
             onUse(item.slot);
         },
-        [isRangedWeapon, onEquip, onRangeAttack, onUse],
+        [objectsDB, onClose, onEquip, onRangeAttack, onUse],
     );
 
     const toCardLocal = React.useCallback(
@@ -218,8 +227,8 @@ export function MobileInventoryModal({
         };
     };
 
-    // En el panel de equipo el doble toque saca el ítem (en el inventario,
-    // sobre un arco equipado, dispara).
+    // En el panel de equipo el toque selecciona y el doble toque dispara el
+    // arco, usa la herramienta o saca lo demás.
     const lastEquipmentTapRef = React.useRef<{
         slot: number;
         at: number;
@@ -236,14 +245,14 @@ export function MobileInventoryModal({
             ) {
                 lastEquipmentTapRef.current = null;
                 if (item.equipped) {
-                    onEquip(item.slot);
+                    activateItem(item);
                 }
                 return;
             }
 
             lastEquipmentTapRef.current = { slot: item.slot, at: now };
         },
-        [onEquip],
+        [activateItem],
     );
 
     const handlePointerMove = (
@@ -346,10 +355,15 @@ export function MobileInventoryModal({
         setGhost(null);
     };
 
+    const selectedEquippedAction = selectedItem?.equipped
+        ? getEquippedItemAction(selectedItem, objectsDB)
+        : null;
     const primaryActionLabel = selectedItem
-        ? selectedItem.equipped && isRangedWeapon(selectedItem)
+        ? selectedEquippedAction === "disparar"
             ? "Disparar"
-            : EQUIPPABLE_TYPES.has(selectedItem.objType)
+            : selectedEquippedAction === "usar"
+              ? "Usar"
+              : EQUIPPABLE_TYPES.has(selectedItem.objType)
               ? selectedItem.equipped
                   ? "Desequipar"
                   : "Equipar"
@@ -464,6 +478,7 @@ export function MobileInventoryModal({
                             draggingFromEquipment={
                                 ghost?.source === "equipment"
                             }
+                            selectedSlot={selectedSlot}
                             isBlocked={(entry) => !entry.validForUser}
                             getSlotPointerHandlers={(entry) => ({
                                 onPointerDown: (event) =>

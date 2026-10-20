@@ -93,3 +93,33 @@ export function getEquipmentKindForPacketObjectType(
 ): EquipmentKind | null {
     return KIND_BY_PACKET_OBJECT_TYPE[objType] ?? null;
 }
+
+// Qué hace el doble click (o el botón de usar) sobre algo equipado: las armas
+// a distancia disparan, las herramientas de trabajo se usan (con la caña se
+// empieza a pescar) y el resto se saca. Las herramientas son objType 18 y el
+// server las reconoce por nombre o id (fishing.ts, harvesting.ts y crafting.ts).
+export type EquippedItemAction = "disparar" | "usar" | "sacar";
+
+const WORK_TOOL_NAME =
+    /caña de pescar|red de pesca|hacha de leñ|piquet[ea] de minero|pico de minero|serrucho|costurero|martillo de herrero/i;
+
+export function getEquippedItemAction(
+    item: InventoryItem,
+    objectsDB: ObjectsDB | null,
+): EquippedItemAction {
+    const definition = objectsDB?.[String(item.idItem)] as
+        { objType?: number; proyectil?: number } | undefined;
+
+    if (Number(definition?.proyectil ?? 0) > 0) {
+        return "disparar";
+    }
+
+    if (
+        Number(definition?.objType ?? item.objType) === OBJ.anillos &&
+        WORK_TOOL_NAME.test(item.name)
+    ) {
+        return "usar";
+    }
+
+    return "sacar";
+}

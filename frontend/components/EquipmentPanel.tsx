@@ -8,6 +8,7 @@ import type { InventoryItem } from "../lib/aowProtocol";
 import type { GraphicData, ObjectsDB } from "../types/game";
 
 import {
+    getEquippedItemAction,
     getInventoryItemEquipmentKind,
     type EquipmentKind,
 } from "../lib/equipmentKinds";
@@ -81,6 +82,7 @@ type EquipmentPanelProps = {
     objectsDB: ObjectsDB | null;
     graphicsDB: Record<string, GraphicData> | null;
     appearance: EquipmentAppearance | null;
+    selectedSlot: number | null;
     // Item que se está arrastrando desde el inventario (para resaltar su lugar).
     draggingKind: EquipmentKind | null;
     draggingFromEquipment: boolean;
@@ -111,6 +113,7 @@ export default function EquipmentPanel({
     objectsDB,
     graphicsDB,
     appearance,
+    selectedSlot,
     draggingKind,
     draggingFromEquipment,
     isBlocked,
@@ -145,6 +148,8 @@ export default function EquipmentPanel({
             : undefined;
         const isTarget = draggingKind === kind && !draggingFromEquipment;
         const blocked = item ? isBlocked(item) : false;
+        const selected = Boolean(item && item.slot === selectedSlot);
+        const action = item ? getEquippedItemAction(item, objectsDB) : null;
 
         return (
             <button
@@ -153,7 +158,11 @@ export default function EquipmentPanel({
                 data-equipment-slot={kind}
                 title={
                     item
-                        ? `${item.name} (doble click o arrastrar al inventario para sacártelo)`
+                        ? action === "disparar"
+                            ? `${item.name} (doble click o U para disparar; arrastralo al inventario para sacártelo)`
+                            : action === "usar"
+                              ? `${item.name} (doble click o U para usarlo; arrastralo al inventario para sacártelo)`
+                              : `${item.name} (doble click o arrastrar al inventario para sacártelo)`
                         : `${meta.label}: ${meta.hint}`
                 }
                 onMouseDown={(event) => {
@@ -177,8 +186,12 @@ export default function EquipmentPanel({
                         ? "border-amber-300 bg-amber-400/20 shadow-[0_0_14px_rgba(245,158,11,0.45)]"
                         : item
                           ? blocked
-                              ? "border-rose-400/40 bg-[#24151a]"
-                              : "border-amber-500/35 bg-[#2b2016] hover:border-amber-300/70"
+                              ? selected
+                                  ? "border-rose-300/85 bg-[#3b2026]"
+                                  : "border-rose-400/40 bg-[#24151a]"
+                              : selected
+                                ? "border-cyan-300/85 bg-[#3a2817]"
+                                : "border-amber-500/35 bg-[#2b2016] hover:border-amber-300/70"
                           : "border-[#433126] bg-[#140f0a]"
                 }`}
             >

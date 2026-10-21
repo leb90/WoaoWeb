@@ -8,6 +8,7 @@ import WikiPersonajesProgresion from "@/components/wiki/WikiPersonajesProgresion
 import WikiPrimerosPasos from "@/components/wiki/WikiPrimerosPasos";
 import { WikiPageHeader, WikiSection } from "@/components/wiki/WikiUi";
 import { buildPageMetadata } from "@/lib/seo";
+import { getWikiData } from "@/lib/wiki-data";
 import { getWikiCategory } from "@/lib/wiki-sections";
 
 const LEGACY_ROUTES: Record<string, string> = {
@@ -55,6 +56,21 @@ export default async function WikiSectionPage({ params }: PageProps) {
     const category = getWikiCategory(section);
     if (!category) notFound();
     const catalogs = CATALOGS[category.slug] ?? [];
+    const trainingMaps =
+        category.slug === "personajes"
+            ? (await getWikiData()).trainingMaps.map((map) => ({
+                  id: map.id,
+                  name: map.name,
+                  minLevel: map.minLevel,
+                  maxLevel: map.maxLevel,
+                  topNpcs: map.topNpcs.map((npc) => ({
+                      npcId: npc.npcId,
+                      npcName: npc.npcName,
+                      maxHp: npc.maxHp,
+                      expReward: npc.expReward,
+                  })),
+              }))
+            : [];
 
     return (
         <div>
@@ -62,7 +78,9 @@ export default async function WikiSectionPage({ params }: PageProps) {
             <WikiPageHeader eyebrow="Guía" title={category.label} description={category.description} />
 
             {category.slug === "primeros-pasos" ? <WikiPrimerosPasos /> : null}
-            {category.slug === "personajes" ? <WikiPersonajesProgresion /> : null}
+            {category.slug === "personajes" ? (
+                <WikiPersonajesProgresion trainingMaps={trainingMaps} />
+            ) : null}
             {category.slug === "crafting" ? <WikiCraftingGuide /> : null}
 
             {catalogs.length ? (

@@ -84,6 +84,8 @@ type DerivedCreationStats = {
 
 type ClassProgress = {
     vida: number;
+    vidaMin: number;
+    vidaMax: number;
     manaInicial: number;
     multMana: number;
     hitPre36: number;
@@ -138,32 +140,34 @@ export const GENDER_ID_MAP: Record<GenderKey, number> = {
 
 const classProgressById: Record<number, ClassProgress> = {
     1: {
-        vida: 7.5,
+        vida: 8,
+        vidaMin: 6,
+        vidaMax: 10,
         manaInicial: 8.33,
         multMana: 2.65,
         hitPre36: 1,
         hitPost36: 1,
     },
-    2: { vida: 8.5, manaInicial: 2.5, multMana: 2, hitPre36: 2, hitPost36: 2 },
-    3: { vida: 10.5, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
-    4: { vida: 9, manaInicial: 2.5, multMana: 1, hitPre36: 3, hitPost36: 2 },
-    5: { vida: 8, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
-    6: { vida: 8.5, manaInicial: 2.5, multMana: 2, hitPre36: 2, hitPost36: 2 },
-    7: { vida: 8.5, manaInicial: 2.5, multMana: 2, hitPre36: 2, hitPost36: 2 },
-    8: { vida: 10, manaInicial: 2.5, multMana: 1, hitPre36: 3, hitPost36: 2 },
-    9: { vida: 10, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
-    10: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
-    11: { vida: 10, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
-    12: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
-    13: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
-    14: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
-    15: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
-    16: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
-    17: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
-    18: { vida: 10, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
-    19: { vida: 8.5, manaInicial: 2.5, multMana: 1, hitPre36: 2, hitPost36: 2 },
-    20: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
-    21: { vida: 9, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
+    2: { vida: 8.5, vidaMin: 7, vidaMax: 10, manaInicial: 2.5, multMana: 2, hitPre36: 2, hitPost36: 2 },
+    3: { vida: 11, vidaMin: 9, vidaMax: 13, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+    4: { vida: 9, vidaMin: 7, vidaMax: 11, manaInicial: 2.5, multMana: 1, hitPre36: 3, hitPost36: 2 },
+    5: { vida: 10, vidaMin: 8, vidaMax: 12, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+    6: { vida: 9, vidaMin: 7, vidaMax: 11, manaInicial: 2.5, multMana: 2, hitPre36: 2, hitPost36: 2 },
+    7: { vida: 8.5, vidaMin: 7, vidaMax: 10, manaInicial: 2.5, multMana: 2, hitPre36: 2, hitPost36: 2 },
+    8: { vida: 10, vidaMin: 8, vidaMax: 12, manaInicial: 2.5, multMana: 1, hitPre36: 3, hitPost36: 2 },
+    9: { vida: 10, vidaMin: 8, vidaMax: 12, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+    10: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+    11: { vida: 10, vidaMin: 8, vidaMax: 12, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+    12: { vida: 9, vidaMin: 7, vidaMax: 11, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+    13: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
+    14: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
+    15: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
+    16: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
+    17: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
+    18: { vida: 10, vidaMin: 8, vidaMax: 12, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+    19: { vida: 8.5, vidaMin: 7, vidaMax: 10, manaInicial: 2.5, multMana: 1, hitPre36: 2, hitPost36: 2 },
+    20: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+    21: { vida: 9, vidaMin: 7, vidaMax: 11, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
 };
 
 export const MAX_LEVEL = 50;
@@ -232,9 +236,8 @@ export function getMaxHpForLevel(
 ): number {
     const safeLevel = clampLevel(level);
     const classProgress = classProgressById[classId] ?? classProgressById[3];
-    const total =
-        constitucion +
-        (classProgress.vida - (21 - constitucion) * 0.5) * (safeLevel - 1);
+    const hpAverage = (classProgress.vidaMin + classProgress.vidaMax) / 2 + (constitucion - 21) * 0.5;
+    const total = constitucion + hpAverage * (safeLevel - 1);
     return Math.round(total);
 }
 
@@ -254,7 +257,7 @@ export function getMaxManaForLevel(
 const raceOptions: Record<RaceKey, RaceOption> = {
     humano: {
         key: "humano",
-        baseStats: statsFromBonus({ fuerza: 2, agilidad: 1, inteligencia: 1, carisma: 0, constitucion: 2 }),
+        baseStats: statsFromBonus({ fuerza: 1, agilidad: 1, inteligencia: 0, carisma: 0, constitucion: 2 }),
         genders: {
             male: { bodyId: 21, startHeadId: 3, endHeadId: 53 },
             female: { bodyId: 39, startHeadId: 70, endHeadId: 82 },
@@ -262,7 +265,7 @@ const raceOptions: Record<RaceKey, RaceOption> = {
     },
     elfo: {
         key: "elfo",
-        baseStats: statsFromBonus({ fuerza: -1, agilidad: 3, inteligencia: 2, carisma: 2, constitucion: 1 }),
+        baseStats: statsFromBonus({ fuerza: 0, agilidad: 2, inteligencia: 2, carisma: 1, constitucion: 1 }),
         genders: {
             male: { bodyId: 21, startHeadId: 101, endHeadId: 119 },
             female: { bodyId: 39, startHeadId: 170, endHeadId: 180 },
@@ -270,7 +273,7 @@ const raceOptions: Record<RaceKey, RaceOption> = {
     },
     elfoDrow: {
         key: "elfoDrow",
-        baseStats: statsFromBonus({ fuerza: 2, agilidad: 3, inteligencia: -1, carisma: 0, constitucion: 2 }),
+        baseStats: statsFromBonus({ fuerza: 2, agilidad: 1, inteligencia: 1, carisma: -1, constitucion: 1 }),
         genders: {
             male: { bodyId: 32, startHeadId: 201, endHeadId: 216 },
             female: { bodyId: 40, startHeadId: 270, endHeadId: 277 },
@@ -278,7 +281,7 @@ const raceOptions: Record<RaceKey, RaceOption> = {
     },
     enano: {
         key: "enano",
-        baseStats: statsFromBonus({ fuerza: 3, agilidad: 0, inteligencia: -2, carisma: 0, constitucion: 3 }),
+        baseStats: statsFromBonus({ fuerza: 3, agilidad: 0, inteligencia: -3, carisma: -1, constitucion: 3 }),
         genders: {
             male: { bodyId: 53, startHeadId: 401, endHeadId: 411 },
             female: { bodyId: 60, startHeadId: 470, endHeadId: 476 },
@@ -286,7 +289,7 @@ const raceOptions: Record<RaceKey, RaceOption> = {
     },
     gnomo: {
         key: "gnomo",
-        baseStats: statsFromBonus({ fuerza: -2, agilidad: 3, inteligencia: 4, carisma: 0, constitucion: 0 }),
+        baseStats: statsFromBonus({ fuerza: -2, agilidad: 3, inteligencia: 4, carisma: 2, constitucion: 0 }),
         genders: {
             male: { bodyId: 53, startHeadId: 301, endHeadId: 315 },
             female: { bodyId: 60, startHeadId: 370, endHeadId: 373 },

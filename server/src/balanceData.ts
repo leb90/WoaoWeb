@@ -8,6 +8,8 @@ export type RaceBalance = {
 
 export type ClassProgress = {
     vida: number;
+    vidaMin: number;
+    vidaMax: number;
     manaInicial: number;
     multMana: number;
     hitPre36: number;
@@ -45,30 +47,30 @@ const DEFAULT_BALANCE_DATA: RuntimeBalanceData = {
         12: { fuerza: 2, agilidad: 1, inteligencia: 1, constitucion: 2, carisma: 0 },
     },
     classProgress: {
-        1: { vida: 7.5, manaInicial: 8.33, multMana: 2.65, hitPre36: 1, hitPost36: 1 },
-        2: { vida: 8.5, manaInicial: 2.5, multMana: 2, hitPre36: 2, hitPost36: 2 },
-        3: { vida: 10.5, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
-        4: { vida: 9, manaInicial: 2.5, multMana: 1, hitPre36: 3, hitPost36: 2 },
-        5: { vida: 8, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
-        6: { vida: 8.5, manaInicial: 2.5, multMana: 2, hitPre36: 2, hitPost36: 2 },
-        7: { vida: 8.5, manaInicial: 2.5, multMana: 2, hitPre36: 2, hitPost36: 2 },
-        8: { vida: 10, manaInicial: 2.5, multMana: 1, hitPre36: 3, hitPost36: 2 },
-        9: { vida: 10, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
-        10: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
-        11: { vida: 10, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
-        12: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
-        13: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
-        14: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
-        15: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
-        16: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
-        17: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
-        18: { vida: 10, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
-        19: { vida: 8.5, manaInicial: 2.5, multMana: 1, hitPre36: 2, hitPost36: 2 },
-        20: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
-        21: { vida: 9, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
+        1: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 8.33, multMana: 2.65, hitPre36: 1, hitPost36: 1 },
+        2: { vida: 8.5, vidaMin: 7, vidaMax: 10, manaInicial: 2.5, multMana: 2, hitPre36: 2, hitPost36: 2 },
+        3: { vida: 11, vidaMin: 9, vidaMax: 13, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+        4: { vida: 9, vidaMin: 7, vidaMax: 11, manaInicial: 2.5, multMana: 1, hitPre36: 3, hitPost36: 2 },
+        5: { vida: 10, vidaMin: 8, vidaMax: 12, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+        6: { vida: 9, vidaMin: 7, vidaMax: 11, manaInicial: 2.5, multMana: 2, hitPre36: 2, hitPost36: 2 },
+        7: { vida: 8.5, vidaMin: 7, vidaMax: 10, manaInicial: 2.5, multMana: 2, hitPre36: 2, hitPost36: 2 },
+        8: { vida: 10, vidaMin: 8, vidaMax: 12, manaInicial: 2.5, multMana: 1, hitPre36: 3, hitPost36: 2 },
+        9: { vida: 10, vidaMin: 8, vidaMax: 12, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+        10: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+        11: { vida: 10, vidaMin: 8, vidaMax: 12, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+        12: { vida: 9, vidaMin: 7, vidaMax: 11, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+        13: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
+        14: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
+        15: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
+        16: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
+        17: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
+        18: { vida: 10, vidaMin: 8, vidaMax: 12, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+        19: { vida: 8.5, vidaMin: 7, vidaMax: 10, manaInicial: 2.5, multMana: 1, hitPre36: 2, hitPost36: 2 },
+        20: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+        21: { vida: 9, vidaMin: 7, vidaMax: 11, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
     },
-    modEscudo: { 1: 0, 2: 0.8, 3: 1, 4: 0.8, 5: 0.7, 6: 0.65, 7: 0, 8: 0.9, 9: 0.75, 12: 2, 13: 0.7, 14: 0.7, 15: 0.7, 16: 0.7, 17: 0.7, 18: 0, 19: 0.7, 20: 0.6, 21: 0.6 },
-    modDmgMagia: { 1: 1, 2: 0.88, 3: 0, 4: 0.76, 5: 0, 6: 0.93, 7: 0.92, 8: 0.78, 9: 0, 12: 0, 13: 0, 14: 0, 15: 0, 16: 0, 17: 0, 18: 0, 19: 0.5, 20: 0, 21: 0 },
+    modEscudo: { 1: 0, 2: 0.8, 3: 1, 4: 0.8, 5: 0.7, 6: 0.65, 7: 0, 8: 0.9, 9: 0.75, 12: 0.7, 13: 0.7, 14: 0.7, 15: 0.7, 16: 0.7, 17: 0.7, 18: 0, 19: 0.7, 20: 0.6, 21: 0.6 },
+    modDmgMagia: { 1: 1.05, 2: 0.88, 3: 0, 4: 0.76, 5: 0, 6: 0.93, 7: 0.92, 8: 0.78, 9: 0, 12: 0, 13: 0, 14: 0, 15: 0, 16: 0, 17: 0, 18: 0, 19: 0.5, 20: 0, 21: 0 },
     modResistenciaMagica: { 1: 0, 2: 4, 3: 12, 4: 5, 5: 4, 6: 2, 7: 3, 8: 5, 9: 6, 12: 4, 13: 4, 14: 4, 15: 4, 16: 4, 17: 4, 18: 6, 19: 4, 20: 4, 21: 4 },
     modDmgWrestling: { 1: 0.4, 2: 0.4, 3: 0.4, 4: 0.4, 5: 0.4, 6: 0.4, 7: 0.4, 8: 0.4, 9: 0.4, 12: 0.4, 13: 0.4, 14: 0.4, 15: 0.4, 16: 0.4, 17: 0.4, 18: 0.4, 19: 0.4, 20: 0.4, 21: 0.4 },
     modDmgProyectiles: { 1: 0.5, 2: 0.75, 3: 0.87, 4: 0.75, 5: 0.75, 6: 0.75, 7: 0.75, 8: 0.8, 9: 0.93, 12: 0.8, 13: 0.7, 14: 0.7, 15: 0.6, 16: 0.7, 17: 0.7, 18: 0.8, 19: 0.75, 20: 1.1, 21: 0.5 },
@@ -76,7 +78,7 @@ const DEFAULT_BALANCE_DATA: RuntimeBalanceData = {
     modAtaqueWrestling: { 1: 0.5, 2: 0.93, 3: 1.1, 4: 1, 5: 0.75, 6: 0.8, 7: 0.75, 8: 1, 9: 0.8, 12: 0.7, 13: 0.8, 14: 0.8, 15: 0.8, 16: 0.8, 17: 0.8, 18: 0.9, 19: 0.8, 20: 0.5, 21: 0.5 },
     modAtaqueProyectiles: { 1: 0.5, 2: 0.8, 3: 0.85, 4: 0.7, 5: 0.8, 6: 0.7, 7: 0.6, 8: 0.78, 9: 0.95, 12: 0.75, 13: 0.7, 14: 0.7, 15: 0.7, 16: 0.7, 17: 0.7, 18: 0.9, 19: 0.7, 20: 1, 21: 0.5 },
     modAtaqueArmas: { 1: 0.5, 2: 0.98, 3: 1.1, 4: 1, 5: 0.75, 6: 0.88, 7: 0.8, 8: 1.03, 9: 0.8, 12: 0.7, 13: 0.8, 14: 0.8, 15: 0.8, 16: 0.8, 17: 0.8, 18: 0.9, 19: 0.8, 20: 0.5, 21: 0.5 },
-    modEvasion: { 1: 0.2, 2: 0.8, 3: 1, 4: 0.9, 5: 1.1, 6: 1, 7: 0.9, 8: 0.85, 9: 0.9, 12: 0.7, 13: 0.8, 14: 0.8, 15: 0.8, 16: 0.8, 17: 0.8, 18: 1.25, 19: 0.8, 20: 0.8, 21: 0.8 },
+    modEvasion: { 1: 0.35, 2: 0.8, 3: 1, 4: 0.9, 5: 1.1, 6: 1, 7: 0.9, 8: 0.85, 9: 0.9, 12: 0.7, 13: 0.8, 14: 0.8, 15: 0.8, 16: 0.8, 17: 0.8, 18: 1.25, 19: 0.8, 20: 0.8, 21: 0.8 },
 };
 
 function cloneNumericRecord<T>(record: Record<number, T>): Record<number, T> {

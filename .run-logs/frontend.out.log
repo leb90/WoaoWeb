@@ -99,3 +99,4 @@ Creating turbopack project {
  POST /api/auth/game-ticket 200 in 53ms (next.js: 13ms, application-code: 41ms)
  GET /api/auth/me 200 in 91ms (next.js: 6ms, application-code: 85ms)
  GET /api/auth/session 200 in 52ms (next.js: 7ms, application-code: 45ms)
+[?25h

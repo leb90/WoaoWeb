@@ -33,8 +33,8 @@ import {
     getClassCreationPreview,
     getFinalStats,
     getHitModifierForLevel,
+    getHpRangeForLevel,
     getLegacyExpNextLevelForLevel,
-    getMaxHpForLevel,
     getMaxManaForLevel,
     getRaceAppearance,
     getRaceOption,
@@ -43,6 +43,10 @@ import {
     type FactionKey,
     type RaceKey,
 } from "@/lib/characterCreation";
+import {
+    getRecommendedTrainingMapsForLevel,
+    type WikiTrainingMapLike,
+} from "@/lib/wiki-training-maps";
 
 type ClassGuide = {
     role: string;
@@ -206,16 +210,74 @@ function StatBox({ label, value, hint }: { label: string; value: string; hint?: 
     );
 }
 
+function CalculatorStat({
+    label,
+    value,
+    tone = "neutral",
+    hint,
+}: {
+    label: string;
+    value: string;
+    tone?: "neutral" | "mana" | "max" | "min" | "average";
+    hint?: string;
+}) {
+    const tones = {
+        neutral: {
+            label: "text-stone-500",
+            value: "text-stone-50",
+        },
+        mana: {
+            label: "text-sky-300/80",
+            value: "text-sky-200",
+        },
+        average: {
+            label: "text-stone-400",
+            value: "text-stone-100",
+        },
+        max: {
+            label: "text-emerald-300/80",
+            value: "text-emerald-300",
+        },
+        min: {
+            label: "text-rose-300/80",
+            value: "text-rose-300",
+        },
+    }[tone];
+
+    return (
+        <div className="min-w-0 text-center">
+            <p className={`text-[10px] font-semibold uppercase tracking-[0.16em] ${tones.label}`}>
+                {label}
+            </p>
+            <p className={`mt-2 font-[var(--font-cinzel)] text-2xl font-semibold tabular-nums ${tones.value}`}>
+                {value}
+            </p>
+            {hint ? <p className="mt-1 text-[10px] text-stone-600">{hint}</p> : null}
+        </div>
+    );
+}
+
+function formatGain(value: number) {
+    if (Number.isInteger(value)) {
+        return String(value);
+    }
+    return value.toFixed(1).replace(".", ",");
+}
+
 function AttributeDelta({ value }: { value: number }) {
     const tone = value > 0 ? "text-emerald-400" : value < 0 ? "text-red-400" : "text-stone-600";
     return <span className={`font-mono text-[11px] ${tone}`}>{value > 0 ? `+${value}` : value}</span>;
 }
 
-export default function WikiPersonajesProgresion() {
+export default function WikiPersonajesProgresion({
+    trainingMaps = [],
+}: {
+    trainingMaps?: WikiTrainingMapLike[];
+}) {
     const [selectedClass, setSelectedClass] = useState<CharacterClassKey>("mago");
-    const [selectedRace, setSelectedRace] = useState<RaceKey>("humano");
+    const [selectedRace, setSelectedRace] = useState<RaceKey>("elfo");
     const [selectedFaction, setSelectedFaction] = useState<FactionKey>("alianza");
-    const [level, setLevel] = useState(1);
+    const [level, setLevel] = useState(20);
 
     const activeClass = characterClassOptions.find((option) => option.key === selectedClass) ?? characterClassOptions[0];
     const activeRace = getRaceOption(selectedRace);
@@ -227,13 +289,17 @@ export default function WikiPersonajesProgresion() {
         () => raceOptions.filter((race) => race.faction === selectedFaction),
         [selectedFaction],
     );
+    const hpRange = getHpRangeForLevel(selectedClass, finalStats.constitucion, level);
     const computedStats = {
-        vida: getMaxHpForLevel(selectedClass, finalStats.constitucion, level),
         mana: getMaxManaForLevel(selectedClass, finalStats.inteligencia, level),
         golpeMin: 1 + getHitModifierForLevel(selectedClass, level),
         golpeMax: 2 + getHitModifierForLevel(selectedClass, level),
         exp: level >= MAX_LEVEL ? 0 : getLegacyExpNextLevelForLevel(level),
     };
+    const recommendedMaps = useMemo(
+        () => getRecommendedTrainingMapsForLevel(trainingMaps, level, hpRange.average, 3),
+        [trainingMaps, level, hpRange.average],
+    );
 
     function selectRace(raceKey: RaceKey) {
         const race = getRaceOption(raceKey);
@@ -257,7 +323,7 @@ export default function WikiPersonajesProgresion() {
                 className="grid border border-amber-200/15 bg-[#0a0806] sm:grid-cols-3 lg:grid-cols-6"
             >
                 {[
-                    ["#simulador", "Simulador"],
+                    ["#simulador", "Calculadora"],
                     ["#clases", "Clases"],
                     ["#razas", "Razas"],
                     ["#atributos", "Atributos"],
@@ -289,8 +355,11 @@ export default function WikiPersonajesProgresion() {
             </figure>
 
             <div id="simulador" className="scroll-mt-28">
-                <WikiSection title="Simulador de personaje">
-                    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_390px]">
+                <WikiSection title="Calculadora de personaje">
+                    <div className="mb-5 max-w-3xl text-sm leading-6 text-stone-400">
+                        Calculá vida mínima, promedio y máxima según raza, clase y nivel. El promedio sigue la curva del balance actual; el mínimo y el máximo representan el rango posible de la tirada por nivel.
+                    </div>
+                    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
                         <div className="space-y-5">
                             <div>
                                 <div className="mb-3 flex items-center justify-between gap-4">
@@ -392,47 +461,133 @@ export default function WikiPersonajesProgresion() {
                             </div>
                         </div>
 
-                        <div className="border border-amber-200/15 bg-black/35 p-4">
-                            <div className="flex items-start gap-4">
-                                <div className="grid min-h-[224px] w-[180px] shrink-0 place-items-center overflow-hidden border border-amber-200/12 bg-[#070605]">
-                                    <CharacterSpritePreview
-                                        bodyId={previewGear.bodyId}
-                                        headId={raceAppearance.startHeadId}
-                                        weaponId={previewGear.weaponId}
-                                        shieldId={previewGear.shieldId}
-                                        helmetId={previewGear.helmetId}
-                                        scale={1.6}
-                                        framed={false}
-                                    />
-                                </div>
-                                <div className="min-w-0 pt-1">
-                                    <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-amber-300/75">
+                        <div className="space-y-4">
+                            <div className="overflow-hidden border border-amber-200/20 bg-[linear-gradient(180deg,rgba(28,24,20,.95),rgba(8,7,6,.98))] shadow-[0_18px_50px_rgba(0,0,0,.35)]">
+                                <div className="border-b border-amber-200/12 px-4 py-4 text-center">
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-amber-300/75">
                                         {factionLabel(activeRace.faction)}
                                     </p>
                                     <h3 className="mt-2 font-[var(--font-cinzel)] text-2xl font-semibold text-stone-50">
-                                        {activeClass.label} {activeRace.label}
+                                        {activeClass.label} — {activeRace.label}
                                     </h3>
-                                    <p className="mt-2 text-sm leading-6 text-stone-400">{activeGuide.summary}</p>
-                                    <div className="mt-3 flex flex-wrap gap-2">
-                                        <WikiTag>{activeGuide.role}</WikiTag>
-                                        <WikiTag>{activeGuide.resource}</WikiTag>
+                                    <p className="mt-2 text-xs text-stone-500">
+                                        CON {finalStats.constitucion} · INT {finalStats.inteligencia}
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-5 px-4 py-5 sm:grid-cols-5">
+                                    <CalculatorStat label="Nivel" value={String(level)} />
+                                    <CalculatorStat
+                                        label="Maná"
+                                        value={formatNumber(computedStats.mana)}
+                                        tone="mana"
+                                    />
+                                    <CalculatorStat
+                                        label="Vida promedio"
+                                        value={formatNumber(hpRange.average)}
+                                        tone="average"
+                                        hint={`+${formatGain(hpRange.gains.average)}/nivel`}
+                                    />
+                                    <CalculatorStat
+                                        label="Vida máxima"
+                                        value={formatNumber(hpRange.max)}
+                                        tone="max"
+                                        hint={`+${formatGain(hpRange.gains.max)}/nivel`}
+                                    />
+                                    <CalculatorStat
+                                        label="Vida mínima"
+                                        value={formatNumber(hpRange.min)}
+                                        tone="min"
+                                        hint={`+${formatGain(hpRange.gains.min)}/nivel`}
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2 border-t border-amber-200/10 px-4 py-4">
+                                    <StatBox
+                                        label="Golpe base"
+                                        value={`${computedStats.golpeMin}-${computedStats.golpeMax}`}
+                                    />
+                                    <StatBox
+                                        label="Próximo nivel"
+                                        value={
+                                            level >= MAX_LEVEL
+                                                ? "Máximo"
+                                                : `${formatNumber(computedStats.exp)} EXP`
+                                        }
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="border border-amber-200/15 bg-black/35 p-4">
+                                <div className="flex items-start gap-4">
+                                    <div className="grid min-h-[180px] w-[140px] shrink-0 place-items-center overflow-hidden border border-amber-200/12 bg-[#070605]">
+                                        <CharacterSpritePreview
+                                            bodyId={previewGear.bodyId}
+                                            headId={raceAppearance.startHeadId}
+                                            weaponId={previewGear.weaponId}
+                                            shieldId={previewGear.shieldId}
+                                            helmetId={previewGear.helmetId}
+                                            scale={1.45}
+                                            framed={false}
+                                        />
+                                    </div>
+                                    <div className="min-w-0 pt-1">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-amber-300/75">
+                                            Perfil
+                                        </p>
+                                        <p className="mt-2 text-sm leading-6 text-stone-400">{activeGuide.summary}</p>
+                                        <div className="mt-3 flex flex-wrap gap-2">
+                                            <WikiTag>{activeGuide.role}</WikiTag>
+                                            <WikiTag>{activeGuide.resource}</WikiTag>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="mt-4 grid grid-cols-2 gap-2">
-                                <StatBox label="Vida" value={formatNumber(computedStats.vida)} />
-                                <StatBox label="Maná" value={formatNumber(computedStats.mana)} />
-                                <StatBox label="Golpe base" value={`${computedStats.golpeMin}-${computedStats.golpeMax}`} />
-                                <StatBox
-                                    label="Próximo nivel"
-                                    value={level >= MAX_LEVEL ? "Máximo" : `${formatNumber(computedStats.exp)} EXP`}
-                                />
+                            <div className="border border-amber-200/15 bg-black/35 p-4">
+                                <div className="flex items-center justify-between gap-3">
+                                    <h4 className="font-[var(--font-cinzel)] text-base font-semibold text-stone-100">
+                                        Mapas sugeridos
+                                    </h4>
+                                    <span className="text-[10px] uppercase tracking-[0.16em] text-stone-600">
+                                        Nivel {level}
+                                    </span>
+                                </div>
+                                {recommendedMaps.length ? (
+                                    <ul className="mt-3 space-y-2">
+                                        {recommendedMaps.map((map, index) => (
+                                            <li key={map.id}>
+                                                <Link
+                                                    href={`/wiki/mapas/${map.id}`}
+                                                    className="flex items-center justify-between gap-3 border border-stone-800 bg-black/25 px-3 py-2.5 transition hover:border-amber-300/40 hover:bg-amber-300/[0.04]"
+                                                >
+                                                    <span className="min-w-0">
+                                                        <span className="block truncate text-sm font-medium text-stone-200">
+                                                            {index === 0 ? "Recomendado · " : ""}
+                                                            {map.groupLabel}
+                                                        </span>
+                                                        <span className="mt-0.5 block truncate text-xs text-stone-500">
+                                                            Mapa {map.id}: {map.name}
+                                                            {map.minLevel > 0 || map.maxLevel > 0
+                                                                ? ` · Niveles ${map.minLevel || 1}${map.maxLevel ? `-${map.maxLevel}` : "+"}`
+                                                                : ""}
+                                                        </span>
+                                                    </span>
+                                                    <ArrowRight className="h-4 w-4 shrink-0 text-amber-300/60" />
+                                                </Link>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <p className="mt-3 text-sm leading-6 text-stone-500">
+                                        No hay mapas de entrenamiento cargados para sugerir en este nivel.
+                                    </p>
+                                )}
+                                <p className="mt-3 flex gap-2 text-[11px] leading-5 text-stone-600">
+                                    <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                                    La sugerencia prioriza zonas de entrenamiento con criaturas cercanas a la vida promedio del personaje. Valores base sin equipo, skills ni montura.
+                                </p>
                             </div>
-                            <p className="mt-3 flex gap-2 text-[11px] leading-5 text-stone-600">
-                                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-                                Valores base sin equipo, skills, mejoras temporales ni montura.
-                            </p>
                         </div>
                     </div>
                 </WikiSection>

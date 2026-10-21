@@ -805,11 +805,14 @@ function Login(this: LoginApi) {
 
                 personaje.level = balance.clampLevel(personaje.level || 1);
                 personaje.expNextLevel = balance.getLegacyExpNextLevelForLevel(personaje.level);
-                personaje.maxHp = balance.getMaxHpForLevel(
-                    personaje.idClase,
-                    personaje.attrConstitucion,
-                    personaje.level,
-                );
+                const storedMaxHp = Number(personaje.maxHp ?? 0);
+                personaje.maxHp = storedMaxHp > 0
+                    ? Math.floor(storedMaxHp)
+                    : balance.getMaxHpForLevel(
+                          personaje.idClase,
+                          personaje.attrConstitucion,
+                          personaje.level,
+                      );
                 personaje.maxMana = balance.getMaxManaForLevel(
                     personaje.idClase,
                     personaje.attrInteligencia,

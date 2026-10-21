@@ -22,8 +22,16 @@ const CLASS_NAMES: Record<number, string> = {
   7: "Druida",
   8: "Paladin",
   9: "Cazador",
-  10: "Trabajador",
-  11: "Pirata",
+  12: "Bandido",
+  13: "Pescador",
+  14: "Herrero",
+  15: "Lenador",
+  16: "Minero",
+  17: "Carpintero",
+  18: "Pirata",
+  19: "Ermitano",
+  20: "Arquero",
+  21: "Domador",
 };
 
 const RACE_BASE_STATS: Record<
@@ -40,6 +48,13 @@ const RACE_BASE_STATS: Record<
   3: { fuerza: 20, agilidad: 19, inteligencia: 19, constitucion: 19 },
   4: { fuerza: 21, agilidad: 18, inteligencia: 15, constitucion: 21 },
   5: { fuerza: 16, agilidad: 21, inteligencia: 22, constitucion: 18 },
+  6: { fuerza: 21, agilidad: 18, inteligencia: 16, constitucion: 21 },
+  7: { fuerza: 17, agilidad: 21, inteligencia: 20, constitucion: 19 },
+  8: { fuerza: 21, agilidad: 19, inteligencia: 18, constitucion: 19 },
+  9: { fuerza: 16, agilidad: 21, inteligencia: 22, constitucion: 18 },
+  10: { fuerza: 20, agilidad: 21, inteligencia: 17, constitucion: 20 },
+  11: { fuerza: 21, agilidad: 19, inteligencia: 18, constitucion: 19 },
+  12: { fuerza: 20, agilidad: 19, inteligencia: 19, constitucion: 20 },
 };
 
 const RACE_NAMES: Record<number, string> = {
@@ -48,6 +63,13 @@ const RACE_NAMES: Record<number, string> = {
   3: "Elfo Drow",
   4: "Enano",
   5: "Gnomo",
+  6: "Orco",
+  7: "Vampiro",
+  8: "Abisario",
+  9: "Goblin",
+  10: "Tauros",
+  11: "Licantropo",
+  12: "No-Muerto",
 };
 
 const outputPath = process.argv[2]

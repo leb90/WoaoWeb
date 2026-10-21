@@ -23,6 +23,13 @@ const RACE_BASE_STATS: Record<
   3: { fuerza: 20, agilidad: 19, inteligencia: 19, constitucion: 19 },
   4: { fuerza: 21, agilidad: 18, inteligencia: 15, constitucion: 21 },
   5: { fuerza: 16, agilidad: 21, inteligencia: 22, constitucion: 18 },
+  6: { fuerza: 21, agilidad: 18, inteligencia: 16, constitucion: 21 },
+  7: { fuerza: 17, agilidad: 21, inteligencia: 20, constitucion: 19 },
+  8: { fuerza: 21, agilidad: 19, inteligencia: 18, constitucion: 19 },
+  9: { fuerza: 16, agilidad: 21, inteligencia: 22, constitucion: 18 },
+  10: { fuerza: 20, agilidad: 21, inteligencia: 17, constitucion: 20 },
+  11: { fuerza: 21, agilidad: 19, inteligencia: 18, constitucion: 19 },
+  12: { fuerza: 20, agilidad: 19, inteligencia: 19, constitucion: 20 },
 };
 
 function getExpectedStats(character: CharacterRecord) {
@@ -34,7 +41,8 @@ function getExpectedStats(character: CharacterRecord) {
   }
 
   const level = clampLevel(character.level || 1);
-  const maxHp = getMaxHpForLevel(character.id_clase, base.constitucion, level);
+  const expectedMaxHp = getMaxHpForLevel(character.id_clase, base.constitucion, level);
+  const maxHp = Number(character.max_hp ?? 0) > 0 ? Number(character.max_hp) : expectedMaxHp;
   const maxMana = getMaxManaForLevel(
     character.id_clase,
     base.inteligencia,

@@ -61,6 +61,14 @@ import {
     isInventorySlot,
     normalizeEquipmentStorage,
 } from "./equipmentStorage";
+import {
+    calculateMagicDamage,
+    clampMagicResistance,
+    getMagicEquipmentTotals,
+    getHealthPotionRecovery,
+    getManaPotionRecovery,
+    getPlayerHealingAmount,
+} from "./combatBalance";
 
 export {};
 const funct = require("./functions");
@@ -77,16 +85,6 @@ const balance = require("./balance");
 const { isWaterGraphic } = require("./waterTiles");
 const workProfessions = require("./workProfessions");
 const skills = require("./skills");
-
-const getPotionRecoveryAmount = (maxStat: number, percentage: number | undefined, fixedAmount: number): number => {
-    const recoveryPercentage = Number(percentage ?? 0);
-
-    if (recoveryPercentage > 0) {
-        return Math.floor((maxStat * recoveryPercentage) / 100);
-    }
-
-    return fixedAmount;
-};
 
 const SURVIVAL_HAMBRE_MAX = Number(balance.MAX_HAMBRE ?? 100);
 const SURVIVAL_SED_MAX = Number(balance.MAX_SED ?? 100);
@@ -1152,26 +1150,14 @@ function getMagicDamageModifier(classId: number): number {
 }
 
 function applyMagicBonuses(baseDamage: number, caster: GameCharacter) {
-    let damage = baseDamage + Math.round((baseDamage * (3 * caster.level)) / 100);
-    let magicPenetration = 0;
     const weapon = getEquippedWeaponData(caster);
     const helmet = getEquippedHelmetData(caster);
     const body = getEquippedBodyData(caster);
     const ring = getEquippedRingData(caster);
+    const equipment = getMagicEquipmentTotals([weapon, helmet, body, ring]);
+    const damage = calculateMagicDamage(baseDamage, caster.level, getMagicDamageModifier(caster.idClase), equipment);
 
-    for (const item of [weapon, helmet, body, ring]) {
-        if (!item) {
-            continue;
-        }
-
-        damage += safeNumber(item.magicDamageBonus);
-        damage += Math.round((damage * safeNumber(item.magicDamagePercent)) / 100);
-        magicPenetration += Number(item.magicPenetration ?? 0);
-    }
-
-    damage = Math.floor(damage * getMagicDamageModifier(caster.idClase));
-
-    return { damage, magicPenetration };
+    return { damage, magicPenetration: equipment.penetration };
 }
 
 function applyMagicResistanceToNpc(
@@ -1187,7 +1173,9 @@ function applyMagicResistanceToNpc(
 
     if (npcMagicResistance > 0) {
         const diffSkill = npcMagicResistance - casterMagicSkill;
-        const percentReduction = Math.max(0, npcMagicDef + (diffSkill > 0 ? diffSkill * 2 : 0) - magicPenetration);
+        const percentReduction = clampMagicResistance(
+            npcMagicDef + (diffSkill > 0 ? diffSkill * 2 : 0) - magicPenetration,
+        );
         nextDamage -= Math.floor((nextDamage * percentReduction) / 100);
     }
 
@@ -1207,8 +1195,7 @@ function applyMagicResistanceToUser(
     const targetItemMagicResistance = getTargetMagicResistanceBonus(target);
     const targetClassMagicResistance = getClassMagicResistanceBonus(target.idClase);
     const diffSkill = targetMagicResistance - casterMagicSkill;
-    const percentReduction = Math.max(
-        0,
+    const percentReduction = clampMagicResistance(
         targetItemMagicResistance +
             targetClassMagicResistance +
             getRacialMagicResistPercent(target) +
@@ -2819,7 +2806,8 @@ function applyUserSpellDamage(
     }
 
     const magicCalc = applyMagicBonuses(funct.randomIntFromInterval(datSpell.minHp, datSpell.maxHp), user);
-    let dmg = applyMagicResistanceToUser(magicCalc.damage, user, userAttacked, magicCalc.magicPenetration);
+    const mountedDamage = require("./mounts").applyOutgoingDamage(user, magicCalc.damage, "magic", false);
+    let dmg = applyMagicResistanceToUser(mountedDamage, user, userAttacked, magicCalc.magicPenetration);
 
     if (Number(userAttacked.protec ?? 0) > 0) {
         dmg -= Math.round((dmg * Number(userAttacked.protec)) / 100);
@@ -3520,7 +3508,7 @@ export type GameApi = {
     quitarUserInvItem: (idUser: EntityId, idPos: number | string, cant: number) => void;
     userSpellNpc: (idUser: EntityId, idNpc: EntityId, idSpell: number) => number | SpellEffect;
     userSpellUser: (idUser: EntityId, idUserAttacked: EntityId, idSpell: number) => number | UserSpellEffect;
-    calcularDmg: (idUser: EntityId) => number;
+    calcularDmg: (idUser: EntityId, targetIsNpc?: boolean) => number;
     userDmgNpc: (idUser: EntityId, idNpc: EntityId) => CombatResult;
     userDmgUser: (idUser: EntityId, idUserAttacked: EntityId) => CombatResult;
     apuNpc: (idUser: EntityId, idNpc: EntityId, dmg: number) => StabResult;
@@ -5628,10 +5616,10 @@ function Game(this: GameApi) {
 
                     if (obj.tipoPocion == vars.typePociones.vida) {
                         if (user.hp < user.maxHp) {
-                            const recoveredHp = getPotionRecoveryAmount(
+                            const recoveredHp = getHealthPotionRecovery(
                                 user.maxHp,
-                                obj.porcentaje,
                                 funct.randomIntFromInterval(obj.minModificador, obj.maxModificador),
+                                Number(obj.porcentaje ?? 0),
                             );
 
                             user.hp += recoveredHp;
@@ -5646,10 +5634,11 @@ function Game(this: GameApi) {
                         consumido = true;
                     } else if (obj.tipoPocion == vars.typePociones.mana) {
                         if (user.mana < user.maxMana) {
-                            const recoveredMana = getPotionRecoveryAmount(
+                            const recoveredMana = getManaPotionRecovery(
                                 user.maxMana,
-                                obj.porcentaje,
-                                Math.floor(user.maxMana * 0.04 + user.level / 2 + 40 / user.level),
+                                user.level,
+                                funct.randomIntFromInterval(obj.minModificador, obj.maxModificador),
+                                Number(obj.porcentaje ?? 0),
                             );
 
                             user.mana += recoveredMana;
@@ -5972,10 +5961,10 @@ function Game(this: GameApi) {
                 adminBot.hp = Math.min(
                     Number(adminBot.maxHp ?? 0),
                     Number(adminBot.hp ?? 0) +
-                        getPotionRecoveryAmount(
+                        getHealthPotionRecovery(
                             Number(adminBot.maxHp ?? 0),
-                            potionData.porcentaje,
                             funct.randomIntFromInterval(potionData.minModificador, potionData.maxModificador),
+                            Number(potionData.porcentaje ?? 0),
                         ),
                 );
 
@@ -8887,12 +8876,12 @@ function Game(this: GameApi) {
 
                 user.expNextLevel = balance.getLegacyExpNextLevelForLevel(user.level);
 
-                const newMaxHp = balance.getMaxHpForLevel(user.idClase, user.attrConstitucion, user.level);
+                const aumentoHP = balance.rollHpGain(user.idClase, user.attrConstitucion);
+                const newMaxHp = user.maxHp + aumentoHP;
                 const newMaxMana = balance.getMaxManaForLevel(user.idClase, user.attrInteligencia, user.level);
                 const newMinHit = balance.getMinHitForLevel(user.idClase, user.level);
                 const newMaxHit = balance.getMaxHitForLevel(user.idClase, user.level);
 
-                const aumentoHP = newMaxHp - user.maxHp;
                 const aumentoMana = newMaxMana - user.maxMana;
                 const aumentoHIT = newMaxHit - user.maxHit;
 
@@ -8958,6 +8947,9 @@ function Game(this: GameApi) {
                 emitCharacterFxToUserArea(idUser, LEVEL_UP_FX_ID);
                 emitCharacterSoundToUserArea(idUser, vars.arSounds.SND_NIVEL);
                 relocateUserIfCurrentMapLevelDenied(user, client, `checkUserLevel ${user.level}`);
+                void persistCharacterSnapshot(user, { connected: true }).catch((error: unknown) => {
+                    funct.dumpError(error);
+                });
             }
         } catch (err) {
             funct.dumpError(err);
@@ -9215,13 +9207,7 @@ function Game(this: GameApi) {
             } else {
                 if (datSpell.subeHp === 1) {
                     //Cura HP
-                    let curo = funct.randomIntFromInterval(datSpell.minHp, datSpell.maxHp);
-
-                    curo += Math.round((curo * (3 * user.level)) / 100);
-
-                    if (curo < 1) {
-                        curo = 1;
-                    }
+                    let curo = getPlayerHealingAmount(funct.randomIntFromInterval(datSpell.minHp, datSpell.maxHp));
 
                     if (npc.hp + curo > npc.maxHp) {
                         curo = npc.maxHp - npc.hp;
@@ -9654,13 +9640,7 @@ function Game(this: GameApi) {
             } else {
                 if (datSpell.subeHp === 1) {
                     //Cura HP
-                    let curo = funct.randomIntFromInterval(datSpell.minHp, datSpell.maxHp);
-
-                    curo += Math.round((curo * (3 * user.level)) / 100);
-
-                    if (curo < 1) {
-                        curo = 1;
-                    }
+                    let curo = getPlayerHealingAmount(funct.randomIntFromInterval(datSpell.minHp, datSpell.maxHp));
 
                     if (userAttacked.hp + curo > userAttacked.maxHp) {
                         curo = userAttacked.maxHp - userAttacked.hp;
@@ -9942,7 +9922,7 @@ function Game(this: GameApi) {
      * @param  {[type]} idUser [description]
      * @return {[type]}        [description]
      */
-    this.calcularDmg = function (idUser: EntityId): number {
+    this.calcularDmg = function (idUser: EntityId, targetIsNpc = false): number {
         try {
             const user = getCharacterById(idUser);
 
@@ -10004,7 +9984,7 @@ function Game(this: GameApi) {
                 user,
                 modifyOutgoingPhysicalDamage(user, dmg, isRanged ? "ranged" : "melee"),
                 isRanged ? "ranged" : "melee",
-                false,
+                targetIsNpc,
             );
         } catch (err) {
             funct.dumpError(err);
@@ -10049,7 +10029,7 @@ function Game(this: GameApi) {
                 const weaponItemId = Number(weaponItem?.idItem ?? 0);
                 const isDragonSlayerHit =
                     isDragonSlayerSword(weaponItemId) && Number(npc.npcType ?? 0) === Number(vars.npcType.dragon);
-                let dmg = game.calcularDmg(idUser);
+                let dmg = game.calcularDmg(idUser, true);
 
                 if (isDragonSlayerHit) {
                     dmg = Math.max(1, npc.hp);

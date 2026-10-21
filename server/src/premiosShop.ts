@@ -1,3 +1,5 @@
+import { canAddToInventory } from "./equipmentStorage";
+
 const game = require("./game");
 const vars = require("./vars");
 const handleProtocol = require("./handleProtocol");
@@ -74,16 +76,7 @@ function canReceiveItem(user: any, idItem: number, quantity: number) {
         return true;
     }
 
-    const inventory = user.inv ?? {};
-    let existingCapacity = 0;
-    for (const item of Object.values(inventory) as any[]) {
-        if (Number(item?.idItem) === idItem) {
-            existingCapacity += Math.max(0, 10000 - Number(item?.cant ?? 0));
-        }
-    }
-
-    const slotsNeeded = Math.ceil(Math.max(0, quantity - existingCapacity) / 10000);
-    return Object.keys(inventory).length + slotsNeeded <= 21;
+    return canAddToInventory(user.inv ?? {}, idItem, quantity);
 }
 
 function redeemFromCatalog(

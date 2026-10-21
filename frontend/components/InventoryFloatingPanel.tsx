@@ -2799,18 +2799,7 @@ export default function InventoryFloatingPanel({
         submitDropRequest,
     ]);
 
-    const inventoryStartSlot = React.useMemo(() => {
-        if (items.length === 0) {
-            return 0;
-        }
-
-        const lowestSlot = items.reduce(
-            (minSlot, item) => Math.min(minSlot, item.slot),
-            items[0].slot,
-        );
-
-        return lowestSlot === 0 ? 0 : 1;
-    }, [items]);
+    const inventoryStartSlot = 1;
 
     const handleSpellListMouseMove = React.useCallback(
         (event: React.MouseEvent<HTMLDivElement>) => {
@@ -2842,18 +2831,7 @@ export default function InventoryFloatingPanel({
         [isSpellListDragging],
     );
 
-    const totalSlots = React.useMemo(() => {
-        if (items.length === 0) {
-            return MIN_SLOTS;
-        }
-
-        const highestSlot = items.reduce(
-            (maxSlot, item) => Math.max(maxSlot, item.slot),
-            items[0].slot,
-        );
-
-        return Math.max(MIN_SLOTS, highestSlot - inventoryStartSlot + 1);
-    }, [inventoryStartSlot, items]);
+    const totalSlots = MIN_SLOTS;
 
     const activateItem = React.useCallback(
         (item: InventoryItem) => {
@@ -2915,9 +2893,8 @@ export default function InventoryFloatingPanel({
         [activateItem],
     );
 
-    // Lo equipado se ve solo en el panel de equipo. En el server sigue
-    // ocupando su lugar del inventario (cuenta para los 21), así que la
-    // grilla muestra los lugares restantes, cada uno con su número real.
+    // Los slots 22-27 son posiciones persistentes exclusivas de equipo. La
+    // mochila siempre conserva sus 21 espacios independientes.
     const slotItems = React.useMemo(() => {
         const itemsBySlot = new Map(items.map((item) => [item.slot, item]));
 
@@ -2953,8 +2930,9 @@ export default function InventoryFloatingPanel({
         typeof hud?.idClase === "number"
             ? (classLabels[hud.idClase] ?? `Clase ${hud.idClase}`)
             : "tu clase";
-    const hoveredItemBlockedForClass = hoveredItem
-        ? isItemBlockedForClass(hoveredItem)
+    const inventoryDetailItem = selectedItem ?? hoveredItem;
+    const inventoryDetailItemBlockedForClass = inventoryDetailItem
+        ? isItemBlockedForClass(inventoryDetailItem)
         : false;
 
     const showTooltipWithDelay = (item: InventoryItem) => {
@@ -3077,15 +3055,10 @@ export default function InventoryFloatingPanel({
             const dragged = draggedInventoryItem;
 
             if (dragSource === "equipment") {
-                // Del equipo al inventario: se lo saca, y si lo soltaste en un
-                // lugar vacío distinto, además se mueve ahí.
+                // El servidor elige un lugar libre de la mochila de forma
+                // atómica; si está llena, el objeto permanece equipado.
                 if (Number.isFinite(targetSlot) && dragged.equipped) {
                     onEquipRequest?.(dragged.slot);
-                    const targetOccupied = items.some((entry) => entry.slot === targetSlot);
-                    if (targetSlot !== dragged.slot && !targetOccupied) {
-                        onMoveInventoryItem?.(dragged.slot, targetSlot);
-                        setSelectedSlot(targetSlot);
-                    }
                 }
             } else if (equipmentTarget) {
                 // Del inventario al equipo: se equipa (el server lo ubica en su
@@ -3107,7 +3080,7 @@ export default function InventoryFloatingPanel({
             setDraggedInventoryItem(null);
             setDragSource("inventory");
         },
-        [draggedInventoryItem, dragSource, items, objectsDB, onEquipRequest, onMoveInventoryItem],
+        [draggedInventoryItem, dragSource, objectsDB, onEquipRequest, onMoveInventoryItem],
     );
 
     React.useEffect(() => {
@@ -3475,17 +3448,6 @@ export default function InventoryFloatingPanel({
                                         items={items}
                                         objectsDB={objectsDB}
                                         graphicsDB={graphicsDB}
-                                        appearance={
-                                            hud?.idBody
-                                                ? {
-                                                      head: hud.idHead ?? 0,
-                                                      body: hud.idBody,
-                                                      helmet: hud.idHelmet ?? 0,
-                                                      weapon: hud.idWeapon ?? 0,
-                                                      shield: hud.idShield ?? 0,
-                                                  }
-                                                : null
-                                        }
                                         selectedSlot={selectedSlot}
                                         draggingKind={getInventoryItemEquipmentKind(
                                             draggedInventoryItem,
@@ -3520,25 +3482,33 @@ export default function InventoryFloatingPanel({
                                         onSlotClick={handleEquipmentSlotClick}
                                         onHover={showTooltipWithDelay}
                                         onLeave={clearTooltip}
+                                        onViewStats={() =>
+                                            onSendCommand?.("/estadisticas")
+                                        }
                                     />
 
-                                    {hoveredItem ? (
-                                        <div className="bg-black/45 px-3 py-2 text-[11px] leading-4 text-stone-200">
-                                            <p className="font-semibold text-amber-100">
-                                                {hoveredItem.name}
-                                            </p>
-                                            {hoveredItem.details ? (
-                                                <p className="mt-1 whitespace-pre-wrap text-stone-300/90">
-                                                    {hoveredItem.details}
+                                    <div
+                                        aria-live="polite"
+                                        className="min-h-[68px] shrink-0 border border-amber-200/10 bg-black/45 px-3 py-2.5 text-[11px] leading-4 text-stone-200"
+                                    >
+                                        {inventoryDetailItem ? (
+                                            <>
+                                                <p className="font-semibold text-amber-100">
+                                                    {inventoryDetailItem.name}
                                                 </p>
-                                            ) : null}
-                                            {hoveredItemBlockedForClass ? (
-                                                <p className="mt-1 font-semibold text-rose-200">
-                                                    No permitido para {currentClassLabel}
-                                                </p>
-                                            ) : null}
-                                        </div>
-                                    ) : null}
+                                                {inventoryDetailItem.details ? (
+                                                    <p className="mt-1 whitespace-pre-wrap break-words text-stone-300/90">
+                                                        {inventoryDetailItem.details}
+                                                    </p>
+                                                ) : null}
+                                                {inventoryDetailItemBlockedForClass ? (
+                                                    <p className="mt-1 font-semibold text-rose-200">
+                                                        No permitido para {currentClassLabel}
+                                                    </p>
+                                                ) : null}
+                                            </>
+                                        ) : null}
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="mt-2 flex min-h-0 flex-1 flex-col gap-2">

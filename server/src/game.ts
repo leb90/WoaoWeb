@@ -54,6 +54,13 @@ import {
     hasOpenClientById,
 } from "./runtimeRegistry";
 import * as safeZone from "./safeZone";
+import {
+    INVENTORY_SLOT_COUNT,
+    countOccupiedInventorySlots,
+    getEquipmentStorageSlotForObjectType,
+    isInventorySlot,
+    normalizeEquipmentStorage,
+} from "./equipmentStorage";
 
 export {};
 const funct = require("./functions");
@@ -915,10 +922,18 @@ function rebuildEquippedInventoryState(user: GameCharacter): void {
     user.idItemHelmet = 0;
     user.idItemArrow = 0;
     user.idItemRing = 0;
-    user.idBody = game.bodyNaked(user.id);
-    user.idWeapon = 0;
-    user.idShield = 0;
-    user.idHelmet = 0;
+    const nakedBody = game.bodyNaked(user.id);
+    if (user.navegando) {
+        user.idLastBody = nakedBody;
+        user.idLastWeapon = 0;
+        user.idLastShield = 0;
+        user.idLastHelmet = 0;
+    } else {
+        user.idBody = nakedBody;
+        user.idWeapon = 0;
+        user.idShield = 0;
+        user.idHelmet = 0;
+    }
 
     for (const [idPos, item] of Object.entries(user.inv)) {
         if (!item.equipped) {
@@ -934,24 +949,32 @@ function rebuildEquippedInventoryState(user: GameCharacter): void {
         const equipType = itemKinds.getEquipObjectType(obj);
 
         if (equipType == vars.objType.armaduras) {
-            if (!user.navegando) {
+            if (user.navegando) {
+                user.idLastBody = obj.anim;
+            } else {
                 user.idBody = obj.anim;
             }
             user.idItemBody = idPos;
         } else if (equipType == vars.objType.armas) {
-            if (!user.navegando) {
+            if (user.navegando) {
+                user.idLastWeapon = obj.anim;
+            } else {
                 user.idWeapon = obj.anim;
             }
             user.idItemWeapon = idPos;
         } else if (equipType == vars.objType.anillos) {
             user.idItemRing = idPos;
         } else if (equipType == vars.objType.escudos) {
-            if (!user.navegando) {
+            if (user.navegando) {
+                user.idLastShield = obj.anim;
+            } else {
                 user.idShield = obj.anim;
             }
             user.idItemShield = idPos;
         } else if (equipType == vars.objType.cascos) {
-            if (!user.navegando) {
+            if (user.navegando) {
+                user.idLastHelmet = obj.anim;
+            } else {
                 user.idHelmet = obj.anim;
             }
             user.idItemHelmet = idPos;
@@ -1019,39 +1042,18 @@ function canAutoEquipInventoryItem(user: GameCharacter, obj: DataObject | undefi
 }
 
 function restoreAutoEquippedInventoryState(user: GameCharacter): void {
-    const equippedByType = new Set<number>();
-
-    for (const item of Object.values(user.inv)) {
-        item.equipped = 0;
-    }
-
-    for (const [idPos, item] of Object.entries(user.inv)) {
+    const normalized = normalizeEquipmentStorage(user.inv, (item) => {
         const obj = vars.datObj[item.idItem] as DataObject | undefined;
-
         if (!canAutoEquipInventoryItem(user, obj, item.idItem)) {
-            continue;
+            return null;
         }
 
-        const objType = itemKinds.getEquipObjectType(obj);
-
-        if (
-            objType !== vars.objType.armaduras &&
-            objType !== vars.objType.armas &&
-            objType !== vars.objType.escudos &&
-            objType !== vars.objType.cascos &&
-            objType !== vars.objType.flechas &&
-            objType !== vars.objType.anillos
-        ) {
-            continue;
-        }
-
-        if (equippedByType.has(objType)) {
-            continue;
-        }
-
-        user.inv[idPos].equipped = 1;
-        equippedByType.add(objType);
-    }
+        return getEquipmentStorageSlotForObjectType(
+            itemKinds.getEquipObjectType(obj),
+            vars.objType,
+        );
+    });
+    user.inv = normalized.inventory;
 
     rebuildEquippedInventoryState(user);
 }
@@ -3667,7 +3669,7 @@ const game = {} as GameApi;
 Game.call(game);
 const AREA_RANGE_X = vars.areaVisionRangeX;
 const AREA_RANGE_Y = vars.areaVisionRangeY;
-const MAX_INVENTORY_SLOTS = 21;
+const MAX_INVENTORY_SLOTS = INVENTORY_SLOT_COUNT;
 const MAX_BANK_SLOTS = 100;
 const NPC_TARGET_LOCK_MS = vars.npcAi.targetLockMs as number;
 const characterPersistenceQueue = new Map<string, Promise<void>>();
@@ -5108,7 +5110,20 @@ function remapEquippedInventorySlots(user: GameCharacter, sourceSlot: number, ta
     }
 }
 
-function findAvailableRecordSlot(record: Record<string, unknown>): number {
+function findAvailableRecordSlot(
+    record: Record<string, unknown>,
+    maxSlot?: number,
+): number {
+    if (typeof maxSlot === "number") {
+        for (let slot = 1; slot <= maxSlot; slot += 1) {
+            if (!record[String(slot)]) {
+                return slot;
+            }
+        }
+
+        return 0;
+    }
+
     let nextSlot = 1;
     const usedSlots = Object.keys(record)
         .map((value) => Number(value))
@@ -5145,7 +5160,12 @@ function addItemToRecord(
     let existingCapacity = 0;
 
     for (const [idPos, item] of Object.entries(record)) {
-        if (item.idItem !== idItem || item.cant >= 10000) {
+        if (
+            (typeof options?.maxSlots === "number" &&
+                Number(idPos) > options.maxSlots) ||
+            item.idItem !== idItem ||
+            item.cant >= 10000
+        ) {
             continue;
         }
 
@@ -5157,7 +5177,15 @@ function addItemToRecord(
     const maxSlots = options?.maxSlots;
     const slotsNeeded = Math.ceil(Math.max(0, cant - existingCapacity) / 10000);
 
-    if (typeof maxSlots === "number" && Object.keys(record).length + slotsNeeded > maxSlots) {
+    const occupiedSlots =
+        maxSlots === INVENTORY_SLOT_COUNT
+            ? countOccupiedInventorySlots(record)
+            : Object.keys(record).filter(
+                  (slot) =>
+                      typeof maxSlots !== "number" || Number(slot) <= maxSlots,
+              ).length;
+
+    if (typeof maxSlots === "number" && occupiedSlots + slotsNeeded > maxSlots) {
         return null;
     }
 
@@ -5181,7 +5209,10 @@ function addItemToRecord(
     }
 
     while (remaining > 0) {
-        const idPos = findAvailableRecordSlot(record);
+        const idPos = findAvailableRecordSlot(record, maxSlots);
+        if (!idPos) {
+            return null;
+        }
         const amountToAdd = Math.min(remaining, 10000);
 
         record[idPos] = {
@@ -6260,6 +6291,10 @@ function Game(this: GameApi) {
                 return;
             }
 
+            if (!isInventorySlot(idPos)) {
+                return;
+            }
+
             const item = user.inv[idPos];
 
             if (cant < 1) {
@@ -6715,6 +6750,7 @@ function Game(this: GameApi) {
 
         if (
             !Number.isInteger(slot) ||
+            !isInventorySlot(slot) ||
             !Number.isInteger(quantity) ||
             !Number.isInteger(startPrice) ||
             !Number.isInteger(durationHours) ||
@@ -7171,6 +7207,7 @@ function Game(this: GameApi) {
 
         if (
             !Number.isInteger(slot) ||
+            !isInventorySlot(slot) ||
             !Number.isInteger(quantity) ||
             !Number.isInteger(price) ||
             quantity < 1 ||
@@ -8363,10 +8400,6 @@ function Game(this: GameApi) {
             user.idItemHelmet = 0;
             user.idItemRing = 0;
 
-            for (let idSlot in user.inv) {
-                user.inv[idSlot].equipped = 0;
-            }
-
             if (hadMovementRestriction && userClient) {
                 handleProtocol.inmo(idUser, 0, userClient);
             }
@@ -8736,18 +8769,19 @@ function Game(this: GameApi) {
             user.deadWorldActive = false;
             user.deadWorldTransitionEndsAt = 0;
 
-            if (user.navegando && reviveOnWater) {
-                applyBoatVisualState(user);
-            } else {
-                user.idBody = game.bodyNaked(idUser);
-                user.idHead = user.idLastHead;
-            }
-
             if (isAdminSummonedBot(user)) {
                 restoreAutoEquippedInventoryState(user);
                 enforceAdminSummonedBotMaxBuffs(user, Date.now());
                 user.nextUseItemAt = 0;
                 user.nextUseItemAfterMeleeAt = 0;
+            } else {
+                rebuildEquippedInventoryState(user);
+            }
+
+            if (user.navegando && reviveOnWater) {
+                applyBoatVisualState(user);
+            } else {
+                user.idHead = user.idLastHead;
             }
 
             handleProtocol.selfVitalsDelta(
@@ -11576,6 +11610,10 @@ function Game(this: GameApi) {
                             userClient,
                         );
                     });
+                    return;
+                }
+
+                if (!isInventorySlot(idPos)) {
                     return;
                 }
 

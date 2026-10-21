@@ -1,5 +1,7 @@
 export {};
 
+import { canAddToInventory } from "./equipmentStorage";
+
 // Tienda de donaciones (estilo tienda de WoW): se paga con puntos de
 // donación. El catálogo vive en server/jsons/tienda.json; la categoría
 // "Objetos" se arma sola con server/jsons/donaciones.json, así ese catálogo
@@ -50,7 +52,6 @@ type PurchaseResult = { ok: boolean; message: string; productId?: string };
 const tiendaJson = require("../jsons/tienda.json") as { categories: CatalogCategory[]; products: CatalogProduct[] };
 const donaciones = require("../jsons/donaciones.json") as Record<string, DonacionEntry>;
 
-const MAX_INVENTORY_SLOTS = 21;
 const MAX_STACK = 10000;
 
 function buildCatalog(): CatalogProduct[] {
@@ -134,15 +135,7 @@ export function canReceiveItem(user: { inv: Record<string, { idItem: number; can
         return true;
     }
 
-    let existingCapacity = 0;
-    for (const item of Object.values(user.inv ?? {})) {
-        if (Number(item?.idItem) === idItem) {
-            existingCapacity += Math.max(0, MAX_STACK - Number(item?.cant ?? 0));
-        }
-    }
-
-    const slotsNeeded = Math.ceil(Math.max(0, quantity - existingCapacity) / MAX_STACK);
-    return Object.keys(user.inv ?? {}).length + slotsNeeded <= MAX_INVENTORY_SLOTS;
+    return canAddToInventory(user.inv, idItem, quantity, MAX_STACK);
 }
 
 function getProductName(product: CatalogProduct): string {

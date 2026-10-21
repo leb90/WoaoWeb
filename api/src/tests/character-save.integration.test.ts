@@ -48,9 +48,9 @@ test("character_save patches top-level fields and nested items", async () => {
         owner.id,
         owner.email,
     );
-    assert.equal(homeState.homeMap, 1);
-    assert.equal(homeState.homeX, 54);
-    assert.equal(homeState.homeY, 60);
+    assert.equal(homeState.homeMap, 37);
+    assert.equal(homeState.homeX, 78);
+    assert.equal(homeState.homeY, 87);
 });
 
 test("character_save patches custom home coordinates", async () => {
@@ -101,6 +101,29 @@ test("character_save items endpoint rejects invalid inventory slots", async () =
     ]);
 
     assert.equal(response.status, 400);
+});
+
+test("character_save persists reserved equipment slots", async () => {
+    const owner = await createCharacterFixture({ namePrefix: "Equipment" });
+
+    const response = await putCharacterItems(owner.id, [
+        { idPos: 23, idItem: 474, cant: 1, equipped: true },
+    ]);
+
+    assert.equal(response.status, 200);
+    const state = await getCharacterState(
+        owner.accountId,
+        owner.id,
+        owner.email,
+    );
+    assert.deepEqual(state.items, [
+        { idPos: 23, idItem: 474, cant: 1, equipped: true },
+    ]);
+
+    const invalidResponse = await putCharacterItems(owner.id, [
+        { idPos: 28, idItem: 474, cant: 1, equipped: true },
+    ]);
+    assert.equal(invalidResponse.status, 400);
 });
 
 test("character_save bank and spells endpoints persist their collections", async () => {

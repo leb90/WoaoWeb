@@ -302,6 +302,7 @@ ALTER TABLE characters
 
 CREATE TABLE IF NOT EXISTS character_items (
     character_id UUID NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+    -- 1-21: mochila. 22-27: armadura, arma, escudo, casco, flechas y accesorio.
     id_pos INTEGER NOT NULL,
     id_item INTEGER NOT NULL,
     cant INTEGER NOT NULL DEFAULT 0,

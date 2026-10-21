@@ -3,6 +3,7 @@ import type { GameApi } from "./game";
 import type { HandleProtocolApi } from "./handleProtocol";
 import { getCharacterById } from "./runtimeRegistry";
 import { getCraftingRecipes, type CraftingProfession, type CraftingRecipe } from "./craftingRecipes";
+import { canAddToInventory, isInventorySlot } from "./equipmentStorage";
 
 export {};
 
@@ -219,7 +220,10 @@ function isValidAnvilTarget(user: CraftingUser, target: Position) {
 function countInventoryItem(user: CraftingUser, itemId: number) {
     let total = 0;
 
-    for (const item of Object.values(user.inv)) {
+    for (const [slot, item] of Object.entries(user.inv)) {
+        if (!isInventorySlot(slot)) {
+            continue;
+        }
         if (item.idItem === itemId) {
             total += item.cant;
         }
@@ -229,13 +233,7 @@ function countInventoryItem(user: CraftingUser, itemId: number) {
 }
 
 function canReceiveCraftedItem(user: CraftingUser, itemId: number, amount: number) {
-    for (const item of Object.values(user.inv)) {
-        if (item.idItem === itemId && item.cant + amount <= 10000) {
-            return true;
-        }
-    }
-
-    return Object.keys(user.inv).length < 21;
+    return canAddToInventory(user.inv, itemId, amount);
 }
 
 function removeMaterial(user: CraftingUser, itemId: number, amount: number) {
@@ -246,7 +244,7 @@ function removeMaterial(user: CraftingUser, itemId: number, amount: number) {
             break;
         }
 
-        if (item.idItem !== itemId) {
+        if (!isInventorySlot(slot) || item.idItem !== itemId) {
             continue;
         }
 

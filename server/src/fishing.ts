@@ -2,6 +2,11 @@ import type { EntityId, FishingState, Position, RuntimeCharacter, RuntimeClient 
 import type { HandleProtocolApi } from "./handleProtocol";
 import type { SocketApi } from "./socket";
 import { getCharacterById, getClientById } from "./runtimeRegistry";
+import {
+    countOccupiedInventorySlots,
+    findAvailableInventorySlot,
+    isInventorySlot,
+} from "./equipmentStorage";
 
 export {};
 
@@ -179,7 +184,11 @@ function getFishingRewardAmount(user: FishingUser) {
 
 function addRewardToInventory(user: FishingUser, itemId: number, amount: number) {
     for (const [slot, item] of Object.entries(user.inv)) {
-        if (item.idItem === itemId && item.cant + amount <= 10000) {
+        if (
+            isInventorySlot(slot) &&
+            item.idItem === itemId &&
+            item.cant + amount <= 10000
+        ) {
             item.cant += amount;
             withUserClient(user.id, (userClient) => {
                 handleProtocol.agregarUserInvItem(user.id, slot, userClient);
@@ -188,18 +197,11 @@ function addRewardToInventory(user: FishingUser, itemId: number, amount: number)
         }
     }
 
-    if (Object.keys(user.inv).length >= 21) {
+    if (countOccupiedInventorySlots(user.inv) >= 21) {
         return false;
     }
 
-    let nextSlot = 1;
-    const usedSlots = Object.keys(user.inv)
-        .map(Number)
-        .sort((left, right) => left - right);
-
-    while (usedSlots[nextSlot - 1] === nextSlot) {
-        nextSlot++;
-    }
+    const nextSlot = findAvailableInventorySlot(user.inv);
 
     user.inv[nextSlot] = {
         idItem: itemId,

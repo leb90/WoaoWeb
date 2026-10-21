@@ -40,11 +40,11 @@ const jailCharacterSchema = z.object({
     posY: z.coerce.number().int(),
 });
 
-const MAX_INVENTORY_SLOTS = 21;
+const MAX_CHARACTER_ITEM_SLOT = 27;
 const MAX_BANK_SLOTS = 100;
 
 const itemSchema = z.object({
-    idPos: z.coerce.number().int().min(1).max(MAX_INVENTORY_SLOTS),
+    idPos: z.coerce.number().int().min(1).max(MAX_CHARACTER_ITEM_SLOT),
     idItem: z.coerce.number().int().positive(),
     cant: z.coerce.number().int().positive(),
     equipped: z

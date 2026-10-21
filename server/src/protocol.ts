@@ -23,6 +23,12 @@ import type { SocketApi } from "./socket";
 import { getCharacterById, getClientById } from "./runtimeRegistry";
 import { applyElfManaRestore, getSpellManaCost } from "./racialPassives";
 import { getRankFromElo, type RankedTierId } from "./ranked";
+import {
+    equipInventoryItem,
+    getEquipmentStorageSlotForObjectType,
+    isEquipmentStorageSlot,
+    unequipInventoryItem,
+} from "./equipmentStorage";
 
 const game = require("./game");
 const itemKinds = require("./itemKinds") as {
@@ -2930,7 +2936,7 @@ function tirarItem(ws: RuntimeClient) {
     }
 }
 
-function equiparItem(ws: RuntimeClient) {
+async function equiparItem(ws: RuntimeClient) {
     try {
         if (!game.existPjOrClose(ws)) {
             return;
@@ -2941,27 +2947,6 @@ function equiparItem(ws: RuntimeClient) {
         }
 
         const clientId = ws.id!;
-
-        const syncInventorySlots = (
-            user: RuntimeCharacter & { inv: InventoryRecord },
-            slots: Array<number | string>,
-        ) => {
-            const sentSlots = new Set<string>();
-
-            for (const slot of slots) {
-                if (!slot && slot !== 0) {
-                    continue;
-                }
-
-                const normalizedSlot = String(slot);
-                if (normalizedSlot === "0" || sentSlots.has(normalizedSlot) || !user.inv[normalizedSlot]) {
-                    continue;
-                }
-
-                sentSlots.add(normalizedSlot);
-                handleProtocol.agregarUserInvItem(clientId, normalizedSlot, ws);
-            }
-        };
 
         if (!pkg.canReadBytes(4)) {
             return;
@@ -2990,309 +2975,221 @@ function equiparItem(ws: RuntimeClient) {
             return;
         }
 
-        const itemInventary = user.inv[idPos];
+        const itemInventary = user.inv[String(idPos)];
+        if (!itemInventary) {
+            return;
+        }
 
-        if (itemInventary) {
-            const idItem = itemInventary.idItem;
-            const item = vars.datObj[idItem];
+        const idItem = itemInventary.idItem;
+        const item = vars.datObj[idItem] as DataObject | undefined;
+        if (!item) {
+            return;
+        }
 
-            if (item.newbie && !game.isNewbieCharacter(user)) {
-                handleProtocol.console("Solo los personajes newbie pueden equipar este item.", "white", 0, 0, ws);
-                return;
-            }
+        const equipType = itemKinds.getEquipObjectType(item);
+        const equipmentSlot = getEquipmentStorageSlotForObjectType(
+            equipType,
+            vars.objType,
+        );
+        if (!equipmentSlot) {
+            return;
+        }
 
-            if (tryPlaceAppearanceItem(ws, idPos)) {
-                return;
-            }
+        const isUnequipping =
+            Number(idPos) === equipmentSlot &&
+            isEquipmentStorageSlot(idPos) &&
+            Boolean(itemInventary.equipped);
 
-            if (item.eventOnly === "HUNTERS_GAME" && !user.huntersGame && !itemInventary.equipped) {
-                handleProtocol.console("Este item solo se puede usar en Hunters Game.", "white", 0, 0, ws);
-                return;
-            }
+        if (!isUnequipping && item.newbie && !game.isNewbieCharacter(user)) {
+            handleProtocol.console("Solo los personajes newbie pueden equipar este item.", "white", 0, 0, ws);
+            return;
+        }
 
-            if (
-                user.privileges !== 1 &&
-                user.privileges !== 2 &&
-                Array.isArray(item.clasesNoPermitidas) &&
-                item.clasesNoPermitidas.includes(user.idClase) &&
-                !ignoresClassRestrictionForItem(idItem)
-            ) {
-                handleProtocol.console("Tu clase no puede equipar ese item.", "white", 0, 0, ws);
-                return;
-            }
+        if (!isUnequipping && tryPlaceAppearanceItem(ws, idPos)) {
+            return;
+        }
 
-            if (!game.canUseFactionItem(ws.id!, idItem)) {
-                handleProtocol.console("Tu faccion no puede equipar ese item.", "white", 0, 0, ws);
-                return;
-            }
+        if (!isUnequipping && item.eventOnly === "HUNTERS_GAME" && !user.huntersGame) {
+            handleProtocol.console("Este item solo se puede usar en Hunters Game.", "white", 0, 0, ws);
+            return;
+        }
 
-            if (
-                (item.razaEnana &&
-                    !game.isRazaEnana(user.idRaza) &&
-                    item.objType == vars.objType.armaduras &&
-                    !itemKinds.isHelmetObject(item)) ||
+        if (
+            !isUnequipping &&
+            user.privileges !== 1 &&
+            user.privileges !== 2 &&
+            Array.isArray(item.clasesNoPermitidas) &&
+            item.clasesNoPermitidas.includes(user.idClase) &&
+            !ignoresClassRestrictionForItem(idItem)
+        ) {
+            handleProtocol.console("Tu clase no puede equipar ese item.", "white", 0, 0, ws);
+            return;
+        }
+
+        if (!isUnequipping && !game.canUseFactionItem(ws.id!, idItem)) {
+            handleProtocol.console("Tu faccion no puede equipar ese item.", "white", 0, 0, ws);
+            return;
+        }
+
+        if (
+            !isUnequipping &&
+            ((item.razaEnana &&
+                !game.isRazaEnana(user.idRaza) &&
+                item.objType == vars.objType.armaduras &&
+                !itemKinds.isHelmetObject(item)) ||
                 (!item.razaEnana &&
                     game.isRazaEnana(user.idRaza) &&
                     item.objType == vars.objType.armaduras &&
-                    !itemKinds.isHelmetObject(item))
-            ) {
-                handleProtocol.console("Tu raza no puede equipar ese item.", "white", 0, 0, ws);
-                return;
-            }
-
-            switch (itemKinds.getEquipObjectType(item)) {
-                case vars.objType.armaduras: //Ropa
-                    const previousBodySlot = user.idItemBody;
-
-                    if (itemInventary.equipped) {
-                        const bodyNaked = game.bodyNaked(ws.id);
-                        if (user.navegando) {
-                            user.idLastBody = bodyNaked;
-                        } else {
-                            user.idBody = bodyNaked;
-                        }
-                        if (user.idItemBody && user.inv[user.idItemBody]) {
-                            user.inv[user.idItemBody].equipped = 0;
-                        }
-                        user.idItemBody = 0;
-                    } else {
-                        if (user.navegando) {
-                            user.idLastBody = item.anim;
-                        } else {
-                            user.idBody = item.anim;
-                        }
-                        if (user.idItemBody && user.inv[user.idItemBody]) {
-                            user.inv[user.idItemBody].equipped = 0;
-                        }
-                        user.idItemBody = idPos;
-                        itemInventary.equipped = 1;
-                    }
-
-                    if (user.navegando) {
-                        syncInventorySlots(user, [previousBodySlot, idPos]);
-                    } else {
-                        game.loopArea(ws, function (target: AreaTarget) {
-                            if (!target.isNpc) {
-                                withTargetClient(target.id, (targetClient) => {
-                                    if (!canReceiveCharacterEvent(target.id, ws.id)) {
-                                        return;
-                                    }
-
-                                    handleProtocol.changeRopa(ws.id, user.idBody, user.idItemBody, targetClient);
-                                });
-                            }
-                        });
-                    }
-                    break;
-
-                case vars.objType.armas: //Arma
-                    const previousWeaponSlot = user.idItemWeapon;
-                    const previousWeaponItemId =
-                        user.idItemWeapon && user.inv[user.idItemWeapon] ? user.inv[user.idItemWeapon].idItem : 0;
-
-                    if (itemInventary.equipped) {
-                        if (user.navegando) {
-                            user.idLastWeapon = 0;
-                        } else {
-                            user.idWeapon = 0;
-                        }
-                        if (user.idItemWeapon && user.inv[user.idItemWeapon]) {
-                            user.inv[user.idItemWeapon].equipped = 0;
-                        }
-                        user.idItemWeapon = 0;
-                    } else {
-                        if (user.navegando) {
-                            user.idLastWeapon = item.anim;
-                        } else {
-                            user.idWeapon = item.anim;
-                        }
-                        if (user.idItemWeapon && user.inv[user.idItemWeapon]) {
-                            user.inv[user.idItemWeapon].equipped = 0;
-                        }
-                        user.idItemWeapon = idPos;
-                        itemInventary.equipped = 1;
-                    }
-
-                    if (user.navegando) {
-                        syncInventorySlots(user, [previousWeaponSlot, idPos]);
-                    } else {
-                        game.loopArea(ws, function (target: AreaTarget) {
-                            if (!target.isNpc) {
-                                withTargetClient(target.id, (targetClient) => {
-                                    if (!canReceiveCharacterEvent(target.id, ws.id)) {
-                                        return;
-                                    }
-
-                                    handleProtocol.changeWeapon(ws.id, user.idWeapon, idPos, targetClient);
-                                    handleProtocol.playSound(ws.id, vars.arSounds.SND_SACARARMA, targetClient);
-                                });
-                            }
-                        });
-                    }
-
-                    if (fishing.isFishingRod(previousWeaponItemId) || fishing.isFishingRod(idItem)) {
-                        fishing.cancelFishing(clientId, "La pesca se canceló porque cambiaste tu arma equipada.");
-                    }
-
-                    if (harvesting.usesHarvestingTool(previousWeaponItemId) || harvesting.usesHarvestingTool(idItem)) {
-                        harvesting.cancelHarvesting(
-                            clientId,
-                            "La recolección se canceló porque cambiaste tu arma equipada.",
-                        );
-                    }
-                    break;
-
-                case vars.objType.anillos: //Anillo / accesorio
-                    const previousRingSlot = user.idItemRing;
-
-                    if (itemInventary.equipped) {
-                        if (user.idItemRing && user.inv[user.idItemRing]) {
-                            user.inv[user.idItemRing].equipped = 0;
-                        }
-                        user.idItemRing = 0;
-                    } else {
-                        if (user.idItemRing && user.inv[user.idItemRing]) {
-                            user.inv[user.idItemRing].equipped = 0;
-                        }
-                        user.idItemRing = idPos;
-                        itemInventary.equipped = 1;
-                    }
-
-                    syncInventorySlots(user, [previousRingSlot, idPos]);
-
-                    const previousRingItemId = Number(
-                        previousRingSlot && user.inv[previousRingSlot] ? user.inv[previousRingSlot].idItem : 0,
-                    );
-                    if (fishing.isFishingRod(previousRingItemId) || fishing.isFishingRod(idItem)) {
-                        fishing.cancelFishing(clientId, "La pesca se canceló porque cambiaste tu caña equipada.");
-                    }
-                    break;
-
-                case vars.objType.flechas: //Flechas
-                    if (itemInventary.equipped) {
-                        if (user.idItemArrow && user.inv[user.idItemArrow]) {
-                            user.inv[user.idItemArrow].equipped = 0;
-                        }
-                        user.idItemArrow = 0;
-                    } else {
-                        if (user.idItemArrow && user.inv[user.idItemArrow]) {
-                            user.inv[user.idItemArrow].equipped = 0;
-                        }
-                        user.idItemArrow = idPos;
-                        itemInventary.equipped = 1;
-                    }
-
-                    game.loopArea(ws, function (target: AreaTarget) {
-                        if (!target.isNpc) {
-                            withTargetClient(target.id, (targetClient) => {
-                                if (!canReceiveCharacterEvent(target.id, ws.id)) {
-                                    return;
-                                }
-
-                                handleProtocol.changeArrow(ws.id, user.idItemArrow, targetClient);
-                            });
-                        }
-                    });
-                    break;
-
-                case vars.objType.escudos: //Escudo
-                    if (!itemInventary.equipped && Number(user.challengeShieldBlockedForRound ?? 0) > 0) {
-                        handleProtocol.console(
-                            "[Retos] No puedes volver a equipar el escudo hasta la próxima ronda.",
-                            "white",
-                            0,
-                            0,
-                            ws,
-                        );
-                        return;
-                    }
-
-                    const previousShieldSlot = user.idItemShield;
-
-                    if (itemInventary.equipped) {
-                        if (user.navegando) {
-                            user.idLastShield = 0;
-                        } else {
-                            user.idShield = 0;
-                        }
-                        if (user.idItemShield && user.inv[user.idItemShield]) {
-                            user.inv[user.idItemShield].equipped = 0;
-                        }
-                        user.idItemShield = 0;
-                    } else {
-                        if (user.navegando) {
-                            user.idLastShield = item.anim;
-                        } else {
-                            user.idShield = item.anim;
-                        }
-                        if (user.idItemShield && user.inv[user.idItemShield]) {
-                            user.inv[user.idItemShield].equipped = 0;
-                        }
-                        user.idItemShield = idPos;
-                        itemInventary.equipped = 1;
-                    }
-
-                    if (user.navegando) {
-                        syncInventorySlots(user, [previousShieldSlot, idPos]);
-                    } else {
-                        game.loopArea(ws, function (target: AreaTarget) {
-                            if (!target.isNpc) {
-                                withTargetClient(target.id, (targetClient) => {
-                                    if (!canReceiveCharacterEvent(target.id, ws.id)) {
-                                        return;
-                                    }
-
-                                    handleProtocol.changeShield(ws.id, user.idShield, idPos, targetClient);
-                                });
-                            }
-                        });
-                    }
-                    break;
-
-                case vars.objType.cascos: //Casco
-                    const previousHelmetSlot = user.idItemHelmet;
-
-                    if (itemInventary.equipped) {
-                        if (user.navegando) {
-                            user.idLastHelmet = 0;
-                        } else {
-                            user.idHelmet = 0;
-                        }
-                        if (user.idItemHelmet && user.inv[user.idItemHelmet]) {
-                            user.inv[user.idItemHelmet].equipped = 0;
-                        }
-                        user.idItemHelmet = 0;
-                    } else {
-                        if (user.navegando) {
-                            user.idLastHelmet = item.anim;
-                        } else {
-                            user.idHelmet = item.anim;
-                        }
-                        if (user.idItemHelmet && user.inv[user.idItemHelmet]) {
-                            user.inv[user.idItemHelmet].equipped = 0;
-                        }
-                        user.idItemHelmet = idPos;
-                        itemInventary.equipped = 1;
-                    }
-
-                    if (user.navegando) {
-                        syncInventorySlots(user, [previousHelmetSlot, idPos]);
-                    } else {
-                        game.loopArea(ws, function (target: AreaTarget) {
-                            if (!target.isNpc) {
-                                withTargetClient(target.id, (targetClient) => {
-                                    if (!canReceiveCharacterEvent(target.id, ws.id)) {
-                                        return;
-                                    }
-
-                                    handleProtocol.changeHelmet(ws.id, user.idHelmet, idPos, targetClient);
-                                });
-                            }
-                        });
-                    }
-                    break;
-            }
+                    !itemKinds.isHelmetObject(item)))
+        ) {
+            handleProtocol.console("Tu raza no puede equipar ese item.", "white", 0, 0, ws);
+            return;
         }
+
+        if (
+            !isUnequipping &&
+            equipType === vars.objType.escudos &&
+            Number(user.challengeShieldBlockedForRound ?? 0) > 0
+        ) {
+            handleProtocol.console(
+                "[Retos] No puedes volver a equipar el escudo hasta la próxima ronda.",
+                "white",
+                0,
+                0,
+                ws,
+            );
+            return;
+        }
+
+        const previousEquippedItem = user.inv[String(equipmentSlot)];
+        const previousEquippedItemId = Number(previousEquippedItem?.idItem ?? 0);
+        const transfer = isUnequipping
+            ? unequipInventoryItem(user.inv, equipmentSlot)
+            : equipInventoryItem(user.inv, Number(idPos), equipmentSlot, {
+                  // Equipar siempre libera el espacio de la mochila, incluso
+                  // cuando el objeto estaba apilado con otras unidades.
+                  moveWholeStack: true,
+              });
+
+        if (!transfer.ok) {
+            if (transfer.reason === "inventory-full") {
+                handleProtocol.console(
+                    isUnequipping
+                        ? "No tienes lugar en el inventario para desequipar ese item."
+                        : "No tienes lugar para guardar el item equipado que estás reemplazando.",
+                    "white",
+                    0,
+                    0,
+                    ws,
+                );
+            }
+            return;
+        }
+
+        user.inv = transfer.inventory;
+        const equippedPosition = isUnequipping ? 0 : equipmentSlot;
+        const equippedAnimation = isUnequipping ? 0 : Number(item.anim ?? 0);
+
+        const broadcastEquipmentChange = (
+            sendChange: (targetClient: RuntimeClient) => void,
+        ) => {
+            game.loopArea(ws, function (target: AreaTarget) {
+                if (target.isNpc) {
+                    return;
+                }
+                withTargetClient(target.id, (targetClient) => {
+                    if (canReceiveCharacterEvent(target.id, ws.id)) {
+                        sendChange(targetClient);
+                    }
+                });
+            });
+        };
+
+        switch (equipType) {
+            case vars.objType.armaduras: {
+                const body = isUnequipping ? game.bodyNaked(ws.id) : equippedAnimation;
+                if (user.navegando) {
+                    user.idLastBody = body;
+                } else {
+                    user.idBody = body;
+                }
+                user.idItemBody = equippedPosition;
+                if (!user.navegando) {
+                    broadcastEquipmentChange((targetClient) =>
+                        handleProtocol.changeRopa(ws.id, user.idBody, equippedPosition, targetClient),
+                    );
+                }
+                break;
+            }
+            case vars.objType.armas:
+                if (user.navegando) {
+                    user.idLastWeapon = equippedAnimation;
+                } else {
+                    user.idWeapon = equippedAnimation;
+                }
+                user.idItemWeapon = equippedPosition;
+                if (!user.navegando) {
+                    broadcastEquipmentChange((targetClient) => {
+                        handleProtocol.changeWeapon(ws.id, user.idWeapon, equippedPosition, targetClient);
+                        handleProtocol.playSound(ws.id, vars.arSounds.SND_SACARARMA, targetClient);
+                    });
+                }
+                if (fishing.isFishingRod(previousEquippedItemId) || fishing.isFishingRod(idItem)) {
+                    fishing.cancelFishing(clientId, "La pesca se canceló porque cambiaste tu arma equipada.");
+                }
+                if (
+                    harvesting.usesHarvestingTool(previousEquippedItemId) ||
+                    harvesting.usesHarvestingTool(idItem)
+                ) {
+                    harvesting.cancelHarvesting(
+                        clientId,
+                        "La recolección se canceló porque cambiaste tu arma equipada.",
+                    );
+                }
+                break;
+            case vars.objType.anillos:
+                user.idItemRing = equippedPosition;
+                if (fishing.isFishingRod(previousEquippedItemId) || fishing.isFishingRod(idItem)) {
+                    fishing.cancelFishing(clientId, "La pesca se canceló porque cambiaste tu caña equipada.");
+                }
+                break;
+            case vars.objType.flechas:
+                user.idItemArrow = equippedPosition;
+                broadcastEquipmentChange((targetClient) =>
+                    handleProtocol.changeArrow(ws.id, equippedPosition, targetClient),
+                );
+                break;
+            case vars.objType.escudos:
+                if (user.navegando) {
+                    user.idLastShield = equippedAnimation;
+                } else {
+                    user.idShield = equippedAnimation;
+                }
+                user.idItemShield = equippedPosition;
+                if (!user.navegando) {
+                    broadcastEquipmentChange((targetClient) =>
+                        handleProtocol.changeShield(ws.id, user.idShield, equippedPosition, targetClient),
+                    );
+                }
+                break;
+            case vars.objType.cascos:
+                if (user.navegando) {
+                    user.idLastHelmet = equippedAnimation;
+                } else {
+                    user.idHelmet = equippedAnimation;
+                }
+                user.idItemHelmet = equippedPosition;
+                if (!user.navegando) {
+                    broadcastEquipmentChange((targetClient) =>
+                        handleProtocol.changeHelmet(ws.id, user.idHelmet, equippedPosition, targetClient),
+                    );
+                }
+                break;
+        }
+
+        handleProtocol.sendMyCharacter(user);
+        socket.send(ws);
+        await game.persistCharacterItemsById(clientId);
     } catch (err) {
         funct.dumpError(err);
     }

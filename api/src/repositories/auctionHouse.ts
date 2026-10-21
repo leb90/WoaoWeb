@@ -7,9 +7,10 @@ const AUCTION_MIN_DURATION_HOURS = 1;
 const AUCTION_MAX_DURATION_HOURS = 48;
 const AUCTION_MIN_BID_INCREMENT_PERCENT = 5;
 const AUCTION_SALE_FEE_PERCENT = 0;
+const MAX_CHARACTER_ITEM_SLOT = 27;
 
 const characterItemSchema = z.object({
-    idPos: z.coerce.number().int(),
+    idPos: z.coerce.number().int().min(1).max(MAX_CHARACTER_ITEM_SLOT),
     idItem: z.coerce.number().int().positive(),
     cant: z.coerce.number().int().positive(),
     equipped: z.union([z.boolean(), z.number().int()]).transform(Boolean),

@@ -11,6 +11,11 @@ import type { HandleProtocolApi } from "./handleProtocol";
 import type { SocketApi } from "./socket";
 import { getCharacterById, getClientById } from "./runtimeRegistry";
 import * as safeZone from "./safeZone";
+import {
+    countOccupiedInventorySlots,
+    findAvailableInventorySlot,
+    isInventorySlot,
+} from "./equipmentStorage";
 
 export {};
 
@@ -201,7 +206,11 @@ function getHarvestAmount(user: HarvestingUser, skill: HarvestingSkill) {
 
 function addRewardToInventory(user: HarvestingUser, itemId: number, amount: number) {
     for (const [slot, item] of Object.entries(user.inv)) {
-        if (item.idItem === itemId && item.cant + amount <= 10000) {
+        if (
+            isInventorySlot(slot) &&
+            item.idItem === itemId &&
+            item.cant + amount <= 10000
+        ) {
             item.cant += amount;
             withUserClient(user.id, (userClient) => {
                 handleProtocol.agregarUserInvItem(user.id, slot, userClient);
@@ -210,18 +219,11 @@ function addRewardToInventory(user: HarvestingUser, itemId: number, amount: numb
         }
     }
 
-    if (Object.keys(user.inv).length >= 21) {
+    if (countOccupiedInventorySlots(user.inv) >= 21) {
         return false;
     }
 
-    let nextSlot = 1;
-    const usedSlots = Object.keys(user.inv)
-        .map(Number)
-        .sort((left, right) => left - right);
-
-    while (usedSlots[nextSlot - 1] === nextSlot) {
-        nextSlot++;
-    }
+    const nextSlot = findAvailableInventorySlot(user.inv);
 
     user.inv[nextSlot] = {
         idItem: itemId,

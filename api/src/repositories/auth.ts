@@ -158,6 +158,7 @@ type StarterInventoryItem = {
     idItem: number;
     amount: number;
     equipped?: boolean;
+    slot?: number;
 };
 
 function getStarterClothesId(raceKey: RaceKey, genderKey: GenderKey): number {
@@ -192,8 +193,13 @@ function getStarterLoadout(
     const items: StarterInventoryItem[] = [
         { idItem: 467, amount: 100 },
         { idItem: 468, amount: 100 },
-        { idItem: 460, amount: 1, equipped: true },
-        { idItem: getStarterClothesId(raceKey, genderKey), amount: 1, equipped: true },
+        { idItem: 460, amount: 1, equipped: true, slot: 23 },
+        {
+            idItem: getStarterClothesId(raceKey, genderKey),
+            amount: 1,
+            equipped: true,
+            slot: 22,
+        },
     ];
 
     const rangedOrWorker = new Set<string>([
@@ -680,11 +686,13 @@ export async function createCharacterForSession(
 
         if (starterLoadout.items.length > 0) {
             const itemValues: Array<string | number | boolean> = [];
+            let nextInventorySlot = 1;
             const itemPlaceholders = starterLoadout.items.map((item, index) => {
                 const base = index * 5;
+                const slot = item.slot ?? nextInventorySlot++;
                 itemValues.push(
                     characterId,
-                    index + 1,
+                    slot,
                     item.idItem,
                     item.amount,
                     Boolean(item.equipped),

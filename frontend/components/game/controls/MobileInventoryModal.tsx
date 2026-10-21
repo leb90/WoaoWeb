@@ -102,24 +102,14 @@ export function MobileInventoryModal({
 
     const items = React.useMemo(() => hud?.inventory ?? [], [hud?.inventory]);
 
-    const startSlot = React.useMemo(() => {
-        if (items.length === 0) {
-            return 0;
-        }
-        const lowest = Math.min(...items.map((item) => item.slot));
-        return lowest === 0 ? 0 : 1;
-    }, [items]);
+    const startSlot = 1;
 
     const slots = React.useMemo(() => {
         const bySlot = new Map(items.map((item) => [item.slot, item]));
-        const highest = items.length
-            ? Math.max(...items.map((item) => item.slot))
-            : 0;
-        const total = Math.max(MIN_SLOTS, highest - startSlot + 1);
 
-        // Lo equipado se ve solo en el panel de equipo (en el server sigue
-        // ocupando su lugar del inventario).
-        return Array.from({ length: total }, (_, index) => ({
+        // Los seis slots persistentes de equipo quedan fuera de los 21 lugares
+        // de la mochila.
+        return Array.from({ length: MIN_SLOTS }, (_, index) => ({
             slot: index + startSlot,
             item: bySlot.get(index + startSlot),
         })).filter(
@@ -318,17 +308,10 @@ export function MobileInventoryModal({
         const dragged = items.find((entry) => entry.slot === drag.slot);
 
         if (drag.source === "equipment") {
-            // Del equipo al inventario: se lo saca (y se mueve si el lugar
-            // donde lo soltaste está vacío).
+            // El servidor ubica la pieza en un lugar libre o rechaza la acción
+            // si la mochila está llena.
             if (Number.isFinite(targetSlot) && dragged?.equipped) {
                 onEquip(drag.slot);
-                const occupied = items.some(
-                    (entry) => entry.slot === targetSlot,
-                );
-                if (targetSlot !== drag.slot && !occupied) {
-                    onMove(drag.slot, targetSlot);
-                    setSelectedSlot(targetSlot);
-                }
             }
             return;
         }
@@ -456,17 +439,6 @@ export function MobileInventoryModal({
                             items={items}
                             objectsDB={objectsDB}
                             graphicsDB={graphicsDB}
-                            appearance={
-                                hud?.idBody
-                                    ? {
-                                          head: hud.idHead ?? 0,
-                                          body: hud.idBody,
-                                          helmet: hud.idHelmet ?? 0,
-                                          weapon: hud.idWeapon ?? 0,
-                                          shield: hud.idShield ?? 0,
-                                      }
-                                    : null
-                            }
                             draggingKind={
                                 ghost && ghost.source !== "equipment"
                                     ? getInventoryItemEquipmentKind(

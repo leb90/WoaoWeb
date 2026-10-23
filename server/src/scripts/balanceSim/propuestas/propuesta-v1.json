@@ -1,0 +1,32 @@
+{
+    "attributeCap": 40,
+    "attributeCapIncludesItems": true,
+    "applyOeMana": true,
+    "pvpMelee": {
+        "2": 0.5,
+        "3": 0.45,
+        "4": 0.45,
+        "6": 0.45,
+        "7": 1.05,
+        "8": 0.45,
+        "9": 0.35
+    },
+    "pvpRanged": {
+        "9": 0.75
+    },
+    "pvpMagic": {
+        "1": 1.1,
+        "2": 1.1,
+        "4": 1.25,
+        "6": 1.35,
+        "7": 0.85,
+        "8": 1.25
+    },
+    "tierSetBonus": {
+        "default": {
+            "phys": 25,
+            "magic": 25,
+            "hp": 20
+        }
+    }
+}

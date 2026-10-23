@@ -42,7 +42,8 @@
         "compare-original-data": "tsx src/scripts/compareOriginalData.ts",
         "apply-combat-balance": "tsx src/scripts/applyCombatBalanceData.ts",
         "report-combat-balance": "tsx src/scripts/reportCombatBalance.ts",
-        "test-combat-balance": "tsx src/balance.test.ts && tsx src/combatBalance.test.ts"
+        "test-combat-balance": "tsx src/balance.test.ts && tsx src/combatBalance.test.ts",
+        "balance-sim": "tsx src/scripts/balanceSim/simulate.ts"
     },
     "repository": {
         "type": "git",

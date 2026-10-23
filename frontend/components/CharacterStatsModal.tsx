@@ -33,6 +33,7 @@ const classLabels: Record<number, string> = {
     7: "Druida",
     8: "Paladin",
     9: "Cazador",
+    22: "Chaman",
 };
 
 const EQUIPMENT_SLOT_LABELS: Record<EquipmentKind, string> = {

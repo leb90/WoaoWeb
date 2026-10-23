@@ -73,6 +73,83 @@ export function getHiddenSkillDurationMs(skill: number, classId?: number): numbe
     return Math.max(1000, durationCounter * 40);
 }
 
+// Efectos del chamán (server/src/elementalEffects.ts): escudo propio (30 s), escudos de aliados (60 s),
+// Evasión de viento (10 s) y su recarga (30 s desde que se tiró).
+const ELEMENTAL_SHIELD_MS = 30_000;
+const ELEMENTAL_ALLY_SHIELD_MS = 60_000;
+const ELEMENTAL_EVASION_MS = 10_000;
+const ELEMENTAL_EVASION_COOLDOWN_MS = 30_000;
+
+const ELEMENTAL_SHIELD_ENTRIES = {
+    magico: { label: "Esc M", accent: "rgba(167, 139, 250, 0.98)", iconSrc: "/imgs/spells/escudo-magico.png" },
+    fisico: { label: "Esc F", accent: "rgba(214, 178, 122, 0.98)", iconSrc: "/imgs/spells/escudo-fisico.png" },
+    energia: { label: "Energ", accent: "rgba(251, 191, 36, 0.98)", iconSrc: "/imgs/spells/escudo-energia.png" },
+} as const;
+
+function getElementalEntries(state: PlayerHudState["elemental"], now: number): StatusEntry[] {
+    if (!state) {
+        return [];
+    }
+
+    const secondsUntil = (until: number) => Math.max(0, Math.ceil((until - now) / 1000));
+    const entries: StatusEntry[] = [];
+
+    if (state.shield) {
+        const seconds = secondsUntil(state.shieldUntil);
+        entries.push({
+            key: "elemental-shield",
+            seconds,
+            progress: clampProgress((seconds * 1000) / ELEMENTAL_SHIELD_MS),
+            ...ELEMENTAL_SHIELD_ENTRIES[state.shield],
+        });
+    }
+
+    const allyMagicSeconds = secondsUntil(state.allyMagicUntil);
+    entries.push({
+        key: "elemental-ally-magic",
+        label: "+5% M",
+        seconds: allyMagicSeconds,
+        progress: clampProgress((allyMagicSeconds * 1000) / ELEMENTAL_ALLY_SHIELD_MS),
+        accent: "rgba(125, 211, 252, 0.98)",
+        iconSrc: "/imgs/spells/escudo-aliado.png",
+    });
+
+    const allyPhysicalSeconds = secondsUntil(state.allyPhysicalUntil);
+    entries.push({
+        key: "elemental-ally-physical",
+        label: "+5% F",
+        seconds: allyPhysicalSeconds,
+        progress: clampProgress((allyPhysicalSeconds * 1000) / ELEMENTAL_ALLY_SHIELD_MS),
+        accent: "rgba(214, 178, 122, 0.98)",
+        iconSrc: "/imgs/spells/escudo-aliado.png",
+    });
+
+    const evasionSeconds = secondsUntil(state.evasionUntil);
+    if (evasionSeconds > 0) {
+        entries.push({
+            key: "elemental-evasion",
+            label: "Evas",
+            seconds: evasionSeconds,
+            progress: clampProgress((evasionSeconds * 1000) / ELEMENTAL_EVASION_MS),
+            accent: "rgba(165, 243, 252, 0.98)",
+            iconSrc: "/imgs/spells/evasion-viento.png",
+        });
+    } else {
+        // Cuánto falta para poder volver a tirarla.
+        const cooldownSeconds = secondsUntil(state.evasionCooldownUntil);
+        entries.push({
+            key: "elemental-evasion-cooldown",
+            label: "Recarga",
+            seconds: cooldownSeconds,
+            progress: clampProgress((cooldownSeconds * 1000) / ELEMENTAL_EVASION_COOLDOWN_MS),
+            accent: "rgba(148, 163, 184, 0.98)",
+            iconSrc: "/imgs/spells/evasion-viento.png",
+        });
+    }
+
+    return entries;
+}
+
 export default function BuffStatusSidebar({
     hud,
     runtimeTiming,
@@ -350,6 +427,7 @@ export default function BuffStatusSidebar({
                 accent: "rgba(250, 204, 21, 0.98)",
                 iconSrc: "/imgs/spells/inmovilizar.png",
             },
+            ...getElementalEntries(hud.elemental, now),
         ].filter((entry) => entry.seconds > 0);
     }, [
         buffExpiryAt.agilidad,

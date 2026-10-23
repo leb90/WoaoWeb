@@ -17,7 +17,8 @@ export type CharacterClassKey =
     | "pirata"
     | "ermitano"
     | "arquero"
-    | "domador";
+    | "domador"
+    | "chaman";
 
 export type RaceKey =
     | "humano"
@@ -134,6 +135,7 @@ export const CLASS_ID_MAP: Record<CharacterClassKey, number> = {
     ermitano: 19,
     arquero: 20,
     domador: 21,
+    chaman: 22,
 };
 
 export const RACE_ID_MAP: Record<RaceKey, number> = {
@@ -171,6 +173,7 @@ const characterClassOptionsWithLegacyWorkers: CharacterClassOption[] = [
     { key: "ermitano", label: "Ermitaño", icon: "🕯", summary: "Clase aislada, equilibrio entre supervivencia y magia menor." },
     { key: "arquero", label: "Arquero", icon: "🏹", summary: "Gran daño con arco y flechas, pero poca vida." },
     { key: "domador", label: "Domador", icon: "🐾", summary: "Controla criaturas. Débil en combate directo." },
+    { key: "chaman", label: "Chamán", icon: "🌀", summary: "Domina fuego, agua, tierra, aire y rayo. Depende de sus escudos elementales." },
 ];
 
 const LEGACY_WORKER_CLASS_KEYS = new Set<CharacterClassKey>(["pescador", "herrero", "lenador", "minero", "carpintero"]);
@@ -246,6 +249,7 @@ const classProgressByKey: Record<CharacterClassKey, ClassProgress> = {
     ermitano: { vida: 8.5, vidaMin: 7, vidaMax: 10, manaInicial: 2.5, multMana: 1, hitPre36: 2, hitPost36: 2 },
     arquero: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
     domador: { vida: 9, vidaMin: 7, vidaMax: 11, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
+    chaman: { vida: 8.5, vidaMin: 7, vidaMax: 10, manaInicial: 2.5, multMana: 2, hitPre36: 2, hitPost36: 2 },
 };
 
 export const classCombatMods: Record<CharacterClassKey, ClassCombatMods> = {
@@ -268,6 +272,7 @@ export const classCombatMods: Record<CharacterClassKey, ClassCombatMods> = {
     carpintero: { evasion: 80, aciertoArmas: 80, aciertoProyectiles: 70, danoArmas: 80, danoProyectiles: 70, escudos: 70, danoMagia: 0, resistMagia: 4 },
     ermitano: { evasion: 80, aciertoArmas: 80, aciertoProyectiles: 70, danoArmas: 80, danoProyectiles: 75, escudos: 70, danoMagia: 50, resistMagia: 4 },
     domador: { evasion: 80, aciertoArmas: 50, aciertoProyectiles: 50, danoArmas: 50, danoProyectiles: 50, escudos: 60, danoMagia: 0, resistMagia: 4 },
+    chaman: { evasion: 90, aciertoArmas: 80, aciertoProyectiles: 60, danoArmas: 75, danoProyectiles: 75, escudos: 80, danoMagia: 92, resistMagia: 3 },
 };
 
 export const raceOptions: RaceOption[] = [
@@ -605,6 +610,15 @@ const CLASS_OUTFITS: Record<CharacterClassKey, ClassOutfit> = {
         helmetId: 0,
         tallMale: 1,
         tallFemale: 44,
+        short: 52,
+    },
+    // Set Elemental: bastón de gema verde, caparazón de tortuga, corona de plumas y túnica blanca.
+    chaman: {
+        weaponId: 85,
+        shieldId: 3,
+        helmetId: 38,
+        tallMale: 403,
+        tallFemale: 403,
         short: 52,
     },
 };

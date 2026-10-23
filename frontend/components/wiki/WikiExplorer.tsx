@@ -149,6 +149,7 @@ const PLAYABLE_CLASS_LABELS: Record<number, string> = {
     7: "Druida",
     8: "Paladín",
     9: "Cazador",
+    22: "Chamán",
 };
 
 const PLAYABLE_CLASS_IDS = Object.keys(PLAYABLE_CLASS_LABELS).map(Number);

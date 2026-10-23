@@ -114,8 +114,35 @@ html.game-targeting body *::after {
     text-shadow: 0 0 10px rgba(127, 29, 29, 0.85), 0 2px 3px rgba(0, 0, 0, 0.95), 0 0 1px rgba(0, 0, 0, 1);
 }
 
+/* Efectos del chamán (ElementalStatusBanner): la cuenta late con el color de cada efecto. */
+@keyframes elemental-pulse {
+    0% {
+        transform: scale(1);
+        text-shadow: 0 0 6px var(--elemental-glow), 0 2px 3px rgba(0, 0, 0, 0.95);
+    }
+    15% {
+        transform: scale(1.4);
+        filter: brightness(1.35);
+        text-shadow: 0 0 18px var(--elemental-glow), 0 0 4px rgba(255, 255, 255, 0.4), 0 2px 3px rgba(0, 0, 0, 0.95);
+    }
+    100% {
+        transform: scale(1);
+        text-shadow: 0 0 6px var(--elemental-glow), 0 2px 3px rgba(0, 0, 0, 0.95);
+    }
+}
+
+.elemental-pulse {
+    display: inline-block;
+    animation: elemental-pulse 0.9s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+.elemental-banner-text {
+    text-shadow: 0 0 10px var(--elemental-glow), 0 2px 3px rgba(0, 0, 0, 0.95), 0 0 1px rgba(0, 0, 0, 1);
+}
+
 @media (prefers-reduced-motion: reduce) {
-    .bleed-heartbeat {
+    .bleed-heartbeat,
+    .elemental-pulse {
         animation: none;
     }
 }

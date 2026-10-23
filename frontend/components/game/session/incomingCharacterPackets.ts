@@ -396,7 +396,8 @@ export async function handleIncomingCharacterPacket({
                             {
                                 heading: previousHeading,
                                 durationMs:
-                                    ctx.runtimeTimingRef.current.walkStepMs,
+                                    ctx.runtimeTimingRef.current.walkStepMs *
+                                    engine.elementalWalkMultiplier(packet.payload.id),
                                 map: packet.payload.map || entity.map,
                             },
                         );
@@ -467,7 +468,8 @@ export async function handleIncomingCharacterPacket({
                             {
                                 heading: packet.payload.heading,
                                 durationMs:
-                                    ctx.runtimeTimingRef.current.walkStepMs,
+                                    ctx.runtimeTimingRef.current.walkStepMs *
+                                    engine.elementalWalkMultiplier(packet.payload.id),
                                 map: packet.payload.map || entity.map,
                             },
                         );

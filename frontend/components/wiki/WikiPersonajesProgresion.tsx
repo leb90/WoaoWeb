@@ -19,6 +19,7 @@ import {
     Sparkles,
     Swords,
     Target,
+    Tornado,
     UserRound,
     Zap,
     type LucideIcon,
@@ -116,6 +117,12 @@ const CLASS_GUIDES: Partial<Record<CharacterClassKey, ClassGuide>> = {
         summary: "La clase de mayor daño con arco y flechas. Su especialización ofensiva se compensa con una progresión de vida menor.",
         strengths: ["Proyectiles", "Alcance", "Daño alto"],
     },
+    chaman: {
+        role: "Daño elemental",
+        resource: "Maná alto",
+        summary: "Domina fuego, agua, tierra, aire y rayo. Su daño elemental no lo frena la resistencia mágica, y vive de sus escudos: mágico, físico y de energía, que tira piedras solo.",
+        strengths: ["Daño elemental", "Escudos", "Control: lentitud y silencios"],
+    },
 };
 
 const CLASS_ICONS: Partial<Record<CharacterClassKey, LucideIcon>> = {
@@ -129,6 +136,7 @@ const CLASS_ICONS: Partial<Record<CharacterClassKey, LucideIcon>> = {
     cazador: Target,
     pirata: Anchor,
     arquero: Crosshair,
+    chaman: Tornado,
 };
 
 const RACIAL_PASSIVES: Record<RaceKey, string> = {

@@ -7,7 +7,7 @@ import balance from "@/lib/wiki-pvp-balance.json";
 // Nivelación PvP: los números salen del simulador del server (server/src/scripts/balanceSim, motor real de
 // combate) y se regeneran con wiki.ts. Ver docs/balance/BALANCE_PVP.md.
 
-const CLASS_NAMES: Record<number, string> = { 1: "Mago", 2: "Clérigo", 3: "Guerrero", 4: "Asesino", 6: "Bardo", 7: "Druida", 8: "Paladín", 9: "Cazador", 18: "Pirata", 20: "Arquero" };
+const CLASS_NAMES: Record<number, string> = { 1: "Mago", 2: "Clérigo", 3: "Guerrero", 4: "Asesino", 6: "Bardo", 7: "Druida", 8: "Paladín", 9: "Cazador", 18: "Pirata", 20: "Arquero", 22: "Chamán" };
 const MODE_LABELS: Record<string, string> = { magia: "magia", melee: "golpe", rango: "flecha" };
 
 const CLASS_IDENTITY: Array<{ id: number; text: string }> = [
@@ -21,6 +21,7 @@ const CLASS_IDENTITY: Array<{ id: number; text: string }> = [
     { id: 9, text: "Arco; el cuerpo a cuerpo queda en segundo plano." },
     { id: 18, text: "Golpe y aguante cercanos al guerrero, con un poco de magia." },
     { id: 20, text: "Flechas muy fuertes y rápidas: con set mata a un mago en 2. Poca vida y poca resistencia a la magia; con el set Silvano completo, 3 de cada 10 parálisis le fallan." },
+    { id: 22, text: "Solo magia elemental: pega parecido a la Llama del mago, pero la resistencia mágica no la frena, así que rinde más contra los que aguantan magia. Vive de sus escudos y casi no pega con el bastón." },
 ];
 
 // Mismos valores que server/src/itemRarity.ts.

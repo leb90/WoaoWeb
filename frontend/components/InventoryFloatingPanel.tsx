@@ -256,6 +256,7 @@ const classLabels: Record<number, string> = {
     19: "Ermitano",
     20: "Arquero",
     21: "Domador",
+    22: "Chaman",
 };
 
 const clanNamePattern = /^[A-Za-z ]+$/;

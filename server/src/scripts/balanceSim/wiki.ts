@@ -34,6 +34,7 @@ const CLASSES = [
     { id: 9, name: "Cazador", modes: ["rango", "melee"] },
     { id: 18, name: "Pirata", modes: ["melee", "magia"] },
     { id: 20, name: "Arquero", modes: ["rango"] },
+    { id: 22, name: "Chamán", modes: ["magia"] },
 ];
 const LEVELS = [30, 40, 50];
 const round = (value: number) => (Number.isFinite(value) ? Math.round(value * 10) / 10 : null);

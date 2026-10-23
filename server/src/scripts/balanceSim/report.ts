@@ -8,7 +8,7 @@ import { TOLERANCE, targetHits, type SimResult } from "./targets";
 type Row = SimResult & { hp: number; hitRate: number; dmgP10: number; dmgP90: number; casts: number | null };
 type Data = { results: Row[]; loadouts: Record<string, { spell?: { name: string } | null }> };
 
-const CLASS_NAMES: Record<number, string> = { 1: "Mago", 2: "Clérigo", 3: "Guerrero", 4: "Asesino", 5: "Ladrón", 6: "Bardo", 7: "Druida", 8: "Paladín", 9: "Cazador", 12: "Bandido", 18: "Pirata", 20: "Arquero" };
+const CLASS_NAMES: Record<number, string> = { 1: "Mago", 2: "Clérigo", 3: "Guerrero", 4: "Asesino", 5: "Ladrón", 6: "Bardo", 7: "Druida", 8: "Paladín", 9: "Cazador", 12: "Bandido", 18: "Pirata", 20: "Arquero", 22: "Chamán" };
 const MODE_NAMES: Record<string, string> = { magia: "magia", melee: "golpe", rango: "flecha" };
 const format = (value: number | undefined) => (value !== undefined && Number.isFinite(value) ? value.toFixed(1).replace(".", ",") : "∞");
 const load = (file: string): Data => JSON.parse(fs.readFileSync(file, "utf8"));

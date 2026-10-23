@@ -35,6 +35,7 @@ const CLASSES: Array<{ id: number; name: string; modes: string[]; identity: stri
     { id: 9, name: "Cazador", modes: ["rango", "melee"], identity: "Arco; el cuerpo a cuerpo queda en segundo plano." },
     { id: 18, name: "Pirata", modes: ["melee", "magia"], identity: "Golpe y aguante cercanos al guerrero, con un poco de magia. No tiene set de tier." },
     { id: 20, name: "Arquero", modes: ["rango"], identity: "Flechas muy fuertes y rápidas: con set mata a un mago en 2 flechas, a los semimagos en 3-4 y a un guerrero en 4-6. Tiene poca vida y aguanta poca magia; depende de que no lo paralicen (con el set Silvano completo, 3 de cada 10 parálisis le fallan)." },
+    { id: 22, name: "Chamán", modes: ["magia"], identity: "Solo magia elemental: pega parecido a la Llama del mago, pero la resistencia mágica no lo frena, así que rinde más contra los que aguantan magia. Vive de sus escudos (el simulador los mide sin escudo) y casi no pega con el bastón." },
 ];
 const NAME: Record<number, string> = Object.fromEntries(CLASSES.map((c) => [c.id, c.name]));
 const MODE: Record<string, string> = { magia: "magia", melee: "golpe", rango: "flecha" };

@@ -71,7 +71,7 @@ export default function WikiPrimerosPasos() {
                         Elegís facción al elegir raza. Alianza: Humano, Elfo, Enano, Gnomo, Tauros y Abisario. Horda: Elfo Oscuro, Orco, Vampiro, Goblin, Licantropo y No-Muerto. Todas tienen hombre y mujer, y una cabeza dentro del rango de esa raza.
                     </p>
                     <p>
-                        Las clases que se pueden crear son Mago, Clerigo, Guerrero, Asesino, Bardo, Druida, Paladin, Cazador, Pirata y Arquero. Ninguna raza bloquea a ninguna de esas clases. Ladrón, Bandido, Ermitaño y Domador no se pueden crear.
+                        Las clases que se pueden crear son Mago, Clerigo, Guerrero, Asesino, Bardo, Druida, Paladin, Cazador, Pirata, Arquero y Chamán. Ninguna raza bloquea a ninguna de esas clases. Ladrón, Bandido, Ermitaño y Domador no se pueden crear.
                     </p>
                     <p>
                         Cada atributo arranca en 18 y suma el bono de la raza. La clase cambia en el momento el acierto, el daño, la evasión, la defensa y el maná que ves en la pantalla. El personaje nace en nivel 1, con 0 de oro, en la zona Dungeon Newbie. En el mundo ese mapa se llama Newbie Dungeon.
@@ -82,7 +82,7 @@ export default function WikiPrimerosPasos() {
                         caption="Raza, sexo, cabeza, clase y atributos se eligen en esta pantalla. La zona inicial es Dungeon Newbie."
                     />
                     <p>
-                        Todos salen con una Daga (Newbies 1-3) equipada, ropa newbie según la raza y el sexo, 100 Manzana Roja (Newbies) y 100 Botella de agua (Newbies). El 1-3 del nombre de la daga es su daño, no un tope de nivel. Arquero y Cazador además reciben un Arco Newbie y 500 Flecha Newbie. Mago, Clerigo, Bardo, Druida, Paladin y Asesino empiezan con el hechizo Dardo Mágico.
+                        Todos salen con una Daga (Newbies 1-3) equipada, ropa newbie según la raza y el sexo, 100 Manzana Roja (Newbies) y 100 Botella de agua (Newbies). El 1-3 del nombre de la daga es su daño, no un tope de nivel. Arquero y Cazador además reciben un Arco Newbie y 500 Flecha Newbie. Mago, Clerigo, Bardo, Druida, Paladin y Asesino empiezan con el hechizo Dardo Mágico, y el Chamán con Flecha eléctrica.
                     </p>
                 </Prose>
             </WikiSection>

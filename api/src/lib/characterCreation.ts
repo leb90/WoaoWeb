@@ -9,6 +9,7 @@ export const CHARACTER_CLASSES = [
     "cazador",
     "pirata",
     "arquero",
+    "chaman",
 ] as const;
 
 export const CLOSED_CREATION_CLASSES = [
@@ -103,6 +104,7 @@ export const CLASS_ID_MAP: Record<CharacterClassKey, number> = {
     cazador: 9,
     pirata: 18,
     arquero: 20,
+    chaman: 22,
 };
 
 export const RACE_ID_MAP: Record<RaceKey, number> = {
@@ -168,6 +170,7 @@ const classProgressById: Record<number, ClassProgress> = {
     19: { vida: 8.5, vidaMin: 7, vidaMax: 10, manaInicial: 2.5, multMana: 1, hitPre36: 2, hitPost36: 2 },
     20: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
     21: { vida: 9, vidaMin: 7, vidaMax: 11, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
+    22: { vida: 8.5, vidaMin: 7, vidaMax: 10, manaInicial: 2.5, multMana: 2, hitPre36: 2, hitPost36: 2 },
 };
 
 export const MAX_LEVEL = 50;

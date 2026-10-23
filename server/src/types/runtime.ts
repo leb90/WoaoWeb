@@ -116,7 +116,8 @@ export type UserSpellEffect =
     | "Hambre"
     | "Sed"
     | "Morph"
-    | "Protec";
+    | "Protec"
+    | "Elemental";
 
 export type CombatResult = number | string;
 
@@ -350,6 +351,8 @@ export type RuntimeCharacter = {
     cooldownAgilidad?: number;
     envenenado?: number;
     cooldownVeneno?: number;
+    // Efectos del chamán elemental (elementalEffects.ts).
+    elemental?: import("../elementalEffects").ElementalState | null;
     ceguera?: NumericFlag;
     cooldownCeguera?: number;
     estupidez?: NumericFlag;

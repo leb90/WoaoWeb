@@ -35,6 +35,7 @@ const classLabels: Record<number, string> = {
     7: "Druida",
     8: "Paladin",
     9: "Cazador",
+    22: "Chaman",
 };
 
 const raceLabels: Record<number, string> = {

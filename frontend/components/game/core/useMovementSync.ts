@@ -403,7 +403,9 @@ export function useMovementSync({
                     predictedTarget.y,
                     {
                         heading: targetHeading,
-                        durationMs: runtimeTimingRef.current.walkStepMs,
+                        durationMs:
+                            runtimeTimingRef.current.walkStepMs *
+                            engine.elementalWalkMultiplier(currentUser.id),
                         map: predictedTarget.map,
                     },
                 );

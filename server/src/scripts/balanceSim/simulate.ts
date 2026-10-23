@@ -36,7 +36,7 @@ type Proposal = {
 const proposalPath = option("--propuesta", "");
 const proposal: Proposal | null = proposalPath ? JSON.parse(fs.readFileSync(proposalPath, "utf8")) : null;
 const TRIALS = Number(option("--tiradas", "1500"));
-const CLASSES = list("--clases", "1,7,2,6,8,4,3,9,18,20").map(Number);
+const CLASSES = list("--clases", "1,7,2,6,8,4,3,9,18,20,22").map(Number);
 const ATTACKERS = list("--atacantes", CLASSES.join(",")).map(Number);
 const LEVELS = list("--niveles", "30,40,50").map(Number);
 const PROFILES = list("--perfiles", "venta,comun,tier") as GearProfile[];
@@ -56,7 +56,7 @@ applyBalanceDataToVars(vars, balanceData);
 for (const [key, table] of [["pvpMelee", "modDmgPvpArmas"], ["pvpRanged", "modDmgPvpProyectiles"], ["pvpMagic", "modDmgPvpMagia"]] as const) {
     const values = proposal?.[key];
     if (!values) continue;
-    for (let classId = 1; classId <= 21; classId++) {
+    for (let classId = 1; classId <= 22; classId++) {
         const value = values[String(classId)] ?? values.default;
         if (value !== undefined) vars[table][classId] = Number(value);
     }
@@ -70,7 +70,7 @@ const skills = require(path.join(SRC, "skills"));
 vars.mapData[1] = { ...(vars.mapData[1] || {}), pk: 0 };
 
 const skillCap = (level: number) => (level >= 39 ? 200 : level <= 18 ? level * 5 : 100 + (level - 19) * 5);
-const MAGIC_ROLE = new Set([1, 6, 7]);
+const MAGIC_ROLE = new Set([1, 6, 7, 22]);
 
 const RANGED_CLASSES = new Set([9, 20]);
 

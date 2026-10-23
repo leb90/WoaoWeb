@@ -163,6 +163,7 @@ function Vars(this: any) {
         ermitano: 19,
         arquero: 20,
         domador: 21,
+        chaman: 22,
     };
 
     this.nameClases = [];
@@ -185,6 +186,7 @@ function Vars(this: any) {
     this.nameClases[this.clases.ermitano] = "Ermitaño";
     this.nameClases[this.clases.arquero] = "Arquero";
     this.nameClases[this.clases.domador] = "Domador";
+    this.nameClases[this.clases.chaman] = "Chamán";
 
     this.genero = {
         hombre: 1,

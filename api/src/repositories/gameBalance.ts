@@ -152,6 +152,7 @@ const DEFAULT_HP_RANGES: Record<string, { vidaMin: number; vidaMax: number }> = 
     "19": { vidaMin: 7, vidaMax: 10 },
     "20": { vidaMin: 6, vidaMax: 10 },
     "21": { vidaMin: 7, vidaMax: 11 },
+    "22": { vidaMin: 7, vidaMax: 10 },
 };
 
 function normalizeClassProgressMap(

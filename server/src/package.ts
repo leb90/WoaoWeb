@@ -130,6 +130,7 @@ const clientPacketID = {
     shopState: 95,
     aggroState: 96,
     bleedState: 97,
+    elementalState: 98,
 } as const;
 
 const serverPacketID = {

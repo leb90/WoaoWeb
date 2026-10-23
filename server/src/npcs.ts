@@ -3054,7 +3054,10 @@ function Npcs(this: NpcsApi) {
                 }
 
                 const probExito = Math.max(10, Math.min(90, 50 + (npcPoderAtaque - userEvasion) * 0.4));
-                const npcImpacto = funct.randomIntFromInterval(1, 100) <= probExito;
+                // Evasión de viento del chamán: el 90 % de los golpes no le entran.
+                const npcImpacto =
+                    funct.randomIntFromInterval(1, 100) <= probExito &&
+                    !(require("./elementalEffects") as typeof import("./elementalEffects")).rollWindEvasion(user);
 
                 let dmg: number | "¡Fallas!" = "¡Fallas!";
 

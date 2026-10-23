@@ -18,7 +18,7 @@ const current: Data = JSON.parse(fs.readFileSync(currentFile, "utf8"));
 const proposal: Data = JSON.parse(fs.readFileSync(proposalFile, "utf8"));
 fs.mkdirSync(outDir, { recursive: true });
 
-const CLASS_NAMES: Record<number, string> = { 1: "Mago", 2: "Clérigo", 3: "Guerrero", 4: "Asesino", 6: "Bardo", 7: "Druida", 8: "Paladín", 9: "Cazador", 18: "Pirata", 20: "Arquero" };
+const CLASS_NAMES: Record<number, string> = { 1: "Mago", 2: "Clérigo", 3: "Guerrero", 4: "Asesino", 6: "Bardo", 7: "Druida", 8: "Paladín", 9: "Cazador", 18: "Pirata", 20: "Arquero", 22: "Chamán" };
 const MODE_NAMES: Record<string, string> = { magia: "magia", melee: "golpe", rango: "flecha" };
 // Orden de lectura: magia pura, híbridos, físicos.
 const ATTACKERS = ["1|magia", "7|magia", "7|melee", "2|magia", "2|melee", "6|magia", "6|melee", "8|magia", "8|melee", "4|magia", "4|melee", "3|melee", "18|melee", "9|rango", "9|melee", "20|rango"];

@@ -17,6 +17,7 @@ import AdminIntervalsModal from "../../components/AdminIntervalsModal";
 import BuffStatusSidebar from "../../components/BuffStatusSidebar";
 import InvisibilityCornerTimer from "../../components/InvisibilityCornerTimer";
 import BleedBanner from "../../components/BleedBanner";
+import ElementalStatusBanner from "../../components/ElementalStatusBanner";
 import AggroPanel from "../../components/AggroPanel";
 import MacroBar from "../../components/MacroBar";
 import BailModal from "../../components/BailModal";
@@ -3714,6 +3715,15 @@ function HomeContent() {
                                 ) : null}
 
                                 {!isMobile ? (
+                                    <ElementalStatusBanner
+                                        state={hud?.elemental}
+                                        dead={Boolean(hud?.dead)}
+                                        className="absolute left-1/2 -translate-x-1/2"
+                                        style={{ top: (activeFactionWarState ? 120 : 64) + 44 }}
+                                    />
+                                ) : null}
+
+                                {!isMobile ? (
                                     <InvisibilityCornerTimer
                                         hud={hud}
                                         runtimeTiming={runtimeTiming}
@@ -4253,6 +4263,15 @@ function HomeContent() {
                                     dead={Boolean(hud?.dead)}
                                     className="fixed left-1/2 -translate-x-1/2"
                                     style={{ top: "calc(env(safe-area-inset-top) + 96px)" }}
+                                />
+                            ) : null}
+
+                            {isMobile ? (
+                                <ElementalStatusBanner
+                                    state={hud?.elemental}
+                                    dead={Boolean(hud?.dead)}
+                                    className="fixed left-1/2 -translate-x-1/2"
+                                    style={{ top: "calc(env(safe-area-inset-top) + 140px)" }}
                                 />
                             ) : null}
 

@@ -106,6 +106,15 @@ const SETS: SetDef[] = [
             { slot: "armadura", id: 1780, stats: { minDef: 44, maxDef: 60, resistenciaMagica: RM, objetoEspecial: 4 } },
         ],
     },
+    {
+        // Chamán: lanzador como el druida (su daño elemental sale del daño mágico del equipo). Piezas creadas en applyShamanData.ts.
+        id: "t1-elemental", name: "Set Elemental", classes: [22], pieces: [
+            { slot: "casco", id: 1817, stats: { minDef: 20, maxDef: 25, magicDamageBonus: 26 } },
+            { slot: "arma", id: 1818, stats: { minHit: 8, maxHit: 14, magicDamageBonus: 31 } },
+            { slot: "escudo", id: 1819, stats: { minDef: 4, maxDef: 12, magicDamageBonus: 22 } },
+            { slot: "armadura", id: 1820, stats: { minDef: 20, maxDef: 30, objetoEspecial: 9 } },
+        ],
+    },
 ];
 
 // Nivel tope sobre la base (lo que antes era la versión LEGENDARIA de cada pieza).

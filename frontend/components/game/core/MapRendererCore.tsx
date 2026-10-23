@@ -74,6 +74,12 @@ import { useHudStateController } from "./useHudStateController";
 import { useSceneController } from "./useSceneController";
 import { useRemoteEntityController } from "./useRemoteEntityController";
 import { createEntityOverlays } from "../rendering/entityOverlays";
+import { createElementalAuras } from "../rendering/elementalAuras";
+import {
+    ELEMENTAL_SLOW_WALK_MULTIPLIER,
+    isElementallySlowed,
+    type ElementalStatePayload,
+} from "../../../lib/elementalState";
 import {
     collectSpellGraphicIds,
     resolveNakedBodyIdFromHeadId,
@@ -1589,6 +1595,48 @@ export default function MapRenderer({
         [getEntityContainer, loadTextures],
     );
 
+    // Auras y estados del chamán elemental (escudos, evasión, lentitud) de cada personaje.
+    const elementalAuras = React.useMemo(
+        () =>
+            createElementalAuras({
+                getEntityContainer,
+                canUseEngineContainer,
+                loadTextures,
+                destroyDisplayObjectSafely,
+            }),
+        [getEntityContainer, loadTextures],
+    );
+
+    const setElementalState = React.useCallback(
+        (payload: ElementalStatePayload) =>
+            elementalAuras.setState(engineRef.current, payload),
+        [elementalAuras],
+    );
+
+    useEffect(() => {
+        const syncElemental = () => {
+            const engine = engineRef.current;
+            if (!engine) {
+                return;
+            }
+
+            const now = Date.now();
+            engine.elementalWalkMultiplier = (entityId: number) =>
+                isElementallySlowed(elementalAuras.getState(entityId), Date.now())
+                    ? ELEMENTAL_SLOW_WALK_MULTIPLIER
+                    : 1;
+            elementalAuras.syncAll(engine, now);
+            // Ralentizado: el propio personaje tampoco puede pedir pasos más rápido de lo que el server acepta.
+            const ownId = engine.user?.id;
+            engine.timeWalkMS =
+                runtimeTimingRef.current.walkStepMs *
+                (ownId ? engine.elementalWalkMultiplier(ownId) : 1);
+        };
+        syncElemental();
+        const intervalId = window.setInterval(syncElemental, 200);
+        return () => window.clearInterval(intervalId);
+    }, [elementalAuras]);
+
     const clearAllDialogMessages = React.useCallback(
         () => entityOverlays.clearAllDialogMessages(),
         [entityOverlays],
@@ -1953,6 +2001,7 @@ export default function MapRenderer({
                 onQuestProgressNotice,
                 onLevelUpNotice,
                 renderEntityFX,
+                setElementalState,
                 renderSpellProjectileVisual,
                 renderProjectileVisual,
                 soundManagerRef,
@@ -2001,6 +2050,7 @@ export default function MapRenderer({
         removeObjectSprite,
         removeRemoteEntity,
         renderEntityFX,
+        setElementalState,
         renderProjectileVisual,
         renderRemoteEntity,
         renderSpellProjectileVisual,

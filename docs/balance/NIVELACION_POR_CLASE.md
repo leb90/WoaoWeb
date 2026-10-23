@@ -35,6 +35,8 @@ Bonos del set (`server/jsons/sets.json`, por piezas distintas equipadas): **2 pi
 
 Antes las tres barras de cada clase casi no cambiaban, porque el set no daba ventaja. Ahora se separan:
 
+⚠ **Ojo:** con set mata más lento el asesino (magia). Es un problema de los ítems, no del bono: la pieza de tier es peor que la común. Se arregla normalizando las piezas de tier (sección 7.5 de [BALANCE_PVP.md](BALANCE_PVP.md)).
+
 ![Efecto del set antes](graficos/efecto-set-nivel-50-antes.svg)
 
 ![Efecto del set ahora](graficos/efecto-set-nivel-50-ahora.svg)
@@ -45,12 +47,12 @@ Chance de matar a un mago con un golpe cuerpo a cuerpo y enseguida una magia, lo
 
 | Clase | Nivel 30 común | Nivel 30 con set | Nivel 40 común | Nivel 40 con set | Nivel 50 común | Nivel 50 con set |
 |---|---:|---:|---:|---:|---:|---:|
-| Druida | 88 % | 86 % | 40 % | 5 % | 0 % | 0 % |
-| Clérigo | 94 % | 95 % | 95 % | 94 % | 71 % | 80 % |
-| Bardo | 92 % | 94 % | 9 % | 17 % | 0 % | 0 % |
-| Paladín | 96 % | 96 % | 4 % | 38 % | 0 % | 0 % |
-| Asesino | 76 % | 58 % | 0 % | 0 % | 0 % | 0 % |
-| Pirata | 95 % | 0 % | 74 % | 0 % | 0 % | 0 % |
+| Druida | 89 % | 86 % | 7 % | 1 % | 0 % | 0 % |
+| Clérigo | 95 % | 95 % | 95 % | 96 % | 72 % | 81 % |
+| Bardo | 93 % | 95 % | 10 % | 18 % | 0 % | 0 % |
+| Paladín | 95 % | 96 % | 0 % | 2 % | 0 % | 0 % |
+| Asesino | 6 % | 6 % | 0 % | 0 % | 0 % | 0 % |
+| Pirata | 95 % | 0 % | 75 % | 0 % | 0 % | 0 % |
 
 ## Todas las clases a nivel 50, en una tabla
 
@@ -59,22 +61,23 @@ Equipo común contra común.
 | Clase | Daño a un mago por acierto | Aciertos para matar a un mago | a un guerrero | a su misma clase |
 |---|---|---|---|---|
 | Mago (magia) | 159 → **174** | 3,0 → **3,0** (3,0) | 4,0 → **4,0** (4,0) | 3,0 → **3,0** (3,0) |
-| Druida (magia) | 136 → **135** | 3,0 → **3,0** (4,0) ⚠ | 5,0 → **5,0** (5,0) | 4,0 → **4,0** (4,0) |
+| Druida (magia) | 136 → **131** | 3,0 → **3,2** (4,0) ⚠ | 5,0 → **5,0** (5,0) | 4,0 → **4,0** (4,0) |
 | Druida (golpe) | 170 → **205** (acierta 95 %) | 3,0 → **2,0** (3,5) ⚠ | 5,5 → **4,2** (5,0) ⚠ | 3,0 → **3,0** (4,0) ⚠ |
-| Clérigo (golpe) | 432 → **223** (acierta 94 %) | 1,0 → **2,0** (2,5) | 2,0 → **3,9** (4,0) | 1,9 → **3,0** (3,5) |
+| Clérigo (golpe) | 432 → **223** (acierta 95 %) | 1,0 → **2,0** (2,5) | 2,0 → **3,9** (4,0) | 1,9 → **3,0** (3,5) |
 | Clérigo (magia) | 106 → **170** | 4,0 → **3,0** (3,5) | 6,0 → **4,0** (4,5) | 4,9 → **3,0** (3,5) |
 | Bardo (magia) | 93 → **139** | 5,0 → **3,0** (4,0) ⚠ | 7,0 → **5,0** (5,0) | 5,0 → **4,0** (4,0) |
-| Bardo (golpe) | 384 → **187** (acierta 96 %) | 1,6 → **3,0** (3,5) ⚠ | 2,0 → **4,8** (5,0) | 2,0 → **3,9** (4,0) |
-| Paladín (golpe) | 544 → **221** (acierta 95 %) | 1,0 → **2,0** (2,5) | 1,9 → **3,9** (4,0) | 1,8 → **3,7** (4,0) |
+| Bardo (golpe) | 384 → **187** (acierta 94 %) | 1,6 → **3,0** (3,5) ⚠ | 2,0 → **4,8** (5,0) | 2,0 → **3,9** (4,0) |
+| Paladín (golpe) | 544 → **221** (acierta 95 %) | 1,0 → **2,0** (2,5) | 1,9 → **3,9** (4,0) | 1,8 → **3,8** (4,0) |
 | Paladín (magia) | 65 → **112** | 6,4 → **4,0** (5,5) ⚠ | 9,9 → **6,0** (6,5) | 8,3 → **5,0** (6,0) ⚠ |
 | Asesino (golpe) | 480 → **186** (acierta 95 %) | 1,0 → **3,0** (3,0) | 2,0 → **4,8** (4,5) | 1,9 → **3,9** (3,5) |
 | Asesino (magia) | 63 → **122** | 6,7 → **4,0** (5,5) ⚠ | 10,1 → **5,5** (6,5) ⚠ | 7,8 → **4,0** (6,0) ⚠ |
-| Guerrero (golpe) | 601 → **258** (acierta 94 %) | 1,0 → **2,0** (2,0) | 1,5 → **3,0** (3,5) | 1,5 → **3,0** (3,5) |
-| Cazador (flecha) | 246 → **215** (acierta 95 %) | 2,0 → **2,0** (3,0) ⚠ | 3,4 → **4,0** (4,5) ⚠ | 3,0 → **3,9** (4,0) |
-| Cazador (golpe) | 461 → **187** (acierta 95 %) | 1,0 → **3,0** (4,0) ⚠ | 2,0 → **4,8** (5,5) ⚠ | 2,0 → **4,6** (5,0) |
+| Guerrero (golpe) | 601 → **259** (acierta 95 %) | 1,0 → **2,0** (2,0) | 1,5 → **3,0** (3,5) | 1,5 → **3,0** (3,5) |
+| Cazador (flecha) | 246 → **214** (acierta 95 %) | 2,0 → **2,0** (3,0) ⚠ | 3,4 → **4,0** (4,5) ⚠ | 3,0 → **3,9** (4,0) |
+| Cazador (golpe) | 461 → **187** (acierta 95 %) | 1,0 → **3,0** (4,0) ⚠ | 2,0 → **4,7** (5,5) ⚠ | 2,0 → **4,6** (5,0) |
 | Pirata (golpe) | — → **233** (acierta 95 %) | — → **2,0** (2,3) | — → **3,7** (3,8) | — → **3,0** (3,8) ⚠ |
 | Pirata (magia) | — → **105** | — → **4,0** (5,5) ⚠ | — → **6,0** (6,5) | — → **5,1** (6,3) ⚠ |
-| Arquero (flecha) | — → **183** (acierta 94 %) | — → **3,0** (2,0) ⚠ | — → **4,9** (5,0) | — → **3,7** (3,0) ⚠ |
+| Arquero (flecha) | — → **183** (acierta 95 %) | — → **3,0** (2,0) ⚠ | — → **4,9** (5,0) | — → **3,7** (3,0) ⚠ |
+| Chamán (magia) | — → **142** | — → **3,0** | — → **4,0** | — → **3,0** |
 
 ## Clase por clase
 
@@ -140,31 +143,31 @@ Set de tier: **Set Silvestre**.
 
 | Nivel | Vida | Vida con set | Maná antes → ahora | Hechizo principal |
 |---|---:|---:|---|---|
-| 30 | 252 | 302 | 1089 → 1144 | Incinerar (58-63 base, 1050 de maná: 1 con el maná lleno) |
-| 40 | 332 | 398 | 1449 → 1504 | Incinerar (58-63 base, 1050 de maná: 1 con el maná lleno) |
-| 50 | 412 | 494 | 1809 → 1864 | Incinerar (58-63 base, 1050 de maná: 1 con el maná lleno) |
+| 30 | 252 | 302 | 1089 → 1144 | LLuvia de Sangre (55-60 base, 1050 de maná: 1 con el maná lleno) |
+| 40 | 332 | 398 | 1449 → 1504 | LLuvia de Sangre (55-60 base, 1050 de maná: 1 con el maná lleno) |
+| 50 | 412 | 494 | 1809 → 1864 | LLuvia de Sangre (55-60 base, 1050 de maná: 1 con el maná lleno) |
 
 **Aciertos para matar con magia** (equipo común contra común)
 
 | Nivel | Daño a un mago | Contra mago | Contra guerrero | Contra druida |
 |---|---|---|---|---|
-| 30 | 114 → **114** | 3,0 → **3,0** (3,0) | 4,0 → **4,0** (4,0) | 3,0 → **3,0** (3,0) |
-| 40 | 125 → **125** | 3,0 → **3,0** (3,5) | 4,1 → **4,1** (4,5) | 3,0 → **3,0** (3,5) |
-| 50 | 136 → **135** | 3,0 → **3,0** (4,0) ⚠ | 5,0 → **5,0** (5,0) | 4,0 → **4,0** (4,0) |
+| 30 | 114 → **110** | 3,0 → **3,0** (3,0) | 4,0 → **4,0** (4,0) | 3,0 → **3,0** (3,0) |
+| 40 | 125 → **120** | 3,0 → **3,0** (3,5) | 4,1 → **5,0** (4,5) | 3,0 → **3,0** (3,5) |
+| 50 | 136 → **131** | 3,0 → **3,2** (4,0) ⚠ | 5,0 → **5,0** (5,0) | 4,0 → **4,0** (4,0) |
 
 **Aciertos para matar con golpe** (equipo común contra común)
 
 | Nivel | Daño a un mago | Contra mago | Contra guerrero | Contra druida |
 |---|---|---|---|---|
 | 30 | 140 → **169** (acierta 89 %) | 2,0 → **2,0** (2,5) | 4,6 → **3,7** (4,0) | 2,0 → **2,0** (3,0) ⚠ |
-| 40 | 155 → **187** (acierta 94 %) | 2,7 → **2,0** (3,0) ⚠ | 5,2 → **3,9** (4,5) ⚠ | 3,0 → **2,0** (3,5) ⚠ |
+| 40 | 155 → **187** (acierta 96 %) | 2,7 → **2,0** (3,0) ⚠ | 5,2 → **4,0** (4,5) ⚠ | 3,0 → **2,0** (3,5) ⚠ |
 | 50 | 170 → **205** (acierta 95 %) | 3,0 → **2,0** (3,5) ⚠ | 5,5 → **4,2** (5,0) ⚠ | 3,0 → **3,0** (4,0) ⚠ |
 
 **Con set a nivel 50** (magia)
 
 | Situación | Contra un mago | Contra un guerrero |
 |---|---|---|
-| Los dos con equipo común | 3,0 → **3,0** (4,0) ⚠ | 5,0 → **5,0** (5,0) |
+| Los dos con equipo común | 3,0 → **3,2** (4,0) ⚠ | 5,0 → **5,0** (5,0) |
 | Vos con set, el otro sin set | 3,0 → **3,0** (3,0) | 5,0 → **4,0** (3,8) |
 | Vos sin set, el otro con set | 3,0 → **4,0** (5,2) ⚠ | 5,0 → **8,0** (6,5) ⚠ |
 | Los dos con set | 3,0 → **3,0** (4,0) ⚠ | 5,0 → **6,0** (5,0) ⚠ |
@@ -190,17 +193,17 @@ Set de tier: **Set Templario**.
 
 | Nivel | Vida | Vida con set | Maná antes → ahora | Hechizo principal |
 |---|---:|---:|---|---|
-| 30 | 252 | 302 | 1089 → 1089 | Ventisca (55-60 base, 1050 de maná: 1 con el maná lleno) |
-| 40 | 332 | 398 | 1449 → 1449 | Ventisca (55-60 base, 1050 de maná: 1 con el maná lleno) |
+| 30 | 252 | 302 | 1089 → 1089 | Martillo de luz celestial (55-60 base, 1050 de maná: 1 con el maná lleno) |
+| 40 | 332 | 398 | 1449 → 1449 | Martillo de luz celestial (55-60 base, 1050 de maná: 1 con el maná lleno) |
 | 50 | 412 | 494 | 1809 → 1809 | Purificar (58-63 base, 1500 de maná: 1 con el maná lleno) |
 
 **Aciertos para matar con golpe** (equipo común contra común)
 
 | Nivel | Daño a un mago | Contra mago | Contra guerrero | Contra clérigo |
 |---|---|---|---|---|
-| 30 | 398 → **204** (acierta 95 %) | 1,0 → **2,0** (2,0) | 1,4 → **2,8** (3,0) | 1,0 → **2,4** (2,5) |
+| 30 | 398 → **203** (acierta 96 %) | 1,0 → **2,0** (2,0) | 1,4 → **2,8** (3,0) | 1,0 → **2,4** (2,5) |
 | 40 | 415 → **213** (acierta 95 %) | 1,0 → **2,0** (2,0) | 2,0 → **3,3** (3,5) | 1,3 → **2,8** (3,0) |
-| 50 | 432 → **223** (acierta 94 %) | 1,0 → **2,0** (2,5) | 2,0 → **3,9** (4,0) | 1,9 → **3,0** (3,5) |
+| 50 | 432 → **223** (acierta 95 %) | 1,0 → **2,0** (2,5) | 2,0 → **3,9** (4,0) | 1,9 → **3,0** (3,5) |
 
 **Aciertos para matar con magia** (equipo común contra común)
 
@@ -256,9 +259,9 @@ Set de tier: **Set Bardo**.
 
 | Nivel | Daño a un mago | Contra mago | Contra guerrero | Contra bardo |
 |---|---|---|---|---|
-| 30 | 353 → **170** (acierta 93 %) | 1,0 → **2,0** (2,5) | 1,9 → **3,6** (4,0) | 1,0 → **2,9** (3,0) |
-| 40 | 368 → **178** (acierta 96 %) | 1,0 → **2,0** (3,0) ⚠ | 2,0 → **4,2** (4,5) | 1,9 → **3,3** (3,5) |
-| 50 | 384 → **187** (acierta 96 %) | 1,6 → **3,0** (3,5) ⚠ | 2,0 → **4,8** (5,0) | 2,0 → **3,9** (4,0) |
+| 30 | 353 → **170** (acierta 92 %) | 1,0 → **2,0** (2,5) | 1,9 → **3,6** (4,0) | 1,0 → **2,9** (3,0) |
+| 40 | 368 → **178** (acierta 95 %) | 1,0 → **2,0** (3,0) ⚠ | 2,0 → **4,1** (4,5) | 1,9 → **3,3** (3,5) |
+| 50 | 384 → **187** (acierta 94 %) | 1,6 → **3,0** (3,5) ⚠ | 2,0 → **4,8** (5,0) | 2,0 → **3,9** (4,0) |
 
 **Con set a nivel 50** (magia)
 
@@ -266,7 +269,7 @@ Set de tier: **Set Bardo**.
 |---|---|---|
 | Los dos con equipo común | 5,0 → **3,0** (4,0) ⚠ | 7,0 → **5,0** (5,0) |
 | Vos con set, el otro sin set | 5,0 → **3,0** (3,0) | 7,0 → **4,0** (3,8) |
-| Vos sin set, el otro con set | 5,0 → **4,0** (5,2) ⚠ | 7,0 → **7,7** (6,5) ⚠ |
+| Vos sin set, el otro con set | 5,0 → **4,0** (5,2) ⚠ | 7,0 → **7,8** (6,5) ⚠ |
 | Los dos con set | 5,0 → **3,0** (4,0) ⚠ | 7,0 → **6,0** (5,0) ⚠ |
 
 ### Paladín
@@ -290,24 +293,24 @@ Set de tier: **Set Paladín**.
 
 | Nivel | Vida | Vida con set | Maná antes → ahora | Hechizo principal |
 |---|---:|---:|---|---|
-| 30 | 296 | 355 | 567 → 767 | Descarga electrica (38-50 base, 350 de maná: 2 con el maná lleno) |
-| 40 | 391 | 469 | 747 → 947 | Descarga electrica (38-50 base, 350 de maná: 2 con el maná lleno) |
+| 30 | 296 | 355 | 567 → 767 | MINIApocalipsis (30-38 base, 220 de maná: 3 con el maná lleno) |
+| 40 | 391 | 469 | 747 → 947 | MINIApocalipsis (30-38 base, 220 de maná: 4 con el maná lleno) |
 | 50 | 486 | 583 | 927 → 1127 | Apocalipsis (50-55 base, 950 de maná: 1 con el maná lleno) |
 
 **Aciertos para matar con golpe** (equipo común contra común)
 
 | Nivel | Daño a un mago | Contra mago | Contra guerrero | Contra paladín |
 |---|---|---|---|---|
-| 30 | 498 → **200** (acierta 96 %) | 1,0 → **2,0** (2,0) | 1,0 → **2,9** (3,0) | 1,0 → **2,8** (3,0) |
-| 40 | 524 → **212** (acierta 96 %) | 1,0 → **2,0** (2,0) | 1,0 → **3,4** (3,5) | 1,0 → **3,1** (3,5) |
-| 50 | 544 → **221** (acierta 95 %) | 1,0 → **2,0** (2,5) | 1,9 → **3,9** (4,0) | 1,8 → **3,7** (4,0) |
+| 30 | 498 → **200** (acierta 95 %) | 1,0 → **2,0** (2,0) | 1,0 → **2,9** (3,0) | 1,0 → **2,8** (3,0) |
+| 40 | 524 → **212** (acierta 95 %) | 1,0 → **2,0** (2,0) | 1,0 → **3,3** (3,5) | 1,0 → **3,1** (3,5) |
+| 50 | 544 → **221** (acierta 95 %) | 1,0 → **2,0** (2,5) | 1,9 → **3,9** (4,0) | 1,8 → **3,8** (4,0) |
 
 **Aciertos para matar con magia** (equipo común contra común)
 
 | Nivel | Daño a un mago | Contra mago | Contra guerrero | Contra paladín |
 |---|---|---|---|---|
-| 30 | 52 → **75** | 5,0 → **3,9** (4,5) ⚠ | 7,7 → **5,4** (5,5) | 6,5 → **4,8** (5,0) |
-| 40 | 59 → **85** | 6,0 → **4,0** (5,0) ⚠ | 8,9 → **6,2** (6,0) | 7,5 → **5,3** (5,5) |
+| 30 | 52 → **58** | 5,0 → **4,7** (4,5) | 7,7 → **7,0** (5,5) ⚠ | 6,5 → **6,0** (5,0) ⚠ |
+| 40 | 59 → **66** | 6,0 → **5,1** (5,0) | 8,9 → **8,0** (6,0) ⚠ | 7,5 → **6,9** (5,5) ⚠ |
 | 50 | 65 → **112** | 6,4 → **4,0** (5,5) ⚠ | 9,9 → **6,0** (6,5) | 8,3 → **5,0** (6,0) ⚠ |
 
 **Con set a nivel 50** (golpe)
@@ -340,24 +343,24 @@ Set de tier: **Set del Umbral**.
 
 | Nivel | Vida | Vida con set | Maná antes → ahora | Hechizo principal |
 |---|---:|---:|---|---|
-| 30 | 267 | 320 | 567 → 767 | Descarga electrica (38-50 base, 350 de maná: 2 con el maná lleno) |
-| 40 | 352 | 422 | 747 → 947 | Descarga electrica (38-50 base, 350 de maná: 2 con el maná lleno) |
+| 30 | 267 | 320 | 567 → 767 | MINIApocalipsis (30-38 base, 220 de maná: 3 con el maná lleno) |
+| 40 | 352 | 422 | 747 → 947 | MINIApocalipsis (30-38 base, 220 de maná: 4 con el maná lleno) |
 | 50 | 437 | 524 | 927 → 1127 | Destello infernal (54-59 base, 950 de maná: 1 con el maná lleno) |
 
 **Aciertos para matar con golpe** (equipo común contra común)
 
 | Nivel | Daño a un mago | Contra mago | Contra guerrero | Contra asesino |
 |---|---|---|---|---|
-| 30 | 436 → **168** (acierta 96 %) | 1,0 → **2,0** (2,0) | 1,0 → **3,6** (3,5) | 1,0 → **2,9** (2,5) |
-| 40 | 460 → **178** (acierta 95 %) | 1,0 → **2,0** (2,5) | 1,9 → **4,2** (4,0) | 1,0 → **3,6** (3,0) ⚠ |
+| 30 | 436 → **168** (acierta 95 %) | 1,0 → **2,0** (2,0) | 1,0 → **3,6** (3,5) | 1,0 → **2,9** (2,5) |
+| 40 | 460 → **178** (acierta 96 %) | 1,0 → **2,0** (2,5) | 1,9 → **4,2** (4,0) | 1,0 → **3,6** (3,0) ⚠ |
 | 50 | 480 → **186** (acierta 95 %) | 1,0 → **3,0** (3,0) | 2,0 → **4,8** (4,5) | 1,9 → **3,9** (3,5) |
 
 **Aciertos para matar con magia** (equipo común contra común)
 
 | Nivel | Daño a un mago | Contra mago | Contra guerrero | Contra asesino |
 |---|---|---|---|---|
-| 30 | 51 → **76** | 5,0 → **3,8** (4,5) ⚠ | 7,9 → **5,2** (5,5) | 6,0 → **4,0** (5,0) ⚠ |
-| 40 | 57 → **85** | 6,0 → **4,0** (5,0) ⚠ | 9,1 → **6,1** (6,0) | 7,0 → **5,0** (5,5) ⚠ |
+| 30 | 51 → **59** | 5,0 → **4,6** (4,5) | 7,9 → **6,9** (5,5) ⚠ | 6,0 → **5,1** (5,0) |
+| 40 | 57 → **66** | 6,0 → **5,1** (5,0) | 9,1 → **8,0** (6,0) ⚠ | 7,0 → **6,0** (5,5) ⚠ |
 | 50 | 63 → **122** | 6,7 → **4,0** (5,5) ⚠ | 10,1 → **5,5** (6,5) ⚠ | 7,8 → **4,0** (6,0) ⚠ |
 
 **Con set a nivel 50** (golpe)
@@ -365,8 +368,8 @@ Set de tier: **Set del Umbral**.
 | Situación | Contra un mago | Contra un guerrero |
 |---|---|---|
 | Los dos con equipo común | 1,0 → **3,0** (3,0) | 2,0 → **4,8** (4,5) |
-| Vos con set, el otro sin set | 2,0 → **2,0** (2,3) | 2,8 → **3,0** (3,4) |
-| Vos sin set, el otro con set | 1,0 → **4,0** (3,9) | 2,0 → **7,9** (5,9) ⚠ |
+| Vos con set, el otro sin set | 2,0 → **2,0** (2,3) | 2,8 → **3,1** (3,4) |
+| Vos sin set, el otro con set | 1,0 → **4,0** (3,9) | 2,0 → **8,1** (5,9) ⚠ |
 | Los dos con set | 2,0 → **3,0** (3,0) | 2,7 → **4,6** (4,5) |
 
 ### Guerrero
@@ -398,8 +401,8 @@ Set de tier: **Set del Verdugo**.
 | Nivel | Daño a un mago | Contra mago | Contra guerrero |
 |---|---|---|---|
 | 30 | 553 → **234** (acierta 95 %) | 1,0 → **1,7** (2,0) | 1,0 → **2,3** (2,5) |
-| 40 | 580 → **248** (acierta 95 %) | 1,0 → **2,0** (2,0) | 1,0 → **2,9** (3,0) |
-| 50 | 601 → **258** (acierta 94 %) | 1,0 → **2,0** (2,0) | 1,5 → **3,0** (3,5) |
+| 40 | 580 → **248** (acierta 96 %) | 1,0 → **2,0** (2,0) | 1,0 → **3,0** (3,0) |
+| 50 | 601 → **259** (acierta 95 %) | 1,0 → **2,0** (2,0) | 1,5 → **3,0** (3,5) |
 
 **Con set a nivel 50** (golpe)
 
@@ -440,17 +443,17 @@ Set de tier: **Set del Verdugo**.
 
 | Nivel | Daño a un mago | Contra mago | Contra guerrero | Contra cazador |
 |---|---|---|---|---|
-| 30 | 204 → **176** (acierta 95 %) | 2,0 → **2,0** (2,0) | 2,8 → **3,4** (3,5) | 2,8 → **3,4** (3,0) |
-| 40 | 228 → **198** (acierta 95 %) | 2,0 → **2,0** (2,5) | 3,0 → **3,7** (4,0) | 3,0 → **3,7** (3,5) |
-| 50 | 246 → **215** (acierta 95 %) | 2,0 → **2,0** (3,0) ⚠ | 3,4 → **4,0** (4,5) ⚠ | 3,0 → **3,9** (4,0) |
+| 30 | 204 → **176** (acierta 95 %) | 2,0 → **2,0** (2,0) | 2,8 → **3,4** (3,5) | 2,8 → **3,3** (3,0) |
+| 40 | 228 → **198** (acierta 95 %) | 2,0 → **2,0** (2,5) | 3,0 → **3,7** (4,0) | 3,0 → **3,6** (3,5) |
+| 50 | 246 → **214** (acierta 95 %) | 2,0 → **2,0** (3,0) ⚠ | 3,4 → **4,0** (4,5) ⚠ | 3,0 → **3,9** (4,0) |
 
 **Aciertos para matar con golpe** (equipo común contra común)
 
 | Nivel | Daño a un mago | Contra mago | Contra guerrero | Contra cazador |
 |---|---|---|---|---|
-| 30 | 423 → **169** (acierta 90 %) | 1,0 → **2,0** (3,0) ⚠ | 1,0 → **3,6** (4,5) ⚠ | 1,0 → **3,6** (4,0) |
-| 40 | 444 → **179** (acierta 95 %) | 1,0 → **2,0** (3,5) ⚠ | 1,9 → **4,1** (5,0) ⚠ | 1,9 → **4,0** (4,5) |
-| 50 | 461 → **187** (acierta 95 %) | 1,0 → **3,0** (4,0) ⚠ | 2,0 → **4,8** (5,5) ⚠ | 2,0 → **4,6** (5,0) |
+| 30 | 423 → **169** (acierta 91 %) | 1,0 → **2,0** (3,0) ⚠ | 1,0 → **3,7** (4,5) ⚠ | 1,0 → **3,6** (4,0) |
+| 40 | 444 → **179** (acierta 95 %) | 1,0 → **2,0** (3,5) ⚠ | 1,9 → **4,1** (5,0) ⚠ | 1,9 → **4,1** (4,5) |
+| 50 | 461 → **187** (acierta 95 %) | 1,0 → **3,0** (4,0) ⚠ | 2,0 → **4,7** (5,5) ⚠ | 2,0 → **4,6** (5,0) |
 
 **Con set a nivel 50** (flecha)
 
@@ -459,7 +462,7 @@ Set de tier: **Set del Verdugo**.
 | Los dos con equipo común | 2,0 → **2,0** (3,0) ⚠ | 3,4 → **4,0** (4,5) ⚠ |
 | Vos con set, el otro sin set | 2,0 → **2,0** (3,0) ⚠ | 3,0 → **4,0** (4,5) ⚠ |
 | Vos sin set, el otro con set | 2,0 → **3,0** (3,9) ⚠ | 3,0 → **6,1** (5,9) |
-| Los dos con set | 2,0 → **3,0** (3,9) ⚠ | 3,0 → **6,1** (5,9) |
+| Los dos con set | 2,0 → **3,0** (3,9) ⚠ | 3,0 → **6,2** (5,9) |
 
 ### Pirata
 
@@ -490,8 +493,8 @@ Set de tier: **Set del Verdugo**.
 
 | Nivel | Daño a un mago | Contra mago | Contra guerrero | Contra pirata |
 |---|---|---|---|---|
-| 30 | — → **212** (acierta 95 %) | — → **2,0** (2,0) | — → **2,8** (2,8) | — → **2,0** (2,8) ⚠ |
-| 40 | — → **224** (acierta 95 %) | — → **2,0** (2,0) | — → **3,0** (3,3) | — → **2,8** (3,3) |
+| 30 | — → **211** (acierta 95 %) | — → **2,0** (2,0) | — → **2,8** (2,8) | — → **2,0** (2,8) ⚠ |
+| 40 | — → **224** (acierta 96 %) | — → **2,0** (2,0) | — → **3,0** (3,3) | — → **2,7** (3,3) ⚠ |
 | 50 | — → **233** (acierta 95 %) | — → **2,0** (2,3) | — → **3,7** (3,8) | — → **3,0** (3,8) ⚠ |
 
 **Aciertos para matar con magia** (equipo común contra común)
@@ -540,9 +543,9 @@ Set de tier: **Set Silvano**.
 
 | Nivel | Daño a un mago | Contra mago | Contra druida | Contra clérigo | Contra bardo | Contra paladín | Contra guerrero | Contra arquero |
 |---|---|---|---|---|---|---|---|---|
-| 30 | — → **150** (acierta 95 %) | — → **2,0** (2,0) | — → **2,0** (2,3) | — → **3,6** (2,3) ⚠ | — → **3,3** (2,3) ⚠ | — → **4,3** (3,0) ⚠ | — → **4,3** (3,3) ⚠ | — → **3,1** (2,0) ⚠ |
-| 40 | — → **168** (acierta 96 %) | — → **2,0** (2,0) | — → **3,0** (2,9) | — → **3,8** (2,9) ⚠ | — → **3,7** (2,9) ⚠ | — → **4,6** (3,8) ⚠ | — → **4,6** (4,2) | — → **3,5** (2,5) ⚠ |
-| 50 | — → **183** (acierta 94 %) | — → **3,0** (2,0) ⚠ | — → **3,0** (3,5) | — → **4,1** (3,5) ⚠ | — → **3,9** (3,5) | — → **4,8** (4,5) | — → **4,9** (5,0) | — → **3,7** (3,0) ⚠ |
+| 30 | — → **150** (acierta 96 %) | — → **2,0** (2,0) | — → **2,0** (2,3) | — → **3,7** (2,3) ⚠ | — → **3,3** (2,3) ⚠ | — → **4,3** (3,0) ⚠ | — → **4,3** (3,3) ⚠ | — → **3,1** (2,0) ⚠ |
+| 40 | — → **168** (acierta 96 %) | — → **2,0** (2,0) | — → **3,0** (2,9) | — → **3,8** (2,9) ⚠ | — → **3,6** (2,9) ⚠ | — → **4,5** (3,8) ⚠ | — → **4,6** (4,2) | — → **3,5** (2,5) ⚠ |
+| 50 | — → **183** (acierta 95 %) | — → **3,0** (2,0) ⚠ | — → **3,0** (3,5) | — → **4,1** (3,5) ⚠ | — → **3,9** (3,5) | — → **4,8** (4,5) | — → **4,9** (5,0) | — → **3,7** (3,0) ⚠ |
 
 **Con set a nivel 50** (flecha)
 
@@ -552,6 +555,47 @@ Set de tier: **Set Silvano**.
 | Vos con set, el otro sin set | — → **2,0** (1,5) | — → **3,0** (3,8) ⚠ |
 | Vos sin set, el otro con set | — → **4,0** (2,6) ⚠ | — → **8,3** (6,5) ⚠ |
 | Los dos con set | — → **2,0** (2,0) | — → **4,0** (5,0) ⚠ |
+
+### Chamán
+
+*Solo magia elemental: pega parecido a la Llama del mago, pero la resistencia mágica no lo frena, así que rinde más contra los que aguantan magia. Vive de sus escudos (el simulador los mide sin escudo) y casi no pega con el bastón.*
+
+Set de tier: **Set Elemental**.
+
+**Equipo**
+
+| Lugar | Equipo común | Set de tier |
+|---|---|---|
+| Arma | **Báculo de la Naturaleza (+28 DM)** (golpe 8-10, +28 daño mágico) · #1225 | **Bastón Elemental** (golpe 9-15, +37 daño mágico) · #1818 |
+| Armadura o túnica | **Túnica Legendaria +55Maná (Alto/as)** (defensa 10-13, +55 maná*) · #519 | **Túnica Elemental** (defensa 23-35, +200 maná*) · #1820 |
+| Casco | **Sombrero Hechizado (+20 DM)** (defensa 2-6, +20 daño mágico) · #1223 | **Corona de Plumas Elemental** (defensa 23-29, +32 daño mágico) · #1817 |
+| Escudo | — | **Caparazón Elemental** (defensa 5-14, +28 daño mágico) · #1819 |
+| Anillo | **Anillo de Energía (+20 DM)** (+20 daño mágico) · #1221 | **Anillo de Energía (+20 DM)** (+20 daño mágico) · #1221 |
+
+**Vida, maná y hechizo**
+
+| Nivel | Vida | Vida con set | Maná antes → ahora | Hechizo principal |
+|---|---:|---:|---|---|
+| 30 | 252 | 302 | — | Incinerar (58-63 base, 1050 de maná: 1 con el maná lleno) |
+| 40 | 332 | 398 | — | Incinerar (58-63 base, 1050 de maná: 1 con el maná lleno) |
+| 50 | 412 | 494 | — | Incinerar (58-63 base, 1050 de maná: 1 con el maná lleno) |
+
+**Aciertos para matar con magia** (equipo común contra común)
+
+| Nivel | Daño a un mago | Contra mago | Contra guerrero | Contra chamán |
+|---|---|---|---|---|
+| 30 | — → **120** | — → **2,3** | — → **3,0** | — → **3,0** |
+| 40 | — → **131** | — → **3,0** | — → **4,0** | — → **3,0** |
+| 50 | — → **142** | — → **3,0** | — → **4,0** | — → **3,0** |
+
+**Con set a nivel 50** (magia)
+
+| Situación | Contra un mago | Contra un guerrero |
+|---|---|---|
+| Los dos con equipo común | — → **3,0** | — → **4,0** |
+| Vos con set, el otro sin set | — → **2,9** | — → **3,0** |
+| Vos sin set, el otro con set | — → **4,0** | — → **5,0** |
+| Los dos con set | — → **3,0** | — → **4,0** |
 
 ## De dónde salen estos números
 

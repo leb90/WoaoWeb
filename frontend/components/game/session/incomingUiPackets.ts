@@ -244,6 +244,14 @@ export async function handleIncomingUiPacket({
             ctx.mergeHud({ bleedUntil: remainingMs > 0 ? Date.now() + remainingMs : 0 });
             return true;
         }
+
+        case "elementalState": {
+            const state = ctx.setElementalState?.(packet.payload);
+            if (state && engine?.user?.id === Number(packet.payload.id)) {
+                ctx.mergeHud({ elemental: state });
+            }
+            return true;
+        }
         case "shopState":
             ctx.mergeHud({ shopState: packet.payload });
             return true;

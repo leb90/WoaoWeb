@@ -43,7 +43,7 @@
         "apply-combat-balance": "tsx src/scripts/applyCombatBalanceData.ts",
         "apply-tier-sets": "tsx src/scripts/applyTierSetData.ts",
         "report-combat-balance": "tsx src/scripts/reportCombatBalance.ts",
-        "test-combat-balance": "tsx src/balance.test.ts && tsx src/combatBalance.test.ts && tsx --test src/pvpBalance.test.ts src/itemRarity.test.ts src/bleed.test.ts src/targetAssist.test.ts",
+        "test-combat-balance": "tsx src/balance.test.ts && tsx src/combatBalance.test.ts && tsx --test src/pvpBalance.test.ts src/itemRarity.test.ts src/bleed.test.ts src/targetAssist.test.ts src/elementalEffects.test.ts",
         "balance-sim": "tsx src/scripts/balanceSim/simulate.ts"
     },
     "repository": {

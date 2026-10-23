@@ -205,9 +205,20 @@ export function getCharacterRenderAlpha(
             return PARTY_INVISIBLE_ALPHA;
         }
 
+        // Para los enemigos solo parpadea mientras pelea contra jugadores (el server manda la ventana);
+        // fuera de eso queda invisible del todo y la invisibilidad sirve para escapar.
+        const now = Date.now();
+        if ((character.pvpRevealUntil ?? 0) <= now) {
+            return Math.min(
+                clampAlpha(timing.visualEffects.invisibilityMinAlpha),
+                clampAlpha(timing.visualEffects.invisibilityMaxAlpha),
+            );
+        }
+
         return getInvisibilityCycleAlpha(
-            character.invisibilityCycleStartedAt ?? Date.now(),
+            character.invisibilityCycleStartedAt ?? now,
             timing,
+            now,
         );
     }
 

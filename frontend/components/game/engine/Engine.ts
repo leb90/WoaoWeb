@@ -226,6 +226,8 @@ export interface Character {
     invisibleSpell?: boolean;
     hiddenSkill?: boolean;
     invisibilityCycleStartedAt?: number;
+    // Hasta cuándo un invisible parpadea por estar peleando contra jugadores (rendering/visibility.ts).
+    pvpRevealUntil?: number;
     isPartyMember?: boolean;
     isClanMember?: boolean;
     color?: string;
@@ -742,6 +744,10 @@ export class Engine {
             invisibilityCycleStartedAt: hasActiveInvisibility
                 ? Date.now()
                 : undefined,
+            pvpRevealUntil:
+                (snapshot.pvpRevealRemainingMs ?? 0) > 0
+                    ? Date.now() + (snapshot.pvpRevealRemainingMs ?? 0)
+                    : 0,
             isPartyMember: snapshot.isPartyMember,
             isClanMember: snapshot.isClanMember,
             color: snapshot.color,
@@ -828,6 +834,18 @@ export class Engine {
                 ? (character.invisibilityCycleStartedAt ?? Date.now())
                 : Date.now()
             : undefined;
+        if (typeof snapshot.pvpRevealRemainingMs === "number") {
+            const now = Date.now();
+            const wasRevealed = (character.pvpRevealUntil ?? 0) > now;
+            character.pvpRevealUntil =
+                snapshot.pvpRevealRemainingMs > 0
+                    ? now + snapshot.pvpRevealRemainingMs
+                    : 0;
+            // Al empezar a revelarse arranca el ciclo visible, así se nota enseguida.
+            if (!wasRevealed && character.pvpRevealUntil > now && hasActiveInvisibility) {
+                character.invisibilityCycleStartedAt = now;
+            }
+        }
         character.isPartyMember = snapshot.isPartyMember;
         character.isClanMember = snapshot.isClanMember;
         character.color = snapshot.color;

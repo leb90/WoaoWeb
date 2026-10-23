@@ -174,6 +174,8 @@ const FLOOR_ITEM_CLEANUP_SOURCE = "drop";
 const DROP_RENDER_BATCH_SIZE = 4;
 const TELEPORT_CLIENT_MOVEMENT_LOCK_MS = 75;
 const PVP_MAP_CHANGE_BLOCK_MS = 5000;
+// Cuánto dura el "revelado" de un invisible después de su último golpe o hechizo contra (o de) un jugador.
+const PVP_INVISIBILITY_REVEAL_MS = 5000;
 const DRAGON_SLAYER_SWORD_ITEM_ID = 402;
 const HOBBIT_CLOAK_OBJECT_TYPE = 50;
 const CRAFTING_RECIPE_OBJECT_TYPE = 46;
@@ -2003,6 +2005,18 @@ function markUsersInPvpCombat(
     const blockedUntil = now + PVP_MAP_CHANGE_BLOCK_MS;
     attacker.pvpMapChangeBlockedUntil = Math.max(Number(attacker.pvpMapChangeBlockedUntil ?? 0), blockedUntil);
     target.pvpMapChangeBlockedUntil = Math.max(Number(target.pvpMapChangeBlockedUntil ?? 0), blockedUntil);
+
+    // Invisible peleando contra jugadores: durante la ventana de combate los demás lo ven parpadear
+    // (la invisibilidad sirve para escapar, no para pelear a ciegas). Ver writeCharacterPayload.
+    for (const fighter of [attacker, target]) {
+        const wasRevealed = Number(fighter.pvpCombatUntil ?? 0) > now;
+        fighter.pvpCombatUntil = Math.max(Number(fighter.pvpCombatUntil ?? 0), now + PVP_INVISIBILITY_REVEAL_MS);
+        const invisible = Boolean(fighter.invisibleSpell || fighter.hiddenSkill);
+        if (invisible && (!wasRevealed || now - Number(fighter.pvpRevealSyncedAt ?? 0) >= 1000)) {
+            fighter.pvpRevealSyncedAt = now;
+            syncCharacterVisibilityForOthers(fighter.id);
+        }
+    }
 }
 
 function getPvpMapChangeDeniedMessage(

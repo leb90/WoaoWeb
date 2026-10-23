@@ -91,6 +91,7 @@ export const CLIENT_PACKET_ID = {
     levelUpNotice: 93,
     transmogState: 94,
     shopState: 95,
+    aggroState: 96,
 } as const;
 
 export const CHARACTER_SWING_WEAPON = 1;
@@ -280,6 +281,8 @@ export interface CharacterSnapshot {
     invisibleSpellRemainingMs?: number;
     isPartyMember?: boolean;
     isClanMember?: boolean;
+    // Invisible en pelea PvP: ms que le quedan parpadeando (0 = invisible del todo para los enemigos).
+    pvpRevealRemainingMs?: number;
     color?: string;
     clan?: string;
     inmovilizado?: number;
@@ -453,6 +456,21 @@ export type ShopProductPayload = {
     badge: string | null;
     setName: string | null;
     unavailableReason: string | null;
+};
+
+// Criaturas que tienen de objetivo al jugador (server/src/aggroState.ts).
+export type AggroEntry = {
+    id: number;
+    name: string;
+    hp: number;
+    maxHp: number;
+    body: number;
+    head: number;
+};
+
+export type AggroStatePayload = {
+    npcs: AggroEntry[];
+    total: number;
 };
 
 export type ShopStatePayload = {
@@ -815,6 +833,7 @@ export interface PlayerHudState {
     mountState?: MountStatePayload;
     transmogState?: TransmogStatePayload;
     shopState?: ShopStatePayload;
+    aggroState?: AggroStatePayload;
     castleState?: CastleStatePayload;
     factionWarState?: FactionWarStatePayload;
     rankedState?: RankedStatePayload;
@@ -1399,6 +1418,7 @@ export type ParsedServerPacket =
     | { type: "mountState"; payload: MountStatePayload }
     | { type: "transmogState"; payload: TransmogStatePayload }
     | { type: "shopState"; payload: ShopStatePayload }
+    | { type: "aggroState"; payload: AggroStatePayload }
     | { type: "castleState"; payload: CastleStatePayload }
     | { type: "factionWarState"; payload: FactionWarStatePayload }
     | { type: "rankedState"; payload: RankedStatePayload }
@@ -1778,6 +1798,7 @@ function parseCharacter(
             snapshot.isClanMember = reader.getByte() === 1;
         }
 
+        snapshot.pvpRevealRemainingMs = reader.canReadBytes(5) ? reader.getInt() : 0;
         snapshot.tt = reader.canReadBytes(1) ? reader.getByte() : 0;
     }
 
@@ -2594,6 +2615,19 @@ function parseServerPacketById(
                 return {
                     type: "shopState",
                     payload: JSON.parse(rawPayload) as ShopStatePayload,
+                };
+            } catch {
+                return { type: "unknown", payload: { packetId } };
+            }
+        }
+
+        case CLIENT_PACKET_ID.aggroState: {
+            const rawPayload = reader.getString();
+
+            try {
+                return {
+                    type: "aggroState",
+                    payload: JSON.parse(rawPayload) as AggroStatePayload,
                 };
             } catch {
                 return { type: "unknown", payload: { packetId } };

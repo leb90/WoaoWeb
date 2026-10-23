@@ -186,6 +186,7 @@ const funct = require("./functions");
 const protocol = require("./protocol") as ProtocolApi;
 const game = require("./game") as GameApi;
 const fishing = require("./fishing");
+const aggroState = require("./aggroState");
 const harvesting = require("./harvesting");
 const smelting = require("./smelting");
 const socket = require("./socket") as SocketApi;
@@ -1323,6 +1324,7 @@ createDynamicScheduler(
         smelting.processTick(now);
         summonRoom.tickSummonRoom();
         npcs.processPendingMovements();
+        aggroState.tickAggroState(now);
         protocol.processPendingMovements();
         processPendingLogoutTick(now);
     },

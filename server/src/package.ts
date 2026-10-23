@@ -128,6 +128,7 @@ const clientPacketID = {
     levelUpNotice: 93,
     transmogState: 94,
     shopState: 95,
+    aggroState: 96,
 } as const;
 
 const serverPacketID = {

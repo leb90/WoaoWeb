@@ -393,6 +393,9 @@ export type RuntimeCharacter = {
     logoutRequestedAt?: number;
     logoutExpiresAt?: number;
     pvpMapChangeBlockedUntil?: number;
+    // Fin de la ventana de combate PvP (para revelar invisibles) y último reenvío del personaje.
+    pvpCombatUntil?: number;
+    pvpRevealSyncedAt?: number;
     disconnectOnDeath?: boolean;
     nextDialogAt?: number;
     nextUiCommandAt?: number;

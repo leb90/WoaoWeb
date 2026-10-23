@@ -773,6 +773,7 @@ function Login(this: LoginApi) {
                 personaje.ignoreMovementUntil = 0;
                 personaje.nextWalkAt = 0;
                 personaje.pvpMapChangeBlockedUntil = 0;
+                personaje.pvpCombatUntil = 0;
 
                 personaje.moveOffsetX = 0;
                 personaje.moveOffsetY = 0;

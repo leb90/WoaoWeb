@@ -473,6 +473,7 @@ export type HandleProtocolApi = {
     mountState: (payload: unknown, client: RuntimeClient) => void;
     transmogState: (payload: unknown, client: RuntimeClient) => void;
     shopState: (payload: unknown, client: RuntimeClient) => void;
+    aggroState: (payload: unknown, client: RuntimeClient) => void;
     castleState: (payload: unknown, client: RuntimeClient) => void;
     factionWarState: (payload: FactionWarStatePayload, client: RuntimeClient) => void;
     rankedState: (payload: unknown, client: RuntimeClient) => void;
@@ -920,6 +921,16 @@ function writeCharacterPayload(character: ProtocolCharacter, viewerId?: EntityId
     }
 
     pkg.writeByte(!huntersAnonymous && areClanMembersForViewer(viewerId, character) ? 1 : 0);
+    // Invisible en pelea PvP: ms que le quedan parpadeando para los demás (0 = invisible del todo).
+    pkg.writeInt(getPvpRevealRemainingMs(character));
+}
+
+function getPvpRevealRemainingMs(character: ProtocolCharacter): number {
+    if (!character.invisibleSpell && !character.hiddenSkill) {
+        return 0;
+    }
+
+    return Math.max(0, Math.floor(Number(character.pvpCombatUntil ?? 0) - Date.now()));
 }
 
 function getNpcQuestStatusForViewer(npc: ProtocolNpc, viewerId?: EntityId): number {
@@ -1563,6 +1574,13 @@ const handleServer: HandleProtocolApi = {
 
     shopState(payload, client) {
         pkg.setPackageID(pkg.clientPacketID.shopState);
+        pkg.writeString(JSON.stringify(payload));
+        socket.send(client);
+    },
+
+    // Criaturas que tienen de objetivo al jugador (aggroState.ts).
+    aggroState(payload, client) {
+        pkg.setPackageID(pkg.clientPacketID.aggroState);
         pkg.writeString(JSON.stringify(payload));
         socket.send(client);
     },

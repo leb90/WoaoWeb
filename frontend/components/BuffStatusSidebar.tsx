@@ -5,7 +5,7 @@ import type { PlayerHudState, SkillsState } from "../lib/aowProtocol";
 import type { RuntimeTimingConfig } from "../lib/runtime-config";
 
 const HUNTER_CLASS_ID = 9;
-const OCULTARSE_SKILL_INDEX = 7;
+export const OCULTARSE_SKILL_INDEX = 7;
 
 type BuffStatusSidebarProps = {
     hud: PlayerHudState | null;
@@ -52,7 +52,8 @@ function clampProgress(value: number): number {
     return Math.min(1, Math.max(0, value));
 }
 
-function getHiddenSkillDurationMs(skill: number, classId?: number): number {
+// Misma fórmula que el server (protocol.ts, getHiddenSkillDurationMs): el server no manda la duración.
+export function getHiddenSkillDurationMs(skill: number, classId?: number): number {
     const normalizedSkill = Math.max(0, Number(skill) || 0);
     const interval = 500;
     const missingSkill = 100 - normalizedSkill;

@@ -42,8 +42,8 @@ export const WIKI_CATEGORIES = [
     {
         slug: "pvp",
         label: "PvP y criminalidad",
-        description: "Seguro, ciudadanos, criminales y consecuencias del PvP.",
-        links: ["Seguro general", "Seguro de clan", "Criminalidad", "Resurrección"],
+        description: "Balance PvP por nivel y clase, sets de tier, rarezas e invisibilidad en combate.",
+        links: ["Aciertos por nivel", "Identidad de clase", "Sets de tier", "Rarezas"],
     },
     {
         slug: "mundo",

@@ -1,5 +1,7 @@
 // Simulador de balance PvP sobre el motor real del server (game.userDmgUser y game.userSpellUser).
 // No levanta el server ni toca la base: arma personajes en memoria y mide el daño.
+// El motor ya aplica el tope de atributos en PvP, los factores PvP (modDmgPvp*), los bonos de set de tier
+// (jsons/sets.json) y el maná de objetoEspecial; una propuesta solo cambia tablas y datos.
 //
 //   pnpm --dir server balance-sim [opciones]
 //   --propuesta <archivo.json>   cambios a probar (ver propuestas/ y docs/balance/BALANCE_PVP.md)
@@ -22,17 +24,10 @@ const option = (name: string, fallback: string) => {
 const list = (name: string, fallback: string) => option(name, fallback).split(",").map((value) => value.trim()).filter(Boolean);
 
 type Proposal = {
-    // Tope de fuerza y agilidad efectivas (buff + equipo) en PvP. Regla clásica de AO: 40.
-    attributeCap?: number;
-    attributeCapIncludesItems?: boolean;
-    // Factores solo PvP por clase (clave = id de clase o "default").
+    // Pisan las tablas modDmgPvpArmas / modDmgPvpProyectiles / modDmgPvpMagia (clave = id de clase o "default").
     pvpMelee?: Record<string, number>;
     pvpRanged?: Record<string, number>;
     pvpMagic?: Record<string, number>;
-    // Bonos porcentuales del set completo de tier, por clase o "default".
-    tierSetBonus?: Record<string, { hp?: number; mana?: number; phys?: number; magic?: number }>;
-    // Aplicar el bono de maná de objetoEspecial 8/9/10/17/19 (hoy no se suma: bug).
-    applyOeMana?: boolean;
     balance?: Record<string, Record<string, unknown>>;
     spells?: Record<string, Record<string, unknown>>;
     objects?: Record<string, Record<string, unknown>>;
@@ -47,7 +42,6 @@ const LEVELS = list("--niveles", "30,40,50").map(Number);
 const PROFILES = list("--perfiles", "venta,comun,tier") as GearProfile[];
 const RACE = Number(option("--raza", "1"));
 const BUFFED = !args.includes("--sin-buff");
-const ATTR_CAP = Number(proposal?.attributeCap ?? 0);
 
 const vars = require(path.join(SRC, "vars"));
 const { loadObjectsDataFromJsonFile } = require(path.join(SRC, "objectData"));
@@ -59,6 +53,14 @@ const balanceFile = option("--perfil-balance", "");
 const balanceData = balanceFile ? normalizeBalanceData(JSON.parse(fs.readFileSync(balanceFile, "utf8"))) : createDefaultBalanceData();
 for (const [key, value] of Object.entries(proposal?.balance ?? {})) balanceData[key] = { ...(balanceData[key] || {}), ...value };
 applyBalanceDataToVars(vars, balanceData);
+for (const [key, table] of [["pvpMelee", "modDmgPvpArmas"], ["pvpRanged", "modDmgPvpProyectiles"], ["pvpMagic", "modDmgPvpMagia"]] as const) {
+    const values = proposal?.[key];
+    if (!values) continue;
+    for (let classId = 1; classId <= 21; classId++) {
+        const value = values[String(classId)] ?? values.default;
+        if (value !== undefined) vars[table][classId] = Number(value);
+    }
+}
 for (const [id, changes] of Object.entries(proposal?.spells ?? {})) Object.assign(vars.datSpell[id], changes);
 for (const [id, changes] of Object.entries(proposal?.objects ?? {})) Object.assign(vars.datObj[id], changes);
 
@@ -67,31 +69,8 @@ const balance = require(path.join(SRC, "balance"));
 const skills = require(path.join(SRC, "skills"));
 vars.mapData[1] = { ...(vars.mapData[1] || {}), pk: 0 };
 
-const classFactor = (table: Record<string, number> | undefined, classId: number) => Number(table?.[String(classId)] ?? table?.default ?? 1);
-
-// Propuesta: factor físico solo PvP y % físico del set, dentro de calcularDmg cuando el objetivo es un jugador
-// (calcularDmg ya recibe targetIsNpc). userDmgUser llama a game.calcularDmg, así que envolverlo es exacto.
-const originalCalcularDmg = game.calcularDmg;
-game.calcularDmg = function (idUser: string, targetIsNpc = false) {
-    const damage = originalCalcularDmg.call(game, idUser, targetIsNpc);
-    if (targetIsNpc || !proposal) return damage;
-    const user = vars.personajes[idUser];
-    const weapon = vars.datObj[user.inv?.[String(user.idItemWeapon)]?.idItem ?? 0];
-    const factor = classFactor(weapon?.proyectil ? proposal.pvpRanged : proposal.pvpMelee, user.idClase);
-    return Math.max(1, Math.floor(damage * factor * (1 + Number(user.__setPhysPct || 0) / 100)));
-};
-
 const skillCap = (level: number) => (level >= 39 ? 200 : level <= 18 ? level * 5 : 100 + (level - 19) * 5);
-// Mismas tablas que getObjectSpecialBonuses (game.ts).
-const OE_STR: Record<number, number> = { 2: 5, 3: 2, 4: 3, 12: 1, 13: 2, 14: 5, 15: 3, 16: 1 };
-const OE_AGI: Record<number, number> = { 5: 5, 6: 2, 7: 3, 12: 3, 13: 2, 14: 2, 15: 2, 16: 1, 17: 2, 18: 1 };
-const OE_MANA: Record<number, number> = { 8: 100, 9: 200, 10: 300, 17: 200, 19: 55 };
 const MAGIC_ROLE = new Set([1, 6, 7]);
-
-function setBonus(classId: number, profile: GearProfile) {
-    if (!proposal?.tierSetBonus || profile !== "tier") return {};
-    return proposal.tierSetBonus[String(classId)] ?? proposal.tierSetBonus.default ?? {};
-}
 
 function gearFor(classId: number, profile: GearProfile, mode: string): Record<string, number> {
     const role: GearRole = mode === "magia" || (mode === "defensa" && MAGIC_ROLE.has(classId)) ? "magia" : "fisico";
@@ -120,43 +99,37 @@ function makeCharacter(classId: number, level: number, profile: GearProfile, mod
     const inv: Record<string, { idItem: number; amount: number; equipped: number }> = {};
     const slots: Record<string, number> = {};
     let slot = 1;
-    let oeMana = 0;
-    let oeStr = 0;
-    let oeAgi = 0;
     for (const [kind, idItem] of Object.entries(gear)) {
         inv[String(slot)] = { idItem, amount: kind === "arrow" ? 100000 : 1, equipped: 1 };
         slots[kind] = slot++;
-        const oe = Number(vars.datObj[idItem]?.objetoEspecial ?? 0);
-        if (proposal?.applyOeMana) oeMana += OE_MANA[oe] || 0;
-        oeStr += OE_STR[oe] || 0;
-        oeAgi += OE_AGI[oe] || 0;
     }
     const skillValues = Array.from({ length: 31 }, () => 0);
     for (const name of ["magia", "tacticas", "armas", "apunalar", "defensa", "proyectiles", "defMagia"]) skillValues[skills.SKILLS[name] - 1] = skillCap(level);
-    const bonus = setBonus(classId, profile);
-    const buff = (base: number, fromItems: number) => {
-        let value = BUFFED ? base * 2 : base;
-        if (ATTR_CAP > 0) value = Math.min(value, proposal?.attributeCapIncludesItems ? Math.max(0, ATTR_CAP - fromItems) : ATTR_CAP);
-        return value;
-    };
+    const buff = (base: number) => (BUFFED ? base * 2 : base);
     const character: Record<string, any> = {
         id, nameCharacter: id, idClase: classId, idRaza: RACE, level, map: 1, pos: { x: 50, y: 50 + team }, heading: team,
-        attrFuerza: buff(attr("fuerza"), oeStr), attrAgilidad: buff(attr("agilidad"), oeAgi),
+        attrFuerza: buff(attr("fuerza")), attrAgilidad: buff(attr("agilidad")),
         attrInteligencia: attr("inteligencia"), attrConstitucion: attr("constitucion"),
         bkAttrFuerza: attr("fuerza"), bkAttrAgilidad: attr("agilidad"),
         minHit: balance.getMinHitForLevel(classId, level), maxHit: balance.getMaxHitForLevel(classId, level),
-        // Vida y maná "infinitos" para medir golpes sueltos; la vida real va aparte.
-        hp: 1e7, maxHp: 1e7, mana: 1e7, maxMana: 1e7, sta: 1e7, maxSta: 1e7, skills: skillValues, skillPts: 0, inv,
+        sta: 1e7, maxSta: 1e7, skills: skillValues, skillPts: 0, inv,
         idItemWeapon: slots.weapon ?? 0, idItemBody: slots.body ?? 0, idItemHelmet: slots.helmet ?? 0,
         idItemShield: slots.shield ?? 0, idItemRing: slots.ring ?? 0, idItemArrow: slots.arrow ?? 0,
         // Combate de arena: saltea zona segura, facciones y fuego amigo.
         rankedMatchId: "sim", rankedTeam: team, spells: {},
-        __setPhysPct: bonus.phys ?? 0,
     };
     vars.personajes[id] = character;
-    const realMaxHp = Math.round(balance.getMaxHpForLevel(classId, attr("constitucion"), level) * (1 + (bonus.hp ?? 0) / 100));
-    const realMaxMana = Math.round((balance.getMaxManaForLevel(classId, attr("inteligencia"), level) + oeMana) * (1 + (bonus.mana ?? 0) / 100));
-    return { character, gear, realMaxHp, realMaxMana, bonus };
+    // Vida y maná reales con el equipo: los calcula el motor (set de tier y +maná de los ítems).
+    character.maxHp = balance.getMaxHpForLevel(classId, attr("constitucion"), level);
+    character.maxMana = classId === 3 || classId === 9 ? 0 : balance.getMaxManaForLevel(classId, attr("inteligencia"), level);
+    character.hp = character.maxHp;
+    character.mana = character.maxMana;
+    game.refreshEquipmentVitals(character, false);
+    const realMaxHp = character.maxHp;
+    const realMaxMana = character.maxMana;
+    // Vida y maná "infinitos" para medir golpes sueltos.
+    Object.assign(character, { hp: 1e7, maxHp: 1e7, mana: 1e7, maxMana: 1e7, equipVitalsMaxHp: 0, equipVitalsMaxMana: 0 });
+    return { character, gear, realMaxHp, realMaxMana };
 }
 
 const scrollAllows = (spellId: number, classId: number) =>
@@ -214,7 +187,6 @@ for (const level of LEVELS) {
                     maxMana: attacker.realMaxMana,
                     spell: spell ? { id: spell.id, name: spell.spell.name, mana: spell.spell.manaRequired, damage: `${spell.spell.minHp}-${spell.spell.maxHp}` } : null,
                 };
-                const magicFactor = proposal ? classFactor(proposal.pvpMagic, atkClass) * (1 + Number(attacker.bonus.magic ?? 0) / 100) : 1;
                 for (const defProfile of PROFILES) {
                     for (const defClass of CLASSES) {
                         const defender = makeCharacter(defClass, level, defProfile, "defensa", 2);
@@ -224,9 +196,7 @@ for (const level of LEVELS) {
                             defender.character.hp = 1e7;
                             if (spell) game.userSpellUser(attacker.character.id, defender.character.id, spell.id);
                             else game.userDmgUser(attacker.character.id, defender.character.id);
-                            let damage = 1e7 - defender.character.hp;
-                            // Propuesta: factor mágico solo PvP y % mágico del set, sobre el daño final del hechizo.
-                            if (spell && damage > 0 && magicFactor !== 1) damage = Math.max(1, Math.floor(damage * magicFactor));
+                            const damage = 1e7 - defender.character.hp;
                             if (damage > 0) landed.push(damage);
                         }
                         landed.sort((a, b) => a - b);

@@ -961,6 +961,9 @@ function Login(this: LoginApi) {
                     personaje.spells = {};
                 }
 
+                // Vida y maná con el equipo (set de tier y +maná de los ítems), sobre la base guardada.
+                game.refreshEquipmentVitals(personaje, false);
+
                 personaje.gold = balance.clampGold(personaje.gold || 0);
                 relocateToJailIfNeeded(personaje);
                 ensureCharacterHasValidMapPosition(personaje);

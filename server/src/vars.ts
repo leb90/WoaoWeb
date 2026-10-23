@@ -66,7 +66,8 @@ function Vars(this: any) {
             spellMs: 560,
             meleeToSpellMs: 0,
             spellToMeleeMs: 0,
-            useItemMs: 50,
+            // 160 ms como AoDrag: con 50 ms se tomaban 20 rojas por segundo (ver docs/balance/BALANCE_PVP.md, 7.8).
+            useItemMs: 160,
             meleeToUseItemMs: 0,
             dropItemMs: 150,
             equipToggleMs: 125,

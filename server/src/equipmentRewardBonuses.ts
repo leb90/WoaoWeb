@@ -4,9 +4,10 @@ type InventorySlotLike = {
     idItem?: number | string;
 } | null | undefined;
 
+// Personaje en juego: el inventario vive en `inv` (no en `items`, que es la forma serializada para guardar).
 type CharacterLike = {
     idItemBody?: number | string;
-    items?: Record<string | number, InventorySlotLike>;
+    inv?: Record<string | number, InventorySlotLike>;
 } | null | undefined;
 
 type ObjectLike = {
@@ -35,7 +36,7 @@ function getEquippedBodyObject(user: CharacterLike): ObjectLike {
         return null;
     }
 
-    const inventoryItem = user.items?.[slotKey as string | number];
+    const inventoryItem = user.inv?.[slotKey as string | number];
     const itemId = Number(inventoryItem?.idItem ?? 0);
     if (!itemId) {
         return null;

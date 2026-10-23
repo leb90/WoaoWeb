@@ -41,8 +41,9 @@
         "world-map": "node scripts/build-world-map.cjs",
         "compare-original-data": "tsx src/scripts/compareOriginalData.ts",
         "apply-combat-balance": "tsx src/scripts/applyCombatBalanceData.ts",
+        "apply-tier-sets": "tsx src/scripts/applyTierSetData.ts",
         "report-combat-balance": "tsx src/scripts/reportCombatBalance.ts",
-        "test-combat-balance": "tsx src/balance.test.ts && tsx src/combatBalance.test.ts",
+        "test-combat-balance": "tsx src/balance.test.ts && tsx src/combatBalance.test.ts && tsx --test src/pvpBalance.test.ts",
         "balance-sim": "tsx src/scripts/balanceSim/simulate.ts"
     },
     "repository": {

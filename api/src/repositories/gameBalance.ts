@@ -38,6 +38,9 @@ export type GameBalanceRecordData = {
     modAtaqueProyectiles: NumericMap;
     modAtaqueArmas: NumericMap;
     modEvasion: NumericMap;
+    modDmgPvpArmas: NumericMap;
+    modDmgPvpProyectiles: NumericMap;
+    modDmgPvpMagia: NumericMap;
 };
 
 type GameBalanceInputData = Omit<
@@ -92,6 +95,9 @@ const gameBalanceSchema = z.object({
     modAtaqueProyectiles: numericMapSchema,
     modAtaqueArmas: numericMapSchema,
     modEvasion: numericMapSchema,
+    modDmgPvpArmas: numericMapSchema.optional(),
+    modDmgPvpProyectiles: numericMapSchema.optional(),
+    modDmgPvpMagia: numericMapSchema.optional(),
 });
 
 let seedPromise: Promise<void> | null = null;
@@ -192,6 +198,17 @@ function normalizeGameBalanceData(data: unknown): GameBalanceRecordData {
         modAtaqueProyectiles: normalizeNumberMap(parsed.modAtaqueProyectiles),
         modAtaqueArmas: normalizeNumberMap(parsed.modAtaqueArmas),
         modEvasion: normalizeNumberMap(parsed.modEvasion),
+        // Perfiles guardados antes de estas tablas: se completan con las del seed.
+        modDmgPvpArmas: normalizeNumberMap(
+            parsed.modDmgPvpArmas ?? loadSeedBalanceJson().modDmgPvpArmas,
+        ),
+        modDmgPvpProyectiles: normalizeNumberMap(
+            parsed.modDmgPvpProyectiles ??
+                loadSeedBalanceJson().modDmgPvpProyectiles,
+        ),
+        modDmgPvpMagia: normalizeNumberMap(
+            parsed.modDmgPvpMagia ?? loadSeedBalanceJson().modDmgPvpMagia,
+        ),
     };
 }
 

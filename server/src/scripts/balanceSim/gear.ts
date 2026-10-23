@@ -20,6 +20,9 @@ const npcs: Record<string, ObjectData> = readJson("npcs.json");
 const premios: ObjectData[] = Object.values(readJson("premios.json"));
 const recipes: ObjectData[] = Object.values(readJson("craftingRecipes.json"));
 const quests: ObjectData[] = Object.values(readJson("quests.json"));
+const tierSets: Array<{ classes: number[]; pieces: Record<string, number[]> }> = fs.existsSync(path.join(JSONS, "sets.json"))
+    ? readJson("sets.json").sets
+    : [];
 
 // De dónde se puede sacar cada objeto.
 export const sources = new Map<number, Set<string>>();
@@ -103,9 +106,18 @@ function best(classId: number, role: GearRole, slot: GearSlot, filter: (id: numb
     return top?.id ?? 0;
 }
 
+// Piezas del set de tier de la clase (jsons/sets.json): con perfil "tier" se prefieren, así se arma el set
+// completo y el motor aplica su bono.
+const ownSetItems = (classId: number) =>
+    new Set(tierSets.filter((set) => set.classes.includes(classId)).flatMap((set) => Object.values(set.pieces).flat()));
+
 // Si el set de tier no tiene pieza para ese lugar, se completa con lo mejor común.
 export function pickGear(classId: number, role: GearRole, slot: GearSlot, profile: GearProfile): number {
-    return best(classId, role, slot, FILTERS[profile]) || (profile === "tier" ? best(classId, role, slot, isCommon) : 0);
+    if (profile === "tier") {
+        const own = ownSetItems(classId);
+        return best(classId, role, slot, (id) => own.has(id)) || best(classId, role, slot, isTier) || best(classId, role, slot, isCommon);
+    }
+    return best(classId, role, slot, FILTERS[profile]);
 }
 
 // Flechas: tienda 480 (1-3); común y tier 607 Flecha de los Dioses (8-10, crafteo).

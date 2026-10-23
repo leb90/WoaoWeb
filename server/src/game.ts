@@ -85,6 +85,7 @@ const balance = require("./balance");
 const { isWaterGraphic } = require("./waterTiles");
 const workProfessions = require("./workProfessions");
 const skills = require("./skills");
+const tierSets = require("./tierSets") as typeof import("./tierSets");
 
 const SURVIVAL_HAMBRE_MAX = Number(balance.MAX_HAMBRE ?? 100);
 const SURVIVAL_SED_MAX = Number(balance.MAX_SED ?? 100);
@@ -811,6 +812,91 @@ function getEffectiveFuerza(user: GameCharacter): number {
 
 function getEffectiveAgilidad(user: GameCharacter): number {
     return safeNumber(user.attrAgilidad) + getEquippedSpecialBonuses(user).agilidad;
+}
+
+// PvP: fuerza y agilidad efectivas (buff + equipo) con el tope clásico de AO. Contra NPC no hay tope.
+// Ver docs/balance/BALANCE_PVP.md, sección 7.1.
+const PVP_ATTRIBUTE_CAP = 40;
+
+function getCombatFuerza(user: GameCharacter, pvp: boolean): number {
+    const value = getEffectiveFuerza(user);
+    return pvp ? Math.min(PVP_ATTRIBUTE_CAP, value) : value;
+}
+
+function getCombatAgilidad(user: GameCharacter, pvp: boolean): number {
+    const value = getEffectiveAgilidad(user);
+    return pvp ? Math.min(PVP_ATTRIBUTE_CAP, value) : value;
+}
+
+// Factor de daño solo contra jugadores (tablas modDmgPvp* del balance). Sección 7.2.
+function getPvpDamageFactor(table: unknown, classId: number): number {
+    const value = Number((table as Record<number, number> | undefined)?.[classId] ?? 1);
+    return Number.isFinite(value) && value > 0 ? value : 1;
+}
+
+function getEquippedItemIds(user: GameCharacter): number[] {
+    return [user.idItemWeapon, user.idItemBody, user.idItemShield, user.idItemHelmet, user.idItemRing]
+        .map((slot) => Number(getInventoryItem(user, slot)?.idItem ?? 0))
+        .filter((idItem) => idItem > 0);
+}
+
+function getEquippedSetBonus(user: GameCharacter) {
+    return tierSets.getEquippedSetBonus(getEquippedItemIds(user));
+}
+
+// Vida y maná máximos con el equipo: bono de vida del set de tier y maná de objetoEspecial (8/9/10/17/19)
+// más el % de maná del set. El bono se guarda aparte (equipHpBonus / equipManaBonus) y nunca se persiste.
+// Si alguien reasignó maxHp o maxMana desde afuera (login, nivel, remort, recarga de balance), ese valor es
+// la nueva base; si no, la base es el valor efectivo menos el bono anterior.
+function refreshEquipmentVitals(user: GameCharacter, notify = true): boolean {
+    if (!user || user.botLoad || user.adminSummonedBot) {
+        return false;
+    }
+
+    const currentMaxHp = safeNumber(user.maxHp);
+    const currentMaxMana = safeNumber(user.maxMana);
+    const previousHpBonus = currentMaxHp === safeNumber(user.equipVitalsMaxHp) ? safeNumber(user.equipHpBonus) : 0;
+    const previousManaBonus = currentMaxMana === safeNumber(user.equipVitalsMaxMana) ? safeNumber(user.equipManaBonus) : 0;
+    const baseMaxHp = Math.max(1, currentMaxHp - previousHpBonus);
+    const baseMaxMana = Math.max(0, currentMaxMana - previousManaBonus);
+    const set = getEquippedSetBonus(user);
+    const hpBonus = Math.round((baseMaxHp * set.hpPct) / 100);
+    // Las clases sin magia no tienen maná aunque lleven un ítem con +maná.
+    const manaBonus = baseMaxMana > 0
+        ? getEquippedSpecialBonuses(user).maxMana + Math.round((baseMaxMana * set.manaPct) / 100)
+        : 0;
+    const nextMaxHp = baseMaxHp + hpBonus;
+    const nextMaxMana = baseMaxMana + manaBonus;
+
+    user.equipHpBonus = hpBonus;
+    user.equipManaBonus = manaBonus;
+    user.equipVitalsMaxHp = nextMaxHp;
+    user.equipVitalsMaxMana = nextMaxMana;
+
+    if (nextMaxHp === currentMaxHp && nextMaxMana === currentMaxMana) {
+        return false;
+    }
+
+    user.maxHp = nextMaxHp;
+    user.maxMana = nextMaxMana;
+    user.hp = Math.min(safeNumber(user.hp), nextMaxHp);
+    user.mana = Math.min(safeNumber(user.mana), nextMaxMana);
+
+    if (notify) {
+        withUserClient(user.id, (client) => sendSelfVitals(user as unknown as Record<string, unknown>, client));
+    }
+
+    return true;
+}
+
+function getBaseMaxHp(user: GameCharacter): number {
+    const bonus = safeNumber(user.maxHp) === safeNumber(user.equipVitalsMaxHp) ? safeNumber(user.equipHpBonus) : 0;
+    return Math.max(1, safeNumber(user.maxHp) - bonus);
+}
+
+function getBaseMaxMana(user: GameCharacter): number {
+    const bonus = safeNumber(user.maxMana) === safeNumber(user.equipVitalsMaxMana) ? safeNumber(user.equipManaBonus) : 0;
+    return Math.max(0, safeNumber(user.maxMana) - bonus);
 }
 
 function isClass(user: GameCharacter, classId: number): boolean {
@@ -2819,6 +2905,9 @@ function applyUserSpellDamage(
         dmg -= Math.round((dmg * Number(userAttacked.protec)) / 100);
     }
 
+    // Solo contra jugadores: factor PvP mágico de la clase y bono de daño del set de tier.
+    dmg = Math.floor(dmg * getPvpDamageFactor(vars.modDmgPvpMagia, user.idClase) * (1 + getEquippedSetBonus(user).dmgPct / 100));
+
     if (dmg < 1) {
         dmg = 1;
     }
@@ -3542,9 +3631,9 @@ export type GameApi = {
     getSkillOcultarse: (idUser: EntityId) => number;
     getSkillApu: (idUser: EntityId) => number;
     puedeApu: (idUser: EntityId) => boolean;
-    poderEvasion: (idUser: EntityId) => number;
+    poderEvasion: (idUser: EntityId, pvp?: boolean) => number;
     poderEvasionEscudo: (idUser: EntityId) => number;
-    poderAtaqueArma: (idUser: EntityId) => number;
+    poderAtaqueArma: (idUser: EntityId, pvp?: boolean) => number;
     hayObj: (idMap: number, pos: Position) => boolean;
     objMap: (idMap: number, pos: Position) => MapObjectInfo;
     tirarItemsUser: (idUser: EntityId) => Promise<void>;
@@ -3560,6 +3649,8 @@ export type GameApi = {
     depositBankGold: (idUser: EntityId, amount: number) => Promise<void>;
     withdrawBankGold: (idUser: EntityId, amount: number) => Promise<void>;
     persistCharacterSnapshot: (user: RuntimeCharacter, options?: CharacterSnapshotPersistOptions) => Promise<void>;
+    refreshEquipmentVitals: (user: RuntimeCharacter, notify?: boolean) => boolean;
+    getEquippedSetBonus: (user: RuntimeCharacter) => ReturnType<typeof tierSets.getEquippedSetBonus>;
     persistCharacterItemsById: (idUser: EntityId) => Promise<void>;
     persistCharacterItemsAndTransmogById: (idUser: EntityId) => Promise<void>;
     waitForCharacterPersistence: (characterId?: string) => Promise<void>;
@@ -4671,8 +4762,17 @@ function buildCharacterSnapshotPayload(
         deadWorldTransitionEndsAt,
         deadWorldTimeoutId,
         pendingReviveCast,
+        equipHpBonus,
+        equipManaBonus,
+        equipVitalsMaxHp,
+        equipVitalsMaxMana,
         ...persistableCharacter
     } = user;
+
+    void equipHpBonus;
+    void equipManaBonus;
+    void equipVitalsMaxHp;
+    void equipVitalsMaxMana;
 
     void connected;
     void inv;
@@ -4689,6 +4789,10 @@ function buildCharacterSnapshotPayload(
         ...(Object.prototype.hasOwnProperty.call(options ?? {}, "connected") ? { connected: options?.connected } : {}),
         attrFuerza: persistedAttrFuerza,
         attrAgilidad: persistedAttrAgilidad,
+        // Se guarda la vida base: el bono del set se recalcula al entrar.
+        maxHp: getBaseMaxHp(user),
+        maxMana: getBaseMaxMana(user),
+        hp: Math.min(safeNumber(user.hp), getBaseMaxHp(user)),
         spells: serializeSpells(user.spells),
         items: serializeInventory(getPersistableInventoryRecord(user)),
         bankItems: serializeBank(user.bank ?? {}),
@@ -8898,17 +9002,18 @@ function Game(this: GameApi) {
                 user.expNextLevel = balance.getLegacyExpNextLevelForLevel(user.level);
 
                 const aumentoHP = balance.rollHpGain(user.idClase, user.attrConstitucion);
-                const newMaxHp = user.maxHp + aumentoHP;
+                const newMaxHp = getBaseMaxHp(user) + aumentoHP;
                 const newMaxMana = balance.getMaxManaForLevel(user.idClase, user.attrInteligencia, user.level);
                 const newMinHit = balance.getMinHitForLevel(user.idClase, user.level);
                 const newMaxHit = balance.getMaxHitForLevel(user.idClase, user.level);
 
-                const aumentoMana = newMaxMana - user.maxMana;
+                const aumentoMana = newMaxMana - getBaseMaxMana(user);
                 const aumentoHIT = newMaxHit - user.maxHit;
 
                 user.maxHp = newMaxHp;
-                user.hp = user.maxHp;
                 user.maxMana = newMaxMana;
+                refreshEquipmentVitals(user, false);
+                user.hp = user.maxHp;
                 user.mana = user.maxMana;
 
                 user.minHit = newMinHit;
@@ -9996,17 +10101,26 @@ function Game(this: GameApi) {
 
             const dmgUser = rollInclusiveRange(user.minHit, user.maxHit);
 
-            const effectiveFuerza = getEffectiveFuerza(user);
+            const effectiveFuerza = getCombatFuerza(user, !targetIsNpc);
             const dmg = Math.floor(
                 (3 * dmgArma + (dmgMaxArma / 5) * Math.max(0, effectiveFuerza - 15) + dmgUser) * modClase,
             );
 
-            return require("./mounts").applyOutgoingDamage(
+            const outgoing = require("./mounts").applyOutgoingDamage(
                 user,
                 modifyOutgoingPhysicalDamage(user, dmg, isRanged ? "ranged" : "melee"),
                 isRanged ? "ranged" : "melee",
                 targetIsNpc,
             );
+
+            if (targetIsNpc) {
+                return outgoing;
+            }
+
+            // Solo contra jugadores: factor PvP de la clase y bono de daño del set de tier.
+            const pvpFactor = getPvpDamageFactor(isRanged ? vars.modDmgPvpProyectiles : vars.modDmgPvpArmas, user.idClase);
+            const setDamagePct = getEquippedSetBonus(user).dmgPct;
+            return Math.max(1, Math.floor(outgoing * pvpFactor * (1 + setDamagePct / 100)));
         } catch (err) {
             funct.dumpError(err);
             return 0;
@@ -10289,8 +10403,8 @@ function Game(this: GameApi) {
                 return 0;
             }
 
-            const poderAtaque = game.poderAtaqueArma(idUser);
-            let userAttackedEvasion = game.poderEvasion(idUserAttacked),
+            const poderAtaque = game.poderAtaqueArma(idUser, true);
+            let userAttackedEvasion = game.poderEvasion(idUserAttacked, true),
                 userAttackedPoderEvasionEscudo = game.poderEvasionEscudo(idUserAttacked);
 
             if (userAttacked.idItemShield) {
@@ -10978,7 +11092,7 @@ function Game(this: GameApi) {
      * @param  {[type]} idUser [description]
      * @return {[type]}        [description]
      */
-    this.poderEvasion = function (idUser: EntityId): number {
+    this.poderEvasion = function (idUser: EntityId, pvp = false): number {
         try {
             const user = getCharacterById(idUser);
 
@@ -10989,7 +11103,7 @@ function Game(this: GameApi) {
             const skillTacticasCombate = game.getSkillTacticasCombate(idUser);
             const n = skillTacticasCombate / 66;
 
-            const effectiveAgilidad = getEffectiveAgilidad(user);
+            const effectiveAgilidad = getCombatAgilidad(user, pvp);
             const tmpCalc =
                 (effectiveAgilidad + Math.round(skillTacticasCombate / 2) + n * effectiveAgilidad) *
                 vars.modEvasion[user.idClase];
@@ -11036,7 +11150,7 @@ function Game(this: GameApi) {
      * @param  {[type]} idUser [description]
      * @return {[type]}        [description]
      */
-    this.poderAtaqueArma = function (idUser: EntityId): number {
+    this.poderAtaqueArma = function (idUser: EntityId, pvp = false): number {
         try {
             const user = vars.personajes[idUser];
 
@@ -11058,7 +11172,7 @@ function Game(this: GameApi) {
             }
 
             const n = skill / 66;
-            const effectiveAgilidad = getEffectiveAgilidad(user);
+            const effectiveAgilidad = getCombatAgilidad(user, pvp);
             const poderAtaqueArmaTmp = (effectiveAgilidad + Math.round(skill / 2) + n * effectiveAgilidad) * modifier;
 
             let poderAtaqueArma = poderAtaqueArmaTmp + 2.5 * Math.max(user.level - 12, 0);
@@ -11911,6 +12025,14 @@ function Game(this: GameApi) {
         } catch (err) {
             funct.dumpError(err);
         }
+    };
+
+    this.refreshEquipmentVitals = function (user: RuntimeCharacter, notify = true): boolean {
+        return refreshEquipmentVitals(user as GameCharacter, notify);
+    };
+
+    this.getEquippedSetBonus = function (user: RuntimeCharacter) {
+        return getEquippedSetBonus(user as GameCharacter);
     };
 
     this.persistCharacterSnapshot = async function (

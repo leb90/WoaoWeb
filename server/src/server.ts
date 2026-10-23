@@ -810,6 +810,9 @@ function processPlayerStatusTick(now: number) {
             continue;
         }
 
+        // Vida y maná con equipo: cubre ítems que se pierden o desequipan por otros caminos.
+        game.refreshEquipmentVitals(user);
+
         if (Number(user.envenenado ?? 0) > 0 && !user.dead) {
             const lastPoisonTick = Number(user.cooldownVeneno ?? 0);
             if (lastPoisonTick <= 0 || now - lastPoisonTick >= 3000) {

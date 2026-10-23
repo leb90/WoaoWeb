@@ -1,0 +1,2043 @@
+{
+  "generatedAt": "2026-10-23T14:53:46.524Z",
+  "notes": [
+    "Fuerza/Agilidad de OE 2-7 y 12-18 se aplican en combate via getEffectiveFuerza/getEffectiveAgilidad.",
+    "Maná de OE 8-10/17/19 se muestra en Mejoras del equipo (cliente) y se calcula en getEquippedSpecialBonuses, pero el maxMana runtime del personaje se setea por balance/clase (revisar si el bono de maná realmente se suma al tope al equipar).",
+    "OE 1/11/53/54/55 aparecen en datos pero no tienen case en getObjectSpecialBonuses ni en el switch de useItem (salvo 50-52).",
+    "Daño mágico de báculos/sombreros suele venir del campo magicDamageBonus del JSON, no del número objetoEspecial."
+  ],
+  "codes": [
+    {
+      "objetoEspecial": 1,
+      "effect": {
+        "kind": "legacy-unimplemented",
+        "desc": "Ahorro de flechas 33% (nombre del item). NO hay handler en server actual."
+      },
+      "count": 2,
+      "items": [
+        {
+          "id": 546,
+          "name": "Arco Mágico (33% ahorro flechas)",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 886,
+          "name": "Arco Iron (Ahorra 33% Flechas)",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        }
+      ]
+    },
+    {
+      "objetoEspecial": 2,
+      "effect": {
+        "kind": "equip-stat",
+        "desc": "+5 Fuerza (al equipar)"
+      },
+      "count": 26,
+      "items": [
+        {
+          "id": 500,
+          "name": "Placas Bruñidas +5F (Bajo/as)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 729,
+          "name": "Placas Doradas +5F (Alto/as)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 746,
+          "name": "Escudo Cruz (+5 Fuerza)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 760,
+          "name": "Espada Dorada (+5 fuerza)",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 824,
+          "name": "Escudo Sajón (+5 Fuerza)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1153,
+          "name": "Espada Dorada (+5 fuerza) Ónice",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1347,
+          "name": "Armadura del Caido (Altos)(GUER./PIRA.)(+5F)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1348,
+          "name": "Armadura del Caido (Altos)(PALADIN)(+5F)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1352,
+          "name": "Armadura del Caido (GUERRERO/PIRATA)(+5F)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1353,
+          "name": "Armadura del Caido (Enanos)(PALADIN)(+5F)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1362,
+          "name": "Escudo del Caído(GUERRERO/PIRATA)(+5F)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1422,
+          "name": "Armadura del Caido (Altos)(GUER./PIRA.)(+5F) +1",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1423,
+          "name": "Armadura del Caido (Altos)(GUER./PIRA.)(+5F) +2",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1424,
+          "name": "Armadura del Caido (Altos)(GUER./PIRA.)(+5F) LEGENDARIA",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1425,
+          "name": "Armadura del Caido (Altos)(PALADIN)(+5F) +1",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1426,
+          "name": "Armadura del Caido (Altos)(PALADIN)(+5F) +2",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1427,
+          "name": "Armadura del Caido (Altos)(PALADIN)(+5F) LEGENDARIA",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1437,
+          "name": "Armadura del Caido (GUERRERO/PIRATA)(+5F) +1",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1438,
+          "name": "Armadura del Caido (GUERRERO/PIRATA)(+5F) +2",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1439,
+          "name": "Armadura del Caido (GUERRERO/PIRATA)(+5F) LEGENDARIA",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1440,
+          "name": "Armadura del Caido (Enanos)(PALADIN)(+5F) +1",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1441,
+          "name": "Armadura del Caido (Enanos)(PALADIN)(+5F) +2",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1442,
+          "name": "Armadura del Caido (Enanos)(PALADIN)(+5F) LEGENDARIA",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1464,
+          "name": "Escudo del Caído(GUERRERO/PIRATA)(+5F) +1",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1465,
+          "name": "Escudo del Caído(GUERRERO/PIRATA)(+5F) +2",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1466,
+          "name": "Escudo del Caído(GUERRERO/PIRATA)(+5F) LEGENDARIO",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        }
+      ]
+    },
+    {
+      "objetoEspecial": 3,
+      "effect": {
+        "kind": "equip-stat",
+        "desc": "+2 Fuerza (al equipar)"
+      },
+      "count": 29,
+      "items": [
+        {
+          "id": 496,
+          "name": "Placas de la Ciénaga +2F (Alto/as)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 745,
+          "name": "Placas con Capa Calavérica +2F (Bajo/as)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 748,
+          "name": "Escudo Celeste (+2 Fuerza)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 762,
+          "name": "Espada dos puntas (+2 Fuerza)",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1156,
+          "name": "Espada dos Puntas (+2 Fuerza) Ónice",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1256,
+          "name": "Escudo Desterrado (Asesino)(+2F)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1359,
+          "name": "Escudo del Caído (CLERIGO)(+2F)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1360,
+          "name": "Escudo del Caído (PALADIN)(+2F)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1363,
+          "name": "Escudo del Caído (ARQUERO/CAZADOR)(+2 F)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1371,
+          "name": "Espada del Caído (CLERIGO)(+2 F)",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1372,
+          "name": "Espada del Caído (PALADIN)(+2 F)",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1446,
+          "name": "Escudo Desterrado (Asesino)(+2F) +1",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1447,
+          "name": "Escudo Desterrado (Asesino)(+2F) +2",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1448,
+          "name": "Escudo Desterrado (Asesino)(+2F) LEGENDARIO",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1455,
+          "name": "Escudo del Caído (CLERIGO)(+2F) +1",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1456,
+          "name": "Escudo del Caído (CLERIGO)(+2F) +2",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1457,
+          "name": "Escudo del Caído (CLERIGO)(+2F) LEGENDARIO",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1458,
+          "name": "Escudo del Caído (PALADIN)(+2F) +1",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1459,
+          "name": "Escudo del Caído (PALADIN)(+2F) +2",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1460,
+          "name": "Escudo del Caído (PALADIN)(+2F) LEGENDARIO",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1467,
+          "name": "Escudo del Caído (ARQUERO/CAZADOR)(+2 F) +1",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1468,
+          "name": "Escudo del Caído (ARQUERO/CAZADOR)(+2 F) +2",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1469,
+          "name": "Escudo del Caído (ARQUERO/CAZADOR)(+2 F) LEGENDARIO",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1504,
+          "name": "Espada del Caído (CLERIGO)(+2 F) +1",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1505,
+          "name": "Espada del Caído (CLERIGO)(+2 F) +2",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1506,
+          "name": "Espada del Caído (CLERIGO)(+2 F) LEGENDARIO",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1507,
+          "name": "Espada del Caído (PALADIN)(+2 F) +1",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1508,
+          "name": "Espada del Caído (PALADIN)(+2 F) +2",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1509,
+          "name": "Espada del Caído (PALADIN)(+2 F) LEGENDARIO",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        }
+      ]
+    },
+    {
+      "objetoEspecial": 4,
+      "effect": {
+        "kind": "equip-stat",
+        "desc": "+3 Fuerza (al equipar)"
+      },
+      "count": 47,
+      "items": [
+        {
+          "id": 196,
+          "name": "Armadura Desterrada (Bajos)(Asesino)(+3F)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 705,
+          "name": "Placas Azules +3F (Alto/as)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 744,
+          "name": "Placas con Capa Amarilla +3F (Bajo/as)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 750,
+          "name": "Escudo Negro (+3 Fuerza)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 761,
+          "name": "Espada azul (+3 Fuerza)",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 846,
+          "name": "Puñal Asesino (+3 Fuerza)",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1054,
+          "name": "Puñal Desterrado (Asesino)(+3F)",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1127,
+          "name": "Puñal Asesino (+3 Fuerza) Ónice",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1155,
+          "name": "Espada Azul (+3 Fuerza) Ónice",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1181,
+          "name": "Armadura Desterrada (Asesino)(+3F)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1345,
+          "name": "Armadura del Caido (Altos)(CLERIGO)(+3F)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1346,
+          "name": "Armadura del Caido (Altos)(BARDO)(+3F)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1349,
+          "name": "Armadura del Caido (Altos)(ARQ./CAZ.)(+3F)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1350,
+          "name": "Armadura del Caido (BAJOS)(CLERIGO)(+3F)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1351,
+          "name": "Armadura del Caido (Enanos)(BARDO)(+3F)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1354,
+          "name": "Armadura del Caido (Bajos)(ARQ./CAZ.)(+3F)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1369,
+          "name": "Espada del Caído (GUERR./PIRA.)(+3F)",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1398,
+          "name": "Armadura Desterrada (Asesino)(+3F) +1",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1399,
+          "name": "Armadura Desterrada (Asesino)(+3F) +2",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1400,
+          "name": "Armadura Desterrada (Asesino)(+3F) LEGENDARIO",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1401,
+          "name": "Armadura Desterrada (Bajos)(Asesino)(+3F) +1",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1402,
+          "name": "Armadura Desterrada (Bajos)(Asesino)(+3F) +2",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1403,
+          "name": "Armadura Desterrada (Bajos)(Asesino)(+3F) LEGENDARIO",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1416,
+          "name": "Armadura del Caido (Altos)(CLERIGO)(+3F) +1",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1417,
+          "name": "Armadura del Caido (Altos)(CLERIGO)(+3F) +2",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1418,
+          "name": "Armadura del Caido (Altos)(CLERIGO)(+3F) LEGENDARIA",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1419,
+          "name": "Armadura del Caido (Altos)(BARDO)(+3F) +1",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1420,
+          "name": "Armadura del Caido (Altos)(BARDO)(+3F) +2",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1421,
+          "name": "Armadura del Caido (Altos)(BARDO)(+3F) LEGENDARIA",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1428,
+          "name": "Armadura del Caido (Altos)(ARQ./CAZ.)(+3F) +1",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1429,
+          "name": "Armadura del Caido (Altos)(ARQ./CAZ.)(+3F) +2",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1430,
+          "name": "Armadura del Caido (Altos)(ARQ./CAZ.)(+3F) LEGENDARIA",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1431,
+          "name": "Armadura del Caido (BAJOS)(CLERIGO)(+3F) +1",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1432,
+          "name": "Armadura del Caido (BAJOS)(CLERIGO)(+3F) +2",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1433,
+          "name": "Armadura del Caido (BAJOS)(CLERIGO)(+3F) LEGENDARIA",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1434,
+          "name": "Armadura del Caido (Enanos)(BARDO)(+3F) +1",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1435,
+          "name": "Armadura del Caido (Enanos)(BARDO)(+3F) +2",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1436,
+          "name": "Armadura del Caido (Enanos)(BARDO)(+3F) LEGENDARIA",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1443,
+          "name": "Armadura del Caido (Bajos)(ARQ./CAZ.)(+3F) +1",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1444,
+          "name": "Armadura del Caido (Bajos)(ARQ./CAZ.)(+3F) +2",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1445,
+          "name": "Armadura del Caido (Bajos)(ARQ./CAZ.)(+3F) LEGENDARIA",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1497,
+          "name": "Puñal Desterrado (Asesino)(+3F) +1",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1498,
+          "name": "Puñal Desterrado (Asesino)(+3F) +2",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1499,
+          "name": "Puñal Desterrado (Asesino)(+3F) LEGENDARIO",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1501,
+          "name": "Espada del Caído (GUERR./PIRA.)(+3F) +1",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1502,
+          "name": "Espada del Caído (GUERR./PIRA.)(+3F) +2",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1503,
+          "name": "Espada del Caído (GUERR./PIRA.)(+3F) LEGENDARIO",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        }
+      ]
+    },
+    {
+      "objetoEspecial": 5,
+      "effect": {
+        "kind": "equip-stat",
+        "desc": "+5 Agilidad (al equipar)"
+      },
+      "count": 8,
+      "items": [
+        {
+          "id": 725,
+          "name": "Placas de Oro +5A (Alto/as)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 741,
+          "name": "Placas de Oro +5A (Bajo/as)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 752,
+          "name": "Escudo Baldurs (+5 Agilidad)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 764,
+          "name": "Casco Cubierto (+5 Agilidad)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1367,
+          "name": "Casco del Caído (GUERRERO/PIRATA)(+5A)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1488,
+          "name": "Casco del Caído (GUERRERO/PIRATA)(+5A) +1",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1489,
+          "name": "Casco del Caído (GUERRERO/PIRATA)(+5A) +2",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1490,
+          "name": "Casco del Caído (GUERRERO/PIRATA)(+5A) LEGENDARIO",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        }
+      ]
+    },
+    {
+      "objetoEspecial": 6,
+      "effect": {
+        "kind": "equip-stat",
+        "desc": "+2 Agilidad (al equipar)"
+      },
+      "count": 22,
+      "items": [
+        {
+          "id": 727,
+          "name": "Placas Rojas +2A (Alto/as)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 751,
+          "name": "Escudo del Dragón Negro (+2 Agilidad)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 765,
+          "name": "Casco Medieval (+2 Agilidad)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 767,
+          "name": "Corona (+2 Agilidad)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 833,
+          "name": "Sombrero Mago (+2 Agilidad)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 870,
+          "name": "Placas Verdes +2A (Bajo/as)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1159,
+          "name": "Casco Desterrado (Asesino)(+2A)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1361,
+          "name": "Escudo del Caído(BARDO)(+2 A)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1364,
+          "name": "Casco del Caído (CLERIGO)(+2 A)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1368,
+          "name": "Casco del Caído (ARQUERO/CAZADOR)(+2A)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1461,
+          "name": "Escudo del Caído(BARDO)(+2 A) +1",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1462,
+          "name": "Escudo del Caído(BARDO)(+2 A) +2",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1463,
+          "name": "Escudo del Caído(BARDO)(+2 A) LEGENDARIO",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1470,
+          "name": "Casco Desterrado (Asesino)(+2A) +1",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1471,
+          "name": "Casco Desterrado (Asesino)(+2A) +2",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1472,
+          "name": "Casco Desterrado (Asesino)(+2A) LEGENDARIO",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1479,
+          "name": "Casco del Caído (CLERIGO)(+2 A) +1",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1480,
+          "name": "Casco del Caído (CLERIGO)(+2 A) +2",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1481,
+          "name": "Casco del Caído (CLERIGO)(+2 A) LEGENDARIO",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1491,
+          "name": "Casco del Caído (ARQUERO/CAZADOR)(+2A) +1",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1492,
+          "name": "Casco del Caído (ARQUERO/CAZADOR)(+2A) +2",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1493,
+          "name": "Casco del Caído (ARQUERO/CAZADOR)(+2A) LEGENDARIO",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        }
+      ]
+    },
+    {
+      "objetoEspecial": 7,
+      "effect": {
+        "kind": "equip-stat",
+        "desc": "+3 Agilidad (al equipar)"
+      },
+      "count": 6,
+      "items": [
+        {
+          "id": 383,
+          "name": "Placas Albinas +3A (Bajo/as)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 716,
+          "name": "Ropa Vampiro (+3 Agilidad)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 726,
+          "name": "Placas Plateadas +3A (Alto/as)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 733,
+          "name": "Ropa Lujo Orco Especial (+3 Agilidad)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 749,
+          "name": "Escudo Bordes Dorados (+3 Agilidad)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 834,
+          "name": "Sombrero Mago (+3 Agilidad)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        }
+      ]
+    },
+    {
+      "objetoEspecial": 8,
+      "effect": {
+        "kind": "equip-stat",
+        "desc": "+100 Maná máximo (UI/bono especial; ver nota)"
+      },
+      "count": 10,
+      "items": [
+        {
+          "id": 599,
+          "name": "Túnica Desterrada (Bajo/as)(+100 Mana)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 730,
+          "name": "Túnica Lujosa Marrón +100Maná (Alto/as)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 757,
+          "name": "Daga Torcida (+100 Mana)",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 763,
+          "name": "Hacha Roñosa (+100 Maná)",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 766,
+          "name": "Casco Completo (+100 Mana)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 950,
+          "name": "Túnica Lujosa Marrón +100Maná (Bajo/as)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1073,
+          "name": "Corona Calavera (+3 Agilidad) (1-3)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1125,
+          "name": "Daga Torcida (+100 Mana) Ónice",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1133,
+          "name": "Hacha Roñosa (+100 Mana) Ónice",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1182,
+          "name": "Túnica Desterrada (Alto/as)(+100 Mana)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        }
+      ]
+    },
+    {
+      "objetoEspecial": 9,
+      "effect": {
+        "kind": "equip-stat",
+        "desc": "+200 Maná máximo (UI/bono especial; ver nota)"
+      },
+      "count": 19,
+      "items": [
+        {
+          "id": 731,
+          "name": "Túnica Lujosa Plateada +200Maná (Alto/as)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 758,
+          "name": "Espada Ensangrentada (+200 Mana)",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 759,
+          "name": "Hacha de las Tinieblas (+200 Mana)",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 951,
+          "name": "Túnica Lujosa Plateada +200Maná (Bajo/as)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1088,
+          "name": "Casco Completo (+200 Mana)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1140,
+          "name": "Hacha de las Tinieblas (+200 Mana) Ónice",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1154,
+          "name": "Espada Ensangrentada (+200 Mana) Ónice",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1342,
+          "name": "Túnica Desterrada (Druida)(Alto/as)(+200 Mana)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1344,
+          "name": "Túnica Desterrada (Druida)(Bajo/as)(+200 Mana)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1365,
+          "name": "Casco del Caído (PALADIN)(+200 Mana)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1407,
+          "name": "Túnica Desterrada (Druida)(Alto/as)(+200 Mana) +1",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1408,
+          "name": "Túnica Desterrada (Druida)(Alto/as)(+200 Mana) +2",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1409,
+          "name": "Túnica Desterrada (Druida)(Alto/as)(+200 Mana) LEGENDARIA",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1413,
+          "name": "Túnica Desterrada (Druida)(Bajo/as)(+200 Mana) +1",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1414,
+          "name": "Túnica Desterrada (Druida)(Bajo/as)(+200 Mana) +2",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1415,
+          "name": "Túnica Desterrada (Druida)(Bajo/as)(+200 Mana) LEGENDARIA",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1482,
+          "name": "Casco del Caído (PALADIN)(+200 Mana) +1",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1483,
+          "name": "Casco del Caído (PALADIN)(+200 Mana) +2",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1484,
+          "name": "Casco del Caído (PALADIN)(+200 Mana) LEGENDARIO",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        }
+      ]
+    },
+    {
+      "objetoEspecial": 10,
+      "effect": {
+        "kind": "equip-stat",
+        "desc": "+300 Maná máximo (UI/bono especial; ver nota)"
+      },
+      "count": 19,
+      "items": [
+        {
+          "id": 732,
+          "name": "Túnica Lujosa Azul +300Maná (Alto/as)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 753,
+          "name": "Báculo Mago (+300 Mana +28DM)",
+          "objType": 2,
+          "magicDamageBonus": 28,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 952,
+          "name": "Túnica Lujosa Azul +300Maná (Bajo/as)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1074,
+          "name": "Sombrero de Mago (+300 Mana +15 DM)",
+          "objType": 3,
+          "magicDamageBonus": 15,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1341,
+          "name": "Túnica Desterrada (Mago)(Alto/as)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1343,
+          "name": "Túnica Desterrada (Mago)(Bajo/as)(+300 Mana)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1404,
+          "name": "Túnica Desterrada (Mago)(Alto/as) +1",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1405,
+          "name": "Túnica Desterrada (Mago)(Alto/as) +2",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1406,
+          "name": "Túnica Desterrada (Mago)(Alto/as) LEGENDARIA",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1410,
+          "name": "Túnica Desterrada (Mago)(Bajo/as)(+300 Mana) +1",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1411,
+          "name": "Túnica Desterrada (Mago)(Bajo/as)(+300 Mana) +2",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1412,
+          "name": "Túnica Desterrada (Mago)(Bajo/as)(+300 Mana) LEGENDARIA",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1750,
+          "name": "Báculo Arcano",
+          "objType": 2,
+          "magicDamageBonus": 28,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1754,
+          "name": "Báculo Silvestre",
+          "objType": 2,
+          "magicDamageBonus": 28,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1758,
+          "name": "Espada Templaria",
+          "objType": 2,
+          "magicDamageBonus": 28,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1762,
+          "name": "Espada Paladín",
+          "objType": 2,
+          "magicDamageBonus": 28,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1766,
+          "name": "Daga Bardo",
+          "objType": 2,
+          "magicDamageBonus": 28,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1770,
+          "name": "Espada del Verdugo",
+          "objType": 2,
+          "magicDamageBonus": 28,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1778,
+          "name": "Daga del Umbral",
+          "objType": 2,
+          "magicDamageBonus": 28,
+          "magicDamagePercent": 0
+        }
+      ]
+    },
+    {
+      "objetoEspecial": 11,
+      "effect": {
+        "kind": "legacy-unimplemented",
+        "desc": "Marcado como equipo mágico/DM en nombres. NO suma stats via objetoEspecial (usa magicDamageBonus del JSON)."
+      },
+      "count": 46,
+      "items": [
+        {
+          "id": 400,
+          "name": "Vara de Aprendiz (+15 DM)",
+          "objType": 2,
+          "magicDamageBonus": 15,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 838,
+          "name": "Corona Desterrado (+20 DM)",
+          "objType": 3,
+          "magicDamageBonus": 20,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 885,
+          "name": "Anillo Desterrado (+20 DM)",
+          "objType": 41,
+          "magicDamageBonus": 20,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1035,
+          "name": "Vara de Magia (+20 DM)",
+          "objType": 2,
+          "magicDamageBonus": 20,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1036,
+          "name": "Báculo Mágico (+20 DM)",
+          "objType": 2,
+          "magicDamageBonus": 20,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1037,
+          "name": "Báculo del Dragón (+28 DM)",
+          "objType": 2,
+          "magicDamageBonus": 28,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1046,
+          "name": "Vara de Aprendiz (Armada Real) (+15 DM)",
+          "objType": 2,
+          "magicDamageBonus": 15,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1047,
+          "name": "Vara de Magia (Armada Real) (+20 DM)",
+          "objType": 2,
+          "magicDamageBonus": 20,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1048,
+          "name": "Báculo Mágico(Armada Real) (+22 DM)",
+          "objType": 2,
+          "magicDamageBonus": 22,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1076,
+          "name": "Sombrero de Mago (+12 DM)",
+          "objType": 3,
+          "magicDamageBonus": 12,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1187,
+          "name": "Báculo Iron (+23 DM)",
+          "objType": 2,
+          "magicDamageBonus": 23,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1220,
+          "name": "Báculo del Dragón(Armada Real) (+26 DM)",
+          "objType": 2,
+          "magicDamageBonus": 26,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1221,
+          "name": "Anillo de Energía (+20 DM)",
+          "objType": 41,
+          "magicDamageBonus": 20,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1222,
+          "name": "Sombrero Chamán (+15 DM)",
+          "objType": 3,
+          "magicDamageBonus": 15,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1223,
+          "name": "Sombrero Hechizado (+20 DM)",
+          "objType": 3,
+          "magicDamageBonus": 20,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1224,
+          "name": "Sombrero Chamán (Armada Real) (+12 DM)",
+          "objType": 3,
+          "magicDamageBonus": 12,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1225,
+          "name": "Báculo de la Naturaleza (+28 DM)",
+          "objType": 2,
+          "magicDamageBonus": 28,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1226,
+          "name": "Báculo del Caos (+22 DM)",
+          "objType": 2,
+          "magicDamageBonus": 22,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1282,
+          "name": "Sombrero de Mago (+15 DM)",
+          "objType": 3,
+          "magicDamageBonus": 15,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1355,
+          "name": "Capucha Mágica del Caído (MAGO)",
+          "objType": 3,
+          "magicDamageBonus": 22,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1356,
+          "name": "Corona de Plumas del Caído (DRUIDA)",
+          "objType": 3,
+          "magicDamageBonus": 22,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1357,
+          "name": "Anillo Mago del Caído (MAGO)",
+          "objType": 41,
+          "magicDamageBonus": 20,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1358,
+          "name": "Anillo Naturaleza del Caído (DRUIDA)",
+          "objType": 41,
+          "magicDamageBonus": 20,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1373,
+          "name": "Báculo Desterrado (MAGO)",
+          "objType": 2,
+          "magicDamageBonus": 32,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1374,
+          "name": "Báculo Desterrado (DRUIDA)",
+          "objType": 2,
+          "magicDamageBonus": 29,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1449,
+          "name": "Anillo Mago del Caído (MAGO) +1",
+          "objType": 41,
+          "magicDamageBonus": 20,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1450,
+          "name": "Anillo Mago del Caído (MAGO) +2",
+          "objType": 41,
+          "magicDamageBonus": 20,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1451,
+          "name": "Anillo Mago del Caído (MAGO) LEGENDARIO",
+          "objType": 41,
+          "magicDamageBonus": 20,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1452,
+          "name": "Anillo Naturaleza del Caído (DRUIDA) +1",
+          "objType": 41,
+          "magicDamageBonus": 20,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1453,
+          "name": "Anillo Naturaleza del Caído (DRUIDA) +2",
+          "objType": 41,
+          "magicDamageBonus": 20,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1454,
+          "name": "Anillo Naturaleza del Caído (DRUIDA) LEGENDARIO",
+          "objType": 41,
+          "magicDamageBonus": 25,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1473,
+          "name": "Capucha Mágica del Caído (MAGO) +1",
+          "objType": 3,
+          "magicDamageBonus": 26,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1474,
+          "name": "Capucha Mágica del Caído (MAGO) +2",
+          "objType": 3,
+          "magicDamageBonus": 30,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1475,
+          "name": "Capucha Mágica del Caído (MAGO) LEGENDARIA",
+          "objType": 3,
+          "magicDamageBonus": 30,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1476,
+          "name": "Corona de Plumas del Caído (DRUIDA) +1",
+          "objType": 3,
+          "magicDamageBonus": 26,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1477,
+          "name": "Corona de Plumas del Caído (DRUIDA) +2",
+          "objType": 3,
+          "magicDamageBonus": 30,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1478,
+          "name": "Corona de Plumas del Caído (DRUIDA) LEGENDARIA",
+          "objType": 3,
+          "magicDamageBonus": 30,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1510,
+          "name": "Báculo Desterrado (MAGO) +1",
+          "objType": 2,
+          "magicDamageBonus": 33,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1511,
+          "name": "Báculo Desterrado (MAGO) +2",
+          "objType": 2,
+          "magicDamageBonus": 35,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1512,
+          "name": "Báculo Desterrado (MAGO) LEGENDARIO",
+          "objType": 2,
+          "magicDamageBonus": 38,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1513,
+          "name": "Báculo Desterrado (DRUIDA) +1",
+          "objType": 2,
+          "magicDamageBonus": 30,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1514,
+          "name": "Báculo Desterrado (DRUIDA) +2",
+          "objType": 2,
+          "magicDamageBonus": 31,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1515,
+          "name": "Báculo Desterrado (DRUIDA) LEGENDARIO",
+          "objType": 2,
+          "magicDamageBonus": 32,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1550,
+          "name": "Sombrero Chamán (Caos) (+12 DM)",
+          "objType": 3,
+          "magicDamageBonus": 12,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1553,
+          "name": "Báculo Mágico(Horda) (+22 DM)",
+          "objType": 2,
+          "magicDamageBonus": 22,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1554,
+          "name": "Báculo del Dragón(Horda) (+26 DM)",
+          "objType": 2,
+          "magicDamageBonus": 26,
+          "magicDamagePercent": 0
+        }
+      ]
+    },
+    {
+      "objetoEspecial": 12,
+      "effect": {
+        "kind": "equip-stat",
+        "desc": "+1 Fuerza / +3 Agilidad"
+      },
+      "count": 1,
+      "items": [
+        {
+          "id": 1228,
+          "name": "Escudo Élfico +1Fu/+3Ag",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        }
+      ]
+    },
+    {
+      "objetoEspecial": 13,
+      "effect": {
+        "kind": "equip-stat",
+        "desc": "+2 Fuerza / +2 Agilidad"
+      },
+      "count": 1,
+      "items": [
+        {
+          "id": 1230,
+          "name": "Escudo Teutón +2Fu/+2Ag",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        }
+      ]
+    },
+    {
+      "objetoEspecial": 14,
+      "effect": {
+        "kind": "equip-stat",
+        "desc": "+5 Fuerza / +2 Agilidad"
+      },
+      "count": 2,
+      "items": [
+        {
+          "id": 1231,
+          "name": "Escudo Sol +5Fu/+2Ag",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1284,
+          "name": "Armadura Forjada",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        }
+      ]
+    },
+    {
+      "objetoEspecial": 15,
+      "effect": {
+        "kind": "equip-stat",
+        "desc": "+3 Fuerza / +2 Agilidad"
+      },
+      "count": 1,
+      "items": [
+        {
+          "id": 1233,
+          "name": "Escudo Troyano +3Fu/+2Ag",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        }
+      ]
+    },
+    {
+      "objetoEspecial": 16,
+      "effect": {
+        "kind": "equip-stat",
+        "desc": "+1 Fuerza / +1 Agilidad"
+      },
+      "count": 2,
+      "items": [
+        {
+          "id": 595,
+          "name": "Armadura Titánica +1F +1A (Bajo/as)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 724,
+          "name": "Armadura Titánica +1F +1A (Alto/as)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        }
+      ]
+    },
+    {
+      "objetoEspecial": 17,
+      "effect": {
+        "kind": "equip-stat",
+        "desc": "+2 Agilidad / +200 Maná máximo"
+      },
+      "count": 2,
+      "items": [
+        {
+          "id": 528,
+          "name": "Toga Despótica +200Maná +3A (Alto/as)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 609,
+          "name": "Toga Despótica +200Maná +3A (Bajo/as)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        }
+      ]
+    },
+    {
+      "objetoEspecial": 18,
+      "effect": {
+        "kind": "equip-stat",
+        "desc": "+1 Agilidad"
+      },
+      "count": 3,
+      "items": [
+        {
+          "id": 381,
+          "name": "Túnica del Acólito +1A (Bajo/as)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 702,
+          "name": "Casco Espirálico (+1 Agilidad)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1183,
+          "name": "Túnica del Acólito +1A (Alto/as)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        }
+      ]
+    },
+    {
+      "objetoEspecial": 19,
+      "effect": {
+        "kind": "equip-stat",
+        "desc": "+55 Maná máximo"
+      },
+      "count": 2,
+      "items": [
+        {
+          "id": 519,
+          "name": "Túnica Legendaria +55Maná (Alto/as)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 940,
+          "name": "Túnica Legendaria +55Maná (Bajo/as)",
+          "objType": 3,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        }
+      ]
+    },
+    {
+      "objetoEspecial": 50,
+      "effect": {
+        "kind": "use-active",
+        "desc": "Al USAR: si sos Mago (o staff) y tenés equipado item 842 (Báculo de la Magia), recupera 10% del maná máximo"
+      },
+      "count": 2,
+      "items": [
+        {
+          "id": 841,
+          "name": "Báculo de Sagrado (24-30)",
+          "objType": 2,
+          "magicDamageBonus": 10,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 842,
+          "name": "Báculo de la Magia (+22 DM)",
+          "objType": 2,
+          "magicDamageBonus": 22,
+          "magicDamagePercent": 0
+        }
+      ]
+    },
+    {
+      "objetoEspecial": 51,
+      "effect": {
+        "kind": "use-active",
+        "desc": "Al USAR: si sos Clérigo/Mago (o staff), cura +50 HP"
+      },
+      "count": 1,
+      "items": [
+        {
+          "id": 840,
+          "name": "Báculo de Regeneración (24-30)",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        }
+      ]
+    },
+    {
+      "objetoEspecial": 53,
+      "effect": {
+        "kind": "legacy-unimplemented",
+        "desc": "Ahorro de flechas 50% (nombre). NO implementado en consumo de flechas"
+      },
+      "count": 1,
+      "items": [
+        {
+          "id": 843,
+          "name": "Arco Mágico (50% ahorro flechas)",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        }
+      ]
+    },
+    {
+      "objetoEspecial": 54,
+      "effect": {
+        "kind": "legacy-unimplemented",
+        "desc": "Ahorro de flechas 75% (nombre). NO implementado en consumo de flechas"
+      },
+      "count": 1,
+      "items": [
+        {
+          "id": 844,
+          "name": "Arco Mágico (75% ahorro flechas)",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        }
+      ]
+    },
+    {
+      "objetoEspecial": 55,
+      "effect": {
+        "kind": "legacy-unimplemented",
+        "desc": "Espada de Cristal / habilidad especial. NO hay handler específico por OE=55"
+      },
+      "count": 3,
+      "items": [
+        {
+          "id": 836,
+          "name": "Espada de Cristal (32-42)",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1086,
+          "name": "Espada de Cristal Desterrada (Hab. Esp)",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        },
+        {
+          "id": 1157,
+          "name": "Espada de Cristal Ónice",
+          "objType": 2,
+          "magicDamageBonus": 0,
+          "magicDamagePercent": 0
+        }
+      ]
+    }
+  ]
+}

@@ -233,7 +233,9 @@ function countInventoryItem(user: CraftingUser, itemId: number) {
 }
 
 function canReceiveCraftedItem(user: CraftingUser, itemId: number, amount: number) {
-    return canAddToInventory(user.inv, itemId, amount);
+    // Si el ítem puede salir con rareza, cada unidad puede ocupar su lugar: se reserva el peor caso.
+    const rarity = require("./itemRarity").isRarityEligible(itemId) ? 1 : 0;
+    return canAddToInventory(user.inv, itemId, amount, 10_000, rarity);
 }
 
 function removeMaterial(user: CraftingUser, itemId: number, amount: number) {
@@ -786,7 +788,15 @@ const crafting: CraftingApi = {
             handleProtocol.actGold(user.gold, ws);
         }
 
-        game.putItemToInv(user.id, recipe.itemId, safeAmount);
+        // La rareza se sortea por unidad crafteada (itemRarity.ts); lo que no lleva rareza va junto.
+        const itemRarity = require("./itemRarity");
+        if (itemRarity.isRarityEligible(recipe.itemId)) {
+            for (let unit = 0; unit < safeAmount; unit++) {
+                game.putItemToInv(user.id, recipe.itemId, 1, itemRarity.rollRarityForItem(recipe.itemId));
+            }
+        } else {
+            game.putItemToInv(user.id, recipe.itemId, safeAmount);
+        }
         if (npcCrafting) {
             await game.persistCharacterSnapshot(user);
         } else {

@@ -334,7 +334,9 @@ function handleDeliverItem(request: any, response: any) {
             return { status: 400, body: { error: "characterId y objIndex son requeridos" } };
         }
 
-        return require("./donationShop").deliverItem(characterId, objIndex, amount, String(body.reason ?? ""));
+        // rarity opcional (0-3): para entregar un diseño o un premio con rareza fija.
+        const rarity = Math.max(0, Math.min(3, Math.floor(Number(body.rarity ?? 0)) || 0));
+        return require("./donationShop").deliverItem(characterId, objIndex, amount, String(body.reason ?? ""), rarity);
     });
 }
 

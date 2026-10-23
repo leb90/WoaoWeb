@@ -491,6 +491,8 @@ export interface InventoryItem {
     objType: number;
     validForUser: boolean;
     details: string;
+    // 0 Normal, 1 Mejorado, 2 Épico, 3 Legendario (lib/itemRarity.ts).
+    rarity: number;
 }
 
 export interface SpellEntry {
@@ -509,6 +511,7 @@ export interface TradeItem {
     validForUser: boolean;
     details: string;
     equipped?: boolean;
+    rarity: number;
 }
 
 export interface TradeState {
@@ -1428,6 +1431,7 @@ function parseInventoryItem(reader: PacketReader): InventoryItem {
         objType: reader.getByte(),
         validForUser: reader.getByte() === 1,
         details: reader.getString(),
+        rarity: reader.getByte(),
     };
 }
 
@@ -1449,6 +1453,7 @@ function parseMerchantTradeItem(reader: PacketReader): TradeItem {
         value: reader.getInt(),
         validForUser: reader.getByte() === 1,
         details: reader.getString(),
+        rarity: reader.getByte(),
     };
 }
 
@@ -1462,6 +1467,7 @@ function parsePlayerTradeItem(reader: PacketReader): TradeItem {
         slot: reader.getByte(),
         validForUser: reader.getByte() === 1,
         details: reader.getString(),
+        rarity: reader.getByte(),
     };
 }
 

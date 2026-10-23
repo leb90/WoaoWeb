@@ -2896,6 +2896,7 @@ function HomeContent() {
                 validForUser: tradeItem?.validForUser ?? item.validForUser,
                 details: tradeItem?.details ?? item.details,
                 equipped: item.equipped,
+                rarity: item.rarity ?? tradeItem?.rarity ?? 0,
             };
         });
     }, [hud?.inventory, tradeState]);

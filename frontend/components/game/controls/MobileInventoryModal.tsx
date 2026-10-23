@@ -13,6 +13,7 @@ import { loadGraphicsDB, loadObjectsDB } from "../../../utils/gameLoader";
 import type { GraphicData, ObjectsDB } from "../../../types/game";
 import { ItemGraphic } from "../../MacroBar";
 import EquipmentPanel from "../../EquipmentPanel";
+import { formatItemNameWithRarity, getRarityTextColor, getRaritySlotClasses } from "../../../lib/itemRarity";
 import {
     getEquippedItemAction,
     getInventoryItemEquipmentKind,
@@ -393,10 +394,14 @@ export function MobileInventoryModal({
                                       objectsDB?.[String(item.idItem)],
                                   )
                                 : null;
-                            const specialSlotClasses = getSpecialItemSlotClasses(
-                                specialAccent,
-                                { selected: selectedSlot === slot },
-                            );
+                            // Túnicas especiales primero; si no, el color de la rareza.
+                            const specialSlotClasses =
+                                getSpecialItemSlotClasses(specialAccent, {
+                                    selected: selectedSlot === slot,
+                                }) ||
+                                getRaritySlotClasses(item?.rarity, {
+                                    selected: selectedSlot === slot,
+                                });
 
                             return (
                             <button
@@ -495,8 +500,14 @@ export function MobileInventoryModal({
                     {selectedItem ? (
                         <>
                             <div className="min-w-0 flex-1">
-                                <p className="truncate text-sm font-semibold text-amber-100">
-                                    {selectedItem.name}
+                                <p
+                                    className="truncate text-sm font-semibold text-amber-100"
+                                    style={{ color: getRarityTextColor(selectedItem.rarity) }}
+                                >
+                                    {formatItemNameWithRarity(
+                                        selectedItem.name,
+                                        selectedItem.rarity,
+                                    )}
                                 </p>
                                 <p className="text-[11px] text-stone-400">
                                     {selectedItem.amount > 1

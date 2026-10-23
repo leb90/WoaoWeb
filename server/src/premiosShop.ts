@@ -76,7 +76,7 @@ function canReceiveItem(user: any, idItem: number, quantity: number) {
         return true;
     }
 
-    return canAddToInventory(user.inv ?? {}, idItem, quantity);
+    return canAddToInventory(user.inv ?? {}, idItem, quantity, 10_000, require("./itemRarity").getItemRarity(idItem));
 }
 
 function redeemFromCatalog(

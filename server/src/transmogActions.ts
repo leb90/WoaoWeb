@@ -12,7 +12,9 @@ import {
 const vars = require("./vars");
 const transmog = require("./transmog") as typeof import("./transmog");
 
-type InventorySlot = { idItem: number; cant: number; equipped?: number | boolean };
+type InventorySlot = { idItem: number; cant: number; equipped?: number | boolean
+    rarity?: number;
+};
 
 type ActionUser = {
     id: string | number;
@@ -150,6 +152,13 @@ export function placeItem(idUser: string | number, invSlotRaw: unknown, slotRaw?
             ok: false,
             message: `Ese objeto va en el espacio de ${transmog.TRANSMOG_SLOT_LABELS[slot]}, no en el de ${wanted}.`,
         };
+    }
+
+    // La transfiguración guarda solo el número del objeto: un ítem con rareza sorteada la perdería.
+    // Los sets de tier no pierden nada (son legendarios por definición).
+    const itemRarity = require("./itemRarity");
+    if (Number(item.rarity ?? 0) > 0 && !require("./tierSets").isTierSetItem(Number(item.idItem))) {
+        return { ok: false, message: `Los objetos ${itemRarity.getRarityName(Number(item.rarity))} no se pueden usar para transfigurar: perderían su rareza.` };
     }
 
     const reason = transmog.getCandidateBlockedReason(user, slot, obj, Boolean(item.equipped));

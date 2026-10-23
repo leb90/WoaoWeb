@@ -64,6 +64,7 @@ import {
 import WoaoHubModal, { type WoaoHubTab } from "./WoaoHubModal";
 import TransmogModal from "./transmog/TransmogModal";
 import EquipmentPanel, { getInventoryItemEquipmentKind } from "./EquipmentPanel";
+import { formatItemNameWithRarity, getRarityName, getRarityTextColor, getRaritySlotClasses } from "../lib/itemRarity";
 import { getEquippedItemAction } from "../lib/equipmentKinds";
 import DonationShopModal from "./transmog/DonationShopModal";
 import SkillsModal from "./SkillsModal";
@@ -3348,17 +3349,26 @@ export default function InventoryFloatingPanel({
                                                           ],
                                                       )
                                                     : null;
+                                                const slotSelected = Boolean(
+                                                    item &&
+                                                        selectedSlot ===
+                                                            item.slot,
+                                                );
+                                                // Túnicas especiales primero; si no, el color de la rareza.
                                                 const specialSlotClasses =
                                                     !isInvalidForUser
                                                         ? getSpecialItemSlotClasses(
                                                               specialAccent,
                                                               {
                                                                   selected:
-                                                                      Boolean(
-                                                                          item &&
-                                                                              selectedSlot ===
-                                                                                  item.slot,
-                                                                      ),
+                                                                      slotSelected,
+                                                              },
+                                                          ) ||
+                                                          getRaritySlotClasses(
+                                                              item?.rarity,
+                                                              {
+                                                                  selected:
+                                                                      slotSelected,
                                                               },
                                                           )
                                                         : "";
@@ -3532,8 +3542,25 @@ export default function InventoryFloatingPanel({
                                     >
                                         {inventoryDetailItem ? (
                                             <>
-                                                <p className="font-semibold text-amber-100">
-                                                    {inventoryDetailItem.name}
+                                                <p
+                                                    className="font-semibold text-amber-100"
+                                                    style={{
+                                                        color: getRarityTextColor(
+                                                            inventoryDetailItem.rarity,
+                                                        ),
+                                                    }}
+                                                >
+                                                    {formatItemNameWithRarity(
+                                                        inventoryDetailItem.name,
+                                                        inventoryDetailItem.rarity,
+                                                    )}
+                                                    {inventoryDetailItem.rarity > 0 ? (
+                                                        <span className="ml-1.5 text-[10px] font-medium uppercase tracking-wide opacity-80">
+                                                            {getRarityName(
+                                                                inventoryDetailItem.rarity,
+                                                            )}
+                                                        </span>
+                                                    ) : null}
                                                 </p>
                                                 {inventoryDetailText ? (
                                                     <p className="mt-1 whitespace-pre-wrap break-words text-stone-300/90">

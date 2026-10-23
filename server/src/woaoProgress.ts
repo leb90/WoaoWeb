@@ -22,6 +22,7 @@ export type PendingDelivery = {
     amount: number;
     reason: string;
     createdAt: number;
+    rarity?: number;
 };
 
 export type WoaoProgress = {

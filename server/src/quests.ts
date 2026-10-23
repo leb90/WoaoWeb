@@ -770,8 +770,16 @@ export function finishQuest(idUser: string, questNumber: number, npcId?: unknown
         tell(idUser, `Has ganado ${quest.rewardPoints} Puntos de Canje como recompensa.`);
     }
 
+    const itemRarity = require("./itemRarity");
     for (const reward of quest.rewardObjs) {
-        game.putItemToInv(idUser, reward.index, reward.amount);
+        // El equipo de recompensa sale con rareza sorteada por unidad (itemRarity.ts).
+        if (itemRarity.isRarityEligible(reward.index)) {
+            for (let unit = 0; unit < reward.amount; unit++) {
+                game.putItemToInv(idUser, reward.index, 1, itemRarity.rollRarityForItem(reward.index));
+            }
+        } else {
+            game.putItemToInv(idUser, reward.index, reward.amount);
+        }
         const objName = vars.datObj?.[reward.index]?.name ?? `Item ${reward.index}`;
         tell(idUser, `Has recibido ${reward.amount} ${objName} como recompensa.`);
     }

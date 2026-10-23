@@ -86,6 +86,7 @@ const { isWaterGraphic } = require("./waterTiles");
 const workProfessions = require("./workProfessions");
 const skills = require("./skills");
 const tierSets = require("./tierSets") as typeof import("./tierSets");
+const itemRarity = require("./itemRarity") as typeof import("./itemRarity");
 
 const SURVIVAL_HAMBRE_MAX = Number(balance.MAX_HAMBRE ?? 100);
 const SURVIVAL_SED_MAX = Number(balance.MAX_SED ?? 100);
@@ -715,7 +716,8 @@ function getEquippedWeaponData(user: GameCharacter): DataObject | null {
         return null;
     }
 
-    return vars.datObj[item.idItem] ?? null;
+    // Stats con la rareza de la instancia (itemRarity.ts).
+    return (itemRarity.getEffectiveItemData(item.idItem, item.rarity) as DataObject | null) ?? null;
 }
 
 function isDragonSlayerSword(itemId: number): boolean {
@@ -1164,7 +1166,8 @@ function getEquippedRingData(user: GameCharacter): DataObject | null {
         return null;
     }
 
-    return vars.datObj[item.idItem] ?? null;
+    // Stats con la rareza de la instancia (itemRarity.ts).
+    return (itemRarity.getEffectiveItemData(item.idItem, item.rarity) as DataObject | null) ?? null;
 }
 
 function getEquippedHelmetData(user: GameCharacter): DataObject | null {
@@ -1173,7 +1176,8 @@ function getEquippedHelmetData(user: GameCharacter): DataObject | null {
         return null;
     }
 
-    return vars.datObj[item.idItem] ?? null;
+    // Stats con la rareza de la instancia (itemRarity.ts).
+    return (itemRarity.getEffectiveItemData(item.idItem, item.rarity) as DataObject | null) ?? null;
 }
 
 function getEquippedBodyData(user: GameCharacter): DataObject | null {
@@ -1182,7 +1186,8 @@ function getEquippedBodyData(user: GameCharacter): DataObject | null {
         return null;
     }
 
-    return vars.datObj[item.idItem] ?? null;
+    // Stats con la rareza de la instancia (itemRarity.ts).
+    return (itemRarity.getEffectiveItemData(item.idItem, item.rarity) as DataObject | null) ?? null;
 }
 
 function getEquippedShieldData(user: GameCharacter): DataObject | null {
@@ -1191,7 +1196,8 @@ function getEquippedShieldData(user: GameCharacter): DataObject | null {
         return null;
     }
 
-    return vars.datObj[item.idItem] ?? null;
+    // Stats con la rareza de la instancia (itemRarity.ts).
+    return (itemRarity.getEffectiveItemData(item.idItem, item.rarity) as DataObject | null) ?? null;
 }
 
 function getTargetMagicResistanceBonus(target: GameCharacter): number {
@@ -3534,8 +3540,8 @@ export type GameApi = {
     getName: (id: EntityId) => string | undefined;
     useItem: (ws: RuntimeClient, idPos: number | string) => Promise<void>;
     agarrarItem: (ws: RuntimeClient) => Promise<void>;
-    putItemToInv: (idUser: EntityId, idItem: number, cant: number) => void;
-    placeDroppedFloorItem: (idMap: number, pos: Position, idItem: number, amount: number) => void;
+    putItemToInv: (idUser: EntityId, idItem: number, cant: number, rarity?: number) => void;
+    placeDroppedFloorItem: (idMap: number, pos: Position, idItem: number, amount: number, rarity?: number) => void;
     renderDroppedFloorItem: (idMap: number, pos: Position, idItem: number) => void;
     cleanupDroppedFloorItems: (batchSize?: number) => Promise<number>;
     cleanupDroppedFloorItemsInMap: (idMap: number, batchSize?: number) => Promise<number>;
@@ -4357,6 +4363,7 @@ function serializeInventory(record: InventoryRecord): SerializedInventoryItem[] 
         idItem: item.idItem,
         cant: item.cant,
         equipped: item.equipped ? 1 : 0,
+        rarity: itemRarity.getItemRarity(item.idItem, item.rarity),
     }));
 }
 
@@ -4370,15 +4377,20 @@ function serializeBank(record: InventoryRecord): SerializedBankItem[] {
         idPos,
         idItem: item.idItem,
         cant: item.cant,
+        rarity: itemRarity.getItemRarity(item.idItem, item.rarity),
     }));
 }
 
-function hydrateBankRecord(items: Array<{ idPos: number | string; idItem: number; cant: number }>): InventoryRecord {
+function hydrateBankRecord(
+    items: Array<{ idPos: number | string; idItem: number; cant: number; rarity?: number }>,
+): InventoryRecord {
     return items.reduce<InventoryRecord>((record, item) => {
+        const rarity = itemRarity.getItemRarity(item.idItem, item.rarity);
         record[String(item.idPos)] = {
             idItem: item.idItem,
             cant: item.cant,
             equipped: 0,
+            ...(rarity > 0 ? { rarity } : {}),
         };
         return record;
     }, {});
@@ -4402,7 +4414,7 @@ async function fetchSharedVaultState(
         },
     })) as {
         gold: number;
-        items: Array<{ idPos: number | string; idItem: number; cant: number }>;
+        items: Array<{ idPos: number | string; idItem: number; cant: number; rarity?: number }>;
     };
 
     return {
@@ -5263,12 +5275,15 @@ function addItemToRecord(
     record: InventoryRecord,
     idItem: number,
     cant: number,
-    options?: { maxSlots?: number; equipped?: number | boolean },
+    options?: { maxSlots?: number; equipped?: number | boolean; rarity?: number },
 ): number[] | null {
     if (!Number.isFinite(cant) || cant < 1) {
         return null;
     }
 
+    // Un ítem con rareza no se apila: cada unidad va en su lugar (itemRarity.ts).
+    const rarity = itemRarity.getItemRarity(idItem, options?.rarity);
+    const stackLimit = rarity > 0 ? 1 : 10000;
     const matchingSlots: Array<{ idPos: string; available: number }> = [];
     let existingCapacity = 0;
 
@@ -5276,7 +5291,7 @@ function addItemToRecord(
         if (
             (typeof options?.maxSlots === "number" &&
                 Number(idPos) > options.maxSlots) ||
-            item.idItem !== idItem ||
+            !itemRarity.canStackWith(item, idItem, rarity) ||
             item.cant >= 10000
         ) {
             continue;
@@ -5288,7 +5303,7 @@ function addItemToRecord(
     }
 
     const maxSlots = options?.maxSlots;
-    const slotsNeeded = Math.ceil(Math.max(0, cant - existingCapacity) / 10000);
+    const slotsNeeded = Math.ceil(Math.max(0, cant - existingCapacity) / stackLimit);
 
     const occupiedSlots =
         maxSlots === INVENTORY_SLOT_COUNT
@@ -5326,12 +5341,13 @@ function addItemToRecord(
         if (!idPos) {
             return null;
         }
-        const amountToAdd = Math.min(remaining, 10000);
+        const amountToAdd = Math.min(remaining, stackLimit);
 
         record[idPos] = {
             idItem,
             cant: amountToAdd,
             equipped: options?.equipped ?? 0,
+            ...(rarity > 0 ? { rarity } : {}),
         };
         affectedSlots.push(idPos);
         remaining -= amountToAdd;
@@ -6165,6 +6181,7 @@ function Game(this: GameApi) {
                     const slots = addItemToRecord(user.inv, item.objIndex, item.amount, {
                         maxSlots: 21,
                         equipped: 0,
+                        rarity: item.rarity,
                     });
 
                     if (slots == null) {
@@ -6202,7 +6219,7 @@ function Game(this: GameApi) {
      * @param  {number} cant   [description]
      * @return {}        [description]
      */
-    this.putItemToInv = function (idUser: EntityId, idItem: number, cant: number) {
+    this.putItemToInv = function (idUser: EntityId, idItem: number, cant: number, rarity = 0) {
         try {
             const user = getCharacterById(idUser);
 
@@ -6230,6 +6247,7 @@ function Game(this: GameApi) {
                 const slots = addItemToRecord(user.inv, idItem, cant, {
                     maxSlots: 21,
                     equipped: 0,
+                    rarity,
                 });
 
                 if (slots == null) {
@@ -6251,16 +6269,18 @@ function Game(this: GameApi) {
         }
     };
 
-    this.placeDroppedFloorItem = function (idMap: number, pos: Position, idItem: number, amount: number) {
+    this.placeDroppedFloorItem = function (idMap: number, pos: Position, idItem: number, amount: number, rarity = 0) {
         const tile = vars.mapa[idMap]?.[pos.y]?.[pos.x];
 
         if (!tile) {
             return;
         }
 
+        const effectiveRarity = itemRarity.getItemRarity(idItem, rarity);
         tile.objInfo = {
             objIndex: idItem,
             amount,
+            ...(effectiveRarity > 0 ? { rarity: effectiveRarity } : {}),
             cleanupSource: FLOOR_ITEM_CLEANUP_SOURCE,
             cleanupRegisteredAt: Date.now(),
         };
@@ -6460,9 +6480,10 @@ function Game(this: GameApi) {
                 return;
             }
 
+            const droppedRarity = itemRarity.getItemRarity(idItem, item.rarity);
             game.quitarUserInvItem(clientId, idPos, cant);
 
-            game.placeDroppedFloorItem(user.map, tmpPos, idItem, cant);
+            game.placeDroppedFloorItem(user.map, tmpPos, idItem, cant, droppedRarity);
 
             game.loopAreaPos(user.map, tmpPos, function (target: GameCharacter) {
                 withUserClient(target.id, (targetClient) => {
@@ -6886,6 +6907,10 @@ function Game(this: GameApi) {
         }
         if (sourceItem.equipped) {
             return { ok: false, message: "Debes desequipar el item antes de publicarlo." };
+        }
+        // La subasta todavía no guarda la rareza: no se publican ítems con rareza para no perderla.
+        if (itemRarity.getItemRarity(sourceItem.idItem, sourceItem.rarity) > 0) {
+            return { ok: false, message: "Los items con rareza (Mejorado, Epico o Legendario) no se pueden subastar." };
         }
         if (quantity > sourceItem.cant) {
             return { ok: false, message: "No tienes esa cantidad disponible." };
@@ -7356,6 +7381,11 @@ function Game(this: GameApi) {
 
         if (objectData.newbie) {
             return { ok: false, message: "Los items newbie no se pueden publicar en el mercado." };
+        }
+
+        // El mercado todavía no guarda la rareza: no se publican ítems con rareza para no perderla.
+        if (itemRarity.getItemRarity(sourceItem.idItem, sourceItem.rarity) > 0) {
+            return { ok: false, message: "Los items con rareza (Mejorado, Épico o Legendario) no se pueden publicar en el mercado." };
         }
 
         if (isItemSoldByMerchantNpc(Number(sourceItem.idItem))) {
@@ -10069,7 +10099,7 @@ function Game(this: GameApi) {
                 }
 
                 const idItem = itemInventary.idItem;
-                const itemWeapon = vars.datObj[idItem];
+                const itemWeapon = itemRarity.getEffectiveItemData(idItem, itemInventary.rarity) as DataObject;
 
                 dmgArma = rollInclusiveRange(itemWeapon.minHit, itemWeapon.maxHit);
 
@@ -10451,7 +10481,7 @@ function Game(this: GameApi) {
                             }
 
                             const idItemHelmet = itemInventaryHelmet.idItem;
-                            const itemHelmet = vars.datObj[idItemHelmet];
+                            const itemHelmet = itemRarity.getEffectiveItemData(idItemHelmet, itemInventaryHelmet.rarity) as DataObject;
 
                             absorbeDmg = rollInclusiveRange(itemHelmet.minDef, itemHelmet.maxDef);
                         }
@@ -10466,7 +10496,7 @@ function Game(this: GameApi) {
 
                             if (itemInventaryBody) {
                                 const idItemBody = itemInventaryBody.idItem;
-                                const itemBody = vars.datObj[idItemBody];
+                                const itemBody = itemRarity.getEffectiveItemData(idItemBody, itemInventaryBody.rarity) as DataObject;
 
                                 minDef = safeNumber(itemBody.minDef);
                                 maxDef = safeNumber(itemBody.maxDef);
@@ -10478,7 +10508,7 @@ function Game(this: GameApi) {
 
                             if (itemInventaryShield) {
                                 const idItemShield = itemInventaryShield.idItem;
-                                const itemShield = vars.datObj[idItemShield];
+                                const itemShield = itemRarity.getEffectiveItemData(idItemShield, itemInventaryShield.rarity) as DataObject;
 
                                 minDef += safeNumber(itemShield.minDef);
                                 maxDef += safeNumber(itemShield.maxDef);
@@ -11263,8 +11293,10 @@ function Game(this: GameApi) {
                     continue;
                 }
 
-                if (!datObj.newbie && !datObj.noSeCae) {
+                // Los legendarios (y los sets de tier, que siempre lo son) no se caen al morir.
+                if (!datObj.newbie && !datObj.noSeCae && !itemRarity.isRarityNoDrop(idItem, item.rarity)) {
                     const cant = item.cant;
+                    const droppedRarity = itemRarity.getItemRarity(idItem, item.rarity);
                     let tmpPos: Position | undefined;
 
                     for (let radius = initialDropRadius; !tmpPos && radius <= maxExpandedDropRadius; radius++) {
@@ -11308,7 +11340,7 @@ function Game(this: GameApi) {
 
                     game.quitarUserInvItem(idUser, idPos, cant);
 
-                    game.placeDroppedFloorItem(user.map, tmpPos, idItem, cant);
+                    game.placeDroppedFloorItem(user.map, tmpPos, idItem, cant, droppedRarity);
                     game.renderDroppedFloorItem(user.map, tmpPos, idItem);
                     droppedItemsCount++;
 
@@ -11521,6 +11553,7 @@ function Game(this: GameApi) {
                     const slots = addItemToRecord(user.inv, bankItem.idItem, cantWithdraw, {
                         maxSlots: 21,
                         equipped: 0,
+                        rarity: bankItem.rarity,
                     });
 
                     if (slots == null) {
@@ -11808,6 +11841,7 @@ function Game(this: GameApi) {
                     const bankSlot = addItemToRecord(bankRecord, itemUser.idItem, cantSell, {
                         maxSlots: MAX_BANK_SLOTS,
                         equipped: 0,
+                        rarity: itemUser.rarity,
                     });
 
                     if (bankSlot == null) {

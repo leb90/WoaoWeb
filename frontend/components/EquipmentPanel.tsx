@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { ItemGraphic } from "./MacroBar";
 import type { InventoryItem } from "../lib/aowProtocol";
+import { formatItemNameWithRarity, getRaritySlotClasses } from "../lib/itemRarity";
 import type { GraphicData, ObjectsDB } from "../types/game";
 
 import {
@@ -156,9 +157,11 @@ export default function EquipmentPanel({
                   objectsDB?.[String(item.idItem)],
               )
             : null;
+        // Túnicas especiales primero; si no, el color de la rareza.
         const specialSlotClasses =
             !blocked && !isTarget
-                ? getSpecialItemSlotClasses(specialAccent, { selected })
+                ? getSpecialItemSlotClasses(specialAccent, { selected }) ||
+                  getRaritySlotClasses(item?.rarity, { selected })
                 : "";
 
         return (
@@ -169,10 +172,10 @@ export default function EquipmentPanel({
                 title={
                     item
                         ? action === "disparar"
-                            ? `${item.name} (doble click o U para disparar; arrastralo al inventario para sacártelo)`
+                            ? `${formatItemNameWithRarity(item.name, item.rarity)} (doble click o U para disparar; arrastralo al inventario para sacártelo)`
                             : action === "usar"
-                              ? `${item.name} (doble click o U para usarlo; arrastralo al inventario para sacártelo)`
-                              : `${item.name} (doble click o arrastrar al inventario para sacártelo)`
+                              ? `${formatItemNameWithRarity(item.name, item.rarity)} (doble click o U para usarlo; arrastralo al inventario para sacártelo)`
+                              : `${formatItemNameWithRarity(item.name, item.rarity)} (doble click o arrastrar al inventario para sacártelo)`
                         : `${meta.label}: ${meta.hint}`
                 }
                 onMouseDown={(event) => {

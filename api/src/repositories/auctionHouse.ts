@@ -14,6 +14,8 @@ const characterItemSchema = z.object({
     idItem: z.coerce.number().int().positive(),
     cant: z.coerce.number().int().positive(),
     equipped: z.union([z.boolean(), z.number().int()]).transform(Boolean),
+    // Rareza por instancia (server/src/itemRarity.ts): se conserva al reescribir el inventario.
+    rarity: z.coerce.number().int().min(0).max(3).default(0),
 });
 
 const createAuctionSchema = z.object({
@@ -170,19 +172,20 @@ async function replaceCharacterItems(client: PoolClient, characterId: string, it
 
     const values: Array<string | number | boolean> = [];
     const placeholders = items.map((item, index) => {
-        const offset = index * 5;
-        values.push(characterId, item.idPos, item.idItem, item.cant, item.equipped);
-        return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5})`;
+        const offset = index * 6;
+        values.push(characterId, item.idPos, item.idItem, item.cant, item.equipped, item.rarity);
+        return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6})`;
     });
 
     await client.query(
         `
-            INSERT INTO character_items (character_id, id_pos, id_item, cant, equipped)
+            INSERT INTO character_items (character_id, id_pos, id_item, cant, equipped, rarity)
             VALUES ${placeholders.join(", ")}
             ON CONFLICT (character_id, id_pos)
             DO UPDATE SET id_item = EXCLUDED.id_item,
                           cant = EXCLUDED.cant,
-                          equipped = EXCLUDED.equipped
+                          equipped = EXCLUDED.equipped,
+                          rarity = EXCLUDED.rarity
         `,
         values,
     );

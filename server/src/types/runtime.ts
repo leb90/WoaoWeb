@@ -120,10 +120,12 @@ export type UserSpellEffect =
 
 export type CombatResult = number | string;
 
+// rarity: 0 Normal, 1 Mejorado, 2 Épico, 3 Legendario (itemRarity.ts). Ausente = 0.
 export type InventoryItem = {
     idItem: number;
     cant: number;
     equipped?: number | boolean;
+    rarity?: number;
 };
 
 export type SerializedInventoryItem = {
@@ -131,12 +133,14 @@ export type SerializedInventoryItem = {
     idItem: number;
     cant: number;
     equipped: number;
+    rarity?: number;
 };
 
 export type SerializedBankItem = {
     idPos: string;
     idItem: number;
     cant: number;
+    rarity?: number;
 };
 
 export type SpellSlot = {
@@ -163,6 +167,7 @@ export type MapTile = {
 export type MapObjectInfo = {
     objIndex: number;
     amount: number;
+    rarity?: number;
     cleanupSource?: "drop";
     cleanupRegisteredAt?: number;
 };

@@ -4,6 +4,7 @@ import React from "react";
 import type { GraphicData } from "../types/game";
 import type { TradeItem } from "../lib/aowProtocol";
 import { formatNumber } from "../lib/number-format";
+import { formatItemNameWithRarity, getRarityTextColor, getRaritySlotClasses } from "../lib/itemRarity";
 import { getTexturePath, loadGraphicsDB } from "../utils/gameLoader";
 
 type TradeModalProps = {
@@ -172,11 +173,19 @@ function getSlotStateClasses({
     isSelected,
     isInvalid,
     palette,
+    rarity = 0,
 }: {
     isSelected: boolean;
     isInvalid: boolean;
     palette: "merchant" | "player";
+    rarity?: number;
 }) {
+    // Ítems con rareza: borde y brillo de su color (lib/itemRarity.ts).
+    const rarityClasses = !isInvalid ? getRaritySlotClasses(rarity, { selected: isSelected }) : "";
+    if (rarityClasses) {
+        return rarityClasses;
+    }
+
     if (palette === "merchant") {
         if (isSelected) {
             return isInvalid
@@ -490,8 +499,13 @@ export default function TradeModal({
                                 <p className="text-[11px] uppercase tracking-[0.28em] text-amber-300/75">
                                     {isBank ? "Banco" : "Comerciante"}
                                 </p>
-                                <h2 className="truncate text-xl font-semibold text-stone-50">
-                                    {previewItem?.name ?? "Selecciona un item"}
+                                <h2
+                                    className="truncate text-xl font-semibold text-stone-50"
+                                    style={{ color: getRarityTextColor(previewItem?.rarity) }}
+                                >
+                                    {previewItem
+                                        ? formatItemNameWithRarity(previewItem.name, previewItem.rarity)
+                                        : "Selecciona un item"}
                                 </h2>
                                 <p className="mt-1 text-sm text-stone-400">
                                     {previewItem
@@ -655,6 +669,7 @@ export default function TradeModal({
                                                       isInvalid:
                                                           !item.validForUser,
                                                       palette: "merchant",
+                                                      rarity: item.rarity,
                                                   })
                                                 : "border-[#3a2a1e] bg-[#0f0a07]"
                                         }`}
@@ -731,6 +746,7 @@ export default function TradeModal({
                                                       item.slot,
                                                   isInvalid: !item.validForUser,
                                                   palette: "player",
+                                                  rarity: item.rarity,
                                               })
                                             : "border-[#252f33] bg-[#0b1114]"
                                     }`}

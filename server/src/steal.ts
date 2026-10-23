@@ -94,8 +94,9 @@ function stealItem(thiefId: string, victim: any): boolean {
     const idItem = Number(item.idItem);
     const amount = Math.min(Math.floor(Math.random() * 5) + 1, Number(item.cant));
 
+    const rarity = Number(item.rarity ?? 0);
     game.quitarUserInvItem(victim.id, slot, amount);
-    game.putItemToInv(thiefId, idItem, amount);
+    game.putItemToInv(thiefId, idItem, amount, rarity);
 
     const name = vars.datObj[idItem]?.name ?? "un objeto";
     tell(thiefId, `Has robado ${amount} ${name}.`);

@@ -291,7 +291,7 @@ export default function WikiPvpBalance() {
                         </p>
                         <ul className="space-y-2">
                             {[
-                                "Durante 10 segundos, cada 2 segundos la herida saca lo mismo que el golpe que la abrió.",
+                                "Durante 10 segundos, cada segundo la herida saca lo mismo que el golpe que la abrió.",
                                 "Curarse no la cierra: hay que curarse muy rápido, con magias de otros jugadores o tomando pociones seguidas, o se muere.",
                                 "Una apuñalada nueva reinicia el desangrado. Entrar a zona segura lo corta.",
                                 "Si te mata, cuenta como que te mató el asesino.",
@@ -309,7 +309,7 @@ export default function WikiPvpBalance() {
                     <div className="border border-stone-800 bg-black/30 p-4 text-sm leading-6 text-stone-400">
                         <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-stone-500">Ejemplo, nivel 50</span>
                         <p className="mt-2">
-                            Si el golpe pega 200, la apuñalada hace 220 y después vienen 5 golpes de 200: en total 1220 en 10 segundos. Un mago tiene unos 390 de vida (466 con su set).
+                            Si el golpe pega 200, la apuñalada hace 220 y después viene un golpe de 200 por segundo durante 10 segundos: en total 2220. Un mago tiene unos 390 de vida (466 con su set): sin curarse muere en 2 segundos.
                         </p>
                     </div>
                 </div>

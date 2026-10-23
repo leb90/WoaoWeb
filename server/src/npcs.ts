@@ -1225,6 +1225,11 @@ const NPC_LEASH_HOME_TOLERANCE_TILES = Number(vars.npcAi.leashHomeToleranceTiles
 const NPC_LEASH_RETURN_BLOCKED_TICKS = Number(vars.npcAi.leashReturnBlockedTicks ?? 6);
 const NPC_LAST_AGGRESSOR_MEMORY_MS = vars.npcAi.lastAggressorMemoryMs as number;
 const NPC_TARGET_SWITCH_MARGIN = vars.npcAi.targetSwitchMargin as number;
+const NPC_AGGRO_RADIUS_TILES = Number(vars.npcAi.aggroRadiusTiles ?? 6);
+const NPC_WANDER_RADIUS_TILES = Number(vars.npcAi.wanderRadiusTiles ?? 8);
+const NPC_WANDER_PAUSE_MIN_MS = Number(vars.npcAi.wanderPauseMinMs ?? 1500);
+const NPC_WANDER_PAUSE_MAX_MS = Number(vars.npcAi.wanderPauseMaxMs ?? 4500);
+const NPC_WANDER_BLOCKED_TICKS = Number(vars.npcAi.wanderBlockedTicks ?? 3);
 const MAX_SUMMONS_PER_USER = 3;
 const SUMMON_DURATION_MS = 60000;
 const SUMMON_SPAWN_SEARCH_RADIUS = 6;
@@ -1408,6 +1413,90 @@ function startNpcReturningHome(npc: NpcCharacter) {
  * el hogar queda fuera de su alcance, avanza en línea recta; si no puede ni
  * eso, se queda donde está y ese pasa a ser su nuevo hogar.
  */
+// Baldosa a la que la criatura puede pasear: transitable, del mismo mapa y del mismo lado de la zona segura.
+function canNpcWanderTo(npc: NpcCharacter, pos: Position, heading?: Direction) {
+    const tile = resolveNpcStepTile(npc, pos);
+    return Boolean(tile && tile.map === npc.map && canNpcOccupyPosition(npc, pos, heading));
+}
+
+function pickNpcWanderTarget(npc: NpcCharacter, home: Position): Position | null {
+    for (let attempt = 0; attempt < 10; attempt++) {
+        const candidate = {
+            x: home.x + funct.randomIntFromInterval(-NPC_WANDER_RADIUS_TILES, NPC_WANDER_RADIUS_TILES),
+            y: home.y + funct.randomIntFromInterval(-NPC_WANDER_RADIUS_TILES, NPC_WANDER_RADIUS_TILES),
+        };
+        if ((candidate.x !== npc.pos.x || candidate.y !== npc.pos.y) && canNpcWanderTo(npc, candidate)) {
+            return candidate;
+        }
+    }
+    return null;
+}
+
+/**
+ * Paseo sin objetivo: elige un punto al azar a NPC_WANDER_RADIUS_TILES como mucho de donde nació, camina
+ * hacia él un paso por tick, hace una pausa y elige otro. Si queda tapada, cambia de destino; si quedó
+ * afuera de su zona (por ejemplo, después de perseguir), el siguiente destino la trae de vuelta.
+ */
+function wanderNpc(npc: NpcCharacter, now: number) {
+    if (!npc.wanderHome || npc.wanderHomeMap === undefined) {
+        npc.wanderHome = { x: npc.pos.x, y: npc.pos.y };
+        npc.wanderHomeMap = npc.map;
+    }
+
+    if ((npc.wanderPauseUntil ?? 0) > now) {
+        return;
+    }
+
+    const home = worldLayout.toViewerFrame(npc.map, npc.wanderHomeMap, npc.wanderHome.x, npc.wanderHome.y);
+    if (!home) {
+        // Quedó lejos de su mapa: esa es su zona ahora.
+        npc.wanderHome = { x: npc.pos.x, y: npc.pos.y };
+        npc.wanderHomeMap = npc.map;
+        return;
+    }
+
+    if (!npc.wanderTarget) {
+        npc.wanderTarget = pickNpcWanderTarget(npc, home);
+        npc.wanderBlockedTicks = 0;
+        if (!npc.wanderTarget) {
+            npc.wanderPauseUntil = now + NPC_WANDER_PAUSE_MIN_MS;
+            return;
+        }
+    }
+
+    const destination = npc.wanderTarget;
+    if (getChebyshevDistance(npc.pos, destination) === 0) {
+        npc.wanderTarget = null;
+        npc.wanderPauseUntil = now + funct.randomIntFromInterval(NPC_WANDER_PAUSE_MIN_MS, NPC_WANDER_PAUSE_MAX_MS);
+        return;
+    }
+
+    let nextPos: Position | null = null;
+    for (const heading of getOrderedHeadings(npc.pos, destination, npc.heading)) {
+        const offset = getDirectionOffset(heading);
+        const candidate = { x: npc.pos.x + offset.x, y: npc.pos.y + offset.y };
+        const insideZone = getChebyshevDistance(candidate, home) <= NPC_WANDER_RADIUS_TILES;
+        const getsCloser = getChebyshevDistance(candidate, destination) < getChebyshevDistance(npc.pos, destination);
+        const getsCloserToHome = getChebyshevDistance(candidate, home) < getChebyshevDistance(npc.pos, home);
+        if ((insideZone || getsCloserToHome) && getsCloser && canNpcWanderTo(npc, candidate, heading)) {
+            nextPos = candidate;
+            break;
+        }
+    }
+
+    if (!nextPos) {
+        npc.wanderBlockedTicks = Number(npc.wanderBlockedTicks ?? 0) + 1;
+        if (npc.wanderBlockedTicks >= NPC_WANDER_BLOCKED_TICKS) {
+            npc.wanderTarget = null;
+            npc.wanderPauseUntil = now + NPC_WANDER_PAUSE_MIN_MS;
+        }
+        return;
+    }
+
+    npc.wanderBlockedTicks = 0;
+    npcs.moveNpcByPos(npc.id, nextPos);
+}
+
 function stepNpcTowardsHome(npc: NpcCharacter) {
     const home = npc.leashHome
         ? worldLayout.toViewerFrame(npc.map, npc.leashHomeMap ?? npc.map, npc.leashHome.x, npc.leashHome.y)
@@ -1735,6 +1824,15 @@ function selectNpcTarget(npc: NpcCharacter, targetPressure: Map<EntityId, number
         // pero la criatura lo ignora.
         if (!isUserOnNpcSideOfSafeZone(npc, user) || require("./clanCastles").isProtectedByCastle(user, npc.map)) {
             continue;
+        }
+
+        // Solo empieza a perseguir a quien está cerca; al que ya persigue no lo suelta por distancia
+        // (eso lo decide la correa) y al que la atacó lo enfrenta arriba (getRecentAggressorTarget).
+        if (npc.currentTargetId !== idUser) {
+            const frameUser = toNpcFrameTarget(npc, user);
+            if (!frameUser || getChebyshevDistance(npc.pos, frameUser.pos) > NPC_AGGRO_RADIUS_TILES) {
+                continue;
+            }
         }
 
         const score = getTargetScore(npc, user, targetPressure);
@@ -2568,6 +2666,19 @@ function Npcs(this: NpcsApi) {
                     continue;
                 }
 
+                // Criaturas de movimiento "al azar" (2), como animales: solo pasean por su zona. Los
+                // comerciantes y los NPC especiales (sacerdotes, entregadores) se quedan donde están.
+                if (npc.movement === 2) {
+                    if ((npc.nextThinkAt ?? 0) > now || !vars.areaNpc[idNpc]?.length) {
+                        continue;
+                    }
+                    npc.nextThinkAt = now + vars.timing.npcThinkMs;
+                    if (!npc.comercia && Number(npc.npcType ?? 0) === 0) {
+                        wanderNpc(npc, now);
+                    }
+                    continue;
+                }
+
                 if (npc.movement !== 3) {
                     continue;
                 }
@@ -2701,6 +2812,9 @@ function Npcs(this: NpcsApi) {
             npc.leashState = "idle";
             npc.leashHome = undefined;
             npc.leashHomeMap = undefined;
+            npc.wanderHome = undefined;
+            npc.wanderHomeMap = undefined;
+            npc.wanderTarget = null;
 
             const posNewNpc = game.respawnNpc(
                 npc.map,
@@ -2796,10 +2910,17 @@ function Npcs(this: NpcsApi) {
             const target = (summonTarget ?? userTarget) as NpcFollowTarget | undefined;
 
             if (!target) {
-                // Sin objetivo (se fue, murió o cruzó de mapa): vuelve a su lugar.
-                startNpcReturningHome(npc);
+                // Sin objetivo: si venía persiguiendo (se fue, murió o cruzó de mapa) vuelve a su lugar;
+                // si no, pasea por su zona.
+                if (npc.leashState === "chasing" || previousTargetId) {
+                    startNpcReturningHome(npc);
+                } else {
+                    wanderNpc(npc, now);
+                }
                 return;
             }
+
+            npc.wanderTarget = null;
 
             const targetIsSummon = Boolean((target as NpcCharacter).isNpc);
             npc.currentTargetId = target.id;

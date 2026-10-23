@@ -12,7 +12,7 @@ type Props = {
 
 /**
  * Cartel "Te estás desangrando" con la cuenta de 10 a 0 mientras dura el desangrado de una apuñalada
- * (server/src/game.ts, startBleeding). Cada 2 segundos la herida saca lo mismo que el golpe: hay que
+ * (server/src/game.ts, startBleeding). Cada segundo la herida saca lo mismo que el golpe: hay que
  * curarse muy rápido.
  */
 export default function BleedBanner({ bleedUntil, dead, className, style }: Props) {

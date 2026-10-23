@@ -317,7 +317,7 @@ Set de tier: **Set Paladín**.
 
 ### Asesino
 
-*Golpe común por debajo del guerrero; su fuerte es la apuñalada por la espalda: +10 % de daño y un desangrado de 10 s que cada 2 s saca lo mismo que el golpe (el simulador mide golpes de frente, sin apuñalada).*
+*Golpe común por debajo del guerrero; su fuerte es la apuñalada por la espalda: +10 % de daño y un desangrado de 10 s que cada segundo saca lo mismo que el golpe (el simulador mide golpes de frente, sin apuñalada).*
 
 Set de tier: **Set del Umbral**.
 

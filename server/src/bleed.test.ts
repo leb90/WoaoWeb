@@ -62,39 +62,39 @@ test("de frente la apuñalada no sangra ni suma daño", () => {
     assert.equal(result.bleedDamage, 0);
 });
 
-test("el desangrado pega cada 2 segundos durante 10 y curarse no lo corta", () => {
+test("el desangrado pega cada segundo durante 10 y curarse no lo corta", () => {
     const assassin = makeUser(vars.clases.asesino, 1);
     const target = makeUser(vars.clases.mago, 1);
-    target.hp = 1000;
-    target.maxHp = 1000;
+    target.hp = 2000;
+    target.maxHp = 2000;
     const start = 1_000_000;
-    target.bleed = { attackerId: assassin.id, tickDamage: 100, endsAt: start + 10000, nextTickAt: start + 2000 };
+    target.bleed = { attackerId: assassin.id, tickDamage: 100, endsAt: start + 10000, nextTickAt: start + 1000 };
 
-    game.processBleedTick(start + 1999);
-    assert.equal(target.hp, 1000);
-    game.processBleedTick(start + 2000);
-    assert.equal(target.hp, 900);
+    game.processBleedTick(start + 999);
+    assert.equal(target.hp, 2000);
+    game.processBleedTick(start + 1000);
+    assert.equal(target.hp, 1900);
     // Se cura: el desangrado sigue.
-    target.hp = 1000;
-    game.processBleedTick(start + 4000);
-    assert.equal(target.hp, 900);
+    target.hp = 2000;
+    game.processBleedTick(start + 2000);
+    assert.equal(target.hp, 1900);
     // Si el tick se atrasa, aplica los que faltaron.
-    game.processBleedTick(start + 8000);
-    assert.equal(target.hp, 700);
+    game.processBleedTick(start + 6000);
+    assert.equal(target.hp, 1500);
     game.processBleedTick(start + 10000);
-    assert.equal(target.hp, 600);
+    assert.equal(target.hp, 1100);
     assert.equal(target.bleed, null);
     game.processBleedTick(start + 12000);
-    assert.equal(target.hp, 600);
+    assert.equal(target.hp, 1100);
 });
 
 test("en zona segura la herida deja de sangrar", () => {
     const assassin = makeUser(vars.clases.asesino, 1);
     const target = makeUser(vars.clases.mago, 1);
     const start = 2_000_000;
-    target.bleed = { attackerId: assassin.id, tickDamage: 100, endsAt: start + 10000, nextTickAt: start + 2000 };
+    target.bleed = { attackerId: assassin.id, tickDamage: 100, endsAt: start + 10000, nextTickAt: start + 1000 };
     target.zonaSegura = 1;
-    game.processBleedTick(start + 2000);
+    game.processBleedTick(start + 1000);
     assert.equal(target.hp, 500);
     assert.equal(target.bleed, null);
 });

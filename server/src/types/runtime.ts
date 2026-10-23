@@ -528,6 +528,12 @@ export type RuntimeNpc = {
     leashHomeMap?: number;
     leashState?: "idle" | "chasing" | "returning";
     leashReturnBlockedTicks?: number;
+    // Paseo sin objetivo: zona donde nació y destino actual (npcs.ts, wanderNpc).
+    wanderHome?: Position;
+    wanderHomeMap?: number;
+    wanderTarget?: Position | null;
+    wanderPauseUntil?: number;
+    wanderBlockedTicks?: number;
     lastReachedTargetAt?: number;
     lastAggressorId?: EntityId;
     lastAggressedAt?: number;

@@ -591,12 +591,12 @@ function rollStabbingSuccess(skillApu: number, isAsesino: boolean): boolean {
 }
 
 // Apuñalada por la espalda a un jugador: suma poco daño en el momento pero abre un desangrado que cada
-// BLEED_TICK_MS saca lo mismo que el golpe, durante BLEED_DURATION_MS. Curarse no lo corta: hay que
-// curarse muy rápido (magias de otros jugadores o pociones seguidas) o se muere. Contra NPC sigue el
+// BLEED_TICK_MS saca lo mismo que el golpe, durante BLEED_DURATION_MS (10 ticks). Curarse no lo corta: hay
+// que curarse muy rápido (magias de otros jugadores o pociones seguidas) o se muere. Contra NPC sigue el
 // daño doble de siempre.
 const STAB_PVP_EXTRA_DAMAGE_PCT = 0.1;
 const BLEED_DURATION_MS = 10000;
-const BLEED_TICK_MS = 2000;
+const BLEED_TICK_MS = 1000;
 
 const COMBAT_HIT_FX_ID = 14;
 const COMBAT_SHIELD_BLOCK_FX_ID = 88;

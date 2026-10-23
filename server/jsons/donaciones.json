@@ -374,5 +374,29 @@
     "cost": 15,
     "desc": "Requerida para confeccionar la Túnica/Armadura de Dragón y Construir items mágicos con el ermitaño.",
     "photo": 34
+  },
+  "48": {
+    "id": 48,
+    "name": "Tunica Suerte",
+    "objIndex": 1814,
+    "cost": 800,
+    "desc": "Tunica Suerte: +50% chance de drop de NPCs. No se cae.",
+    "photo": 49
+  },
+  "49": {
+    "id": 49,
+    "name": "Tunica Experiencia",
+    "objIndex": 1815,
+    "cost": 800,
+    "desc": "Tunica Experiencia: +50% experiencia de NPCs. No se cae.",
+    "photo": 50
+  },
+  "50": {
+    "id": 50,
+    "name": "Tunica Dorada",
+    "objIndex": 1816,
+    "cost": 800,
+    "desc": "Tunica Dorada: +50% oro de NPCs. No se cae.",
+    "photo": 51
   }
 }

@@ -357,6 +357,9 @@ export type RuntimeCharacter = {
     maxSed?: number;
     lastHungerDrainAt?: number;
     lastStaRegenAt?: number;
+    lastHpRegenAt?: number;
+    starvationPenaltyApplied?: boolean;
+    starvationPenaltyAmount?: number;
     protec?: number;
     cooldownProtec?: number;
     morphBody?: number;

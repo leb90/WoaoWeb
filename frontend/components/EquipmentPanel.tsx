@@ -18,6 +18,10 @@ import {
     getInventoryItemEquipmentKind,
     type EquipmentKind,
 } from "../lib/equipmentKinds";
+import {
+    getSpecialItemAccent,
+    getSpecialItemSlotClasses,
+} from "../lib/specialItems";
 
 export { getInventoryItemEquipmentKind, type EquipmentKind };
 
@@ -146,6 +150,16 @@ export default function EquipmentPanel({
         const blocked = item ? isBlocked(item) : false;
         const selected = Boolean(item && item.slot === selectedSlot);
         const action = item ? getEquippedItemAction(item, objectsDB) : null;
+        const specialAccent = item
+            ? getSpecialItemAccent(
+                  item.idItem,
+                  objectsDB?.[String(item.idItem)],
+              )
+            : null;
+        const specialSlotClasses =
+            !blocked && !isTarget
+                ? getSpecialItemSlotClasses(specialAccent, { selected })
+                : "";
 
         return (
             <button
@@ -185,9 +199,10 @@ export default function EquipmentPanel({
                               ? selected
                                   ? "border-rose-300/85 bg-[#3b2026]"
                                   : "border-rose-400/40 bg-[#24151a]"
-                              : selected
-                                ? "border-cyan-300/85 bg-[#3a2817]"
-                                : "border-amber-500/35 bg-[#2b2016] hover:border-amber-300/70"
+                              : specialSlotClasses ||
+                                (selected
+                                    ? "border-cyan-300/85 bg-[#3a2817]"
+                                    : "border-amber-500/35 bg-[#2b2016] hover:border-amber-300/70")
                           : "border-[#433126] bg-[#140f0a]"
                 }`}
             >

@@ -17,6 +17,10 @@ import {
     getEquippedItemAction,
     getInventoryItemEquipmentKind,
 } from "../../../lib/equipmentKinds";
+import {
+    getSpecialItemAccent,
+    getSpecialItemSlotClasses,
+} from "../../../lib/specialItems";
 
 const MIN_SLOTS = 21;
 const DOUBLE_TAP_MS = 300;
@@ -382,7 +386,19 @@ export function MobileInventoryModal({
 
                 <div className="flex min-h-0 flex-col gap-3 overflow-y-auto p-3 landscape:flex-row landscape:items-start">
                     <div className="grid min-w-0 flex-1 grid-cols-7 gap-1.5">
-                        {slots.map(({ slot, item }) => (
+                        {slots.map(({ slot, item }) => {
+                            const specialAccent = item
+                                ? getSpecialItemAccent(
+                                      item.idItem,
+                                      objectsDB?.[String(item.idItem)],
+                                  )
+                                : null;
+                            const specialSlotClasses = getSpecialItemSlotClasses(
+                                specialAccent,
+                                { selected: selectedSlot === slot },
+                            );
+
+                            return (
                             <button
                                 key={slot}
                                 type="button"
@@ -402,9 +418,10 @@ export function MobileInventoryModal({
                                 }
                                 className={`relative flex aspect-square touch-none select-none items-center justify-center rounded-lg border [-webkit-touch-callout:none] ${
                                     item
-                                        ? selectedSlot === slot
-                                            ? "border-cyan-300/85 bg-[#3a2817]"
-                                            : "border-amber-500/25 bg-[#2b2016]"
+                                        ? specialSlotClasses ||
+                                          (selectedSlot === slot
+                                              ? "border-cyan-300/85 bg-[#3a2817]"
+                                              : "border-amber-500/25 bg-[#2b2016]")
                                         : "border-[#433126] bg-[#140f0a]"
                                 } ${ghost && selectedSlot === slot ? "opacity-40" : ""}`}
                             >
@@ -432,7 +449,8 @@ export function MobileInventoryModal({
                                     </>
                                 ) : null}
                             </button>
-                        ))}
+                            );
+                        })}
                     </div>
                     <div className="shrink-0 landscape:w-[300px]">
                         <EquipmentPanel

@@ -26,6 +26,10 @@ import {
     shouldIgnoreHarmfulSpell,
 } from "./racialPassives";
 import { getLegacyNpcDropChancePercent, shouldDropNpcItem } from "./npcDrops";
+import {
+    applyDropChanceBonus,
+    getEquippedNpcDropBonusPct,
+} from "./equipmentRewardBonuses";
 import { rollCraftingRecipeDrops } from "./craftingRecipeDrops";
 import { pickMountRespawnMap, rollMountEggDrops } from "./mountEggDrops";
 import {
@@ -3432,9 +3436,31 @@ function Npcs(this: NpcsApi) {
 
             const reservedDropPositions = new Set<string>();
 
+            const killer = getUser(ws.id!);
+            const dropBonusPct = getEquippedNpcDropBonusPct(killer);
+
             for (let index = 0; index < (npc.drop ?? []).length; index++) {
                 const item = npc.drop[index];
-                if (!item || !shouldDropNpcItem(item, undefined, getLegacyNpcDropChancePercent(index))) {
+                if (!item) {
+                    continue;
+                }
+
+                const baseChance = getLegacyNpcDropChancePercent(index);
+                const boostedEntry = {
+                    ...item,
+                    chancePercent: applyDropChanceBonus(
+                        Number(
+                            item.chancePercent ??
+                                item.chance ??
+                                item.probabilityPercent ??
+                                item.probabilidad ??
+                                baseChance,
+                        ),
+                        dropBonusPct,
+                    ),
+                };
+
+                if (!shouldDropNpcItem(boostedEntry, undefined, boostedEntry.chancePercent)) {
                     continue;
                 }
 

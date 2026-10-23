@@ -90,6 +90,12 @@ const SURVIVAL_HAMBRE_MAX = Number(balance.MAX_HAMBRE ?? 100);
 const SURVIVAL_SED_MAX = Number(balance.MAX_SED ?? 100);
 const HUNGER_DRAIN_INTERVAL_MS = 8000;
 const STA_REGEN_INTERVAL_MS = 2000;
+/**
+ * Regeneración pasiva de vida (legacy Sanar / SanaIntervaloSinDescansar).
+ * En el motor viejo: 400 ticks del GameTimer (40ms) ≈ 16s entre curas.
+ * Cura Random(2, 5% de maxSta) si hay hambre y sed > 0.
+ */
+const HP_REGEN_INTERVAL_MS = 16000;
 // Inanición: con hambre Y sed en 0 a la vez, la estamina deja de regenerar y en
 // cambio se drena. Además se resta un % FIJO de la vida máxima una sola vez (no es
 // un daño por tiempo: 100/100 -> 90/100 y se queda ahí), y se devuelve ese mismo
@@ -3366,10 +3372,25 @@ function distribuirExpNpcEscalada(idUser: EntityId, npc: GameNpc, exp: number) {
         return;
     }
 
+    const rewardBonuses = require("./equipmentRewardBonuses") as {
+        applyPercentBonus: (baseAmount: number, bonusPct: number) => number;
+        getEquippedNpcExpBonusPct: (user: GameCharacter) => number;
+    };
+
     eligibleRecipients.forEach((recipient) => {
-        recipient.exp += share;
+        const awarded = rewardBonuses.applyPercentBonus(
+            share,
+            rewardBonuses.getEquippedNpcExpBonusPct(recipient),
+        );
+        recipient.exp += awarded;
         withUserClient(recipient.id, (recipientClient) => {
-            handleProtocol.console("¡Has ganado " + share + " puntos de experiencia!", "red", 1, 0, recipientClient);
+            handleProtocol.console(
+                "¡Has ganado " + awarded + " puntos de experiencia!",
+                "red",
+                1,
+                0,
+                recipientClient,
+            );
         });
         game.checkUserLevel(recipient.id);
     });
@@ -12004,10 +12025,25 @@ function Game(this: GameApi) {
                 return;
             }
 
+            const rewardBonuses = require("./equipmentRewardBonuses") as {
+                applyPercentBonus: (baseAmount: number, bonusPct: number) => number;
+                getEquippedNpcGoldBonusPct: (user: GameCharacter) => number;
+            };
+
             recipients.forEach((recipient) => {
-                recipient.gold = balance.clampGold(recipient.gold + share);
+                const awarded = rewardBonuses.applyPercentBonus(
+                    share,
+                    rewardBonuses.getEquippedNpcGoldBonusPct(recipient),
+                );
+                recipient.gold = balance.clampGold(recipient.gold + awarded);
                 withUserClient(recipient.id, (recipientClient) => {
-                    handleProtocol.console("¡Has ganado " + share + " monedas de oro!", "red", 1, 0, recipientClient);
+                    handleProtocol.console(
+                        "¡Has ganado " + awarded + " monedas de oro!",
+                        "red",
+                        1,
+                        0,
+                        recipientClient,
+                    );
                     handleProtocol.actGold(recipient.gold, recipientClient);
                 });
             });
@@ -12662,6 +12698,37 @@ function Game(this: GameApi) {
                 if (nextSta !== Number(user.sta ?? 0)) {
                     user.sta = nextSta;
                     changed = true;
+                }
+            }
+
+            // Vida pasiva (legacy Sanar): solo con hambre y sed por encima de 0.
+            const canRegenHp =
+                Number(user.hambre ?? 0) > 0 && Number(user.sed ?? 0) > 0;
+            const maxHp = Number(user.maxHp ?? 0);
+            const currentHp = Number(user.hp ?? 0);
+            const starvationCap = user.starvationPenaltyApplied
+                ? Math.max(
+                      1,
+                      maxHp - Number(user.starvationPenaltyAmount ?? 0),
+                  )
+                : maxHp;
+            const hpRegenCap = Math.min(maxHp, starvationCap);
+
+            if (canRegenHp && currentHp > 0 && currentHp < hpRegenCap) {
+                const lastHp = Number(user.lastHpRegenAt ?? 0);
+                if (now - lastHp >= HP_REGEN_INTERVAL_MS) {
+                    user.lastHpRegenAt = now;
+                    const maxSta = Number(user.maxSta ?? 0);
+                    const maxHeal = Math.max(
+                        2,
+                        Math.floor((maxSta * 5) / 100),
+                    );
+                    const heal = funct.randomIntFromInterval(2, maxHeal);
+                    const nextHp = Math.min(hpRegenCap, currentHp + heal);
+                    if (nextHp !== currentHp) {
+                        user.hp = nextHp;
+                        changed = true;
+                    }
                 }
             }
 

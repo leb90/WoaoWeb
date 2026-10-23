@@ -393,6 +393,15 @@ export default function CharacterStatsModal({
 
                 total.magicDamageBonus += objectData.magicDamageBonus ?? 0;
                 total.magicDamagePercent += objectData.magicDamagePercent ?? 0;
+                total.bonusExpNpcPct += Number(
+                    objectData.bonusExpNpcPct ?? 0,
+                );
+                total.bonusGoldNpcPct += Number(
+                    objectData.bonusGoldNpcPct ?? 0,
+                );
+                total.bonusDropNpcPct += Number(
+                    objectData.bonusDropNpcPct ?? 0,
+                );
 
                 const specialBonuses = getSpecialBonuses(objectData);
                 total.strengthBonus += specialBonuses.strength;
@@ -421,6 +430,9 @@ export default function CharacterStatsModal({
                 maxWeaponHit: 0,
                 magicDamageBonus: 0,
                 magicDamagePercent: 0,
+                bonusExpNpcPct: 0,
+                bonusGoldNpcPct: 0,
+                bonusDropNpcPct: 0,
                 strengthBonus: 0,
                 agilityBonus: 0,
                 maxManaBonus: 0,
@@ -505,6 +517,24 @@ export default function CharacterStatsModal({
         addValue("strength", "Fuerza", equipmentStats.strengthBonus);
         addValue("agility", "Agilidad", equipmentStats.agilityBonus);
         addValue("max-mana", "Maná máximo", equipmentStats.maxManaBonus);
+        addValue(
+            "bonus-exp-npc",
+            "Experiencia extra",
+            equipmentStats.bonusExpNpcPct,
+            "%",
+        );
+        addValue(
+            "bonus-gold-npc",
+            "Oro extra",
+            equipmentStats.bonusGoldNpcPct,
+            "%",
+        );
+        addValue(
+            "bonus-drop-npc",
+            "Chance de drop",
+            equipmentStats.bonusDropNpcPct,
+            "%",
+        );
 
         return improvements;
     }, [equipmentStats]);

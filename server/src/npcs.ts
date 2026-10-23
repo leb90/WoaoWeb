@@ -3437,7 +3437,7 @@ function Npcs(this: NpcsApi) {
             const reservedDropPositions = new Set<string>();
 
             const killer = getUser(ws.id!);
-            const dropBonusPct = getEquippedNpcDropBonusPct(killer);
+            const dropBonusPct = getEquippedNpcDropBonusPct(killer ?? null);
 
             for (let index = 0; index < (npc.drop ?? []).length; index++) {
                 const item = npc.drop[index];

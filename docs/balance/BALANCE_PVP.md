@@ -55,7 +55,11 @@ Capturas de cada cosa en el juego: [capturas/](capturas/).
 
 ### Resultado en el simulador
 
-- Cruces dentro de ±0,5 aciertos del objetivo: **932 de 1344 (69 %)**, error cuadrático medio **0,38**. Antes del trabajo de balance: 286 de 1344 (21 %) y 3,66.
+- Cruces dentro de ±0,5 aciertos del objetivo, con las 10 clases: **1341 de 2040 (66 %)**, error cuadrático medio **0,46**. Con las 8 clases originales eran 932 de 1344 (69 %); antes del trabajo de balance, 286 de 1344 (21 %).
+- **Pirata y arquero** (pedido de Leandro, 2026-10-23): entran en la matriz y en el simulador (10 clases).
+  - **Arquero:** pega mucho y muy rápido con arco (contra NPC no cambia nada). Contra jugadores, `modDmgPvpProyectiles` del arquero pasa de 0,9 a 0,65: como la defensa del que recibe se resta después del factor, la armadura pesa más y queda la forma pedida. A nivel 50, los dos con set: mago en **2** flechas, clérigo, bardo y asesino en 3, druida 2,6, paladín 3,7 y guerrero **4**. Con equipo común: mago 3, semimagos 3-4, guerrero 4,9. Tiene la vida de un mago (388; 466 con set) y aguanta poca magia (un mago lo mata en 3).
+  - **Set Silvano completo:** 3 de cada 10 parálisis o inmovilizaciones (de jugadores o de criaturas) le fallan (`paralysisResistPct` en `sets.json`, `resistsParalysisBySet` en `game.ts`).
+  - **Pirata:** plan básico, sin cambios de factor: su golpe queda cerca del guerrero (a nivel 50 con set: guerrero en 5,3, paladín 4,7, mago 3). No tiene set de tier, así que "con set" usa su equipo común.
 - **Apuñalada y desangrado del asesino** (pedido de Leandro): por la espalda a un jugador, la apuñalada suma solo un 10 % pero abre un desangrado de 10 s que cada segundo saca lo mismo que el golpe (10 ticks) (`STAB_PVP_EXTRA_DAMAGE_PCT`, `BLEED_DURATION_MS`, `BLEED_TICK_MS` en `game.ts`; `startBleeding` y `processBleedTick`). Curarse no lo corta; entrar a zona segura sí. Si mata, cuenta como muerte por el asesino (`respawn.muere`); si el asesino se desconectó, como por veneno. El cliente muestra "Te estás desangrando" con la cuenta de 10 a 0 (`BleedBanner.tsx`, paquete `bleedState` 97) y la misma animación de sangre de un golpe en cada tick. Contra NPC y para las demás clases, la apuñalada sigue haciendo el daño doble. La Daga del Umbral (1778) ahora es arma de apuñalar (`apu`). El simulador mide golpes de frente: el desangrado no entra en las tablas.
 - **Combo del clérigo** (pedido de Leandro): con set contra un mago con set, un golpe cuerpo a cuerpo y una magia lo matan la mayoría de las veces y, si no, lo dejan con poca vida. Nivel 50: 80 % con set y 73 % con equipo común (nivel 30 y 40: 95 %, solo falla si erra el golpe). Para eso el clérigo pasó a `modDmgPvpArmas` 0,575 y `modDmgPvpMagia` 1,62; su golpe sigue debajo del del paladín y su magia debajo de la del mago. El simulador mide el combo (`combos` en el resultado) y la guía lo muestra para todas las clases híbridas.
 - Lo pedido: mago contra mago **2 / 2 / 3** aciertos a nivel 30 / 40 / 50. Mago 50 con set contra guerrero sin set: **3** (pedido 2-3). Contra guerrero con set: **5** (pedido 4-5).
@@ -73,7 +77,7 @@ Capturas de cada cosa en el juego: [capturas/](capturas/).
 - **Dónde se consiguen los sets nuevos** (premios, tienda, drops o misiones).
 - **Set para cazador y pirata**, o habilitarles Silvano y Verdugo.
 - **Cazador:** la flecha sigue rápida contra todos (⚠ en las tablas); hace falta bajar `modDmgPvpProyectiles` del cazador o revisar su objetivo.
-- **Clases fuera de la matriz** (bardo como identidad final, pirata, ladrón, bandido, arquero) y **razas** distintas de la humana.
+- **Razas** distintas de la humana. Ladrón, bandido, ermitaño y domador no se pueden crear y quedan fuera de la matriz.
 - **Razas bajas:** las armaduras de los sets nuevos no tienen versión para enanos, gnomos y goblins (`razaEnana` 0), así que no se las pueden poner.
 
 ---

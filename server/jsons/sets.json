@@ -228,7 +228,8 @@
                 {
                     "pieces": 4,
                     "hpPct": 20,
-                    "dmgPct": 25
+                    "dmgPct": 25,
+                    "paralysisResistPct": 30
                 }
             ]
         },

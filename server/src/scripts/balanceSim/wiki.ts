@@ -32,6 +32,8 @@ const CLASSES = [
     { id: 4, name: "Asesino", modes: ["melee", "magia"] },
     { id: 3, name: "Guerrero", modes: ["melee"] },
     { id: 9, name: "Cazador", modes: ["rango", "melee"] },
+    { id: 18, name: "Pirata", modes: ["melee", "magia"] },
+    { id: 20, name: "Arquero", modes: ["rango"] },
 ];
 const LEVELS = [30, 40, 50];
 const round = (value: number) => (Number.isFinite(value) ? Math.round(value * 10) / 10 : null);
@@ -46,11 +48,11 @@ const attackers = CLASSES.flatMap((cls) =>
         return {
             classId: cls.id,
             mode,
-            // Promedio contra las 8 clases, equipo común contra común.
+            // Promedio contra las 10 clases, equipo común contra común.
             average: Object.fromEntries(LEVELS.map((level) => [level, round(average(rowsOf(level, cls.id, mode, "comun", "comun").map((r) => r.mean)))])),
             // Uno contra uno por nivel.
             vs: Object.fromEntries(LEVELS.map((level) => [level, vs(level)])),
-            // Efecto del set a nivel 50 (promedio contra las 8 clases).
+            // Efecto del set a nivel 50 (promedio contra las 10 clases).
             set50: {
                 comun: round(average(rowsOf(50, cls.id, mode, "comun", "comun").map((r) => r.mean))),
                 conSet: round(average(rowsOf(50, cls.id, mode, "tier", "comun").map((r) => r.mean))),

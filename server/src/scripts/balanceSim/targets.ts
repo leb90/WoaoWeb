@@ -27,12 +27,22 @@ export const ATTACKER_OFFSET: Record<string, number> = {
     "6|magia": 1, "6|melee": 1, // Bardo: mixto
     "4|melee": 0.5, "4|magia": 2.5, // Asesino: golpe común por debajo del guerrero; su fuerte es la apuñalada
     "9|rango": 0.5, "9|melee": 1.5, // Cazador: arco
+    "18|melee": -0.25, "18|magia": 2.5, // Pirata: golpe y aguante cercanos al guerrero, poca magia
+    "20|rango": 0, // Arquero: flechas muy fuertes (objetivo por defensor abajo); el cuerpo a cuerpo no se mide
+};
+
+// Objetivos fijos por defensor para atacantes que no siguen la regla general, a nivel 50 y con el mismo
+// equipo. Pedido de Leandro para el arquero: un mago en 2 flechas, los semimagos en 3-4 y los guerreros en
+// 4-6. En otros niveles se escalan con BASE_HITS (piso 2).
+export const DEFENDER_TARGETS_50: Record<string, Record<number, number>> = {
+    "20|rango": { 1: 2, 7: 3.5, 2: 3.5, 6: 3.5, 4: 3.5, 8: 4.5, 9: 4.5, 3: 5, 18: 5, 20: 3 },
 };
 
 // Aguante del defensor según el tipo de daño que recibe.
 export const DEFENDER_OFFSET: Record<"magia" | "fisico", Record<number, number>> = {
-    magia: { 1: 0, 7: 0, 6: 0, 2: 0, 4: 0.5, 9: 0.5, 8: 0.5, 3: 1 },
-    fisico: { 1: -0.5, 7: 0, 6: 0, 4: 0, 2: 0.5, 9: 0.5, 8: 1, 3: 1 },
+    // Arquero (20): menos vida que el guerrero y aguanta poca magia. Pirata (18): cerca del guerrero.
+    magia: { 1: 0, 7: 0, 6: 0, 2: 0, 4: 0.5, 9: 0.5, 8: 0.5, 3: 1, 18: 0.75, 20: 0 },
+    fisico: { 1: -0.5, 7: 0, 6: 0, 4: 0, 2: 0.5, 9: 0.5, 8: 1, 3: 1, 18: 1, 20: 0 },
 };
 
 // Efecto del equipo. "comun" = mejor equipo común, "tier" = set de premios. Los cruces con "venta" son informativos.
@@ -62,7 +72,11 @@ export function targetHits(result: SimResult): number | null {
     const base = BASE_HITS[result.level];
     if (offset === undefined || factor === undefined || base === undefined) return null;
     const kind = result.mode === "magia" ? "magia" : "fisico";
-    const equal = Math.max(MIN_HITS, base + offset + (DEFENDER_OFFSET[kind][result.defClass] ?? 0));
+    const fixed = DEFENDER_TARGETS_50[`${result.atkClass}|${result.mode}`]?.[result.defClass];
+    const equal =
+        fixed !== undefined
+            ? Math.max(MIN_HITS, (fixed * base) / BASE_HITS[50])
+            : Math.max(MIN_HITS, base + offset + (DEFENDER_OFFSET[kind][result.defClass] ?? 0));
     return factor === 1 ? equal : Math.max(factor < 1 ? 1.5 : MIN_HITS, equal * factor);
 }
 

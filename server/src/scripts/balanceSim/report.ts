@@ -53,9 +53,11 @@ function compare(currentFile: string, proposalFile: string, level: number, atkPr
             const before = current.find(key, d);
             const after = proposed.find(key, d);
             const target = after ? targetHits(after) : null;
-            if (target === null) return `${format(before?.mean)} → ${format(after?.mean)}`;
+            // Sin dato previo (clase que antes no estaba en la matriz): "—".
+            const was = before ? format(before.mean) : "—";
+            if (target === null) return `${was} → ${format(after?.mean)}`;
             const warn = after && Math.abs(after.mean - target) > TOLERANCE ? " ⚠" : "";
-            return `${format(before?.mean)} → **${format(after?.mean)}** (${format(target)})${warn}`;
+            return `${was} → **${format(after?.mean)}** (${format(target)})${warn}`;
         });
         console.log(`| ${CLASS_NAMES[Number(atkClass)]} ${MODE_NAMES[mode]} | ${cells.join(" | ")} |`);
     }

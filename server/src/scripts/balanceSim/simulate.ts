@@ -36,7 +36,7 @@ type Proposal = {
 const proposalPath = option("--propuesta", "");
 const proposal: Proposal | null = proposalPath ? JSON.parse(fs.readFileSync(proposalPath, "utf8")) : null;
 const TRIALS = Number(option("--tiradas", "1500"));
-const CLASSES = list("--clases", "1,7,2,6,8,4,3,9").map(Number);
+const CLASSES = list("--clases", "1,7,2,6,8,4,3,9,18,20").map(Number);
 const ATTACKERS = list("--atacantes", CLASSES.join(",")).map(Number);
 const LEVELS = list("--niveles", "30,40,50").map(Number);
 const PROFILES = list("--perfiles", "venta,comun,tier") as GearProfile[];
@@ -72,11 +72,14 @@ vars.mapData[1] = { ...(vars.mapData[1] || {}), pk: 0 };
 const skillCap = (level: number) => (level >= 39 ? 200 : level <= 18 ? level * 5 : 100 + (level - 19) * 5);
 const MAGIC_ROLE = new Set([1, 6, 7]);
 
+const RANGED_CLASSES = new Set([9, 20]);
+
 function gearFor(classId: number, profile: GearProfile, mode: string): Record<string, number> {
     const role: GearRole = mode === "magia" || (mode === "defensa" && MAGIC_ROLE.has(classId)) ? "magia" : "fisico";
     const gear: Record<string, number> = {};
     const pick = (slot: GearSlot) => pickGear(classId, role, slot, profile);
-    if (mode === "rango") {
+    // Las clases de arco también defienden con el arco puesto (así el set del arquero cuenta sus 4 piezas).
+    if (mode === "rango" || (mode === "defensa" && RANGED_CLASSES.has(classId))) {
         gear.weapon = pickGear(classId, "fisico", "arco", profile);
         gear.arrow = gear.weapon ? BEST_ARROW[profile] : 0;
     } else {

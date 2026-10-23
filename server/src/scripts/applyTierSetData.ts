@@ -27,7 +27,8 @@ type Stats = {
     apu?: number;
 };
 type PieceDef = { slot: Slot; id: number; stats: Stats };
-type SetDef = { id: string; name: string; classes: number[]; pieces: PieceDef[] };
+type SetBonusStep = { pieces: number; hpPct?: number; dmgPct?: number; paralysisResistPct?: number };
+type SetDef = { id: string; name: string; classes: number[]; pieces: PieceDef[]; bonuses?: SetBonusStep[] };
 
 const root = path.resolve(__dirname, "../../..");
 const OBJECT_PATHS = ["server/jsons/objs.json", "api/src/jsons/objs.json"];
@@ -86,7 +87,11 @@ const SETS: SetDef[] = [
         ],
     },
     {
-        id: "t1-silvano", name: "Set Silvano", classes: [20], pieces: [
+        // Arquero: con las 4 piezas, 3 de cada 10 parálisis o inmovilizaciones le fallan.
+        id: "t1-silvano", name: "Set Silvano", classes: [20], bonuses: [
+            { pieces: 2, hpPct: 10 },
+            { pieces: 4, hpPct: 20, dmgPct: 25, paralysisResistPct: 30 },
+        ], pieces: [
             { slot: "casco", id: 1773, stats: { minDef: 22, maxDef: 30, resistenciaMagica: RM, objetoEspecial: 6 } },
             { slot: "arma", id: 1774, stats: { minHit: 12, maxHit: 16 } },
             { slot: "escudo", id: 1775, stats: { minDef: 22, maxDef: 30, resistenciaMagica: RM, objetoEspecial: 3 } },
@@ -118,7 +123,7 @@ function topTierStats(stats: Stats): Stats {
 }
 
 // Bonos del set (ver tierSets.ts). Solo cuentan lugares distintos.
-const BONUSES = [
+const BONUSES: SetBonusStep[] = [
     { pieces: 2, hpPct: 10 },
     { pieces: 4, hpPct: 20, dmgPct: 25 },
 ];
@@ -165,7 +170,7 @@ const sets = SETS.map((set) => ({
     season: 1,
     classes: set.classes,
     pieces: Object.fromEntries(set.pieces.map((piece) => [piece.slot, [piece.id]])),
-    bonuses: BONUSES,
+    bonuses: set.bonuses ?? BONUSES,
 }));
 
 for (const relativePath of OBJECT_PATHS) {

@@ -861,6 +861,12 @@ function getEquippedSetBonus(user: GameCharacter) {
     return tierSets.getEquippedSetBonus(getEquippedItemIds(user));
 }
 
+// Set con resistencia a la parálisis (Silvano completo): la parálisis o la inmovilización puede fallar.
+function resistsParalysisBySet(user: GameCharacter | undefined): boolean {
+    const pct = user ? Number(getEquippedSetBonus(user).paralysisResistPct ?? 0) : 0;
+    return pct > 0 && Math.random() * 100 < pct;
+}
+
 // Vida y maná máximos con el equipo: bono de vida del set de tier y maná de objetoEspecial (8/9/10/17/19)
 // más el % de maná del set. El bono se guarda aparte (equipHpBonus / equipManaBonus) y nunca se persiste.
 // Si alguien reasignó maxHp o maxMana desde afuera (login, nivel, remort, recarga de balance), ese valor es
@@ -3772,6 +3778,7 @@ export type GameApi = {
     persistCharacterSnapshot: (user: RuntimeCharacter, options?: CharacterSnapshotPersistOptions) => Promise<void>;
     refreshEquipmentVitals: (user: RuntimeCharacter, notify?: boolean) => boolean;
     getEquippedSetBonus: (user: RuntimeCharacter) => ReturnType<typeof tierSets.getEquippedSetBonus>;
+    resistsParalysisBySet: (user: RuntimeCharacter | undefined) => boolean;
     persistCharacterItemsById: (idUser: EntityId) => Promise<void>;
     persistCharacterItemsAndTransmogById: (idUser: EntityId) => Promise<void>;
     waitForCharacterPersistence: (characterId?: string) => Promise<void>;
@@ -9788,7 +9795,7 @@ function Game(this: GameApi) {
 
                 markUsersInPvpCombat(user, userAttacked);
 
-                if (shouldAvoidParalysis(userAttacked)) {
+                if (shouldAvoidParalysis(userAttacked) || resistsParalysisBySet(userAttacked)) {
                     withUserClient(idUser, (userClient) => {
                         handleProtocol.console("El objetivo evitó la parálisis.", "white", 1, 0, userClient);
                     });
@@ -9825,6 +9832,13 @@ function Game(this: GameApi) {
                 }
 
                 markUsersInPvpCombat(user, userAttacked);
+
+                if (resistsParalysisBySet(userAttacked)) {
+                    withUserClient(idUser, (userClient) => {
+                        handleProtocol.console("El objetivo evitó la inmovilización.", "white", 1, 0, userClient);
+                    });
+                    return 0;
+                }
 
                 const controlAppliedAt = Date.now();
                 userAttacked.inmovilizado = 1;
@@ -12197,6 +12211,10 @@ function Game(this: GameApi) {
 
     this.refreshEquipmentVitals = function (user: RuntimeCharacter, notify = true): boolean {
         return refreshEquipmentVitals(user as GameCharacter, notify);
+    };
+
+    this.resistsParalysisBySet = function (user: RuntimeCharacter | undefined) {
+        return resistsParalysisBySet(user as GameCharacter | undefined);
     };
 
     this.getEquippedSetBonus = function (user: RuntimeCharacter) {

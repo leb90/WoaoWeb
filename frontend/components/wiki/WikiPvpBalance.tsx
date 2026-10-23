@@ -19,6 +19,8 @@ const CLASS_IDENTITY: Array<{ id: number; text: string }> = [
     { id: 4, text: "Golpe común por debajo del guerrero; su fuerte es la apuñalada por la espalda, que deja al otro desangrándose." },
     { id: 3, text: "El que más pega físico. Nada de magia." },
     { id: 9, text: "Arco; el cuerpo a cuerpo queda en segundo plano." },
+    { id: 18, text: "Golpe y aguante cercanos al guerrero, con un poco de magia." },
+    { id: 20, text: "Flechas muy fuertes y rápidas: con set mata a un mago en 2. Poca vida y poca resistencia a la magia; con el set Silvano completo, 3 de cada 10 parálisis le fallan." },
 ];
 
 // Mismos valores que server/src/itemRarity.ts.
@@ -107,7 +109,7 @@ export default function WikiPvpBalance() {
 
             <WikiSection title="Aciertos para matar por nivel">
                 <p className="mb-4 max-w-3xl text-sm leading-6 text-stone-400">
-                    Promedio contra las 8 clases principales, los dos con el mejor equipo común (sin premios). Más alto es una pelea más larga.
+                    Promedio contra las 10 clases, los dos con el mejor equipo común (sin premios). Más alto es una pelea más larga.
                 </p>
                 <div className="overflow-x-auto border border-amber-200/12">
                     <table className="w-full min-w-[320px] text-left text-sm">
@@ -230,7 +232,7 @@ export default function WikiPvpBalance() {
                                 </tbody>
                             </table>
                         </div>
-                        <p className="text-xs text-stone-500">Aciertos para matar a nivel 50, promedio contra las 8 clases.</p>
+                        <p className="text-xs text-stone-500">Aciertos para matar a nivel 50, promedio contra las 10 clases.</p>
                     </div>
                     <div className="grid content-start gap-3 sm:grid-cols-2">
                         {balance.sets.map((set) => (

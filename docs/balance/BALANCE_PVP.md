@@ -1,6 +1,6 @@
-# Balance PvP: análisis y propuesta
+# Balance PvP: análisis, propuesta e implementación
 
-Fecha: 2026-10-23. Estado: **análisis terminado, nada implementado**. Antes de tocar el juego hay que cerrar las decisiones de la sección 9 con Leandro.
+Fecha: 2026-10-23. Estado: **implementado en el PR #54** (rama `docs-balance-combate`), salvo lo que figura como pendiente en la sección 0. Las secciones 1 a 7 son el análisis original; la 0 y la 8 tienen los valores finales.
 
 Este documento sirve para retomar el trabajo en cualquier momento. Tiene:
 - qué se pidió;
@@ -8,11 +8,48 @@ Este documento sirve para retomar el trabajo en cualquier momento. Tiene:
 - qué se midió y con qué herramienta;
 - qué cambiar, por qué y en qué archivo.
 
-**Para leer rápido** (gráficos y, por clase, qué ítems usa, cuánto pega y en cuántos aciertos mata, hoy y con la propuesta): [NIVELACION_POR_CLASE.md](NIVELACION_POR_CLASE.md).
+**Para leer rápido** (gráficos y, por clase, qué ítems usa, cuánto pega y en cuántos aciertos mata, antes y ahora): [NIVELACION_POR_CLASE.md](NIVELACION_POR_CLASE.md).
 
 Las tablas completas están en [BALANCE_PVP_TABLAS.md](BALANCE_PVP_TABLAS.md). El simulador está en `server/src/scripts/balanceSim/`.
 
 Documento previo de referencia: [combat-balance.md](combat-balance.md), del PR #52, con el modelo de balance de Eze (ezesaraniti22).
+
+---
+
+## 0. Estado de la implementación
+
+### Qué quedó en el juego
+
+| Punto | Qué hace | Dónde |
+|---|---|---|
+| 7.1 Tope de atributos | Fuerza y agilidad efectivas con tope 40 (buff + objetos), **solo en PvP** | `game.ts`: `getCombatFuerza`, `getCombatAgilidad`, `PVP_ATTRIBUTE_CAP` |
+| 7.2 Factores PvP | Daño contra jugadores por clase: `modDmgPvpArmas`, `modDmgPvpProyectiles`, `modDmgPvpMagia` | `balanceData.ts`, `api/src/jsons/balance.json`, `game.ts` (`getPvpDamageFactor`, `calcularDmg`, `applyUserSpellDamage`) |
+| 7.4 Bonos del set | 2 piezas: +10 % de vida. 4 piezas: +20 % de vida y +25 % de daño contra jugadores. Se aplica el escalón más alto, sin acumular | `server/jsons/sets.json`, `tierSets.ts`, `game.ts` (`refreshEquipmentVitals`, `getEquippedSetBonus`) |
+| 7.6 Rarezas | Normal, Mejorado, Épico y Legendario por instancia de ítem (+1/+2/+3 al golpe y a la defensa, +2/+4/+6 al daño mágico). El Legendario no se cae al morir. **Las piezas de set son siempre Legendarias.** Mercado y subastas no aceptan ítems con rareza | `itemRarity.ts`, columna `rarity` en `character_items`, `character_bank_items`, `account_vault_items` y `clan_vault_items`, cliente `lib/itemRarity.ts` |
+| 7.7 Bugs | Maná de los ítems con "+maná" (OE) ahora suma; túnicas especiales leen el equipo en juego; pirata | `game.ts`, `equipmentRewardBonuses.ts`, `balanceData.ts` |
+| 7.8 Pociones | Intervalo de usar ítem 50 → 160 ms (como AoDrag) | `vars.ts` (`actionCooldowns.useItemMs`) |
+
+La rareza **no** suma a `resistenciaMagica`: es un porcentaje de reducción y +3 por pieza llevaba el set de guerrero de 17 % a 26 %, lo que descalibraba la magia contra cualquiera con set.
+
+### Resultado en el simulador
+
+- Cruces dentro de ±0,5 aciertos del objetivo: **900 de 1344 (67 %)**, error cuadrático medio **0,40**. En `main`: 306 de 1344 (23 %) y 3,38.
+- Lo pedido: mago contra mago **2 / 2 / 3** aciertos a nivel 30 / 40 / 50. Mago 50 con set contra guerrero sin set: **3** (pedido 2-3). Contra guerrero con set: **5** (pedido 4-5).
+- Efecto del set a nivel 50 (promedio): con set contra sin set mata en ×0,80 de los aciertos (objetivo ×0,75); sin set contra uno con set tarda ×1,42 (objetivo ×1,3).
+
+### Qué hay que hacer en producción al desplegar
+
+1. **Perfil de balance (`game_balance`).** Las tablas PvP nuevas se completan solas con el seed si el perfil no las tiene, pero el cambio del pirata (maná 2,5/1 y `modDmgMagia` 0,5) está en tablas que ya existen. Actualizar el perfil con `/admin/game-data/balance` (PUT) o `pnpm --dir api import-game-data`, como dice 7.9.
+2. **Intervalo de pociones.** `runtime_settings` guarda `actionCooldowns.useItemMs = 50` y pisa el valor nuevo del código. Un admin tiene que correr `/intervalo useitem 160` en el juego.
+3. **Migración de la base.** Las columnas `rarity` se crean solas: `pnpm start` de la API corre `migrate` (`ALTER TABLE ... ADD COLUMN IF NOT EXISTS`). En local hay que correr `npx tsx src/migrate.ts` en `api/`.
+4. **Cliente.** `frontend/public/init/objs.json` ya trae `anim` de las armaduras (lo usa la adaptación de armaduras a la raza); se regenera con `pnpm --dir server export-client-objs`.
+
+### Pendiente
+
+- **7.5 Normalizar las piezas de tier.** Algunas piezas de set pegan menos que la mejor común (por ejemplo, el Puñal Desterrado del asesino), así que el set no les sirve. Hay que normalizarlas y volver a calibrar.
+- **Cazador:** la flecha sigue rápida contra todos (⚠ en las tablas); hace falta bajar `modDmgPvpProyectiles` del cazador o revisar su objetivo.
+- **Clases fuera de la matriz** (bardo como identidad final, pirata, ladrón, bandido, arquero) y **razas** distintas de la humana.
+- **Temporadas:** qué set es el de la temporada actual y qué pasa con el anterior (decisión 6).
 
 ---
 
@@ -288,13 +325,13 @@ El simulador usa Humano en todos los cruces.
 | `tune.ts` | Barrido de factores PvP por fila de atacante contra la matriz objetivo. |
 | `charts.ts` | Gráficos de barras SVG en `docs/balance/graficos/`. |
 | `guide.ts` | Genera [NIVELACION_POR_CLASE.md](NIVELACION_POR_CLASE.md) con el equipo de cada clase y sus números. |
-| `propuestas/propuesta-v1.json` | La propuesta de este documento. |
+| `propuestas/` | Cambios a probar sobre el código actual, sin tocar el juego. Claves: `pvpMelee`, `pvpRanged` y `pvpMagic` (pisan `modDmgPvp*`; clave = id de clase o `default`), `balance` (tablas de `balanceData`), `spells` y `objects` (campos de `spells.json` y `objs.json`). La propuesta original (`propuesta-v1.json`) ya está implementada y se borró; `ejemplo-cazador.json` prueba bajar la flecha del cazador (pendiente de la sección 0). |
 
 Uso:
 
 ```bash
 pnpm --dir server balance-sim --salida /tmp/actual.json                    # estado actual
-pnpm --dir server balance-sim --propuesta src/scripts/balanceSim/propuestas/propuesta-v1.json --salida /tmp/prop.json
+pnpm --dir server balance-sim --propuesta src/scripts/balanceSim/propuestas/ejemplo-cazador.json --salida /tmp/prop.json
 pnpm --dir server balance-sim --perfil-balance /tmp/game_balance.json ...  # con el perfil exportado de producción
 npx tsx server/src/scripts/balanceSim/report.ts comparar /tmp/actual.json /tmp/prop.json 50 comun comun
 npx tsx server/src/scripts/balanceSim/tune.ts <propuesta-base.json> comun,tier <salida.json>
@@ -405,7 +442,7 @@ A nivel 50 eso es "el set vale más o menos un acierto". Con la matriz, el ejemp
 
 ## 7. Propuesta de cambios
 
-Cada punto tiene qué cambiar, por qué, dónde y con qué número arrancar. Los números salen del barrido del simulador (`tune.ts`) y están en `propuestas/propuesta-v1.json`.
+Cada punto tiene qué cambiar, por qué, dónde y con qué número arrancar. Los números salieron del barrido del simulador (`tune.ts`); los valores finales están en `balanceData.ts` (sección 0).
 
 ### 7.1 Tope de fuerza y agilidad efectivas: 40, solo en PvP
 
@@ -545,30 +582,34 @@ Sin esto, cualquier cambio de `balanceData.ts` no llega al juego.
 
 ---
 
-## 8. Resultado de la propuesta (resumen)
+## 8. Resultado implementado (resumen)
 
-Tablas completas en [BALANCE_PVP_TABLAS.md](BALANCE_PVP_TABLAS.md).
+Tablas completas en [BALANCE_PVP_TABLAS.md](BALANCE_PVP_TABLAS.md) y, por clase, en [NIVELACION_POR_CLASE.md](NIVELACION_POR_CLASE.md).
 
-Nivel 50, equipo común contra común. Celda: aciertos `actual → propuesta (objetivo)`:
+Nivel 50, equipo común contra común. Celda: aciertos `antes (main) → ahora (objetivo)`:
 
 | Atacante | Mago | Clérigo | Paladín | Guerrero |
 |---|---|---|---|---|
-| Mago, magia | 3,0 → **3,0** (3) | 3,0 → **3,0** (3) | 4,0 → **3,1** (3,5) | 4,0 → **4,0** (4) |
-| Druida, magia | 3,0 → **4,0** (4) | 4,0 → **4,0** (4) | 4,0 → **5,0** (4,5) | 5,0 → **6,0** (5) |
-| Clérigo, golpe | 1,0 → **2,5** (3) | 1,9 → **3,8** (4) | 2,0 → **4,5** (4,5) | 2,0 → **4,6** (4,5) |
-| Paladín, golpe | 1,0 → **2,0** (2,5) | 1,0 → **3,1** (3,5) | 1,8 → **3,7** (4) | 1,9 → **3,9** (4) |
-| Guerrero, golpe | 1,0 → **2,0** (2) | 1,0 → **3,0** (3) | 1,0 → **3,6** (3,5) | 1,5 → **3,7** (3,5) |
-| Cazador, flecha | 2,0 → **3,0** (3) | 2,9 → **4,4** (4) | 3,0 → **5,0** (4,5) | 3,4 → **5,1** (4,5) |
+| Mago, magia | 3,0 → **3,0** (3,0) | 3,0 → **3,0** (3,0) | 4,0 → **3,1** (3,5) | 4,0 → **4,0** (4,0) |
+| Druida, magia | 3,0 → **3,0** (4,0) ⚠ | 4,0 → **4,0** (4,0) | 4,0 → **4,0** (4,5) | 5,0 → **5,0** (5,0) |
+| Clérigo, golpe | 1,0 → **2,5** (3,0) | 1,9 → **3,8** (4,0) | 2,0 → **4,5** (4,5) | 2,0 → **4,6** (4,5) |
+| Paladín, golpe | 1,0 → **2,0** (2,5) | 1,0 → **3,1** (3,5) | 1,8 → **3,8** (4,0) | 1,9 → **3,9** (4,0) |
+| Asesino, golpe | 1,0 → **3,0** (3,0) | 1,6 → **4,0** (4,0) | 2,0 → **4,6** (4,5) | 2,0 → **4,8** (4,5) |
+| Guerrero, golpe | 1,0 → **2,0** (2,0) | 1,0 → **2,8** (3,0) | 1,0 → **3,0** (3,5) ⚠ | 1,5 → **3,0** (3,5) |
+| Cazador, flecha | 2,0 → **2,0** (3,0) ⚠ | 2,9 → **3,3** (4,0) ⚠ | 3,0 → **3,9** (4,5) ⚠ | 3,4 → **3,9** (4,5) ⚠ |
 
 Lo que todavía queda lejos del objetivo:
-- **Asesino con golpe:** mata más rápido que lo pedido. Le falta el set bueno; con su arma de tier actual pega menos que con la común.
-- **Cazador:** el golpe cuerpo a cuerpo y la flecha quedan algo lentos contra clases con armadura.
-- **Lado defensivo del set** (común contra set): queda por debajo de ×1,3, como se explicó en 7.4. Con las piezas normalizadas (7.5) hay que volver a ajustar.
-- **Sin buffs** la propuesta da 44 % de celdas a ±0,5. La matriz está pensada para el estado normal de PvP, con los dos buffeados. Sin buff el físico queda lento, que es el incentivo clásico de AO para buffearse.
+- **Cazador con flecha:** mata más rápido que lo pedido contra todos.
+- **Druida con magia contra mago:** 3 en vez de 4 (el druida queda igual que el mago contra un mago).
+- **Guerrero contra paladín:** 3 en vez de 3,5.
+- **Lado defensivo del set:** sin set contra uno con set da ×1,42 (objetivo ×1,3). Con las piezas normalizadas (7.5) hay que volver a ajustar.
+- **Sin buffs** el físico queda lento. La matriz está pensada para el estado normal de PvP, con los dos buffeados; es el incentivo clásico de AO para buffearse.
 
 ---
 
 ## 9. Decisiones abiertas (para Leandro)
+
+Tomadas al implementar: rarezas con "+N" plano y piezas de set siempre Legendarias (pedido de Leandro); tope de 40 solo en PvP; ventaja del set de "un acierto" (+25 % de daño y +20 % de vida); pociones a 160 ms; bug del maná OE arreglado. Siguen abiertas la 6 (temporadas), la 7 (resto de las clases) y Ónice (5).
 
 1. **Matriz objetivo:** ¿se aprueban los ajustes de identidad y aguante de la sección 6, que son propuesta, y el piso de 2 aciertos?
 2. **Tamaño de la ventaja del set:** ¿"más o menos un acierto a nivel 50" (×0,75 / ×1,3, con +25 % de daño y +20 % de vida), o algo más moderado (×0,85 / ×1,15)?
@@ -589,11 +630,13 @@ Cada etapa va en su PR, con tests y una corrida del simulador en el "Test plan".
 |---|---|---|---|
 | 0 | Verificar `game_balance` en producción (7.9) | — | Captura del perfil. Si hay diferencias, exportarlo y correr el simulador con `--perfil-balance`. |
 | 1 | Bugs (7.7): maná OE, túnicas especiales, pirata | `login.ts`, `game.ts`, `gameDataSync.ts`, `protocol.ts` (equipar), `equipmentRewardBonuses.ts` | Tests unitarios. En vivo: túnica "+300 maná" muestra 2787. |
-| 2 | Núcleo PvP: tope 40 y factores PvP (7.1, 7.2) | `game.ts` (`calcularDmg`, `poderAtaqueArma`, `poderEvasion`, `applyUserSpellDamage`), `balanceData.ts`, `api/src/repositories/gameBalance.ts`, `api/src/jsons/balance.json` | `pnpm --dir server balance-sim` sin `--propuesta` tiene que dar lo mismo que hoy `--propuesta propuesta-v1.json` (sin el bono de set). Repetir la validación en vivo de la sección 4. |
+| 2 | Núcleo PvP: tope 40 y factores PvP (7.1, 7.2) | `game.ts` (`calcularDmg`, `poderAtaqueArma`, `poderEvasion`, `applyUserSpellDamage`), `balanceData.ts`, `api/src/repositories/gameBalance.ts`, `api/src/jsons/balance.json` | `pnpm --dir server balance-sim` sin `--propuesta` tiene que dar lo mismo que la propuesta original (sin el bono de set). Repetir la validación en vivo de la sección 4. |
 | 3 | Sets: `setId`, `sets.json`, `setBonuses.ts`, normalización de piezas (7.4, 7.5) | `objs.json` (3 copias), `scripts/exportClientObjs.ts`, `setBonuses.ts`, `protocol.ts`, tooltip del cliente | Simulador con set contra común a ×0,75 ±0,1 y común contra set a ×1,3 ±0,1. En vivo: vida máxima +20 % con el set puesto. |
 | 4 | Rarezas (7.6) | Inventario, banco y bóveda (DB y `user.inv`), paquete de inventario, drops y crafteo, cliente | Tests de sorteo. En vivo: un arma Épica pega +2 en el rango. |
 | 5 | Pociones (7.8) | `vars.timing` o `/intervalos`, repetición del cliente | Prueba en vivo de tomar pociones. |
 | 6 | Resto de las clases y de las razas | `targets.ts`, factores | Simulador con `--clases` ampliado y con `--raza`. |
+
+Estado: las etapas 1 a 5 están en el PR #54; la normalización de piezas (parte de la 3) y la 6 quedan pendientes. La 0 se hace al desplegar (sección 0).
 
 Al terminar cada etapa, actualizar este documento: estado, valores finales y resultados.
 

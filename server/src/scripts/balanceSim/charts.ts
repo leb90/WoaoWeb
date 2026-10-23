@@ -1,5 +1,5 @@
-// Gráficos de barras (SVG) de balance PvP a partir de dos resultados del simulador.
-//   tsx charts.ts <actual.json> <propuesta.json> [carpeta de salida=docs/balance/graficos]
+// Gráficos de barras (SVG) de balance PvP a partir de dos resultados del simulador: antes (main) y ahora.
+//   tsx charts.ts <antes.json> <ahora.json> [carpeta de salida=docs/balance/graficos]
 import fs from "node:fs";
 import path from "node:path";
 
@@ -10,7 +10,7 @@ type Data = { results: Row[] };
 
 const [currentFile, proposalFile, outArg] = process.argv.slice(2);
 if (!currentFile || !proposalFile) {
-    console.log("Uso: charts.ts <actual.json> <propuesta.json> [carpeta de salida]");
+    console.log("Uso: charts.ts <antes.json> <ahora.json> [carpeta de salida]");
     process.exit(1);
 }
 const outDir = outArg ?? path.resolve(__dirname, "../../../../docs/balance/graficos");
@@ -156,8 +156,8 @@ for (const level of [30, 40, 50]) {
         yLabel: "Aciertos para matar",
         categories: ATTACKERS.map(labelOf),
         series: [
-            { name: "Hoy", color: COLORS.hoy, values: ATTACKERS.map((k) => meanOf(current, k)) },
-            { name: "Propuesta", color: COLORS.propuesta, values: ATTACKERS.map((k) => meanOf(proposal, k)) },
+            { name: "Antes (main)", color: COLORS.hoy, values: ATTACKERS.map((k) => meanOf(current, k)) },
+            { name: "Ahora", color: COLORS.propuesta, values: ATTACKERS.map((k) => meanOf(proposal, k)) },
         ],
         marker: { name: "Objetivo", color: COLORS.objetivo, values: ATTACKERS.map((k) => average(rowsFor(proposal, level, "comun", "comun", k).map((r) => targetHits(r) ?? NaN).filter(Number.isFinite))) },
         decimals: 1,
@@ -175,20 +175,20 @@ for (const level of [30, 40, 50]) {
         yLabel: "Daño promedio por acierto",
         categories: ATTACKERS.map(labelOf),
         series: [
-            { name: "Hoy", color: COLORS.hoy, values: ATTACKERS.map((k) => damageOf(current, k)) },
-            { name: "Propuesta", color: COLORS.propuesta, values: ATTACKERS.map((k) => damageOf(proposal, k)) },
+            { name: "Antes (main)", color: COLORS.hoy, values: ATTACKERS.map((k) => damageOf(current, k)) },
+            { name: "Ahora", color: COLORS.propuesta, values: ATTACKERS.map((k) => damageOf(proposal, k)) },
         ],
         refLine: { value: mageHp, label: `Vida del mago (${mageHp})` },
         decimals: 0,
     });
 }
 
-// 3) Efecto del set de tier a nivel 50, hoy y con la propuesta.
+// 3) Efecto del set de tier a nivel 50, antes y ahora.
 const SET_SUBTITLES = {
-    hoy: "Promedio contra las 8 clases. Hoy las barras casi no cambian: el set no da ventaja, y en algunas clases es peor.",
-    propuesta: "Promedio contra las 8 clases. Con set matás más rápido (azul); sin set contra uno con set tardás más (naranja).",
+    antes: "Promedio contra las 8 clases. Antes las barras casi no cambiaban: el set no daba ventaja, y en algunas clases era peor.",
+    ahora: "Promedio contra las 8 clases. Con set matás más rápido (azul); sin set contra uno con set tardás más (naranja).",
 };
-for (const [data, name, label] of [[current, "hoy", "hoy"], [proposal, "propuesta", "con la propuesta"]] as const) {
+for (const [data, name, label] of [[current, "antes", "antes, en main"], [proposal, "ahora", "ahora"]] as const) {
     const meanOf = (atk: string, def: string, key: string) => average(rowsFor(data, 50, atk, def, key).map((r) => r.mean).filter(Number.isFinite));
     renderChart({
         file: `efecto-set-nivel-50-${name}.svg`,
@@ -223,8 +223,8 @@ for (const [data, name, label] of [[current, "hoy", "hoy"], [proposal, "propuest
         yLabel: "Aciertos para matar",
         categories: cases.map((c) => c.label),
         series: [
-            { name: "Hoy", color: COLORS.hoy, values: cases.map((c) => pick(current, ...c.args)) },
-            { name: "Propuesta", color: COLORS.propuesta, values: cases.map((c) => pick(proposal, ...c.args)) },
+            { name: "Antes (main)", color: COLORS.hoy, values: cases.map((c) => pick(current, ...c.args)) },
+            { name: "Ahora", color: COLORS.propuesta, values: cases.map((c) => pick(proposal, ...c.args)) },
         ],
         marker: { name: "Pedido", color: COLORS.objetivo, values: cases.map((c) => (c.range[0] + c.range[1]) / 2), labels: cases.map((c) => c.targetLabel), ranges: cases.map((c) => c.range) },
         decimals: 1,

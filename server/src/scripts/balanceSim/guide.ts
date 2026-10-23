@@ -1,7 +1,7 @@
-// Guía de nivelación por clase (markdown) a partir de dos resultados del simulador.
+// Guía de nivelación por clase (markdown) a partir de dos resultados del simulador: antes (main) y ahora.
 // Muestra, para cada clase, el equipo exacto (nombres y stats), vida, maná, hechizo y aciertos para matar
-// por nivel, hoy y con la propuesta.
-//   tsx guide.ts <actual.json> <propuesta.json> <propuesta.json de entrada> [salida.md]
+// por nivel. Los bonos del set salen de jsons/sets.json.
+//   tsx guide.ts <antes.json> <ahora.json> [salida.md]
 import fs from "node:fs";
 import path from "node:path";
 
@@ -11,15 +11,16 @@ type Row = SimResult & { hp: number; dmgAvg: number; dmgP10: number; dmgP90: num
 type Loadout = { gear: Record<string, number>; maxHp?: number; maxMana?: number; spell?: { name: string; mana: number; damage: string } | null };
 type Data = { results: Row[]; loadouts: Record<string, Loadout> };
 
-const [currentFile, resultFile, proposalInputFile, outArg] = process.argv.slice(2);
-if (!currentFile || !resultFile || !proposalInputFile) {
-    console.log("Uso: guide.ts <actual.json> <resultado-propuesta.json> <propuesta.json> [salida.md]");
+const [currentFile, resultFile, outArg] = process.argv.slice(2);
+if (!currentFile || !resultFile) {
+    console.log("Uso: guide.ts <antes.json> <ahora.json> [salida.md]");
     process.exit(1);
 }
 const output = outArg ?? path.resolve(__dirname, "../../../../docs/balance/NIVELACION_POR_CLASE.md");
 const current: Data = JSON.parse(fs.readFileSync(currentFile, "utf8"));
 const proposal: Data = JSON.parse(fs.readFileSync(resultFile, "utf8"));
-const proposalInput = JSON.parse(fs.readFileSync(proposalInputFile, "utf8"));
+type SetBonusStep = { pieces: number; hpPct?: number; dmgPct?: number; manaPct?: number };
+const tierSets: Array<{ name: string; bonuses: SetBonusStep[] }> = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../../../jsons/sets.json"), "utf8")).sets ?? [];
 const objects: Record<string, Record<string, any>> = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../../../jsons/objs.json"), "utf8"));
 
 const CLASSES: Array<{ id: number; name: string; modes: string[]; identity: string }> = [
@@ -95,8 +96,8 @@ const oneShotters = CLASSES.flatMap((cls) =>
 );
 const oneShotAfter = CLASSES.flatMap((cls) => cls.modes.filter((mode) => (find(proposal, 50, cls.id, mode, 1, "comun", "comun")?.dmgAvg ?? 0) >= mageHp));
 const oneShotText = oneShotters.length
-    ? `Hoy lo matan de un solo acierto: ${oneShotters.join(", ")}. Con la propuesta, ${oneShotAfter.length ? `todavía ${oneShotAfter.length}` : "ninguno"}.`
-    : "Hoy ninguna clase lo mata de un acierto.";
+    ? `Antes lo mataban de un solo acierto: ${oneShotters.join(", ")}. Ahora, ${oneShotAfter.length ? `todavía ${oneShotAfter.length}` : "ninguno"}.`
+    : "Ninguna clase lo mata de un acierto.";
 
 // Clases que con set matan más lento que con equipo común (pieza de tier peor que la común).
 const averageMean = (data: Data, atkClass: number, mode: string, atkProfile: string, defProfile: string) => {
@@ -111,27 +112,34 @@ const worseWithSet = CLASSES.flatMap((cls) =>
 
 const lines: string[] = [];
 const push = (...text: string[]) => lines.push(...text);
-const setBonus = proposalInput.tierSetBonus?.default ?? {};
+// Escalones del set (todos los sets usan los mismos; si alguno difiere se avisa).
+const setSteps = tierSets[0]?.bonuses ?? [];
+const sameSteps = tierSets.every((set) => JSON.stringify(set.bonuses) === JSON.stringify(setSteps));
+const describeStep = (step: SetBonusStep) =>
+    [step.hpPct ? `+${step.hpPct} % de vida máxima` : "", step.manaPct ? `+${step.manaPct} % de maná` : "", step.dmgPct ? `+${step.dmgPct} % de daño contra jugadores` : ""]
+        .filter(Boolean)
+        .join(" y ");
+const setText = setSteps.map((step) => `**${step.pieces} piezas:** ${describeStep(step)}`).join("; ");
 
 push(
     "# Nivelación PvP por clase: cómo queda con los ítems",
     "",
-    "Guía para leer rápido la propuesta de [BALANCE_PVP.md](BALANCE_PVP.md): qué ítems usa cada clase, cuánta vida y maná tiene, cuánto pega y en cuántos aciertos mata a alguien de su nivel, **hoy** y **con la propuesta**. Todos los números salen del simulador, que usa el motor real del server y que se comparó contra el juego en vivo.",
+    "Guía para leer rápido el balance de [BALANCE_PVP.md](BALANCE_PVP.md): qué ítems usa cada clase, cuánta vida y maná tiene, cuánto pega y en cuántos aciertos mata a alguien de su nivel, **antes** (en `main`) y **ahora** (con este cambio). Todos los números salen del simulador, que usa el motor real del server y que se comparó contra el juego en vivo.",
     "",
     "## Cómo leer los números",
     "",
     "- **Acierto**: un golpe, flecha o hechizo que entra. Los golpes fallados no cuentan (al lado del daño figura la chance de acertar).",
     "- **Aciertos para matar**: cuántos aciertos seguidos hacen falta para bajar toda la vida del otro, sin que se cure. Es un promedio: 2,5 quiere decir que la mitad de las veces son 2 y la otra mitad 3.",
-    "- **`hoy → propuesta (objetivo)`**: lo que pasa hoy en `main`, lo que pasaría con la propuesta y lo que se busca. ⚠ marca cuando la propuesta queda a más de medio acierto del objetivo.",
+    "- **`antes → ahora (objetivo)`**: lo que pasaba en `main`, lo que pasa ahora y lo que se busca. ⚠ marca cuando ahora queda a más de medio acierto del objetivo.",
     "- **Equipo común**: lo mejor que se consigue sin premios (crafteo, drops, misiones o comerciantes).",
-    "- **Set**: el set de tier de premios de canje (Desterrado y del Caído, con sus versiones +1, +2 y LEGENDARIA). Donde el set no tiene pieza se usa la mejor común.",
+    "- **Set**: el set de tier de premios de canje (Desterrado y del Caído, con sus versiones +1, +2 y LEGENDARIA). Donde el set no tiene pieza se usa la mejor común. Las piezas de set son **siempre Legendarias**: +3 al golpe o a la defensa y +6 al daño mágico, y no se caen al morir. Las stats de las tablas son las del ítem sin la rareza.",
     "- Todos pelean **buffeados** (fuerza y agilidad al doble, como en cualquier pelea), con raza humana y los skills al tope del nivel.",
-    "- \\* Los ítems con \"+maná\" hoy **no suman maná** (bug). La propuesta lo arregla.",
+    "- \\* Los ítems con \"+maná\" antes **no sumaban maná** (bug). Ahora sí.",
     "- ² Las clases físicas no tienen anillo útil: el Anillo de Magia (#1242) no tiene efecto en combate y el Anillo de Resistencia Mágica (#988) no se consigue por ninguna vía.",
     "",
     "## Lo pedido, en un gráfico",
     "",
-    "![Aciertos pedidos: hoy y con la propuesta](graficos/anclas-del-pedido.svg)",
+    "![Aciertos pedidos: antes y ahora](graficos/anclas-del-pedido.svg)",
     "",
     "## Cuánto pega cada clase a nivel 50",
     "",
@@ -147,16 +155,16 @@ push(
     "",
     "## Qué da el set",
     "",
-    `Con la propuesta, el set completo da **+${setBonus.phys ?? 0} % de daño** (físico o mágico, según con qué pegue la clase) y **+${setBonus.hp ?? 0} % de vida máxima**. Se suma una sola vez por personaje y tiene tope. La idea es que **el set valga más o menos un acierto a nivel 50**: con set matás un poco más rápido y aguantás un poco más.`,
+    `Bonos del set (\`server/jsons/sets.json\`, por piezas distintas equipadas): ${setText}${sameSteps ? "" : " (algunos sets tienen otros escalones; ver el archivo)"}. El daño es físico o mágico, según con qué pegue la clase, y solo cuenta contra jugadores. Se aplica el escalón más alto alcanzado, sin acumular. La idea es que **el set valga más o menos un acierto a nivel 50**: con set matás un poco más rápido y aguantás un poco más.`,
     "",
-    "Hoy las tres barras de cada clase casi no cambian, porque el set no da ventaja. Con la propuesta se separan:",
+    "Antes las tres barras de cada clase casi no cambiaban, porque el set no daba ventaja. Ahora se separan:",
     ...(worseWithSet.length
-        ? ["", `⚠ **Ojo:** aun con la propuesta, con set mata más lento ${worseWithSet.join(", ")}. Es un problema de los ítems, no del bono: la pieza de tier es peor que la común (por ejemplo, el Puñal Desterrado del asesino pega 19-22 y la Espada MataDragones común 35-48). Se arregla normalizando las piezas de tier (sección 7.5 de [BALANCE_PVP.md](BALANCE_PVP.md)).`]
+        ? ["", `⚠ **Ojo:** con set mata más lento ${worseWithSet.join(", ")}. Es un problema de los ítems, no del bono: la pieza de tier es peor que la común. Se arregla normalizando las piezas de tier (sección 7.5 de [BALANCE_PVP.md](BALANCE_PVP.md)).`]
         : []),
     "",
-    "![Efecto del set hoy](graficos/efecto-set-nivel-50-hoy.svg)",
+    "![Efecto del set antes](graficos/efecto-set-nivel-50-antes.svg)",
     "",
-    "![Efecto del set con la propuesta](graficos/efecto-set-nivel-50-propuesta.svg)",
+    "![Efecto del set ahora](graficos/efecto-set-nivel-50-ahora.svg)",
     "",
     "## Todas las clases a nivel 50, en una tabla",
     "",
@@ -189,7 +197,7 @@ for (const cls of CLASSES) {
         push(`| ${label} | ${cell("comun")} | ${cell("tier")} |`);
     }
 
-    push("", "**Vida, maná y hechizo**", "", "| Nivel | Vida | Vida con set (propuesta) | Maná hoy → propuesta | Hechizo principal |", "|---|---:|---:|---|---|");
+    push("", "**Vida, maná y hechizo**", "", "| Nivel | Vida | Vida con set | Maná antes → ahora | Hechizo principal |", "|---|---:|---:|---|---|");
     for (const level of LEVELS) {
         const hpCommon = defense("comun", level)?.maxHp ?? 0;
         const hpTier = defense("tier", level)?.maxHp ?? 0;
@@ -239,10 +247,13 @@ push(
     "- Para regenerar esta guía y los gráficos:",
     "",
     "```bash",
-    "pnpm --dir server balance-sim --tiradas 2000 --salida /tmp/actual.json",
-    "pnpm --dir server balance-sim --tiradas 2000 --propuesta src/scripts/balanceSim/propuestas/propuesta-v1.json --salida /tmp/propuesta.json",
-    "cd server && npx tsx src/scripts/balanceSim/charts.ts /tmp/actual.json /tmp/propuesta.json",
-    "npx tsx src/scripts/balanceSim/guide.ts /tmp/actual.json /tmp/propuesta.json src/scripts/balanceSim/propuestas/propuesta-v1.json",
+    "# Antes: el simulador corrido sobre main (sin este cambio), por ejemplo en un worktree.",
+    "git worktree add /tmp/woao-main main && pnpm --dir /tmp/woao-main/server install",
+    "pnpm --dir /tmp/woao-main/server balance-sim --tiradas 2000 --salida /tmp/antes.json",
+    "# Ahora: el código actual.",
+    "pnpm --dir server balance-sim --tiradas 2000 --salida /tmp/ahora.json",
+    "cd server && npx tsx src/scripts/balanceSim/charts.ts /tmp/antes.json /tmp/ahora.json",
+    "npx tsx src/scripts/balanceSim/guide.ts /tmp/antes.json /tmp/ahora.json",
     "```",
     "",
 );

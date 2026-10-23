@@ -1244,17 +1244,23 @@ const WEATHER_ICONS: Record<number, LucideIcon> = {
     [WEATHER.niebla]: CloudFog,
 };
 
-type EnvironmentChip = { key: string; icon: LucideIcon | undefined; label: string | undefined; iconOnly?: boolean };
+type EnvironmentChip = {
+    key: string;
+    kind: string;
+    icon: LucideIcon | undefined;
+    label: string | undefined;
+    iconOnly?: boolean;
+};
 
 function getEnvironmentChips(environment: EnvironmentState) {
     const chips: EnvironmentChip[] = [
-        { key: "season", icon: SEASON_ICONS[environment.season], label: SEASON_LABELS[environment.season], iconOnly: true },
-        { key: "phase", icon: DAY_PHASE_ICONS[environment.dayPhase], label: DAY_PHASE_LABELS[environment.dayPhase], iconOnly: true },
-        { key: "weather", icon: WEATHER_ICONS[environment.weather], label: WEATHER_LABELS[environment.weather] },
-        { key: "temperature", icon: Thermometer, label: `${environment.temperatureC}°C` },
+        { key: "season", kind: "Estación", icon: SEASON_ICONS[environment.season], label: SEASON_LABELS[environment.season], iconOnly: true },
+        { key: "phase", kind: "Momento del día", icon: DAY_PHASE_ICONS[environment.dayPhase], label: DAY_PHASE_LABELS[environment.dayPhase], iconOnly: true },
+        { key: "weather", kind: "Clima", icon: WEATHER_ICONS[environment.weather], label: WEATHER_LABELS[environment.weather] },
+        { key: "temperature", kind: "Temperatura", icon: Thermometer, label: `${environment.temperatureC}°C` },
     ];
     return chips.filter(
-        (chip): chip is { key: string; icon: LucideIcon; label: string; iconOnly?: boolean } =>
+        (chip): chip is EnvironmentChip & { icon: LucideIcon; label: string } =>
             chip.icon !== undefined && Boolean(chip.label),
     );
 }
@@ -1262,23 +1268,26 @@ function getEnvironmentChips(environment: EnvironmentState) {
 // Estación, momento del día, clima y temperatura en una fila de chips (antes era una línea de 8 px con
 // truncate que se cortaba en pantallas angostas). Tiene que entrar en una sola fila: el panel tiene alto fijo
 // y si esto crece, el detalle del ítem pierde su segunda línea. Por eso estación y momento del día van solo
-// con ícono (el nombre está en el título y para lectores de pantalla) y clima y temperatura con texto.
+// con ícono, y al pasar el mouse cada chip dice qué es ("Estación: Primavera").
 function EnvironmentChips({ environment }: { environment: EnvironmentState }) {
     const chips = getEnvironmentChips(environment);
     return (
-        <div
-            data-environment-chips="true"
-            className="mb-1 flex min-w-0 items-center gap-[3px]"
-            title={chips.map((chip) => chip.label).join(" · ")}
-        >
-            {chips.map(({ key, icon: Icon, label, iconOnly }) => (
+        <div data-environment-chips="true" className="mb-1 flex min-w-0 items-center gap-[3px]">
+            {chips.map(({ key, kind, icon: Icon, label, iconOnly }) => (
                 <span
                     key={key}
-                    title={label}
-                    className={`inline-flex items-center gap-[3px] whitespace-nowrap rounded-sm border border-[#6b5636]/50 bg-black/30 px-[3px] py-[2px] text-[9px] font-semibold leading-none text-[#d9c39d] ${iconOnly ? "shrink-0" : "min-w-0"}`}
+                    data-environment-chip={key}
+                    aria-label={`${kind}: ${label}`}
+                    className={`group relative inline-flex cursor-help items-center gap-[3px] whitespace-nowrap rounded-sm border border-[#6b5636]/50 bg-black/30 px-[3px] py-[2px] text-[9px] font-semibold leading-none text-[#d9c39d] transition-colors hover:border-[#c9a86a]/70 hover:text-amber-100 ${iconOnly ? "shrink-0" : "min-w-0"}`}
                 >
                     <Icon className="h-2.5 w-2.5 shrink-0 text-[#c9a86a]" aria-hidden="true" />
-                    {iconOnly ? <span className="sr-only">{label}</span> : <span className="truncate">{label}</span>}
+                    {iconOnly ? null : <span className="truncate">{label}</span>}
+                    <span
+                        role="tooltip"
+                        className="pointer-events-none absolute bottom-full left-0 z-50 mb-1 whitespace-nowrap rounded border border-[#6b5636] bg-stone-950/95 px-1.5 py-1 text-[10px] font-semibold normal-case tracking-normal text-amber-50 opacity-0 shadow-lg transition-opacity duration-100 group-hover:opacity-100"
+                    >
+                        <span className="text-[#c9a86a]">{kind}:</span> {label}
+                    </span>
                 </span>
             ))}
         </div>

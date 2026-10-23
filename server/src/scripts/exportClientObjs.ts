@@ -24,6 +24,7 @@ type SourceObject = {
     subtipo?: number;
     cosmetico?: number;
     disfraz?: number;
+    anim?: number;
     clasesNoPermitidas?: number[];
 };
 
@@ -48,6 +49,7 @@ type ClientObject = {
     subtipo?: number;
     cosmetico?: number;
     disfraz?: number;
+    anim?: number;
     clasesNoPermitidas?: number[];
 };
 
@@ -104,6 +106,10 @@ function toClientObject(source: SourceObject): ClientObject {
     // Objetos de apariencia: el cliente no los ofrece para equipar.
     addOptionalNumber(clientObject, "cosmetico", source.cosmetico);
     addOptionalNumber(clientObject, "disfraz", source.disfraz);
+    // Cuerpo de las armaduras: el cliente lo usa para adaptarlas a la silueta de cada raza (armorWarp.ts).
+    if (source.objType === 3 && !source.subtipo && !source.disfraz) {
+        addOptionalNumber(clientObject, "anim", source.anim);
+    }
 
     if (Array.isArray(source.clasesNoPermitidas) && source.clasesNoPermitidas.length > 0) {
         clientObject.clasesNoPermitidas = source.clasesNoPermitidas;

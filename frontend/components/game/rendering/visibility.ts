@@ -6,6 +6,11 @@ import type { Character } from "../engine/Engine";
 
 const GHOST_ALPHA = 0.45;
 const PARTY_INVISIBLE_ALPHA = 0.4;
+// Invisible peleando contra jugadores: mientras dura la ventana de combate hace fade in / fade out
+// completos (de invisible del todo a visible del todo y vuelta), así el rival lo sigue. Al terminar la
+// ventana se apaga suave.
+const PVP_REVEAL_PERIOD_MS = 1400;
+const PVP_REVEAL_FADE_OUT_MS = 500;
 
 export type TreeFadeSource = "object" | "layer3";
 
@@ -20,18 +25,6 @@ export type TreeSpriteEntry = {
 
 function clampAlpha(value: number): number {
     return Math.max(0, Math.min(1, value));
-}
-
-function easeInCubic(progress: number): number {
-    const clampedProgress = Math.max(0, Math.min(1, progress));
-
-    return clampedProgress * clampedProgress * clampedProgress;
-}
-
-function easeOutCubic(progress: number): number {
-    const clampedProgress = Math.max(0, Math.min(1, progress));
-
-    return 1 - Math.pow(1 - clampedProgress, 3);
 }
 
 function lerp(start: number, end: number, progress: number): number {
@@ -135,33 +128,23 @@ export function shouldHighlightClanTag(
     return (playerHud?.zonaSegura ?? character?.zonaSegura) === 0;
 }
 
-export function getInvisibilityCycleAlpha(
+// Arranca invisible, aparece del todo a mitad del ciclo y vuelve a desaparecer (coseno).
+export function getPvpRevealAlpha(
     startedAt: number,
-    timing: RuntimeTimingConfig,
+    revealUntil: number,
+    hiddenAlpha: number,
     now = Date.now(),
 ): number {
-    const fadeOutMs = Math.max(1, timing.visualEffects.invisibilityFadeOutMs);
-    const fadeInMs = Math.max(1, timing.visualEffects.invisibilityFadeInMs);
-    const minAlpha = clampAlpha(timing.visualEffects.invisibilityMinAlpha);
-    const maxAlpha = clampAlpha(timing.visualEffects.invisibilityMaxAlpha);
-    const hiddenAlpha = Math.min(minAlpha, maxAlpha);
-    const visibleAlpha = Math.max(minAlpha, maxAlpha);
-    const cycleDurationMs = fadeOutMs + fadeInMs;
-    const elapsedInCycle = Math.max(0, now - startedAt) % cycleDurationMs;
-
-    if (elapsedInCycle < fadeOutMs) {
-        return lerp(
-            visibleAlpha,
-            hiddenAlpha,
-            easeOutCubic(elapsedInCycle / fadeOutMs),
-        );
+    const phase =
+        (Math.max(0, now - startedAt) % PVP_REVEAL_PERIOD_MS) /
+        PVP_REVEAL_PERIOD_MS;
+    const wave = (1 - Math.cos(phase * Math.PI * 2)) / 2;
+    const alpha = lerp(hiddenAlpha, 1, wave);
+    const remainingMs = revealUntil - now;
+    if (remainingMs < PVP_REVEAL_FADE_OUT_MS) {
+        return lerp(hiddenAlpha, alpha, Math.max(0, remainingMs) / PVP_REVEAL_FADE_OUT_MS);
     }
-
-    return lerp(
-        hiddenAlpha,
-        visibleAlpha,
-        easeInCubic((elapsedInCycle - fadeOutMs) / fadeInMs),
-    );
+    return alpha;
 }
 
 export function isTreeObjectData(objectData: ObjectData | undefined): boolean {
@@ -205,9 +188,23 @@ export function getCharacterRenderAlpha(
             return PARTY_INVISIBLE_ALPHA;
         }
 
-        return getInvisibilityCycleAlpha(
-            character.invisibilityCycleStartedAt ?? Date.now(),
-            timing,
+        // Para los enemigos solo parpadea mientras pelea contra jugadores (el server manda la ventana);
+        // fuera de eso queda invisible del todo y la invisibilidad sirve para escapar.
+        const now = Date.now();
+        const hiddenAlpha = Math.min(
+            clampAlpha(timing.visualEffects.invisibilityMinAlpha),
+            clampAlpha(timing.visualEffects.invisibilityMaxAlpha),
+        );
+        const revealUntil = character.pvpRevealUntil ?? 0;
+        if (revealUntil <= now) {
+            return hiddenAlpha;
+        }
+
+        return getPvpRevealAlpha(
+            character.invisibilityCycleStartedAt ?? now,
+            revealUntil,
+            hiddenAlpha,
+            now,
         );
     }
 

@@ -97,6 +97,7 @@ import {
 } from "../rendering/rowLayerContainers";
 import { destroyWeatherFx, updateWeatherFx } from "../rendering/weatherFx";
 import { updateEquipmentAuras } from "../rendering/equipmentAuras";
+import { getLayoutBodyData } from "../rendering/armorWarp";
 
 const TREE_FADE_ALPHA = 0.25;
 const WATER_ANIMATION_SPEED_MULTIPLIER = 10;
@@ -226,6 +227,9 @@ export interface Character {
     invisibleSpell?: boolean;
     hiddenSkill?: boolean;
     invisibilityCycleStartedAt?: number;
+    // Hasta cuándo un invisible parpadea por estar peleando contra jugadores (rendering/visibility.ts).
+    pvpRevealUntil?: number;
+    isHostileNpc?: boolean;
     isPartyMember?: boolean;
     isClanMember?: boolean;
     color?: string;
@@ -577,6 +581,9 @@ export class Engine {
     user: PlayerCharacter | null = null;
     isServerDriven = false;
     partyMemberIds: Set<string> = new Set();
+    // Hover sobre personajes (rendering/hoverHighlight.ts).
+    hoverPointerGlobal: { x: number; y: number } | null = null;
+    hoveredEntityId: number | null = null;
     canAutoEmbark = false;
     healthBarEntityIds: Set<number> = new Set();
     remoteEntities: Map<number, Container> = new Map();
@@ -742,8 +749,13 @@ export class Engine {
             invisibilityCycleStartedAt: hasActiveInvisibility
                 ? Date.now()
                 : undefined,
+            pvpRevealUntil:
+                (snapshot.pvpRevealRemainingMs ?? 0) > 0
+                    ? Date.now() + (snapshot.pvpRevealRemainingMs ?? 0)
+                    : 0,
             isPartyMember: snapshot.isPartyMember,
             isClanMember: snapshot.isClanMember,
+            isHostileNpc: snapshot.isHostileNpc,
             color: snapshot.color,
             clan: snapshot.clan,
             zonaSegura: snapshot.zonaSegura,
@@ -828,8 +840,21 @@ export class Engine {
                 ? (character.invisibilityCycleStartedAt ?? Date.now())
                 : Date.now()
             : undefined;
+        if (typeof snapshot.pvpRevealRemainingMs === "number") {
+            const now = Date.now();
+            const wasRevealed = (character.pvpRevealUntil ?? 0) > now;
+            character.pvpRevealUntil =
+                snapshot.pvpRevealRemainingMs > 0
+                    ? now + snapshot.pvpRevealRemainingMs
+                    : 0;
+            // Al empezar a revelarse arranca el ciclo visible, así se nota enseguida.
+            if (!wasRevealed && character.pvpRevealUntil > now && hasActiveInvisibility) {
+                character.invisibilityCycleStartedAt = now;
+            }
+        }
         character.isPartyMember = snapshot.isPartyMember;
         character.isClanMember = snapshot.isClanMember;
+        if (snapshot.isNpc) character.isHostileNpc = snapshot.isHostileNpc;
         character.color = snapshot.color;
         character.clan = snapshot.clan;
         character.zonaSegura = snapshot.zonaSegura;
@@ -2195,7 +2220,11 @@ export class Engine {
             syncCharacterContainerToRenderRow(this, entity, container);
 
             const direction = entity.heading.toString();
-            const bodyData = this.bodiesDB[entity.idBody.toString()];
+            const bodyData = getLayoutBodyData(
+                container,
+                entity.idBody,
+                this.bodiesDB,
+            );
             const weaponData = entity.idWeapon
                 ? this.weaponsDB?.[entity.idWeapon.toString()]
                 : undefined;
@@ -2880,7 +2909,11 @@ export class Engine {
     updateCharacterAnimations(): void {
         if (!this.user || !this.graphicsDB || !this.bodiesDB) return;
 
-        const bodyData = this.bodiesDB[this.user.idBody.toString()];
+        const bodyData = getLayoutBodyData(
+            this.playerContainer,
+            this.user.idBody,
+            this.bodiesDB,
+        );
         if (!bodyData) return;
 
         const direction = this.user.heading.toString();
@@ -3239,7 +3272,11 @@ export class Engine {
             );
 
             if (headSprite && this.bodiesDB && spriteToUpdate) {
-                const bodyData = this.bodiesDB[this.user.idBody.toString()];
+                const bodyData = getLayoutBodyData(
+                    this.playerContainer,
+                    this.user.idBody,
+                    this.bodiesDB,
+                );
                 const bodyMetrics = (spriteToUpdate as any).renderMetrics as
                     | BodyRenderMetrics
                     | undefined;
@@ -3265,7 +3302,11 @@ export class Engine {
                 this.helmetsDB &&
                 spriteToUpdate
             ) {
-                const bodyData = this.bodiesDB[this.user.idBody.toString()];
+                const bodyData = getLayoutBodyData(
+                    this.playerContainer,
+                    this.user.idBody,
+                    this.bodiesDB,
+                );
                 const helmetData =
                     this.helmetsDB[this.user.idHelmet?.toString() || ""];
                 if (bodyData && helmetData) {

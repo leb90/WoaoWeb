@@ -348,6 +348,13 @@ CREATE TABLE IF NOT EXISTS clan_vault_items (
     PRIMARY KEY (clan_id, id_pos)
 );
 
+-- Rareza por instancia de ítem: 0 Normal, 1 Mejorado, 2 Épico, 3 Legendario (server/src/itemRarity.ts).
+-- Un ítem con rareza va de a uno por lugar.
+ALTER TABLE character_items ADD COLUMN IF NOT EXISTS rarity SMALLINT NOT NULL DEFAULT 0;
+ALTER TABLE character_bank_items ADD COLUMN IF NOT EXISTS rarity SMALLINT NOT NULL DEFAULT 0;
+ALTER TABLE account_vault_items ADD COLUMN IF NOT EXISTS rarity SMALLINT NOT NULL DEFAULT 0;
+ALTER TABLE clan_vault_items ADD COLUMN IF NOT EXISTS rarity SMALLINT NOT NULL DEFAULT 0;
+
 CREATE TABLE IF NOT EXISTS character_spells (
     character_id UUID NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
     id_pos INTEGER NOT NULL,

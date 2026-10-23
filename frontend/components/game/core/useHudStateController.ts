@@ -189,6 +189,9 @@ export function useHudStateController({
                       ...(!hud.shopState && previousHud?.shopState
                           ? { shopState: previousHud.shopState }
                           : {}),
+                      ...(!hud.aggroState && previousHud?.aggroState
+                          ? { aggroState: previousHud.aggroState }
+                          : {}),
                   }
                 : hud;
 

@@ -37,6 +37,7 @@ import {
     setTextIfChanged,
 } from "../rendering/textStyles";
 import { Engine } from "../engine/Engine";
+import { updateHoverHighlight } from "../rendering/hoverHighlight";
 import {
     isAdminInspector,
     buildInspectableNpc,
@@ -532,6 +533,17 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                     });
                 };
 
+                // Hover con contorno de color sobre personajes y NPC (no en pantallas táctiles).
+                mapContainer.on("pointermove", (event) => {
+                    if (event.pointerType === "touch") {
+                        return;
+                    }
+                    engine.hoverPointerGlobal = { x: event.global.x, y: event.global.y };
+                });
+                app.canvas.addEventListener("pointerleave", () => {
+                    engine.hoverPointerGlobal = null;
+                });
+
                 mapContainer.on("pointerdown", (event) => {
                     const interaction = getInteractionContext(event);
                     if (!interaction) {
@@ -871,6 +883,7 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                     options.updateActiveDialogBubblePositions(engine);
                     options.updateActiveCastBarPositions(engine);
                     options.updateEntityFXPositions(engine);
+                    updateHoverHighlight(engine, findVisibleEntityAtExactTile);
                 };
                 app.ticker.add(dialogBubbleTicker);
                 engine.dialogBubbleTicker = dialogBubbleTicker;

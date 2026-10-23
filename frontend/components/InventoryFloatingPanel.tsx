@@ -30,6 +30,18 @@ import {
     Clock3,
     Swords,
     ShoppingBag,
+    Flower2,
+    Leaf,
+    Snowflake,
+    Sun,
+    Sunrise,
+    Sunset,
+    Moon,
+    CloudRain,
+    CloudLightning,
+    CloudFog,
+    Thermometer,
+    type LucideIcon,
 } from "lucide-react";
 import type {
     CharacterStatsSnapshot,
@@ -64,6 +76,7 @@ import {
 import WoaoHubModal, { type WoaoHubTab } from "./WoaoHubModal";
 import TransmogModal from "./transmog/TransmogModal";
 import EquipmentPanel, { getInventoryItemEquipmentKind } from "./EquipmentPanel";
+import { formatItemNameWithRarity, getRarityName, getRarityTextColor, getRaritySlotClasses } from "../lib/itemRarity";
 import { getEquippedItemAction } from "../lib/equipmentKinds";
 import DonationShopModal from "./transmog/DonationShopModal";
 import SkillsModal from "./SkillsModal";
@@ -1209,16 +1222,67 @@ const WEATHER_LABELS: Record<number, string> = {
     [WEATHER.niebla]: "Niebla",
 };
 
-function formatEnvironmentLabel(environment: EnvironmentState | null | undefined) {
-    if (!environment) {
-        return null;
-    }
+const SEASON_ICONS: Record<number, LucideIcon> = {
+    [SEASON.verano]: Sun,
+    [SEASON.otono]: Leaf,
+    [SEASON.invierno]: Snowflake,
+    [SEASON.primavera]: Flower2,
+};
 
-    const season = SEASON_LABELS[environment.season] ?? "";
-    const dayPhase = DAY_PHASE_LABELS[environment.dayPhase] ?? "";
-    const weather = WEATHER_LABELS[environment.weather] ?? "";
+const DAY_PHASE_ICONS: Record<number, LucideIcon> = {
+    [DAY_PHASE.manana]: Sunrise,
+    [DAY_PHASE.mediodia]: Sun,
+    [DAY_PHASE.tarde]: Sunset,
+    [DAY_PHASE.noche]: Moon,
+};
 
-    return `${season} · ${dayPhase} · ${weather} · ${environment.temperatureC}°C`;
+const WEATHER_ICONS: Record<number, LucideIcon> = {
+    [WEATHER.despejado]: Sun,
+    [WEATHER.lluvia]: CloudRain,
+    [WEATHER.tormenta]: CloudLightning,
+    [WEATHER.nieve]: Snowflake,
+    [WEATHER.niebla]: CloudFog,
+};
+
+type EnvironmentChip = { key: string; icon: LucideIcon | undefined; label: string | undefined; iconOnly?: boolean };
+
+function getEnvironmentChips(environment: EnvironmentState) {
+    const chips: EnvironmentChip[] = [
+        { key: "season", icon: SEASON_ICONS[environment.season], label: SEASON_LABELS[environment.season], iconOnly: true },
+        { key: "phase", icon: DAY_PHASE_ICONS[environment.dayPhase], label: DAY_PHASE_LABELS[environment.dayPhase], iconOnly: true },
+        { key: "weather", icon: WEATHER_ICONS[environment.weather], label: WEATHER_LABELS[environment.weather] },
+        { key: "temperature", icon: Thermometer, label: `${environment.temperatureC}°C` },
+    ];
+    return chips.filter(
+        (chip): chip is { key: string; icon: LucideIcon; label: string; iconOnly?: boolean } =>
+            chip.icon !== undefined && Boolean(chip.label),
+    );
+}
+
+// Estación, momento del día, clima y temperatura en una fila de chips (antes era una línea de 8 px con
+// truncate que se cortaba en pantallas angostas). Tiene que entrar en una sola fila: el panel tiene alto fijo
+// y si esto crece, el detalle del ítem pierde su segunda línea. Por eso estación y momento del día van solo
+// con ícono (el nombre está en el título y para lectores de pantalla) y clima y temperatura con texto.
+function EnvironmentChips({ environment }: { environment: EnvironmentState }) {
+    const chips = getEnvironmentChips(environment);
+    return (
+        <div
+            data-environment-chips="true"
+            className="mb-1 flex min-w-0 items-center gap-[3px]"
+            title={chips.map((chip) => chip.label).join(" · ")}
+        >
+            {chips.map(({ key, icon: Icon, label, iconOnly }) => (
+                <span
+                    key={key}
+                    title={label}
+                    className={`inline-flex items-center gap-[3px] whitespace-nowrap rounded-sm border border-[#6b5636]/50 bg-black/30 px-[3px] py-[2px] text-[9px] font-semibold leading-none text-[#d9c39d] ${iconOnly ? "shrink-0" : "min-w-0"}`}
+                >
+                    <Icon className="h-2.5 w-2.5 shrink-0 text-[#c9a86a]" aria-hidden="true" />
+                    {iconOnly ? <span className="sr-only">{label}</span> : <span className="truncate">{label}</span>}
+                </span>
+            ))}
+        </div>
+    );
 }
 
 export default function InventoryFloatingPanel({
@@ -3348,17 +3412,26 @@ export default function InventoryFloatingPanel({
                                                           ],
                                                       )
                                                     : null;
+                                                const slotSelected = Boolean(
+                                                    item &&
+                                                        selectedSlot ===
+                                                            item.slot,
+                                                );
+                                                // Túnicas especiales primero; si no, el color de la rareza.
                                                 const specialSlotClasses =
                                                     !isInvalidForUser
                                                         ? getSpecialItemSlotClasses(
                                                               specialAccent,
                                                               {
                                                                   selected:
-                                                                      Boolean(
-                                                                          item &&
-                                                                              selectedSlot ===
-                                                                                  item.slot,
-                                                                      ),
+                                                                      slotSelected,
+                                                              },
+                                                          ) ||
+                                                          getRaritySlotClasses(
+                                                              item?.rarity,
+                                                              {
+                                                                  selected:
+                                                                      slotSelected,
                                                               },
                                                           )
                                                         : "";
@@ -3532,8 +3605,25 @@ export default function InventoryFloatingPanel({
                                     >
                                         {inventoryDetailItem ? (
                                             <>
-                                                <p className="font-semibold text-amber-100">
-                                                    {inventoryDetailItem.name}
+                                                <p
+                                                    className="font-semibold text-amber-100"
+                                                    style={{
+                                                        color: getRarityTextColor(
+                                                            inventoryDetailItem.rarity,
+                                                        ),
+                                                    }}
+                                                >
+                                                    {formatItemNameWithRarity(
+                                                        inventoryDetailItem.name,
+                                                        inventoryDetailItem.rarity,
+                                                    )}
+                                                    {inventoryDetailItem.rarity > 0 ? (
+                                                        <span className="ml-1.5 text-[10px] font-medium uppercase tracking-wide opacity-80">
+                                                            {getRarityName(
+                                                                inventoryDetailItem.rarity,
+                                                            )}
+                                                        </span>
+                                                    ) : null}
                                                 </p>
                                                 {inventoryDetailText ? (
                                                     <p className="mt-1 whitespace-pre-wrap break-words text-stone-300/90">
@@ -3890,7 +3980,7 @@ export default function InventoryFloatingPanel({
                                     <button
                                         type="button"
                                         onClick={() => setIsWorldMapOpen(true)}
-                                        className="mb-1 w-full text-left text-[9px] font-semibold tracking-[0.04em] text-[#cbb18e] transition hover:text-amber-100"
+                                        className="mb-1 block w-full truncate text-left text-[9px] font-semibold tracking-[0.04em] text-[#cbb18e] transition hover:text-amber-100"
                                         aria-label="Abrir mapa del mundo"
                                         title={
                                             hud
@@ -3901,9 +3991,7 @@ export default function InventoryFloatingPanel({
                                         {mapName || "Sin mapa cargado"}
                                     </button>
                                     {environment ? (
-                                        <p className="mb-1 truncate text-[8px] font-semibold uppercase tracking-[0.03em] text-[#a6926f]">
-                                            {formatEnvironmentLabel(environment)}
-                                        </p>
+                                        <EnvironmentChips environment={environment} />
                                     ) : null}
                                     <VitalBars
                                         hp={hud?.hp || 0}

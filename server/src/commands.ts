@@ -4508,7 +4508,7 @@ const command: CommandApi = {
 
                         if (createItemArgs.length < 2) {
                             handleProtocol.console(
-                                "[INFO] Uso: /crearitem ID_ITEM CANTIDAD",
+                                "[INFO] Uso: /crearitem ID_ITEM CANTIDAD [RAREZA 0-3: normal, mejorado, epico, legendario]",
                                 "#E69500",
                                 0,
                                 0,
@@ -4522,7 +4522,7 @@ const command: CommandApi = {
 
                         if (!Number.isInteger(idItem) || idItem <= 0 || !Number.isInteger(cant) || cant <= 0) {
                             handleProtocol.console(
-                                "[INFO] Uso: /crearitem ID_ITEM CANTIDAD",
+                                "[INFO] Uso: /crearitem ID_ITEM CANTIDAD [RAREZA 0-3: normal, mejorado, epico, legendario]",
                                 "#E69500",
                                 0,
                                 0,
@@ -4544,7 +4544,12 @@ const command: CommandApi = {
                             break;
                         }
 
-                        game.putItemToInv(user.id, idItem, cant);
+                        // Rareza opcional (0 Normal, 1 Mejorado, 2 Épico, 3 Legendario o su nombre).
+                        const rarityArg = String(createItemArgs[2] ?? "0").toLowerCase();
+                        const rarityByName: Record<string, number> = { normal: 0, mejorado: 1, raro: 1, epico: 2, "épico": 2, legendario: 3 };
+                        const requestedRarity = rarityByName[rarityArg] ?? Number.parseInt(rarityArg, 10);
+                        const rarity = Number.isInteger(requestedRarity) ? Math.max(0, Math.min(3, requestedRarity)) : 0;
+                        game.putItemToInv(user.id, idItem, cant, rarity);
                         void game.persistCharacterItemsById(user.id).catch((error: unknown) => {
                             funct.dumpError(error);
                         });

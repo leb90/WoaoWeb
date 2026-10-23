@@ -29,6 +29,11 @@ export type RuntimeBalanceData = {
     modAtaqueProyectiles: Record<number, number>;
     modAtaqueArmas: Record<number, number>;
     modEvasion: Record<number, number>;
+    // Factores que solo se aplican contra jugadores (PvP). No tocan el daño contra NPC.
+    // Ver docs/balance/BALANCE_PVP.md, sección 7.2.
+    modDmgPvpArmas: Record<number, number>;
+    modDmgPvpProyectiles: Record<number, number>;
+    modDmgPvpMagia: Record<number, number>;
 };
 
 const DEFAULT_BALANCE_DATA: RuntimeBalanceData = {
@@ -64,13 +69,14 @@ const DEFAULT_BALANCE_DATA: RuntimeBalanceData = {
         15: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
         16: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
         17: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
-        18: { vida: 10, vidaMin: 8, vidaMax: 12, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+        18: { vida: 10, vidaMin: 8, vidaMax: 12, manaInicial: 2.5, multMana: 1, hitPre36: 3, hitPost36: 2 },
         19: { vida: 8.5, vidaMin: 7, vidaMax: 10, manaInicial: 2.5, multMana: 1, hitPre36: 2, hitPost36: 2 },
         20: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
         21: { vida: 9, vidaMin: 7, vidaMax: 11, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
     },
     modEscudo: { 1: 0, 2: 0.8, 3: 1, 4: 0.8, 5: 0.7, 6: 0.65, 7: 0, 8: 0.9, 9: 0.75, 12: 0.7, 13: 0.7, 14: 0.7, 15: 0.7, 16: 0.7, 17: 0.7, 18: 0, 19: 0.7, 20: 0.6, 21: 0.6 },
-    modDmgMagia: { 1: 1.05, 2: 0.88, 3: 0, 4: 0.76, 5: 0, 6: 0.93, 7: 0.92, 8: 0.78, 9: 0, 12: 0, 13: 0, 14: 0, 15: 0, 16: 0, 17: 0, 18: 0, 19: 0.5, 20: 0, 21: 0 },
+    // Pirata 0,5: sin esto sus Disparos (únicos hechizos que puede aprender) pegan 1.
+    modDmgMagia: { 1: 1.05, 2: 0.88, 3: 0, 4: 0.76, 5: 0, 6: 0.93, 7: 0.92, 8: 0.78, 9: 0, 12: 0, 13: 0, 14: 0, 15: 0, 16: 0, 17: 0, 18: 0.5, 19: 0.5, 20: 0, 21: 0 },
     modResistenciaMagica: { 1: 0, 2: 4, 3: 12, 4: 5, 5: 4, 6: 2, 7: 3, 8: 5, 9: 6, 12: 4, 13: 4, 14: 4, 15: 4, 16: 4, 17: 4, 18: 6, 19: 4, 20: 4, 21: 4 },
     modDmgWrestling: { 1: 0.4, 2: 0.4, 3: 0.4, 4: 0.4, 5: 0.4, 6: 0.4, 7: 0.4, 8: 0.4, 9: 0.4, 12: 0.4, 13: 0.4, 14: 0.4, 15: 0.4, 16: 0.4, 17: 0.4, 18: 0.4, 19: 0.4, 20: 0.4, 21: 0.4 },
     modDmgProyectiles: { 1: 0.5, 2: 0.75, 3: 0.87, 4: 0.75, 5: 0.75, 6: 0.75, 7: 0.75, 8: 0.8, 9: 0.93, 12: 0.8, 13: 0.7, 14: 0.7, 15: 0.6, 16: 0.7, 17: 0.7, 18: 0.8, 19: 0.75, 20: 1.1, 21: 0.5 },
@@ -79,6 +85,12 @@ const DEFAULT_BALANCE_DATA: RuntimeBalanceData = {
     modAtaqueProyectiles: { 1: 0.5, 2: 0.8, 3: 0.85, 4: 0.7, 5: 0.8, 6: 0.7, 7: 0.6, 8: 0.78, 9: 0.95, 12: 0.75, 13: 0.7, 14: 0.7, 15: 0.7, 16: 0.7, 17: 0.7, 18: 0.9, 19: 0.7, 20: 1, 21: 0.5 },
     modAtaqueArmas: { 1: 0.5, 2: 0.98, 3: 1.1, 4: 1, 5: 0.75, 6: 0.88, 7: 0.8, 8: 1.03, 9: 0.8, 12: 0.7, 13: 0.8, 14: 0.8, 15: 0.8, 16: 0.8, 17: 0.8, 18: 0.9, 19: 0.8, 20: 0.5, 21: 0.5 },
     modEvasion: { 1: 0.35, 2: 0.8, 3: 1, 4: 0.9, 5: 1.1, 6: 1, 7: 0.9, 8: 0.85, 9: 0.9, 12: 0.7, 13: 0.8, 14: 0.8, 15: 0.8, 16: 0.8, 17: 0.8, 18: 1.25, 19: 0.8, 20: 0.8, 21: 0.8 },
+    // Medidos con el simulador (server/src/scripts/balanceSim) para Mago, Druida, Clérigo, Bardo, Paladín,
+    // Asesino, Guerrero y Cazador. El resto usa los valores de su par más cercano (guerrero para el golpe,
+    // cazador para la flecha) hasta que se mida.
+    modDmgPvpArmas: { 1: 1, 2: 0.5, 3: 0.5, 4: 0.4, 5: 0.5, 6: 0.5, 7: 1.2, 8: 0.45, 9: 0.45, 12: 0.5, 13: 0.5, 14: 0.5, 15: 0.5, 16: 0.5, 17: 0.5, 18: 0.5, 19: 0.5, 20: 0.5, 21: 0.5 },
+    modDmgPvpProyectiles: { 1: 0.9, 2: 0.9, 3: 0.9, 4: 0.9, 5: 0.9, 6: 0.9, 7: 0.9, 8: 0.9, 9: 0.9, 12: 0.9, 13: 0.9, 14: 0.9, 15: 0.9, 16: 0.9, 17: 0.9, 18: 0.9, 19: 0.9, 20: 0.9, 21: 0.9 },
+    modDmgPvpMagia: { 1: 1.1, 2: 1.25, 3: 1, 4: 1.5, 5: 1, 6: 1.5, 7: 1, 8: 1.45, 9: 1, 12: 1, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1, 18: 1, 19: 1, 20: 1, 21: 1 },
 };
 
 function cloneNumericRecord<T>(record: Record<number, T>): Record<number, T> {
@@ -111,6 +123,9 @@ function cloneDefaults(): RuntimeBalanceData {
         modAtaqueProyectiles: cloneNumericRecord(DEFAULT_BALANCE_DATA.modAtaqueProyectiles),
         modAtaqueArmas: cloneNumericRecord(DEFAULT_BALANCE_DATA.modAtaqueArmas),
         modEvasion: cloneNumericRecord(DEFAULT_BALANCE_DATA.modEvasion),
+        modDmgPvpArmas: cloneNumericRecord(DEFAULT_BALANCE_DATA.modDmgPvpArmas),
+        modDmgPvpProyectiles: cloneNumericRecord(DEFAULT_BALANCE_DATA.modDmgPvpProyectiles),
+        modDmgPvpMagia: cloneNumericRecord(DEFAULT_BALANCE_DATA.modDmgPvpMagia),
     };
 }
 
@@ -212,6 +227,18 @@ export function normalizeBalanceData(input: unknown): RuntimeBalanceData {
             input && (input as RuntimeBalanceData).modEvasion,
             DEFAULT_BALANCE_DATA.modEvasion,
         ),
+        modDmgPvpArmas: normalizeNumberMap(
+            input && (input as RuntimeBalanceData).modDmgPvpArmas,
+            DEFAULT_BALANCE_DATA.modDmgPvpArmas,
+        ),
+        modDmgPvpProyectiles: normalizeNumberMap(
+            input && (input as RuntimeBalanceData).modDmgPvpProyectiles,
+            DEFAULT_BALANCE_DATA.modDmgPvpProyectiles,
+        ),
+        modDmgPvpMagia: normalizeNumberMap(
+            input && (input as RuntimeBalanceData).modDmgPvpMagia,
+            DEFAULT_BALANCE_DATA.modDmgPvpMagia,
+        ),
     };
 }
 
@@ -230,6 +257,9 @@ export function applyBalanceDataToVars(targetVars: Record<string, unknown>, inpu
     targetVars.modAtaqueProyectiles = cloneToSparseArray(balanceData.modAtaqueProyectiles);
     targetVars.modAtaqueArmas = cloneToSparseArray(balanceData.modAtaqueArmas);
     targetVars.modEvasion = cloneToSparseArray(balanceData.modEvasion);
+    targetVars.modDmgPvpArmas = cloneToSparseArray(balanceData.modDmgPvpArmas);
+    targetVars.modDmgPvpProyectiles = cloneToSparseArray(balanceData.modDmgPvpProyectiles);
+    targetVars.modDmgPvpMagia = cloneToSparseArray(balanceData.modDmgPvpMagia);
 
     return balanceData;
 }

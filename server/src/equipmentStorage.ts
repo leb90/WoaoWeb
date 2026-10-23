@@ -104,17 +104,26 @@ export function findAvailableInventorySlot(record: InventoryRecord): number {
     return 0;
 }
 
+// Un ítem con rareza (rarity > 0) es único: no se apila con nada (ver itemRarity.ts).
+const hasRarity = (item: { rarity?: number } | null | undefined) => Number(item?.rarity ?? 0) > 0;
+
 export function getInventoryStackCapacity(
     record: InventoryRecord,
     idItem: number,
     maxStack = 10_000,
+    rarity = 0,
 ): number {
+    if (rarity > 0) {
+        return 0;
+    }
+
     let capacity = 0;
 
     for (const [slot, item] of Object.entries(record)) {
         if (
             !isInventorySlot(slot) ||
             item.idItem !== idItem ||
+            hasRarity(item) ||
             item.cant >= maxStack
         ) {
             continue;
@@ -131,14 +140,17 @@ export function canAddToInventory(
     idItem: number,
     amount: number,
     maxStack = 10_000,
+    rarity = 0,
 ): boolean {
+    const stackLimit = rarity > 0 ? 1 : maxStack;
     const stackCapacity = getInventoryStackCapacity(
         record,
         idItem,
         maxStack,
+        rarity,
     );
     const slotsNeeded = Math.ceil(
-        Math.max(0, amount - stackCapacity) / maxStack,
+        Math.max(0, amount - stackCapacity) / stackLimit,
     );
 
     return (
@@ -154,26 +166,32 @@ function addItemToInventory(
     maxStack = 10_000,
 ): boolean {
     let remaining = item.cant;
+    const unique = hasRarity(item);
+    const stackLimit = unique ? 1 : maxStack;
+    const createSlot = (amount: number) => ({
+        idItem: item.idItem,
+        cant: amount,
+        equipped: 0,
+        ...(unique ? { rarity: Number(item.rarity) } : {}),
+    });
 
     if (
         preferredSlot &&
         isInventorySlot(preferredSlot) &&
         !record[String(preferredSlot)]
     ) {
-        const amount = Math.min(remaining, maxStack);
-        record[String(preferredSlot)] = {
-            idItem: item.idItem,
-            cant: amount,
-            equipped: 0,
-        };
+        const amount = Math.min(remaining, stackLimit);
+        record[String(preferredSlot)] = createSlot(amount);
         remaining -= amount;
     }
 
     for (const [slot, inventoryItem] of Object.entries(record)) {
         if (
             remaining <= 0 ||
+            unique ||
             !isInventorySlot(slot) ||
             inventoryItem.idItem !== item.idItem ||
+            hasRarity(inventoryItem) ||
             inventoryItem.cant >= maxStack
         ) {
             continue;
@@ -191,12 +209,8 @@ function addItemToInventory(
             return false;
         }
 
-        const amount = Math.min(remaining, maxStack);
-        record[String(slot)] = {
-            idItem: item.idItem,
-            cant: amount,
-            equipped: 0,
-        };
+        const amount = Math.min(remaining, stackLimit);
+        record[String(slot)] = createSlot(amount);
         remaining -= amount;
     }
 
@@ -246,6 +260,7 @@ export function equipInventoryItem(
         idItem: sourceItem.idItem,
         cant: amountToEquip,
         equipped: 1,
+        ...(hasRarity(sourceItem) ? { rarity: Number(sourceItem.rarity) } : {}),
     };
 
     return { ok: true, inventory: next, equipmentSlot };

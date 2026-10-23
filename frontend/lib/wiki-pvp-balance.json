@@ -1,0 +1,1201 @@
+{
+ "generatedAt": "2026-10-23",
+ "trials": 2000,
+ "levels": [
+  30,
+  40,
+  50
+ ],
+ "classes": [
+  {
+   "id": 1,
+   "name": "Mago",
+   "modes": [
+    "magia"
+   ]
+  },
+  {
+   "id": 7,
+   "name": "Druida",
+   "modes": [
+    "magia",
+    "melee"
+   ]
+  },
+  {
+   "id": 2,
+   "name": "Clérigo",
+   "modes": [
+    "melee",
+    "magia"
+   ]
+  },
+  {
+   "id": 6,
+   "name": "Bardo",
+   "modes": [
+    "magia",
+    "melee"
+   ]
+  },
+  {
+   "id": 8,
+   "name": "Paladín",
+   "modes": [
+    "melee",
+    "magia"
+   ]
+  },
+  {
+   "id": 4,
+   "name": "Asesino",
+   "modes": [
+    "melee",
+    "magia"
+   ]
+  },
+  {
+   "id": 3,
+   "name": "Guerrero",
+   "modes": [
+    "melee"
+   ]
+  },
+  {
+   "id": 9,
+   "name": "Cazador",
+   "modes": [
+    "rango",
+    "melee"
+   ]
+  }
+ ],
+ "attackers": [
+  {
+   "classId": 1,
+   "mode": "magia",
+   "average": {
+    "30": 2.5,
+    "40": 3,
+    "50": 3.2
+   },
+   "vs": {
+    "30": {
+     "1": 2,
+     "2": 2,
+     "3": 3,
+     "4": 2.9,
+     "6": 2.2,
+     "7": 2,
+     "8": 3,
+     "9": 3
+    },
+    "40": {
+     "1": 2,
+     "2": 3,
+     "3": 4,
+     "4": 3,
+     "6": 3,
+     "7": 3,
+     "8": 3,
+     "9": 3
+    },
+    "50": {
+     "1": 3,
+     "2": 3,
+     "3": 4,
+     "4": 3,
+     "6": 3,
+     "7": 3,
+     "8": 3.1,
+     "9": 3.3
+    }
+   },
+   "set50": {
+    "comun": 3.2,
+    "conSet": 2.4,
+    "contraSet": 4.4,
+    "ambos": 3.6
+   }
+  },
+  {
+   "classId": 7,
+   "mode": "magia",
+   "average": {
+    "30": 3.1,
+    "40": 3.4,
+    "50": 4
+   },
+   "vs": {
+    "30": {
+     "1": 3,
+     "2": 3,
+     "3": 4,
+     "4": 3,
+     "6": 3,
+     "7": 3,
+     "8": 3,
+     "9": 3
+    },
+    "40": {
+     "1": 3,
+     "2": 3,
+     "3": 4.1,
+     "4": 3.3,
+     "6": 3,
+     "7": 3,
+     "8": 4,
+     "9": 4
+    },
+    "50": {
+     "1": 3,
+     "2": 4,
+     "3": 5,
+     "4": 4,
+     "6": 4,
+     "7": 4,
+     "8": 4,
+     "9": 4
+    }
+   },
+   "set50": {
+    "comun": 4,
+    "conSet": 3.1,
+    "contraSet": 5.6,
+    "ambos": 4.3
+   }
+  },
+  {
+   "classId": 7,
+   "mode": "melee",
+   "average": {
+    "30": 3,
+    "40": 3.1,
+    "50": 3.5
+   },
+   "vs": {
+    "30": {
+     "1": 2,
+     "2": 2.9,
+     "3": 3.6,
+     "4": 2.9,
+     "6": 2.9,
+     "7": 2,
+     "8": 3.6,
+     "9": 3.7
+    },
+    "40": {
+     "1": 2,
+     "2": 3.4,
+     "3": 3.9,
+     "4": 3.2,
+     "6": 3,
+     "7": 2,
+     "8": 3.8,
+     "9": 3.8
+    },
+    "50": {
+     "1": 2,
+     "2": 3.7,
+     "3": 4.2,
+     "4": 3.7,
+     "6": 3.4,
+     "7": 3,
+     "8": 4,
+     "9": 4
+    }
+   },
+   "set50": {
+    "comun": 3.5,
+    "conSet": 2.7,
+    "contraSet": 4.8,
+    "ambos": 3.7
+   }
+  },
+  {
+   "classId": 2,
+   "mode": "melee",
+   "average": {
+    "30": 2.8,
+    "40": 3.2,
+    "50": 3.8
+   },
+   "vs": {
+    "30": {
+     "1": 2,
+     "2": 2.8,
+     "3": 3.3,
+     "4": 2.8,
+     "6": 2.8,
+     "7": 2,
+     "8": 3.3,
+     "9": 3.3
+    },
+    "40": {
+     "1": 2,
+     "2": 3.5,
+     "3": 4,
+     "4": 3.3,
+     "6": 3,
+     "7": 2,
+     "8": 3.8,
+     "9": 3.8
+    },
+    "50": {
+     "1": 2.5,
+     "2": 3.8,
+     "3": 4.6,
+     "4": 3.8,
+     "6": 3.7,
+     "7": 3,
+     "8": 4.5,
+     "9": 4.5
+    }
+   },
+   "set50": {
+    "comun": 3.8,
+    "conSet": 2.6,
+    "contraSet": 5.3,
+    "ambos": 3.2
+   }
+  },
+  {
+   "classId": 2,
+   "mode": "magia",
+   "average": {
+    "30": 3.4,
+    "40": 3.9,
+    "50": 4
+   },
+   "vs": {
+    "30": {
+     "1": 3,
+     "2": 3,
+     "3": 4,
+     "4": 3,
+     "6": 3,
+     "7": 3,
+     "8": 4,
+     "9": 4
+    },
+    "40": {
+     "1": 3,
+     "2": 3.9,
+     "3": 5,
+     "4": 4,
+     "6": 4,
+     "7": 3.6,
+     "8": 4,
+     "9": 4
+    },
+    "50": {
+     "1": 3.1,
+     "2": 4,
+     "3": 5,
+     "4": 4,
+     "6": 4,
+     "7": 4,
+     "8": 4,
+     "9": 4.1
+    }
+   },
+   "set50": {
+    "comun": 4,
+    "conSet": 3.4,
+    "contraSet": 5.9,
+    "ambos": 5
+   }
+  },
+  {
+   "classId": 6,
+   "mode": "magia",
+   "average": {
+    "30": 3.1,
+    "40": 3.4,
+    "50": 4
+   },
+   "vs": {
+    "30": {
+     "1": 3,
+     "2": 3,
+     "3": 4,
+     "4": 3,
+     "6": 3,
+     "7": 3,
+     "8": 3,
+     "9": 3
+    },
+    "40": {
+     "1": 3,
+     "2": 3,
+     "3": 4.2,
+     "4": 3.3,
+     "6": 3,
+     "7": 3,
+     "8": 4,
+     "9": 4
+    },
+    "50": {
+     "1": 3,
+     "2": 4,
+     "3": 5,
+     "4": 4,
+     "6": 4,
+     "7": 3.8,
+     "8": 4,
+     "9": 4
+    }
+   },
+   "set50": {
+    "comun": 4,
+    "conSet": 3.2,
+    "contraSet": 5.5,
+    "ambos": 4.4
+   }
+  },
+  {
+   "classId": 6,
+   "mode": "melee",
+   "average": {
+    "30": 2.9,
+    "40": 3.4,
+    "50": 4
+   },
+   "vs": {
+    "30": {
+     "1": 2,
+     "2": 2.9,
+     "3": 3.6,
+     "4": 2.9,
+     "6": 2.8,
+     "7": 2,
+     "8": 3.6,
+     "9": 3.5
+    },
+    "40": {
+     "1": 2,
+     "2": 3.6,
+     "3": 4.2,
+     "4": 3.6,
+     "6": 3.3,
+     "7": 2.1,
+     "8": 4,
+     "9": 4.1
+    },
+    "50": {
+     "1": 3,
+     "2": 4,
+     "3": 4.8,
+     "4": 4,
+     "6": 3.9,
+     "7": 3,
+     "8": 4.6,
+     "9": 4.7
+    }
+   },
+   "set50": {
+    "comun": 4,
+    "conSet": 2.7,
+    "contraSet": 5.7,
+    "ambos": 3.6
+   }
+  },
+  {
+   "classId": 8,
+   "mode": "melee",
+   "average": {
+    "30": 2.4,
+    "40": 2.8,
+    "50": 3.1
+   },
+   "vs": {
+    "30": {
+     "1": 2,
+     "2": 2.5,
+     "3": 2.9,
+     "4": 2.4,
+     "6": 2.1,
+     "7": 2,
+     "8": 2.8,
+     "9": 2.8
+    },
+    "40": {
+     "1": 2,
+     "2": 2.8,
+     "3": 3.4,
+     "4": 2.9,
+     "6": 2.8,
+     "7": 2,
+     "8": 3.1,
+     "9": 3.1
+    },
+    "50": {
+     "1": 2,
+     "2": 3.1,
+     "3": 3.9,
+     "4": 3,
+     "6": 3,
+     "7": 2,
+     "8": 3.8,
+     "9": 3.7
+    }
+   },
+   "set50": {
+    "comun": 3.1,
+    "conSet": 2.2,
+    "contraSet": 4.4,
+    "ambos": 2.8
+   }
+  },
+  {
+   "classId": 8,
+   "mode": "magia",
+   "average": {
+    "30": 4.4,
+    "40": 5,
+    "50": 4.7
+   },
+   "vs": {
+    "30": {
+     "1": 3.9,
+     "2": 4,
+     "3": 5.4,
+     "4": 4.1,
+     "6": 4,
+     "7": 4,
+     "8": 4.8,
+     "9": 4.8
+    },
+    "40": {
+     "1": 4,
+     "2": 4.7,
+     "3": 6.2,
+     "4": 5,
+     "6": 4.9,
+     "7": 4.6,
+     "8": 5.2,
+     "9": 5.3
+    },
+    "50": {
+     "1": 4,
+     "2": 4,
+     "3": 6,
+     "4": 5,
+     "6": 4.3,
+     "7": 4,
+     "8": 5,
+     "9": 5
+    }
+   },
+   "set50": {
+    "comun": 4.7,
+    "conSet": 3.9,
+    "contraSet": 6.8,
+    "ambos": 5.4
+   }
+  },
+  {
+   "classId": 4,
+   "mode": "melee",
+   "average": {
+    "30": 3,
+    "40": 3.4,
+    "50": 4
+   },
+   "vs": {
+    "30": {
+     "1": 2,
+     "2": 2.9,
+     "3": 3.7,
+     "4": 2.9,
+     "6": 2.9,
+     "7": 2,
+     "8": 3.6,
+     "9": 3.7
+    },
+    "40": {
+     "1": 2,
+     "2": 3.7,
+     "3": 4.2,
+     "4": 3.6,
+     "6": 3.3,
+     "7": 2.1,
+     "8": 4.1,
+     "9": 4.1
+    },
+    "50": {
+     "1": 3,
+     "2": 4,
+     "3": 4.8,
+     "4": 4,
+     "6": 3.9,
+     "7": 3,
+     "8": 4.6,
+     "9": 4.6
+    }
+   },
+   "set50": {
+    "comun": 4,
+    "conSet": 2.7,
+    "contraSet": 5.7,
+    "ambos": 3.7
+   }
+  },
+  {
+   "classId": 4,
+   "mode": "magia",
+   "average": {
+    "30": 4.3,
+    "40": 4.9,
+    "50": 4.4
+   },
+   "vs": {
+    "30": {
+     "1": 3.8,
+     "2": 4,
+     "3": 5.2,
+     "4": 4.1,
+     "6": 4,
+     "7": 4,
+     "8": 4.7,
+     "9": 4.8
+    },
+    "40": {
+     "1": 4,
+     "2": 4.6,
+     "3": 6.1,
+     "4": 5,
+     "6": 4.9,
+     "7": 4.5,
+     "8": 5.2,
+     "9": 5.2
+    },
+    "50": {
+     "1": 4,
+     "2": 4,
+     "3": 5.5,
+     "4": 4,
+     "6": 4,
+     "7": 4,
+     "8": 5,
+     "9": 5
+    }
+   },
+   "set50": {
+    "comun": 4.4,
+    "conSet": 4.5,
+    "contraSet": 6.2,
+    "ambos": 6.4
+   }
+  },
+  {
+   "classId": 3,
+   "mode": "melee",
+   "average": {
+    "30": 2,
+    "40": 2.4,
+    "50": 2.7
+   },
+   "vs": {
+    "30": {
+     "1": 1.7,
+     "2": 2,
+     "3": 2.3,
+     "4": 2,
+     "6": 2,
+     "7": 2,
+     "8": 2.1,
+     "9": 2.1
+    },
+    "40": {
+     "1": 2,
+     "2": 2.2,
+     "3": 3,
+     "4": 2.2,
+     "6": 2,
+     "7": 2,
+     "8": 2.8,
+     "9": 2.8
+    },
+    "50": {
+     "1": 2,
+     "2": 2.8,
+     "3": 3,
+     "4": 2.9,
+     "6": 2.8,
+     "7": 2,
+     "8": 3,
+     "9": 3
+    }
+   },
+   "set50": {
+    "comun": 2.7,
+    "conSet": 2,
+    "contraSet": 3.6,
+    "ambos": 2.3
+   }
+  },
+  {
+   "classId": 9,
+   "mode": "rango",
+   "average": {
+    "30": 2.8,
+    "40": 3,
+    "50": 3.2
+   },
+   "vs": {
+    "30": {
+     "1": 2,
+     "2": 2.8,
+     "3": 3.4,
+     "4": 2.8,
+     "6": 2.8,
+     "7": 2,
+     "8": 3.4,
+     "9": 3.4
+    },
+    "40": {
+     "1": 2,
+     "2": 3,
+     "3": 3.7,
+     "4": 3,
+     "6": 3,
+     "7": 2,
+     "8": 3.7,
+     "9": 3.7
+    },
+    "50": {
+     "1": 2,
+     "2": 3.3,
+     "3": 3.9,
+     "4": 3.2,
+     "6": 3,
+     "7": 2.3,
+     "8": 3.9,
+     "9": 3.9
+    }
+   },
+   "set50": {
+    "comun": 3.2,
+    "conSet": 2.7,
+    "contraSet": 4.6,
+    "ambos": 3.4
+   }
+  },
+  {
+   "classId": 9,
+   "mode": "melee",
+   "average": {
+    "30": 2.9,
+    "40": 3.4,
+    "50": 4
+   },
+   "vs": {
+    "30": {
+     "1": 2,
+     "2": 2.9,
+     "3": 3.6,
+     "4": 2.9,
+     "6": 2.8,
+     "7": 2,
+     "8": 3.6,
+     "9": 3.6
+    },
+    "40": {
+     "1": 2,
+     "2": 3.7,
+     "3": 4.1,
+     "4": 3.6,
+     "6": 3.3,
+     "7": 2.1,
+     "8": 4.1,
+     "9": 4.1
+    },
+    "50": {
+     "1": 3,
+     "2": 4,
+     "3": 4.8,
+     "4": 3.9,
+     "6": 3.9,
+     "7": 3,
+     "8": 4.6,
+     "9": 4.6
+    }
+   },
+   "set50": {
+    "comun": 4,
+    "conSet": 4,
+    "contraSet": 5.7,
+    "ambos": 5.7
+   }
+  }
+ ],
+ "hp": {
+  "30": {
+   "1": {
+    "comun": 238,
+    "set": 286
+   },
+   "2": {
+    "comun": 252,
+    "set": 302
+   },
+   "3": {
+    "comun": 325,
+    "set": 390
+   },
+   "4": {
+    "comun": 267,
+    "set": 320
+   },
+   "6": {
+    "comun": 267,
+    "set": 320
+   },
+   "7": {
+    "comun": 252,
+    "set": 302
+   },
+   "8": {
+    "comun": 296,
+    "set": 355
+   },
+   "9": {
+    "comun": 296,
+    "set": 326
+   }
+  },
+  "40": {
+   "1": {
+    "comun": 313,
+    "set": 376
+   },
+   "2": {
+    "comun": 332,
+    "set": 398
+   },
+   "3": {
+    "comun": 430,
+    "set": 516
+   },
+   "4": {
+    "comun": 352,
+    "set": 422
+   },
+   "6": {
+    "comun": 352,
+    "set": 422
+   },
+   "7": {
+    "comun": 332,
+    "set": 398
+   },
+   "8": {
+    "comun": 391,
+    "set": 469
+   },
+   "9": {
+    "comun": 391,
+    "set": 430
+   }
+  },
+  "50": {
+   "1": {
+    "comun": 388,
+    "set": 466
+   },
+   "2": {
+    "comun": 412,
+    "set": 494
+   },
+   "3": {
+    "comun": 535,
+    "set": 642
+   },
+   "4": {
+    "comun": 437,
+    "set": 524
+   },
+   "6": {
+    "comun": 437,
+    "set": 524
+   },
+   "7": {
+    "comun": 412,
+    "set": 494
+   },
+   "8": {
+    "comun": 486,
+    "set": 583
+   },
+   "9": {
+    "comun": 486,
+    "set": 535
+   }
+  }
+ },
+ "sets": [
+  {
+   "id": "t1-mago",
+   "name": "Set Desterrado del Mago",
+   "season": 1,
+   "classes": [
+    1
+   ],
+   "bonuses": [
+    {
+     "pieces": 2,
+     "hpPct": 10
+    },
+    {
+     "pieces": 4,
+     "hpPct": 20,
+     "dmgPct": 25
+    }
+   ],
+   "pieces": [
+    {
+     "slot": "Armadura",
+     "id": 1341,
+     "name": "Túnica Desterrada (Mago)(Alto/as)",
+     "variants": 8
+    },
+    {
+     "slot": "Arma",
+     "id": 1373,
+     "name": "Báculo Desterrado (MAGO)",
+     "variants": 4
+    },
+    {
+     "slot": "Casco",
+     "id": 1355,
+     "name": "Capucha Mágica del Caído (MAGO)",
+     "variants": 4
+    },
+    {
+     "slot": "Anillo",
+     "id": 1357,
+     "name": "Anillo Mago del Caído (MAGO)",
+     "variants": 4
+    }
+   ]
+  },
+  {
+   "id": "t1-druida",
+   "name": "Set Desterrado del Druida",
+   "season": 1,
+   "classes": [
+    7
+   ],
+   "bonuses": [
+    {
+     "pieces": 2,
+     "hpPct": 10
+    },
+    {
+     "pieces": 4,
+     "hpPct": 20,
+     "dmgPct": 25
+    }
+   ],
+   "pieces": [
+    {
+     "slot": "Armadura",
+     "id": 1342,
+     "name": "Túnica Desterrada (Druida)(Alto/as)(+200 Mana)",
+     "variants": 8
+    },
+    {
+     "slot": "Arma",
+     "id": 1374,
+     "name": "Báculo Desterrado (DRUIDA)",
+     "variants": 4
+    },
+    {
+     "slot": "Casco",
+     "id": 1356,
+     "name": "Corona de Plumas del Caído (DRUIDA)",
+     "variants": 4
+    },
+    {
+     "slot": "Anillo",
+     "id": 1358,
+     "name": "Anillo Naturaleza del Caído (DRUIDA)",
+     "variants": 4
+    }
+   ]
+  },
+  {
+   "id": "t1-clerigo",
+   "name": "Set del Caído del Clérigo",
+   "season": 1,
+   "classes": [
+    2
+   ],
+   "bonuses": [
+    {
+     "pieces": 2,
+     "hpPct": 10
+    },
+    {
+     "pieces": 4,
+     "hpPct": 20,
+     "dmgPct": 25
+    }
+   ],
+   "pieces": [
+    {
+     "slot": "Armadura",
+     "id": 1345,
+     "name": "Armadura del Caido (Altos)(CLERIGO)(+3F)",
+     "variants": 8
+    },
+    {
+     "slot": "Arma",
+     "id": 1371,
+     "name": "Espada del Caído (CLERIGO)(+2 F)",
+     "variants": 4
+    },
+    {
+     "slot": "Casco",
+     "id": 1364,
+     "name": "Casco del Caído (CLERIGO)(+2 A)",
+     "variants": 4
+    },
+    {
+     "slot": "Escudo",
+     "id": 1359,
+     "name": "Escudo del Caído (CLERIGO)(+2F)",
+     "variants": 4
+    }
+   ]
+  },
+  {
+   "id": "t1-bardo",
+   "name": "Set del Caído del Bardo",
+   "season": 1,
+   "classes": [
+    6
+   ],
+   "bonuses": [
+    {
+     "pieces": 2,
+     "hpPct": 10
+    },
+    {
+     "pieces": 4,
+     "hpPct": 20,
+     "dmgPct": 25
+    }
+   ],
+   "pieces": [
+    {
+     "slot": "Armadura",
+     "id": 1346,
+     "name": "Armadura del Caido (Altos)(BARDO)(+3F)",
+     "variants": 8
+    },
+    {
+     "slot": "Arma",
+     "id": 1087,
+     "name": "Lanza Desterrada (Bardo)",
+     "variants": 4
+    },
+    {
+     "slot": "Casco",
+     "id": 1366,
+     "name": "Casco del Caído (BARDO)",
+     "variants": 4
+    },
+    {
+     "slot": "Escudo",
+     "id": 1361,
+     "name": "Escudo del Caído(BARDO)(+2 A)",
+     "variants": 4
+    }
+   ]
+  },
+  {
+   "id": "t1-guerrero",
+   "name": "Set del Caído del Guerrero y el Pirata",
+   "season": 1,
+   "classes": [
+    3,
+    18
+   ],
+   "bonuses": [
+    {
+     "pieces": 2,
+     "hpPct": 10
+    },
+    {
+     "pieces": 4,
+     "hpPct": 20,
+     "dmgPct": 25
+    }
+   ],
+   "pieces": [
+    {
+     "slot": "Armadura",
+     "id": 1347,
+     "name": "Armadura del Caido (Altos)(GUER./PIRA.)(+5F)",
+     "variants": 8
+    },
+    {
+     "slot": "Arma",
+     "id": 1369,
+     "name": "Espada del Caído (GUERR./PIRA.)(+3F)",
+     "variants": 4
+    },
+    {
+     "slot": "Casco",
+     "id": 1367,
+     "name": "Casco del Caído (GUERRERO/PIRATA)(+5A)",
+     "variants": 4
+    },
+    {
+     "slot": "Escudo",
+     "id": 1362,
+     "name": "Escudo del Caído(GUERRERO/PIRATA)(+5F)",
+     "variants": 4
+    }
+   ]
+  },
+  {
+   "id": "t1-paladin",
+   "name": "Set del Caído del Paladín",
+   "season": 1,
+   "classes": [
+    8
+   ],
+   "bonuses": [
+    {
+     "pieces": 2,
+     "hpPct": 10
+    },
+    {
+     "pieces": 4,
+     "hpPct": 20,
+     "dmgPct": 25
+    }
+   ],
+   "pieces": [
+    {
+     "slot": "Armadura",
+     "id": 1348,
+     "name": "Armadura del Caido (Altos)(PALADIN)(+5F)",
+     "variants": 8
+    },
+    {
+     "slot": "Arma",
+     "id": 1372,
+     "name": "Espada del Caído (PALADIN)(+2 F)",
+     "variants": 4
+    },
+    {
+     "slot": "Casco",
+     "id": 1365,
+     "name": "Casco del Caído (PALADIN)(+200 Mana)",
+     "variants": 4
+    },
+    {
+     "slot": "Escudo",
+     "id": 1360,
+     "name": "Escudo del Caído (PALADIN)(+2F)",
+     "variants": 4
+    }
+   ]
+  },
+  {
+   "id": "t1-cazador",
+   "name": "Set del Caído del Cazador y el Arquero",
+   "season": 1,
+   "classes": [
+    9,
+    20
+   ],
+   "bonuses": [
+    {
+     "pieces": 2,
+     "hpPct": 10
+    },
+    {
+     "pieces": 4,
+     "hpPct": 20,
+     "dmgPct": 25
+    }
+   ],
+   "pieces": [
+    {
+     "slot": "Armadura",
+     "id": 1349,
+     "name": "Armadura del Caido (Altos)(ARQ./CAZ.)(+3F)",
+     "variants": 8
+    },
+    {
+     "slot": "Arma",
+     "id": 1052,
+     "name": "Arco Desterrado (Ahorra 33% Flechas)",
+     "variants": 4
+    },
+    {
+     "slot": "Casco",
+     "id": 1368,
+     "name": "Casco del Caído (ARQUERO/CAZADOR)(+2A)",
+     "variants": 4
+    },
+    {
+     "slot": "Escudo",
+     "id": 1363,
+     "name": "Escudo del Caído (ARQUERO/CAZADOR)(+2 F)",
+     "variants": 4
+    }
+   ]
+  },
+  {
+   "id": "t1-asesino",
+   "name": "Set Desterrado del Asesino",
+   "season": 1,
+   "classes": [
+    4
+   ],
+   "bonuses": [
+    {
+     "pieces": 2,
+     "hpPct": 10
+    },
+    {
+     "pieces": 4,
+     "hpPct": 20,
+     "dmgPct": 25
+    }
+   ],
+   "pieces": [
+    {
+     "slot": "Armadura",
+     "id": 196,
+     "name": "Armadura Desterrada (Bajos)(Asesino)(+3F)",
+     "variants": 8
+    },
+    {
+     "slot": "Arma",
+     "id": 1054,
+     "name": "Puñal Desterrado (Asesino)(+3F)",
+     "variants": 4
+    },
+    {
+     "slot": "Casco",
+     "id": 1159,
+     "name": "Casco Desterrado (Asesino)(+2A)",
+     "variants": 4
+    },
+    {
+     "slot": "Escudo",
+     "id": 1256,
+     "name": "Escudo Desterrado (Asesino)(+2F)",
+     "variants": 4
+    }
+   ]
+  }
+ ]
+}

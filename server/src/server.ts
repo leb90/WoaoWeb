@@ -186,6 +186,7 @@ const funct = require("./functions");
 const protocol = require("./protocol") as ProtocolApi;
 const game = require("./game") as GameApi;
 const fishing = require("./fishing");
+const aggroState = require("./aggroState");
 const harvesting = require("./harvesting");
 const smelting = require("./smelting");
 const socket = require("./socket") as SocketApi;
@@ -334,7 +335,9 @@ function handleDeliverItem(request: any, response: any) {
             return { status: 400, body: { error: "characterId y objIndex son requeridos" } };
         }
 
-        return require("./donationShop").deliverItem(characterId, objIndex, amount, String(body.reason ?? ""));
+        // rarity opcional (0-3): para entregar un diseño o un premio con rareza fija.
+        const rarity = Math.max(0, Math.min(3, Math.floor(Number(body.rarity ?? 0)) || 0));
+        return require("./donationShop").deliverItem(characterId, objIndex, amount, String(body.reason ?? ""), rarity);
     });
 }
 
@@ -809,6 +812,9 @@ function processPlayerStatusTick(now: number) {
         if (!user) {
             continue;
         }
+
+        // Vida y maná con equipo: cubre ítems que se pierden o desequipan por otros caminos.
+        game.refreshEquipmentVitals(user);
 
         if (Number(user.envenenado ?? 0) > 0 && !user.dead) {
             const lastPoisonTick = Number(user.cooldownVeneno ?? 0);
@@ -1318,6 +1324,7 @@ createDynamicScheduler(
         smelting.processTick(now);
         summonRoom.tickSummonRoom();
         npcs.processPendingMovements();
+        aggroState.tickAggroState(now);
         protocol.processPendingMovements();
         processPendingLogoutTick(now);
     },

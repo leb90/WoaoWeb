@@ -125,7 +125,7 @@ function refreshSnapshot(idUser: string | number) {
     getSocket().send(client);
 }
 
-export function canReceiveItem(user: { inv: Record<string, { idItem: number; cant: number }> }, idItem: number, quantity: number) {
+export function canReceiveItem(user: { inv: Record<string, { idItem: number; cant: number }> }, idItem: number, quantity: number, rarity = 0) {
     const obj = vars.datObj?.[idItem];
     if (!obj) {
         return false;
@@ -135,7 +135,7 @@ export function canReceiveItem(user: { inv: Record<string, { idItem: number; can
         return true;
     }
 
-    return canAddToInventory(user.inv, idItem, quantity, MAX_STACK);
+    return canAddToInventory(user.inv, idItem, quantity, MAX_STACK, require("./itemRarity").getItemRarity(idItem, rarity));
 }
 
 function getProductName(product: CatalogProduct): string {
@@ -448,12 +448,13 @@ export function deliverPendingItems(idUser: string | number) {
         const objIndex = Number(entry?.objIndex);
         const amount = Math.max(1, Number(entry?.amount ?? 1));
 
-        if (!vars.datObj?.[objIndex] || !canReceiveItem(user, objIndex, amount)) {
+        const rarity = Math.max(0, Math.min(3, Math.floor(Number(entry?.rarity ?? 0)) || 0));
+        if (!vars.datObj?.[objIndex] || !canReceiveItem(user, objIndex, amount, rarity)) {
             remaining.push(entry);
             continue;
         }
 
-        getGame().putItemToInv(idUser, objIndex, amount);
+        getGame().putItemToInv(idUser, objIndex, amount, rarity);
         tell(idUser, `Recibiste ${vars.datObj[objIndex].name}${entry.reason ? ` (${entry.reason})` : ""}.`);
         delivered++;
     }
@@ -471,7 +472,7 @@ export function deliverPendingItems(idUser: string | number) {
 }
 
 /** Le entrega un objeto a un personaje, esté conectado o no. */
-export function deliverItem(characterId: string, objIndex: number, amount: number, reason: string) {
+export function deliverItem(characterId: string, objIndex: number, amount: number, reason: string, rarity = 0) {
     if (!vars.datObj?.[objIndex]) {
         return { status: 404, body: { error: "Ese objeto no existe en el servidor de juego." } };
     }
@@ -480,7 +481,7 @@ export function deliverItem(characterId: string, objIndex: number, amount: numbe
     const progress = getProgress({ _id: characterId });
     progress.pendingDeliveries = [
         ...(Array.isArray(progress.pendingDeliveries) ? progress.pendingDeliveries : []),
-        { objIndex, amount: safeAmount, reason: String(reason ?? "").slice(0, 120), createdAt: Date.now() },
+        { objIndex, amount: safeAmount, reason: String(reason ?? "").slice(0, 120), createdAt: Date.now(), ...(rarity > 0 ? { rarity } : {}) },
     ];
     saveProgress({ _id: characterId });
 

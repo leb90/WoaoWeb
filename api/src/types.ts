@@ -222,12 +222,14 @@ export type CharacterItemRecord = {
     id_item: number;
     cant: number;
     equipped: boolean;
+    rarity?: number;
 };
 
 export type CharacterBankItemRecord = {
     id_pos: number;
     id_item: number;
     cant: number;
+    rarity?: number;
 };
 
 export type CharacterSpellRecord = {

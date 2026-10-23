@@ -15,6 +15,8 @@ import React, {
 import { MapRenderer } from "../../components/game";
 import AdminIntervalsModal from "../../components/AdminIntervalsModal";
 import BuffStatusSidebar from "../../components/BuffStatusSidebar";
+import InvisibilityCornerTimer from "../../components/InvisibilityCornerTimer";
+import AggroPanel from "../../components/AggroPanel";
 import MacroBar from "../../components/MacroBar";
 import BailModal from "../../components/BailModal";
 import CharacterStatsModal from "../../components/CharacterStatsModal";
@@ -2896,6 +2898,7 @@ function HomeContent() {
                 validForUser: tradeItem?.validForUser ?? item.validForUser,
                 details: tradeItem?.details ?? item.details,
                 equipped: item.equipped,
+                rarity: item.rarity ?? tradeItem?.rarity ?? 0,
             };
         });
     }, [hud?.inventory, tradeState]);
@@ -3700,6 +3703,23 @@ function HomeContent() {
                                     </div>
                                 ) : null}
 
+                                {!isMobile ? (
+                                    <InvisibilityCornerTimer
+                                        hud={hud}
+                                        runtimeTiming={runtimeTiming}
+                                        skillsState={skillsState}
+                                        className="absolute left-2"
+                                        style={{ bottom: isFullscreen ? 42 : 8 }}
+                                    />
+                                ) : null}
+
+                                {!isMobile ? (
+                                    <AggroPanel
+                                        aggro={hud?.aggroState}
+                                        className="absolute left-2 top-[68px]"
+                                    />
+                                ) : null}
+
                                 <div
                                     className="pointer-events-none absolute right-2 z-30 rounded-md border border-stone-200/12 bg-stone-950/72 px-2.5 py-1.5 font-mono text-[11px] leading-none text-amber-100/90 shadow-xl backdrop-blur-sm"
                                     style={{
@@ -4198,6 +4218,23 @@ function HomeContent() {
                                         )
                                     }
                                 />
+                            ) : null}
+
+                            {isMobile ? (
+                                <div
+                                    className="pointer-events-none fixed z-30 flex flex-col items-end gap-2"
+                                    style={{
+                                        top: 56,
+                                        right: "calc(env(safe-area-inset-right) + 12px)",
+                                    }}
+                                >
+                                    <InvisibilityCornerTimer
+                                        hud={hud}
+                                        runtimeTiming={runtimeTiming}
+                                        skillsState={skillsState}
+                                    />
+                                    <AggroPanel aggro={hud?.aggroState} />
+                                </div>
                             ) : null}
 
                             {isMobile ? (

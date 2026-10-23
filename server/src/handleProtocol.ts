@@ -185,6 +185,7 @@ type SelfMapMetaDeltaPayload = {
 };
 
 const vars = require("./vars");
+const itemRarity = require("./itemRarity") as typeof import("./itemRarity");
 const pkg = require("./package") as PackageApi;
 const socket = require("./socket") as SocketApi;
 const funct = require("./functions");
@@ -472,6 +473,7 @@ export type HandleProtocolApi = {
     mountState: (payload: unknown, client: RuntimeClient) => void;
     transmogState: (payload: unknown, client: RuntimeClient) => void;
     shopState: (payload: unknown, client: RuntimeClient) => void;
+    aggroState: (payload: unknown, client: RuntimeClient) => void;
     castleState: (payload: unknown, client: RuntimeClient) => void;
     factionWarState: (payload: FactionWarStatePayload, client: RuntimeClient) => void;
     rankedState: (payload: unknown, client: RuntimeClient) => void;
@@ -659,9 +661,14 @@ function itemValidUser(idUser: EntityId, idItem: number) {
     return 1;
 }
 
-function dataObj(idItem: number) {
+// Los anillos de verdad son objType 41 (vars.objType.anillos = 18 son las herramientas).
+const RING_OBJ_TYPE = 41;
+
+function dataObj(idItem: number, rarity = 0) {
     try {
-        const obj = getObject(idItem);
+        // Con rareza, el detalle muestra los stats ya sumados (itemRarity.ts).
+        const effectiveRarity = itemRarity.getItemRarity(idItem, rarity);
+        const obj = (effectiveRarity > 0 ? itemRarity.getEffectiveItemData(idItem, effectiveRarity) : null) ?? getObject(idItem);
 
         if (Number(obj.disfraz ?? 0) > 0) {
             return "Disfraz de cuerpo completo. Ponelo en Transfigurar para cambiar tu aspecto.";
@@ -691,7 +698,8 @@ function dataObj(idItem: number) {
                 }
                 break;
 
-            case vars.objType.anillos: {
+            case vars.objType.anillos:
+            case RING_OBJ_TYPE: {
                 const parts: string[] = [];
 
                 if (obj.minDefMag && obj.maxDefMag) {
@@ -784,6 +792,21 @@ function dataObj(idItem: number) {
 
         if (itemTier > 0) {
             data += data ? ` | Tier: ${itemTier}` : `Tier: ${itemTier}`;
+        }
+
+        const extras: string[] = [];
+        const tierSet = require("./tierSets").getTierSetForItem(idItem);
+        if (tierSet) {
+            extras.push(`Set: ${tierSet.name}`);
+        }
+        if (effectiveRarity > 0) {
+            extras.push(`Rareza: ${itemRarity.getRarityName(effectiveRarity)} (+${effectiveRarity})`);
+        }
+        if (itemRarity.isRarityNoDrop(idItem, effectiveRarity)) {
+            extras.push("No se cae");
+        }
+        if (extras.length > 0) {
+            data = data ? `${data} | ${extras.join(" | ")}` : extras.join(" | ");
         }
 
         return data;
@@ -898,6 +921,16 @@ function writeCharacterPayload(character: ProtocolCharacter, viewerId?: EntityId
     }
 
     pkg.writeByte(!huntersAnonymous && areClanMembersForViewer(viewerId, character) ? 1 : 0);
+    // Invisible en pelea PvP: ms que le quedan parpadeando para los demás (0 = invisible del todo).
+    pkg.writeInt(getPvpRevealRemainingMs(character));
+}
+
+function getPvpRevealRemainingMs(character: ProtocolCharacter): number {
+    if (!character.invisibleSpell && !character.hiddenSkill) {
+        return 0;
+    }
+
+    return Math.max(0, Math.floor(Number(character.pvpCombatUntil ?? 0) - Date.now()));
 }
 
 function getNpcQuestStatusForViewer(npc: ProtocolNpc, viewerId?: EntityId): number {
@@ -933,6 +966,8 @@ function writeNpcPayload(npc: ProtocolNpc, viewerId?: EntityId) {
     pkg.writeShort(npc.hp);
     pkg.writeShort(npc.maxHp);
     pkg.writeByte(getNpcQuestStatusForViewer(npc, viewerId));
+    // Hostil (ataca solo): el cliente lo usa para el color del contorno al pasar el mouse.
+    pkg.writeByte(Number((npc as { hostile?: number }).hostile ?? 0) === 1 || Number(npc.movement ?? 0) === 3 ? 1 : 0);
 }
 
 function writeAreaItemSnapshot(item: AreaItemSnapshot) {
@@ -1393,7 +1428,9 @@ const handleServer: HandleProtocolApi = {
             pkg.writeInt(obj.valor);
             pkg.writeByte(obj.objType);
             pkg.writeByte(itemValidUser(character.id, idItem));
-            pkg.writeString(dataObj(idItem));
+            const rarity = itemRarity.getItemRarity(idItem, item.rarity);
+            pkg.writeString(dataObj(idItem, rarity));
+            pkg.writeByte(rarity);
         }
 
         if (character.maxMana > 0) {
@@ -1539,6 +1576,13 @@ const handleServer: HandleProtocolApi = {
 
     shopState(payload, client) {
         pkg.setPackageID(pkg.clientPacketID.shopState);
+        pkg.writeString(JSON.stringify(payload));
+        socket.send(client);
+    },
+
+    // Criaturas que tienen de objetivo al jugador (aggroState.ts).
+    aggroState(payload, client) {
+        pkg.setPackageID(pkg.clientPacketID.aggroState);
         pkg.writeString(JSON.stringify(payload));
         socket.send(client);
     },
@@ -1763,7 +1807,9 @@ const handleServer: HandleProtocolApi = {
         pkg.writeInt(Math.floor(obj.valor / 3));
         pkg.writeByte(obj.objType);
         pkg.writeByte(itemValidUser(idUser, idItem));
-        pkg.writeString(dataObj(idItem));
+        const rarity = itemRarity.getItemRarity(idItem, item.rarity);
+        pkg.writeString(dataObj(idItem, rarity));
+        pkg.writeByte(rarity);
 
         socket.send(client);
     },
@@ -1813,7 +1859,7 @@ const handleServer: HandleProtocolApi = {
                     entry,
                 ): entry is {
                     indexObj: string;
-                    item: { item?: number; idItem?: number; cant: number };
+                    item: { item?: number; idItem?: number; cant: number; rarity?: number };
                     idItem: number;
                 } => entry !== null,
             );
@@ -1831,7 +1877,10 @@ const handleServer: HandleProtocolApi = {
             pkg.writeShort(item.cant);
             pkg.writeInt(isBankTrade ? 0 : objItem.valor);
             pkg.writeByte(itemValidUser(idUser, idItem));
-            pkg.writeString(dataObj(idItem));
+            // Lo que vende un NPC no tiene rareza; lo del banco conserva la suya.
+            const rarity = isBankTrade ? itemRarity.getItemRarity(idItem, item.rarity) : 0;
+            pkg.writeString(dataObj(idItem, rarity));
+            pkg.writeByte(rarity);
         }
 
         pkg.writeByte(Object.keys(user.inv).length);
@@ -1848,7 +1897,9 @@ const handleServer: HandleProtocolApi = {
             pkg.writeByte(itemUser.equipped);
             pkg.writeByte(idPos);
             pkg.writeByte(itemValidUser(idUser, idItem));
-            pkg.writeString(dataObj(idItem));
+            const rarity = itemRarity.getItemRarity(idItem, itemUser.rarity);
+            pkg.writeString(dataObj(idItem, rarity));
+            pkg.writeByte(rarity);
         }
 
         if (isBankTrade) {

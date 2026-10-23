@@ -38,6 +38,8 @@ export interface ObjectData {
     bonusDropNpcPct?: number;
     mataHobbits?: number;
     subtipo?: number;
+    /** Cuerpo que pone la armadura al equiparla (solo armaduras; ver rendering/armorWarp.ts). */
+    anim?: number;
     clasesNoPermitidas?: number[];
 }
 

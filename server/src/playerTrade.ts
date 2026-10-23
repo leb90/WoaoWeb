@@ -278,14 +278,21 @@ export function acceptTrade(idUser: string) {
     handleProtocol.actGold(userA.gold, clientA);
     handleProtocol.actGold(userB.gold, clientB);
 
+    // La rareza viaja con el ítem: se lee del lugar antes de sacarlo.
+    const rarityAt = (owner: typeof userA, entry: { slot: string; idItem: number }) => {
+        const slotItem = owner.inv?.[entry.slot];
+        return Number(slotItem?.idItem) === Number(entry.idItem) ? Number(slotItem?.rarity ?? 0) : 0;
+    };
     for (const offerItemEntry of offerA.items) {
+        const rarity = rarityAt(userA, offerItemEntry);
         game.quitarUserInvItem(session.a, offerItemEntry.slot, offerItemEntry.amount);
-        game.putItemToInv(session.b, offerItemEntry.idItem, offerItemEntry.amount);
+        game.putItemToInv(session.b, offerItemEntry.idItem, offerItemEntry.amount, rarity);
         mounts.transferMountForItem(userA, userB, offerItemEntry.idItem);
     }
     for (const offerItemEntry of offerB.items) {
+        const rarity = rarityAt(userB, offerItemEntry);
         game.quitarUserInvItem(session.b, offerItemEntry.slot, offerItemEntry.amount);
-        game.putItemToInv(session.a, offerItemEntry.idItem, offerItemEntry.amount);
+        game.putItemToInv(session.a, offerItemEntry.idItem, offerItemEntry.amount, rarity);
         mounts.transferMountForItem(userB, userA, offerItemEntry.idItem);
     }
     for (const mountId of offerA.mounts ?? []) {

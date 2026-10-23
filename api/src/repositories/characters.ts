@@ -43,6 +43,9 @@ const jailCharacterSchema = z.object({
 const MAX_CHARACTER_ITEM_SLOT = 27;
 const MAX_BANK_SLOTS = 100;
 
+// Rareza por instancia: 0 Normal, 1 Mejorado, 2 Épico, 3 Legendario (server/src/itemRarity.ts).
+const raritySchema = z.coerce.number().int().min(0).max(3).default(0);
+
 const itemSchema = z.object({
     idPos: z.coerce.number().int().min(1).max(MAX_CHARACTER_ITEM_SLOT),
     idItem: z.coerce.number().int().positive(),
@@ -50,6 +53,7 @@ const itemSchema = z.object({
     equipped: z
         .union([z.boolean(), z.number().int()])
         .transform((value) => Boolean(value)),
+    rarity: raritySchema,
 });
 
 const spellSchema = z.object({
@@ -61,6 +65,7 @@ const bankItemSchema = z.object({
     idPos: z.coerce.number().int().min(1).max(MAX_BANK_SLOTS),
     idItem: z.coerce.number().int().positive(),
     cant: z.coerce.number().int().positive(),
+    rarity: raritySchema,
 });
 
 type ParsedItem = z.infer<typeof itemSchema>;
@@ -349,11 +354,13 @@ function toCharacterResponse(
             idItem: item.id_item,
             cant: item.cant,
             equipped: item.equipped,
+            rarity: Number(item.rarity ?? 0),
         })),
         bankItems: bankItems.map((item) => ({
             idPos: item.id_pos,
             idItem: item.id_item,
             cant: item.cant,
+            rarity: Number(item.rarity ?? 0),
         })),
         spells: spells.map((spell) => ({
             idPos: spell.id_pos,
@@ -392,7 +399,7 @@ async function getCharacterItems(
 ): Promise<CharacterItemRecord[]> {
     const result = await client.query<CharacterItemRecord>(
         `
-      SELECT id_pos, id_item, cant, equipped
+      SELECT id_pos, id_item, cant, equipped, rarity
       FROM character_items
       WHERE character_id = $1
       ORDER BY id_pos ASC
@@ -409,7 +416,7 @@ async function getCharacterBankItems(
 ): Promise<CharacterBankItemRecord[]> {
     const result = await client.query<CharacterBankItemRecord>(
         `
-      SELECT id_pos, id_item, cant
+      SELECT id_pos, id_item, cant, rarity
       FROM character_bank_items
       WHERE character_id = $1
       ORDER BY id_pos ASC
@@ -598,7 +605,8 @@ async function replaceItems(
             !current ||
             current.id_item !== item.idItem ||
             current.cant !== item.cant ||
-            current.equipped !== item.equipped
+            current.equipped !== item.equipped ||
+            Number(current.rarity ?? 0) !== item.rarity
         );
     });
 
@@ -608,25 +616,27 @@ async function replaceItems(
 
     const values: Array<number | boolean | string> = [];
     const placeholders = itemsToUpsert.map((item, index) => {
-        const base = index * 5;
+        const base = index * 6;
         values.push(
             characterId,
             item.idPos,
             item.idItem,
             item.cant,
             item.equipped,
+            item.rarity,
         );
-        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5})`;
+        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6})`;
     });
 
     await client.query(
         `
-      INSERT INTO character_items (character_id, id_pos, id_item, cant, equipped)
+      INSERT INTO character_items (character_id, id_pos, id_item, cant, equipped, rarity)
       VALUES ${placeholders.join(", ")}
       ON CONFLICT (character_id, id_pos)
       DO UPDATE SET id_item = EXCLUDED.id_item,
                     cant = EXCLUDED.cant,
-                    equipped = EXCLUDED.equipped
+                    equipped = EXCLUDED.equipped,
+                    rarity = EXCLUDED.rarity
     `,
         values,
     );
@@ -662,7 +672,8 @@ async function replaceBankItems(
         return (
             !current ||
             current.id_item !== item.idItem ||
-            current.cant !== item.cant
+            current.cant !== item.cant ||
+            Number(current.rarity ?? 0) !== item.rarity
         );
     });
 
@@ -672,18 +683,19 @@ async function replaceBankItems(
 
     const values: Array<number | string> = [];
     const placeholders = itemsToUpsert.map((item, index) => {
-        const base = index * 4;
-        values.push(characterId, item.idPos, item.idItem, item.cant);
-        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4})`;
+        const base = index * 5;
+        values.push(characterId, item.idPos, item.idItem, item.cant, item.rarity);
+        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5})`;
     });
 
     await client.query(
         `
-      INSERT INTO character_bank_items (character_id, id_pos, id_item, cant)
+      INSERT INTO character_bank_items (character_id, id_pos, id_item, cant, rarity)
       VALUES ${placeholders.join(", ")}
       ON CONFLICT (character_id, id_pos)
       DO UPDATE SET id_item = EXCLUDED.id_item,
-                    cant = EXCLUDED.cant
+                    cant = EXCLUDED.cant,
+                    rarity = EXCLUDED.rarity
     `,
         values,
     );

@@ -4,6 +4,7 @@ type InventorySlotLike = {
     idItem?: number | string;
 } | null | undefined;
 
+// Personaje en juego: el inventario vive en `inv` (no en `items`, que es la forma serializada para guardar).
 type CharacterLike = {
     idItemBody?: number | string;
     inv?: Record<string | number, InventorySlotLike> | InventorySlotLike[] | null;

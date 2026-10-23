@@ -85,6 +85,8 @@ const balance = require("./balance");
 const { isWaterGraphic } = require("./waterTiles");
 const workProfessions = require("./workProfessions");
 const skills = require("./skills");
+const tierSets = require("./tierSets") as typeof import("./tierSets");
+const itemRarity = require("./itemRarity") as typeof import("./itemRarity");
 
 const SURVIVAL_HAMBRE_MAX = Number(balance.MAX_HAMBRE ?? 100);
 const SURVIVAL_SED_MAX = Number(balance.MAX_SED ?? 100);
@@ -172,6 +174,8 @@ const FLOOR_ITEM_CLEANUP_SOURCE = "drop";
 const DROP_RENDER_BATCH_SIZE = 4;
 const TELEPORT_CLIENT_MOVEMENT_LOCK_MS = 75;
 const PVP_MAP_CHANGE_BLOCK_MS = 5000;
+// Cuánto dura el "revelado" de un invisible después de su último golpe o hechizo contra (o de) un jugador.
+const PVP_INVISIBILITY_REVEAL_MS = 5000;
 const DRAGON_SLAYER_SWORD_ITEM_ID = 402;
 const HOBBIT_CLOAK_OBJECT_TYPE = 50;
 const CRAFTING_RECIPE_OBJECT_TYPE = 46;
@@ -714,7 +718,8 @@ function getEquippedWeaponData(user: GameCharacter): DataObject | null {
         return null;
     }
 
-    return vars.datObj[item.idItem] ?? null;
+    // Stats con la rareza de la instancia (itemRarity.ts).
+    return (itemRarity.getEffectiveItemData(item.idItem, item.rarity) as DataObject | null) ?? null;
 }
 
 function isDragonSlayerSword(itemId: number): boolean {
@@ -811,6 +816,91 @@ function getEffectiveFuerza(user: GameCharacter): number {
 
 function getEffectiveAgilidad(user: GameCharacter): number {
     return safeNumber(user.attrAgilidad) + getEquippedSpecialBonuses(user).agilidad;
+}
+
+// PvP: fuerza y agilidad efectivas (buff + equipo) con el tope clásico de AO. Contra NPC no hay tope.
+// Ver docs/balance/BALANCE_PVP.md, sección 7.1.
+const PVP_ATTRIBUTE_CAP = 40;
+
+function getCombatFuerza(user: GameCharacter, pvp: boolean): number {
+    const value = getEffectiveFuerza(user);
+    return pvp ? Math.min(PVP_ATTRIBUTE_CAP, value) : value;
+}
+
+function getCombatAgilidad(user: GameCharacter, pvp: boolean): number {
+    const value = getEffectiveAgilidad(user);
+    return pvp ? Math.min(PVP_ATTRIBUTE_CAP, value) : value;
+}
+
+// Factor de daño solo contra jugadores (tablas modDmgPvp* del balance). Sección 7.2.
+function getPvpDamageFactor(table: unknown, classId: number): number {
+    const value = Number((table as Record<number, number> | undefined)?.[classId] ?? 1);
+    return Number.isFinite(value) && value > 0 ? value : 1;
+}
+
+function getEquippedItemIds(user: GameCharacter): number[] {
+    return [user.idItemWeapon, user.idItemBody, user.idItemShield, user.idItemHelmet, user.idItemRing]
+        .map((slot) => Number(getInventoryItem(user, slot)?.idItem ?? 0))
+        .filter((idItem) => idItem > 0);
+}
+
+function getEquippedSetBonus(user: GameCharacter) {
+    return tierSets.getEquippedSetBonus(getEquippedItemIds(user));
+}
+
+// Vida y maná máximos con el equipo: bono de vida del set de tier y maná de objetoEspecial (8/9/10/17/19)
+// más el % de maná del set. El bono se guarda aparte (equipHpBonus / equipManaBonus) y nunca se persiste.
+// Si alguien reasignó maxHp o maxMana desde afuera (login, nivel, remort, recarga de balance), ese valor es
+// la nueva base; si no, la base es el valor efectivo menos el bono anterior.
+function refreshEquipmentVitals(user: GameCharacter, notify = true): boolean {
+    if (!user || user.botLoad || user.adminSummonedBot) {
+        return false;
+    }
+
+    const currentMaxHp = safeNumber(user.maxHp);
+    const currentMaxMana = safeNumber(user.maxMana);
+    const previousHpBonus = currentMaxHp === safeNumber(user.equipVitalsMaxHp) ? safeNumber(user.equipHpBonus) : 0;
+    const previousManaBonus = currentMaxMana === safeNumber(user.equipVitalsMaxMana) ? safeNumber(user.equipManaBonus) : 0;
+    const baseMaxHp = Math.max(1, currentMaxHp - previousHpBonus);
+    const baseMaxMana = Math.max(0, currentMaxMana - previousManaBonus);
+    const set = getEquippedSetBonus(user);
+    const hpBonus = Math.round((baseMaxHp * set.hpPct) / 100);
+    // Las clases sin magia no tienen maná aunque lleven un ítem con +maná.
+    const manaBonus = baseMaxMana > 0
+        ? getEquippedSpecialBonuses(user).maxMana + Math.round((baseMaxMana * set.manaPct) / 100)
+        : 0;
+    const nextMaxHp = baseMaxHp + hpBonus;
+    const nextMaxMana = baseMaxMana + manaBonus;
+
+    user.equipHpBonus = hpBonus;
+    user.equipManaBonus = manaBonus;
+    user.equipVitalsMaxHp = nextMaxHp;
+    user.equipVitalsMaxMana = nextMaxMana;
+
+    if (nextMaxHp === currentMaxHp && nextMaxMana === currentMaxMana) {
+        return false;
+    }
+
+    user.maxHp = nextMaxHp;
+    user.maxMana = nextMaxMana;
+    user.hp = Math.min(safeNumber(user.hp), nextMaxHp);
+    user.mana = Math.min(safeNumber(user.mana), nextMaxMana);
+
+    if (notify) {
+        withUserClient(user.id, (client) => sendSelfVitals(user as unknown as Record<string, unknown>, client));
+    }
+
+    return true;
+}
+
+function getBaseMaxHp(user: GameCharacter): number {
+    const bonus = safeNumber(user.maxHp) === safeNumber(user.equipVitalsMaxHp) ? safeNumber(user.equipHpBonus) : 0;
+    return Math.max(1, safeNumber(user.maxHp) - bonus);
+}
+
+function getBaseMaxMana(user: GameCharacter): number {
+    const bonus = safeNumber(user.maxMana) === safeNumber(user.equipVitalsMaxMana) ? safeNumber(user.equipManaBonus) : 0;
+    return Math.max(0, safeNumber(user.maxMana) - bonus);
 }
 
 function isClass(user: GameCharacter, classId: number): boolean {
@@ -1078,7 +1168,8 @@ function getEquippedRingData(user: GameCharacter): DataObject | null {
         return null;
     }
 
-    return vars.datObj[item.idItem] ?? null;
+    // Stats con la rareza de la instancia (itemRarity.ts).
+    return (itemRarity.getEffectiveItemData(item.idItem, item.rarity) as DataObject | null) ?? null;
 }
 
 function getEquippedHelmetData(user: GameCharacter): DataObject | null {
@@ -1087,7 +1178,8 @@ function getEquippedHelmetData(user: GameCharacter): DataObject | null {
         return null;
     }
 
-    return vars.datObj[item.idItem] ?? null;
+    // Stats con la rareza de la instancia (itemRarity.ts).
+    return (itemRarity.getEffectiveItemData(item.idItem, item.rarity) as DataObject | null) ?? null;
 }
 
 function getEquippedBodyData(user: GameCharacter): DataObject | null {
@@ -1096,7 +1188,8 @@ function getEquippedBodyData(user: GameCharacter): DataObject | null {
         return null;
     }
 
-    return vars.datObj[item.idItem] ?? null;
+    // Stats con la rareza de la instancia (itemRarity.ts).
+    return (itemRarity.getEffectiveItemData(item.idItem, item.rarity) as DataObject | null) ?? null;
 }
 
 function getEquippedShieldData(user: GameCharacter): DataObject | null {
@@ -1105,7 +1198,8 @@ function getEquippedShieldData(user: GameCharacter): DataObject | null {
         return null;
     }
 
-    return vars.datObj[item.idItem] ?? null;
+    // Stats con la rareza de la instancia (itemRarity.ts).
+    return (itemRarity.getEffectiveItemData(item.idItem, item.rarity) as DataObject | null) ?? null;
 }
 
 function getTargetMagicResistanceBonus(target: GameCharacter): number {
@@ -1911,6 +2005,18 @@ function markUsersInPvpCombat(
     const blockedUntil = now + PVP_MAP_CHANGE_BLOCK_MS;
     attacker.pvpMapChangeBlockedUntil = Math.max(Number(attacker.pvpMapChangeBlockedUntil ?? 0), blockedUntil);
     target.pvpMapChangeBlockedUntil = Math.max(Number(target.pvpMapChangeBlockedUntil ?? 0), blockedUntil);
+
+    // Invisible peleando contra jugadores: durante la ventana de combate los demás lo ven parpadear
+    // (la invisibilidad sirve para escapar, no para pelear a ciegas). Ver writeCharacterPayload.
+    for (const fighter of [attacker, target]) {
+        const wasRevealed = Number(fighter.pvpCombatUntil ?? 0) > now;
+        fighter.pvpCombatUntil = Math.max(Number(fighter.pvpCombatUntil ?? 0), now + PVP_INVISIBILITY_REVEAL_MS);
+        const invisible = Boolean(fighter.invisibleSpell || fighter.hiddenSkill);
+        if (invisible && (!wasRevealed || now - Number(fighter.pvpRevealSyncedAt ?? 0) >= 1000)) {
+            fighter.pvpRevealSyncedAt = now;
+            syncCharacterVisibilityForOthers(fighter.id);
+        }
+    }
 }
 
 function getPvpMapChangeDeniedMessage(
@@ -2819,6 +2925,9 @@ function applyUserSpellDamage(
         dmg -= Math.round((dmg * Number(userAttacked.protec)) / 100);
     }
 
+    // Solo contra jugadores: factor PvP mágico de la clase y bono de daño del set de tier.
+    dmg = Math.floor(dmg * getPvpDamageFactor(vars.modDmgPvpMagia, user.idClase) * (1 + getEquippedSetBonus(user).dmgPct / 100));
+
     if (dmg < 1) {
         dmg = 1;
     }
@@ -3445,8 +3554,8 @@ export type GameApi = {
     getName: (id: EntityId) => string | undefined;
     useItem: (ws: RuntimeClient, idPos: number | string) => Promise<void>;
     agarrarItem: (ws: RuntimeClient) => Promise<void>;
-    putItemToInv: (idUser: EntityId, idItem: number, cant: number) => void;
-    placeDroppedFloorItem: (idMap: number, pos: Position, idItem: number, amount: number) => void;
+    putItemToInv: (idUser: EntityId, idItem: number, cant: number, rarity?: number) => void;
+    placeDroppedFloorItem: (idMap: number, pos: Position, idItem: number, amount: number, rarity?: number) => void;
     renderDroppedFloorItem: (idMap: number, pos: Position, idItem: number) => void;
     cleanupDroppedFloorItems: (batchSize?: number) => Promise<number>;
     cleanupDroppedFloorItemsInMap: (idMap: number, batchSize?: number) => Promise<number>;
@@ -3542,9 +3651,9 @@ export type GameApi = {
     getSkillOcultarse: (idUser: EntityId) => number;
     getSkillApu: (idUser: EntityId) => number;
     puedeApu: (idUser: EntityId) => boolean;
-    poderEvasion: (idUser: EntityId) => number;
+    poderEvasion: (idUser: EntityId, pvp?: boolean) => number;
     poderEvasionEscudo: (idUser: EntityId) => number;
-    poderAtaqueArma: (idUser: EntityId) => number;
+    poderAtaqueArma: (idUser: EntityId, pvp?: boolean) => number;
     hayObj: (idMap: number, pos: Position) => boolean;
     objMap: (idMap: number, pos: Position) => MapObjectInfo;
     tirarItemsUser: (idUser: EntityId) => Promise<void>;
@@ -3560,6 +3669,8 @@ export type GameApi = {
     depositBankGold: (idUser: EntityId, amount: number) => Promise<void>;
     withdrawBankGold: (idUser: EntityId, amount: number) => Promise<void>;
     persistCharacterSnapshot: (user: RuntimeCharacter, options?: CharacterSnapshotPersistOptions) => Promise<void>;
+    refreshEquipmentVitals: (user: RuntimeCharacter, notify?: boolean) => boolean;
+    getEquippedSetBonus: (user: RuntimeCharacter) => ReturnType<typeof tierSets.getEquippedSetBonus>;
     persistCharacterItemsById: (idUser: EntityId) => Promise<void>;
     persistCharacterItemsAndTransmogById: (idUser: EntityId) => Promise<void>;
     waitForCharacterPersistence: (characterId?: string) => Promise<void>;
@@ -4266,6 +4377,7 @@ function serializeInventory(record: InventoryRecord): SerializedInventoryItem[] 
         idItem: item.idItem,
         cant: item.cant,
         equipped: item.equipped ? 1 : 0,
+        rarity: itemRarity.getItemRarity(item.idItem, item.rarity),
     }));
 }
 
@@ -4279,15 +4391,20 @@ function serializeBank(record: InventoryRecord): SerializedBankItem[] {
         idPos,
         idItem: item.idItem,
         cant: item.cant,
+        rarity: itemRarity.getItemRarity(item.idItem, item.rarity),
     }));
 }
 
-function hydrateBankRecord(items: Array<{ idPos: number | string; idItem: number; cant: number }>): InventoryRecord {
+function hydrateBankRecord(
+    items: Array<{ idPos: number | string; idItem: number; cant: number; rarity?: number }>,
+): InventoryRecord {
     return items.reduce<InventoryRecord>((record, item) => {
+        const rarity = itemRarity.getItemRarity(item.idItem, item.rarity);
         record[String(item.idPos)] = {
             idItem: item.idItem,
             cant: item.cant,
             equipped: 0,
+            ...(rarity > 0 ? { rarity } : {}),
         };
         return record;
     }, {});
@@ -4311,7 +4428,7 @@ async function fetchSharedVaultState(
         },
     })) as {
         gold: number;
-        items: Array<{ idPos: number | string; idItem: number; cant: number }>;
+        items: Array<{ idPos: number | string; idItem: number; cant: number; rarity?: number }>;
     };
 
     return {
@@ -4671,8 +4788,17 @@ function buildCharacterSnapshotPayload(
         deadWorldTransitionEndsAt,
         deadWorldTimeoutId,
         pendingReviveCast,
+        equipHpBonus,
+        equipManaBonus,
+        equipVitalsMaxHp,
+        equipVitalsMaxMana,
         ...persistableCharacter
     } = user;
+
+    void equipHpBonus;
+    void equipManaBonus;
+    void equipVitalsMaxHp;
+    void equipVitalsMaxMana;
 
     void connected;
     void inv;
@@ -4689,6 +4815,10 @@ function buildCharacterSnapshotPayload(
         ...(Object.prototype.hasOwnProperty.call(options ?? {}, "connected") ? { connected: options?.connected } : {}),
         attrFuerza: persistedAttrFuerza,
         attrAgilidad: persistedAttrAgilidad,
+        // Se guarda la vida base: el bono del set se recalcula al entrar.
+        maxHp: getBaseMaxHp(user),
+        maxMana: getBaseMaxMana(user),
+        hp: Math.min(safeNumber(user.hp), getBaseMaxHp(user)),
         spells: serializeSpells(user.spells),
         items: serializeInventory(getPersistableInventoryRecord(user)),
         bankItems: serializeBank(user.bank ?? {}),
@@ -5159,12 +5289,15 @@ function addItemToRecord(
     record: InventoryRecord,
     idItem: number,
     cant: number,
-    options?: { maxSlots?: number; equipped?: number | boolean },
+    options?: { maxSlots?: number; equipped?: number | boolean; rarity?: number },
 ): number[] | null {
     if (!Number.isFinite(cant) || cant < 1) {
         return null;
     }
 
+    // Un ítem con rareza no se apila: cada unidad va en su lugar (itemRarity.ts).
+    const rarity = itemRarity.getItemRarity(idItem, options?.rarity);
+    const stackLimit = rarity > 0 ? 1 : 10000;
     const matchingSlots: Array<{ idPos: string; available: number }> = [];
     let existingCapacity = 0;
 
@@ -5172,7 +5305,7 @@ function addItemToRecord(
         if (
             (typeof options?.maxSlots === "number" &&
                 Number(idPos) > options.maxSlots) ||
-            item.idItem !== idItem ||
+            !itemRarity.canStackWith(item, idItem, rarity) ||
             item.cant >= 10000
         ) {
             continue;
@@ -5184,7 +5317,7 @@ function addItemToRecord(
     }
 
     const maxSlots = options?.maxSlots;
-    const slotsNeeded = Math.ceil(Math.max(0, cant - existingCapacity) / 10000);
+    const slotsNeeded = Math.ceil(Math.max(0, cant - existingCapacity) / stackLimit);
 
     const occupiedSlots =
         maxSlots === INVENTORY_SLOT_COUNT
@@ -5222,12 +5355,13 @@ function addItemToRecord(
         if (!idPos) {
             return null;
         }
-        const amountToAdd = Math.min(remaining, 10000);
+        const amountToAdd = Math.min(remaining, stackLimit);
 
         record[idPos] = {
             idItem,
             cant: amountToAdd,
             equipped: options?.equipped ?? 0,
+            ...(rarity > 0 ? { rarity } : {}),
         };
         affectedSlots.push(idPos);
         remaining -= amountToAdd;
@@ -6061,6 +6195,7 @@ function Game(this: GameApi) {
                     const slots = addItemToRecord(user.inv, item.objIndex, item.amount, {
                         maxSlots: 21,
                         equipped: 0,
+                        rarity: item.rarity,
                     });
 
                     if (slots == null) {
@@ -6098,7 +6233,7 @@ function Game(this: GameApi) {
      * @param  {number} cant   [description]
      * @return {}        [description]
      */
-    this.putItemToInv = function (idUser: EntityId, idItem: number, cant: number) {
+    this.putItemToInv = function (idUser: EntityId, idItem: number, cant: number, rarity = 0) {
         try {
             const user = getCharacterById(idUser);
 
@@ -6126,6 +6261,7 @@ function Game(this: GameApi) {
                 const slots = addItemToRecord(user.inv, idItem, cant, {
                     maxSlots: 21,
                     equipped: 0,
+                    rarity,
                 });
 
                 if (slots == null) {
@@ -6147,16 +6283,18 @@ function Game(this: GameApi) {
         }
     };
 
-    this.placeDroppedFloorItem = function (idMap: number, pos: Position, idItem: number, amount: number) {
+    this.placeDroppedFloorItem = function (idMap: number, pos: Position, idItem: number, amount: number, rarity = 0) {
         const tile = vars.mapa[idMap]?.[pos.y]?.[pos.x];
 
         if (!tile) {
             return;
         }
 
+        const effectiveRarity = itemRarity.getItemRarity(idItem, rarity);
         tile.objInfo = {
             objIndex: idItem,
             amount,
+            ...(effectiveRarity > 0 ? { rarity: effectiveRarity } : {}),
             cleanupSource: FLOOR_ITEM_CLEANUP_SOURCE,
             cleanupRegisteredAt: Date.now(),
         };
@@ -6356,9 +6494,10 @@ function Game(this: GameApi) {
                 return;
             }
 
+            const droppedRarity = itemRarity.getItemRarity(idItem, item.rarity);
             game.quitarUserInvItem(clientId, idPos, cant);
 
-            game.placeDroppedFloorItem(user.map, tmpPos, idItem, cant);
+            game.placeDroppedFloorItem(user.map, tmpPos, idItem, cant, droppedRarity);
 
             game.loopAreaPos(user.map, tmpPos, function (target: GameCharacter) {
                 withUserClient(target.id, (targetClient) => {
@@ -6782,6 +6921,10 @@ function Game(this: GameApi) {
         }
         if (sourceItem.equipped) {
             return { ok: false, message: "Debes desequipar el item antes de publicarlo." };
+        }
+        // La subasta todavía no guarda la rareza: no se publican ítems con rareza para no perderla.
+        if (itemRarity.getItemRarity(sourceItem.idItem, sourceItem.rarity) > 0) {
+            return { ok: false, message: "Los items con rareza (Mejorado, Epico o Legendario) no se pueden subastar." };
         }
         if (quantity > sourceItem.cant) {
             return { ok: false, message: "No tienes esa cantidad disponible." };
@@ -7252,6 +7395,11 @@ function Game(this: GameApi) {
 
         if (objectData.newbie) {
             return { ok: false, message: "Los items newbie no se pueden publicar en el mercado." };
+        }
+
+        // El mercado todavía no guarda la rareza: no se publican ítems con rareza para no perderla.
+        if (itemRarity.getItemRarity(sourceItem.idItem, sourceItem.rarity) > 0) {
+            return { ok: false, message: "Los items con rareza (Mejorado, Épico o Legendario) no se pueden publicar en el mercado." };
         }
 
         if (isItemSoldByMerchantNpc(Number(sourceItem.idItem))) {
@@ -8898,17 +9046,18 @@ function Game(this: GameApi) {
                 user.expNextLevel = balance.getLegacyExpNextLevelForLevel(user.level);
 
                 const aumentoHP = balance.rollHpGain(user.idClase, user.attrConstitucion);
-                const newMaxHp = user.maxHp + aumentoHP;
+                const newMaxHp = getBaseMaxHp(user) + aumentoHP;
                 const newMaxMana = balance.getMaxManaForLevel(user.idClase, user.attrInteligencia, user.level);
                 const newMinHit = balance.getMinHitForLevel(user.idClase, user.level);
                 const newMaxHit = balance.getMaxHitForLevel(user.idClase, user.level);
 
-                const aumentoMana = newMaxMana - user.maxMana;
+                const aumentoMana = newMaxMana - getBaseMaxMana(user);
                 const aumentoHIT = newMaxHit - user.maxHit;
 
                 user.maxHp = newMaxHp;
-                user.hp = user.maxHp;
                 user.maxMana = newMaxMana;
+                refreshEquipmentVitals(user, false);
+                user.hp = user.maxHp;
                 user.mana = user.maxMana;
 
                 user.minHit = newMinHit;
@@ -9964,7 +10113,7 @@ function Game(this: GameApi) {
                 }
 
                 const idItem = itemInventary.idItem;
-                const itemWeapon = vars.datObj[idItem];
+                const itemWeapon = itemRarity.getEffectiveItemData(idItem, itemInventary.rarity) as DataObject;
 
                 dmgArma = rollInclusiveRange(itemWeapon.minHit, itemWeapon.maxHit);
 
@@ -9996,17 +10145,26 @@ function Game(this: GameApi) {
 
             const dmgUser = rollInclusiveRange(user.minHit, user.maxHit);
 
-            const effectiveFuerza = getEffectiveFuerza(user);
+            const effectiveFuerza = getCombatFuerza(user, !targetIsNpc);
             const dmg = Math.floor(
                 (3 * dmgArma + (dmgMaxArma / 5) * Math.max(0, effectiveFuerza - 15) + dmgUser) * modClase,
             );
 
-            return require("./mounts").applyOutgoingDamage(
+            const outgoing = require("./mounts").applyOutgoingDamage(
                 user,
                 modifyOutgoingPhysicalDamage(user, dmg, isRanged ? "ranged" : "melee"),
                 isRanged ? "ranged" : "melee",
                 targetIsNpc,
             );
+
+            if (targetIsNpc) {
+                return outgoing;
+            }
+
+            // Solo contra jugadores: factor PvP de la clase y bono de daño del set de tier.
+            const pvpFactor = getPvpDamageFactor(isRanged ? vars.modDmgPvpProyectiles : vars.modDmgPvpArmas, user.idClase);
+            const setDamagePct = getEquippedSetBonus(user).dmgPct;
+            return Math.max(1, Math.floor(outgoing * pvpFactor * (1 + setDamagePct / 100)));
         } catch (err) {
             funct.dumpError(err);
             return 0;
@@ -10289,8 +10447,8 @@ function Game(this: GameApi) {
                 return 0;
             }
 
-            const poderAtaque = game.poderAtaqueArma(idUser);
-            let userAttackedEvasion = game.poderEvasion(idUserAttacked),
+            const poderAtaque = game.poderAtaqueArma(idUser, true);
+            let userAttackedEvasion = game.poderEvasion(idUserAttacked, true),
                 userAttackedPoderEvasionEscudo = game.poderEvasionEscudo(idUserAttacked);
 
             if (userAttacked.idItemShield) {
@@ -10337,7 +10495,7 @@ function Game(this: GameApi) {
                             }
 
                             const idItemHelmet = itemInventaryHelmet.idItem;
-                            const itemHelmet = vars.datObj[idItemHelmet];
+                            const itemHelmet = itemRarity.getEffectiveItemData(idItemHelmet, itemInventaryHelmet.rarity) as DataObject;
 
                             absorbeDmg = rollInclusiveRange(itemHelmet.minDef, itemHelmet.maxDef);
                         }
@@ -10352,7 +10510,7 @@ function Game(this: GameApi) {
 
                             if (itemInventaryBody) {
                                 const idItemBody = itemInventaryBody.idItem;
-                                const itemBody = vars.datObj[idItemBody];
+                                const itemBody = itemRarity.getEffectiveItemData(idItemBody, itemInventaryBody.rarity) as DataObject;
 
                                 minDef = safeNumber(itemBody.minDef);
                                 maxDef = safeNumber(itemBody.maxDef);
@@ -10364,7 +10522,7 @@ function Game(this: GameApi) {
 
                             if (itemInventaryShield) {
                                 const idItemShield = itemInventaryShield.idItem;
-                                const itemShield = vars.datObj[idItemShield];
+                                const itemShield = itemRarity.getEffectiveItemData(idItemShield, itemInventaryShield.rarity) as DataObject;
 
                                 minDef += safeNumber(itemShield.minDef);
                                 maxDef += safeNumber(itemShield.maxDef);
@@ -10978,7 +11136,7 @@ function Game(this: GameApi) {
      * @param  {[type]} idUser [description]
      * @return {[type]}        [description]
      */
-    this.poderEvasion = function (idUser: EntityId): number {
+    this.poderEvasion = function (idUser: EntityId, pvp = false): number {
         try {
             const user = getCharacterById(idUser);
 
@@ -10989,7 +11147,7 @@ function Game(this: GameApi) {
             const skillTacticasCombate = game.getSkillTacticasCombate(idUser);
             const n = skillTacticasCombate / 66;
 
-            const effectiveAgilidad = getEffectiveAgilidad(user);
+            const effectiveAgilidad = getCombatAgilidad(user, pvp);
             const tmpCalc =
                 (effectiveAgilidad + Math.round(skillTacticasCombate / 2) + n * effectiveAgilidad) *
                 vars.modEvasion[user.idClase];
@@ -11036,7 +11194,7 @@ function Game(this: GameApi) {
      * @param  {[type]} idUser [description]
      * @return {[type]}        [description]
      */
-    this.poderAtaqueArma = function (idUser: EntityId): number {
+    this.poderAtaqueArma = function (idUser: EntityId, pvp = false): number {
         try {
             const user = vars.personajes[idUser];
 
@@ -11058,7 +11216,7 @@ function Game(this: GameApi) {
             }
 
             const n = skill / 66;
-            const effectiveAgilidad = getEffectiveAgilidad(user);
+            const effectiveAgilidad = getCombatAgilidad(user, pvp);
             const poderAtaqueArmaTmp = (effectiveAgilidad + Math.round(skill / 2) + n * effectiveAgilidad) * modifier;
 
             let poderAtaqueArma = poderAtaqueArmaTmp + 2.5 * Math.max(user.level - 12, 0);
@@ -11149,8 +11307,10 @@ function Game(this: GameApi) {
                     continue;
                 }
 
-                if (!datObj.newbie && !datObj.noSeCae) {
+                // Los legendarios (y los sets de tier, que siempre lo son) no se caen al morir.
+                if (!datObj.newbie && !datObj.noSeCae && !itemRarity.isRarityNoDrop(idItem, item.rarity)) {
                     const cant = item.cant;
+                    const droppedRarity = itemRarity.getItemRarity(idItem, item.rarity);
                     let tmpPos: Position | undefined;
 
                     for (let radius = initialDropRadius; !tmpPos && radius <= maxExpandedDropRadius; radius++) {
@@ -11194,7 +11354,7 @@ function Game(this: GameApi) {
 
                     game.quitarUserInvItem(idUser, idPos, cant);
 
-                    game.placeDroppedFloorItem(user.map, tmpPos, idItem, cant);
+                    game.placeDroppedFloorItem(user.map, tmpPos, idItem, cant, droppedRarity);
                     game.renderDroppedFloorItem(user.map, tmpPos, idItem);
                     droppedItemsCount++;
 
@@ -11407,6 +11567,7 @@ function Game(this: GameApi) {
                     const slots = addItemToRecord(user.inv, bankItem.idItem, cantWithdraw, {
                         maxSlots: 21,
                         equipped: 0,
+                        rarity: bankItem.rarity,
                     });
 
                     if (slots == null) {
@@ -11694,6 +11855,7 @@ function Game(this: GameApi) {
                     const bankSlot = addItemToRecord(bankRecord, itemUser.idItem, cantSell, {
                         maxSlots: MAX_BANK_SLOTS,
                         equipped: 0,
+                        rarity: itemUser.rarity,
                     });
 
                     if (bankSlot == null) {
@@ -11911,6 +12073,14 @@ function Game(this: GameApi) {
         } catch (err) {
             funct.dumpError(err);
         }
+    };
+
+    this.refreshEquipmentVitals = function (user: RuntimeCharacter, notify = true): boolean {
+        return refreshEquipmentVitals(user as GameCharacter, notify);
+    };
+
+    this.getEquippedSetBonus = function (user: RuntimeCharacter) {
+        return getEquippedSetBonus(user as GameCharacter);
     };
 
     this.persistCharacterSnapshot = async function (

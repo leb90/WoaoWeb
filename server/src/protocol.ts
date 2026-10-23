@@ -3187,6 +3187,8 @@ async function equiparItem(ws: RuntimeClient) {
                 break;
         }
 
+        // Vida y maná con el equipo nuevo (set de tier y +maná de los ítems).
+        game.refreshEquipmentVitals(user);
         handleProtocol.sendMyCharacter(user);
         socket.send(ws);
         await game.persistCharacterItemsById(clientId);
@@ -3938,11 +3940,18 @@ function attackRange(ws: RuntimeClient) {
             user.spellsErrados++;
         }
 
-        game.quitarUserInvItem(ws.id, user.idItemArrow, 1);
+        // Arcos que ahorran flechas: objetoEspecial 1 (33 %), 53 (50 %) y 54 (75 %).
+        const bow = vars.datObj[Number(user.inv?.[String(user.idItemWeapon)]?.idItem ?? 0)];
+        const arrowSaveChance = ARROW_SAVE_CHANCE_BY_OE[Number(bow?.objetoEspecial ?? 0)] ?? 0;
+        if (arrowSaveChance <= 0 || Math.random() * 100 >= arrowSaveChance) {
+            game.quitarUserInvItem(ws.id, user.idItemArrow, 1);
+        }
     } catch (err) {
         funct.dumpError(err);
     }
 }
+
+const ARROW_SAVE_CHANCE_BY_OE: Record<number, number> = { 1: 33, 53: 50, 54: 75 };
 
 function attackSpell(ws: RuntimeClient) {
     try {

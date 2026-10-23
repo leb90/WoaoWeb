@@ -10,6 +10,7 @@ export {};
 const funct = require("./functions");
 const vars = require("./vars");
 const game = require("./game");
+const itemRarity = require("./itemRarity") as typeof import("./itemRarity");
 const itemKinds = require("./itemKinds") as {
     getEquipObjectType: (obj: { objType?: number; subtipo?: number } | null | undefined) => number;
 };
@@ -36,6 +37,7 @@ type StoredInventoryItem = {
     idItem: number;
     cant: number;
     equipped: number | boolean;
+    rarity?: number;
 };
 
 type StoredSpellSlot = {
@@ -47,6 +49,7 @@ type StoredBankItem = {
     idPos: string;
     idItem: number;
     cant: number;
+    rarity?: number;
 };
 
 type StoredCharacter = RuntimeCharacter & {
@@ -770,6 +773,7 @@ function Login(this: LoginApi) {
                 personaje.ignoreMovementUntil = 0;
                 personaje.nextWalkAt = 0;
                 personaje.pvpMapChangeBlockedUntil = 0;
+                personaje.pvpCombatUntil = 0;
 
                 personaje.moveOffsetX = 0;
                 personaje.moveOffsetY = 0;
@@ -897,11 +901,14 @@ function Login(this: LoginApi) {
 
                 personaje.items.map((item) => {
                     const idPos = item.idPos;
+                    // Rareza guardada, normalizada: los sets de tier quedan siempre legendarios.
+                    const rarity = itemRarity.getItemRarity(item.idItem, item.rarity);
 
                     personaje.inv[idPos] = {
                         idItem: item.idItem,
                         cant: item.cant,
                         equipped: Boolean(item.equipped),
+                        ...(rarity > 0 ? { rarity } : {}),
                     };
 
                     const obj = vars.datObj[item.idItem];
@@ -920,11 +927,13 @@ function Login(this: LoginApi) {
 
                 (personaje.bankItems ?? []).map((item) => {
                     const idPos = item.idPos;
+                    const rarity = itemRarity.getItemRarity(item.idItem, item.rarity);
 
                     personaje.bank[idPos] = {
                         idItem: item.idItem,
                         cant: item.cant,
                         equipped: 0,
+                        ...(rarity > 0 ? { rarity } : {}),
                     };
                 });
 
@@ -960,6 +969,9 @@ function Login(this: LoginApi) {
                     personaje.maxMana = 0;
                     personaje.spells = {};
                 }
+
+                // Vida y maná con el equipo (set de tier y +maná de los ítems), sobre la base guardada.
+                game.refreshEquipmentVitals(personaje, false);
 
                 personaje.gold = balance.clampGold(personaje.gold || 0);
                 relocateToJailIfNeeded(personaje);
@@ -1021,6 +1033,7 @@ function Login(this: LoginApi) {
                                       idItem: item.idItem,
                                       cant: item.cant,
                                       equipped: Boolean(item.equipped),
+                                      rarity: itemRarity.getItemRarity(item.idItem, item.rarity),
                                   }),
                               ),
                           }

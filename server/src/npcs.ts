@@ -46,6 +46,7 @@ const socket = require("./socket") as SocketApi;
 const funct = require("./functions");
 const game = require("./game") as GameApi;
 const handleProtocol = require("./handleProtocol") as HandleProtocolApi;
+const itemRarity = require("./itemRarity") as typeof import("./itemRarity");
 
 const AREA_RANGE_X = vars.areaVisionRangeX as number;
 const AREA_RANGE_Y = vars.areaVisionRangeY as number;
@@ -386,7 +387,7 @@ function getUserMagicDefense(user: PlayerCharacter): number {
             continue;
         }
 
-        const itemData = vars.datObj[inventoryItem.idItem];
+        const itemData = itemRarity.getEffectiveItemData(inventoryItem.idItem, inventoryItem.rarity);
 
         total += rollInclusiveRange(itemData?.minDefMag, itemData?.maxDefMag);
     }
@@ -404,7 +405,7 @@ function getUserMagicResistanceBonus(user: PlayerCharacter): number {
             continue;
         }
 
-        total += Number(vars.datObj[inventoryItem.idItem]?.resistenciaMagica ?? 0);
+        total += Number(itemRarity.getEffectiveItemData(inventoryItem.idItem, inventoryItem.rarity)?.resistenciaMagica ?? 0);
     }
 
     return total;
@@ -2943,8 +2944,8 @@ function Npcs(this: NpcsApi) {
                             if (user.idItemHelmet) {
                                 const itemInventaryHelmet = user.inv[String(user.idItemHelmet)];
                                 if (itemInventaryHelmet) {
-                                    const itemHelmet = vars.datObj[itemInventaryHelmet.idItem];
-                                    absorbeDmg = rollInclusiveRange(itemHelmet.minDef, itemHelmet.maxDef);
+                                    const itemHelmet = itemRarity.getEffectiveItemData(itemInventaryHelmet.idItem, itemInventaryHelmet.rarity);
+                                    absorbeDmg = rollInclusiveRange(itemHelmet?.minDef, itemHelmet?.maxDef);
                                 }
                             }
                             break;
@@ -2955,18 +2956,18 @@ function Npcs(this: NpcsApi) {
                             if (user.idItemBody) {
                                 const itemInventaryBody = user.inv[String(user.idItemBody)];
                                 if (itemInventaryBody) {
-                                    const itemBody = vars.datObj[itemInventaryBody.idItem];
-                                    minDef = safeNumber(itemBody.minDef);
-                                    maxDef = safeNumber(itemBody.maxDef);
+                                    const itemBody = itemRarity.getEffectiveItemData(itemInventaryBody.idItem, itemInventaryBody.rarity);
+                                    minDef = safeNumber(itemBody?.minDef);
+                                    maxDef = safeNumber(itemBody?.maxDef);
                                 }
                             }
 
                             if (user.idItemShield) {
                                 const itemInventaryShield = user.inv[String(user.idItemShield)];
                                 if (itemInventaryShield) {
-                                    const itemShield = vars.datObj[itemInventaryShield.idItem];
-                                    minDef += safeNumber(itemShield.minDef);
-                                    maxDef += safeNumber(itemShield.maxDef);
+                                    const itemShield = itemRarity.getEffectiveItemData(itemInventaryShield.idItem, itemInventaryShield.rarity);
+                                    minDef += safeNumber(itemShield?.minDef);
+                                    maxDef += safeNumber(itemShield?.maxDef);
                                 }
                             }
 
@@ -3543,7 +3544,8 @@ function Npcs(this: NpcsApi) {
 
             excludedPositions?.add(`${idMap}:${tmpPos.x}:${tmpPos.y}`);
 
-            game.placeDroppedFloorItem(idMap, tmpPos, idItem, cant);
+            // Drops de NPC y cofres: la rareza se sortea acá (itemRarity.ts).
+            game.placeDroppedFloorItem(idMap, tmpPos, idItem, cant, itemRarity.rollRarityForItem(idItem));
             game.renderDroppedFloorItem(idMap, tmpPos, idItem);
         } catch (err) {
             funct.dumpError(err);

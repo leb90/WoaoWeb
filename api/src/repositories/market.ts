@@ -12,6 +12,8 @@ const characterItemSchema = z.object({
     equipped: z
         .union([z.boolean(), z.number().int()])
         .transform((value) => Boolean(value)),
+    // Rareza por instancia (server/src/itemRarity.ts): se conserva al reescribir el inventario.
+    rarity: z.coerce.number().int().min(0).max(3).default(0),
 });
 
 const createMarketListingSchema = z.object({
@@ -126,9 +128,10 @@ async function replaceCharacterItems(
         id_item: number;
         cant: number;
         equipped: boolean;
+        rarity: number;
     }>(
         `
-            SELECT id_pos, id_item, cant, equipped
+            SELECT id_pos, id_item, cant, equipped, rarity
             FROM character_items
             WHERE character_id = $1
             ORDER BY id_pos ASC
@@ -161,7 +164,8 @@ async function replaceCharacterItems(
             !current ||
             current.id_item !== item.idItem ||
             current.cant !== item.cant ||
-            current.equipped !== item.equipped
+            current.equipped !== item.equipped ||
+            Number(current.rarity ?? 0) !== Number(item.rarity ?? 0)
         );
     });
 
@@ -171,25 +175,27 @@ async function replaceCharacterItems(
 
     const values: Array<number | boolean | string> = [];
     const placeholders = itemsToUpsert.map((item, index) => {
-        const base = index * 5;
+        const base = index * 6;
         values.push(
             characterId,
             item.idPos,
             item.idItem,
             item.cant,
             item.equipped,
+            Number(item.rarity ?? 0),
         );
-        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5})`;
+        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6})`;
     });
 
     await client.query(
         `
-            INSERT INTO character_items (character_id, id_pos, id_item, cant, equipped)
+            INSERT INTO character_items (character_id, id_pos, id_item, cant, equipped, rarity)
             VALUES ${placeholders.join(", ")}
             ON CONFLICT (character_id, id_pos)
             DO UPDATE SET id_item = EXCLUDED.id_item,
                           cant = EXCLUDED.cant,
-                          equipped = EXCLUDED.equipped
+                          equipped = EXCLUDED.equipped,
+                          rarity = EXCLUDED.rarity
         `,
         values,
     );

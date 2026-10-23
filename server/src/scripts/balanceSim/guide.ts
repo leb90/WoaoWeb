@@ -20,7 +20,7 @@ const output = outArg ?? path.resolve(__dirname, "../../../../docs/balance/NIVEL
 const current: Data = JSON.parse(fs.readFileSync(currentFile, "utf8"));
 const proposal: Data = JSON.parse(fs.readFileSync(resultFile, "utf8"));
 type SetBonusStep = { pieces: number; hpPct?: number; dmgPct?: number; manaPct?: number };
-const tierSets: Array<{ name: string; bonuses: SetBonusStep[] }> = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../../../jsons/sets.json"), "utf8")).sets ?? [];
+const tierSets: Array<{ name: string; classes: number[]; bonuses: SetBonusStep[] }> = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../../../jsons/sets.json"), "utf8")).sets ?? [];
 const objects: Record<string, Record<string, any>> = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../../../jsons/objs.json"), "utf8"));
 
 const CLASSES: Array<{ id: number; name: string; modes: string[]; identity: string }> = [
@@ -132,7 +132,7 @@ push(
     "- **Aciertos para matar**: cuántos aciertos seguidos hacen falta para bajar toda la vida del otro, sin que se cure. Es un promedio: 2,5 quiere decir que la mitad de las veces son 2 y la otra mitad 3.",
     "- **`antes → ahora (objetivo)`**: lo que pasaba en `main`, lo que pasa ahora y lo que se busca. ⚠ marca cuando ahora queda a más de medio acierto del objetivo.",
     "- **Equipo común**: lo mejor que se consigue sin premios (crafteo, drops, misiones o comerciantes).",
-    "- **Set**: el set de tier de premios de canje (Desterrado y del Caído, con sus versiones +1, +2 y LEGENDARIA). Donde el set no tiene pieza se usa la mejor común. Las piezas de set son **siempre Legendarias**: +3 al golpe o a la defensa y +6 al daño mágico, y no se caen al morir. Las stats de las tablas son las del ítem sin la rareza.",
+    "- **Set**: el set de tier de la clase (Arcano, Silvestre, Templario, Paladín, Bardo, Verdugo, Silvano y Umbral; ítems 1749 a 1780). Donde el set no tiene pieza se usa la mejor común. El cazador y el pirata no tienen set: para ellos \"con set\" es su equipo común. Las piezas de set son **siempre Legendarias**: +3 al golpe o a la defensa y +6 al daño mágico, y no se caen al morir. Las stats de las tablas son las del ítem sin la rareza.",
     "- Todos pelean **buffeados** (fuerza y agilidad al doble, como en cualquier pelea), con raza humana y los skills al tope del nivel.",
     "- \\* Los ítems con \"+maná\" antes **no sumaban maná** (bug). Ahora sí.",
     "- ² Las clases físicas no tienen anillo útil: el Anillo de Magia (#1242) no tiene efecto en combate y el Anillo de Resistencia Mágica (#988) no se consigue por ninguna vía.",
@@ -183,7 +183,19 @@ push("", "## Clase por clase", "");
 for (const cls of CLASSES) {
     const defense = (profile: string, level = 50) => proposal.loadouts[`${cls.id}|${level}|${profile}|defensa`];
     const attack = (profile: string, mode: string, level = 50) => proposal.loadouts[`${cls.id}|${level}|${profile}|${mode}`];
-    push(`### ${cls.name}`, "", `*${cls.identity}*`, "", "**Equipo**", "", "| Lugar | Equipo común | Set de tier |", "|---|---|---|");
+    const classSet = tierSets.find((set) => set.classes.includes(cls.id));
+    push(
+        `### ${cls.name}`,
+        "",
+        `*${cls.identity}*`,
+        "",
+        classSet ? `Set de tier: **${classSet.name}**.` : "**No tiene set de tier:** la columna del set repite su equipo común.",
+        "",
+        "**Equipo**",
+        "",
+        "| Lugar | Equipo común | Set de tier |",
+        "|---|---|---|",
+    );
     for (const mode of cls.modes) {
         const label = cls.modes.length > 1 ? `Arma (para ${MODE[mode] === "magia" ? "la magia" : MODE[mode] === "flecha" ? "tirar flechas" : "pegar"})` : "Arma";
         push(`| ${label} | ${describeItem(attack("comun", mode)?.gear.weapon)} | ${describeItem(attack("tier", mode)?.gear.weapon)} |`);

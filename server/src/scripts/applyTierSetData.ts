@@ -1,92 +1,119 @@
-// Sets de tier (temporada 1): arma server/jsons/sets.json y normaliza los stats de sus piezas.
-// Ver docs/balance/BALANCE_PVP.md, secciones 7.4 y 7.5.
+// Sets de tier (temporada 1): arma server/jsons/sets.json y fija los stats de sus piezas.
+// Ver docs/balance/BALANCE_PVP.md, secciones 0 y 7.4.
 //
-// - Un set por clase con las piezas de premios de canje (Desterrado y del Caído). Cada lugar acepta la
-//   pieza base y sus versiones +1, +2 y LEGENDARIA (y la variante para razas bajas).
-// - Stats: cada pieza base queda un poco por encima de lo mejor común de su clase; las piezas de clases
-//   físicas suman resistencia mágica; +1/+2/LEGENDARIA suben de verdad sobre la base.
-// - Nunca baja un stat: queda el máximo entre el valor actual y el nuevo.
+// - Un set por clase con las piezas 1749 a 1780 (Arcano, Silvestre, Templario, Paladín, Bardo, Verdugo,
+//   Silvano y Umbral). Las clases salen de las restricciones de cada pieza en objs.json.
+// - Las apariencias de la tienda (1781 en adelante, cosmetico: 1) no cuentan como pieza.
+// - Stats: los de la calibración de balance. En SETS va la base de cada pieza (un poco por encima de lo
+//   mejor común de su clase; las de clases físicas suman resistencia mágica) y se escribe el nivel tope
+//   (TOP_TIER: el de las versiones LEGENDARIA de los sets viejos, con el que se calibró el simulador).
+//   El script es la fuente de verdad de estas piezas. Encima, la rareza Legendaria (itemRarity.ts) suma +3 / +6.
+// - objetoEspecial: 2-7 fuerza o agilidad, 8-10 maná (ver getObjetoEspecialBonus en game.ts). 0 = nada.
 //
 //   pnpm --dir server apply-tier-sets   (después: pnpm --dir server export-client-objs)
 import fs from "node:fs";
 import path from "node:path";
 
-type Slot = "armadura" | "arma" | "casco" | "escudo" | "anillo";
-type Stats = { minHit?: number; maxHit?: number; minDef?: number; maxDef?: number; magicDamageBonus?: number; resistenciaMagica?: number };
-type PieceDef = { slot: Slot; baseIds: number[]; stats: Stats };
+type Slot = "armadura" | "arma" | "casco" | "escudo";
+type Stats = {
+    minHit?: number;
+    maxHit?: number;
+    minDef?: number;
+    maxDef?: number;
+    magicDamageBonus?: number;
+    resistenciaMagica?: number;
+    objetoEspecial?: number;
+};
+type PieceDef = { slot: Slot; id: number; stats: Stats };
 type SetDef = { id: string; name: string; classes: number[]; pieces: PieceDef[] };
 
 const root = path.resolve(__dirname, "../../..");
 const OBJECT_PATHS = ["server/jsons/objs.json", "api/src/jsons/objs.json"];
 const SETS_PATH = "server/jsons/sets.json";
+// Campos que el script controla: lo que no figura en `stats` queda en 0.
+const MANAGED_FIELDS: Array<keyof Stats> = ["minHit", "maxHit", "minDef", "maxDef", "magicDamageBonus", "resistenciaMagica", "objetoEspecial"];
 
 const RM = 5;
 const SETS: SetDef[] = [
     {
-        id: "t1-mago", name: "Set Desterrado del Mago", classes: [1], pieces: [
-            { slot: "armadura", baseIds: [1341, 1343], stats: { minDef: 20, maxDef: 30 } },
-            { slot: "arma", baseIds: [1373], stats: { magicDamageBonus: 33 } },
-            { slot: "casco", baseIds: [1355], stats: { minDef: 20, maxDef: 25, magicDamageBonus: 26 } },
-            { slot: "anillo", baseIds: [1357], stats: { magicDamageBonus: 22 } },
+        id: "t1-arcano", name: "Set Arcano", classes: [1], pieces: [
+            { slot: "casco", id: 1749, stats: { minDef: 20, maxDef: 25, magicDamageBonus: 26 } },
+            { slot: "arma", id: 1750, stats: { minHit: 4, maxHit: 6, magicDamageBonus: 33 } },
+            { slot: "escudo", id: 1751, stats: { minDef: 4, maxDef: 12, magicDamageBonus: 22 } },
+            { slot: "armadura", id: 1752, stats: { minDef: 20, maxDef: 30, objetoEspecial: 10 } },
         ],
     },
     {
-        id: "t1-druida", name: "Set Desterrado del Druida", classes: [7], pieces: [
-            { slot: "armadura", baseIds: [1342, 1344], stats: { minDef: 20, maxDef: 30 } },
-            { slot: "arma", baseIds: [1374], stats: { minHit: 8, maxHit: 14, magicDamageBonus: 31 } },
-            { slot: "casco", baseIds: [1356], stats: { minDef: 20, maxDef: 25, magicDamageBonus: 26 } },
-            { slot: "anillo", baseIds: [1358], stats: { magicDamageBonus: 22 } },
+        id: "t1-silvestre", name: "Set Silvestre", classes: [7], pieces: [
+            { slot: "casco", id: 1753, stats: { minDef: 20, maxDef: 25, magicDamageBonus: 26 } },
+            { slot: "arma", id: 1754, stats: { minHit: 8, maxHit: 14, magicDamageBonus: 31 } },
+            { slot: "escudo", id: 1755, stats: { minDef: 4, maxDef: 12, magicDamageBonus: 22 } },
+            { slot: "armadura", id: 1756, stats: { minDef: 20, maxDef: 30, objetoEspecial: 9 } },
         ],
     },
     {
-        id: "t1-clerigo", name: "Set del Caído del Clérigo", classes: [2], pieces: [
-            { slot: "armadura", baseIds: [1345, 1350], stats: { minDef: 52, maxDef: 72, resistenciaMagica: RM } },
-            { slot: "arma", baseIds: [1371], stats: { minHit: 35, maxHit: 47 } },
-            { slot: "casco", baseIds: [1364], stats: { minDef: 22, maxDef: 30, resistenciaMagica: RM } },
-            { slot: "escudo", baseIds: [1359], stats: { minDef: 22, maxDef: 30, resistenciaMagica: RM } },
+        id: "t1-templario", name: "Set Templario", classes: [2], pieces: [
+            { slot: "casco", id: 1757, stats: { minDef: 22, maxDef: 30, resistenciaMagica: RM, objetoEspecial: 6 } },
+            { slot: "arma", id: 1758, stats: { minHit: 35, maxHit: 47, objetoEspecial: 3 } },
+            { slot: "escudo", id: 1759, stats: { minDef: 22, maxDef: 30, resistenciaMagica: RM, objetoEspecial: 3 } },
+            { slot: "armadura", id: 1760, stats: { minDef: 52, maxDef: 72, resistenciaMagica: RM, objetoEspecial: 4 } },
         ],
     },
     {
-        id: "t1-bardo", name: "Set del Caído del Bardo", classes: [6], pieces: [
-            { slot: "armadura", baseIds: [1346, 1351], stats: { minDef: 44, maxDef: 60, resistenciaMagica: RM } },
-            { slot: "arma", baseIds: [1087], stats: { minHit: 34, maxHit: 46 } },
-            { slot: "casco", baseIds: [1366], stats: { minDef: 24, maxDef: 32, resistenciaMagica: RM } },
-            { slot: "escudo", baseIds: [1361], stats: { minDef: 22, maxDef: 30, resistenciaMagica: RM } },
+        id: "t1-paladin", name: "Set Paladín", classes: [8], pieces: [
+            { slot: "casco", id: 1761, stats: { minDef: 22, maxDef: 30, resistenciaMagica: RM, objetoEspecial: 9 } },
+            { slot: "arma", id: 1762, stats: { minHit: 36, maxHit: 49, objetoEspecial: 3 } },
+            { slot: "escudo", id: 1763, stats: { minDef: 22, maxDef: 30, resistenciaMagica: RM, objetoEspecial: 3 } },
+            { slot: "armadura", id: 1764, stats: { minDef: 52, maxDef: 72, resistenciaMagica: RM, objetoEspecial: 2 } },
         ],
     },
     {
-        id: "t1-guerrero", name: "Set del Caído del Guerrero y el Pirata", classes: [3, 18], pieces: [
-            { slot: "armadura", baseIds: [1347, 1352], stats: { minDef: 52, maxDef: 72, resistenciaMagica: RM } },
-            { slot: "arma", baseIds: [1369], stats: { minHit: 37, maxHit: 50 } },
-            { slot: "casco", baseIds: [1367], stats: { minDef: 26, maxDef: 34, resistenciaMagica: RM } },
-            { slot: "escudo", baseIds: [1362], stats: { minDef: 26, maxDef: 34, resistenciaMagica: RM } },
+        id: "t1-bardo", name: "Set Bardo", classes: [6], pieces: [
+            { slot: "casco", id: 1765, stats: { minDef: 24, maxDef: 32, resistenciaMagica: RM } },
+            { slot: "arma", id: 1766, stats: { minHit: 34, maxHit: 46 } },
+            { slot: "escudo", id: 1767, stats: { minDef: 22, maxDef: 30, resistenciaMagica: RM, objetoEspecial: 6 } },
+            { slot: "armadura", id: 1768, stats: { minDef: 44, maxDef: 60, resistenciaMagica: RM, objetoEspecial: 4 } },
         ],
     },
     {
-        id: "t1-paladin", name: "Set del Caído del Paladín", classes: [8], pieces: [
-            { slot: "armadura", baseIds: [1348, 1353], stats: { minDef: 52, maxDef: 72, resistenciaMagica: RM } },
-            { slot: "arma", baseIds: [1372], stats: { minHit: 36, maxHit: 49 } },
-            { slot: "casco", baseIds: [1365], stats: { minDef: 22, maxDef: 30, resistenciaMagica: RM } },
-            { slot: "escudo", baseIds: [1360], stats: { minDef: 22, maxDef: 30, resistenciaMagica: RM } },
+        id: "t1-verdugo", name: "Set del Verdugo", classes: [3], pieces: [
+            { slot: "casco", id: 1769, stats: { minDef: 26, maxDef: 34, resistenciaMagica: RM, objetoEspecial: 5 } },
+            { slot: "arma", id: 1770, stats: { minHit: 37, maxHit: 50, objetoEspecial: 4 } },
+            { slot: "escudo", id: 1771, stats: { minDef: 26, maxDef: 34, resistenciaMagica: RM, objetoEspecial: 2 } },
+            { slot: "armadura", id: 1772, stats: { minDef: 52, maxDef: 72, resistenciaMagica: RM, objetoEspecial: 2 } },
         ],
     },
     {
-        id: "t1-cazador", name: "Set del Caído del Cazador y el Arquero", classes: [9, 20], pieces: [
-            { slot: "armadura", baseIds: [1349, 1354], stats: { minDef: 52, maxDef: 72, resistenciaMagica: RM } },
-            { slot: "arma", baseIds: [1052], stats: { minHit: 12, maxHit: 16 } },
-            { slot: "casco", baseIds: [1368], stats: { minDef: 22, maxDef: 30, resistenciaMagica: RM } },
-            { slot: "escudo", baseIds: [1363], stats: { minDef: 22, maxDef: 30, resistenciaMagica: RM } },
+        id: "t1-silvano", name: "Set Silvano", classes: [20], pieces: [
+            { slot: "casco", id: 1773, stats: { minDef: 22, maxDef: 30, resistenciaMagica: RM, objetoEspecial: 6 } },
+            { slot: "arma", id: 1774, stats: { minHit: 12, maxHit: 16 } },
+            { slot: "escudo", id: 1775, stats: { minDef: 22, maxDef: 30, resistenciaMagica: RM, objetoEspecial: 3 } },
+            { slot: "armadura", id: 1776, stats: { minDef: 52, maxDef: 72, resistenciaMagica: RM, objetoEspecial: 4 } },
         ],
     },
     {
-        id: "t1-asesino", name: "Set Desterrado del Asesino", classes: [4], pieces: [
-            { slot: "armadura", baseIds: [1181, 196], stats: { minDef: 44, maxDef: 60, resistenciaMagica: RM } },
-            { slot: "arma", baseIds: [1054], stats: { minHit: 34, maxHit: 46 } },
-            { slot: "casco", baseIds: [1159], stats: { minDef: 20, maxDef: 28, resistenciaMagica: RM } },
-            { slot: "escudo", baseIds: [1256], stats: { minDef: 22, maxDef: 30, resistenciaMagica: RM } },
+        id: "t1-umbral", name: "Set del Umbral", classes: [4], pieces: [
+            { slot: "casco", id: 1777, stats: { minDef: 20, maxDef: 28, resistenciaMagica: RM, objetoEspecial: 6 } },
+            { slot: "arma", id: 1778, stats: { minHit: 34, maxHit: 46, objetoEspecial: 4 } },
+            { slot: "escudo", id: 1779, stats: { minDef: 22, maxDef: 30, resistenciaMagica: RM, objetoEspecial: 3 } },
+            { slot: "armadura", id: 1780, stats: { minDef: 44, maxDef: 60, resistenciaMagica: RM, objetoEspecial: 4 } },
         ],
     },
 ];
+
+// Nivel tope sobre la base (lo que antes era la versión LEGENDARIA de cada pieza).
+const TOP_TIER = { hit: 1.1, def: 1.15, magicDamage: 6, magicResistance: 2 };
+
+function topTierStats(stats: Stats): Stats {
+    const out: Stats = { ...stats };
+    if (stats.minHit) out.minHit = Math.round(stats.minHit * TOP_TIER.hit);
+    if (stats.maxHit) out.maxHit = Math.round(stats.maxHit * TOP_TIER.hit);
+    if (stats.minDef) out.minDef = Math.round(stats.minDef * TOP_TIER.def);
+    if (stats.maxDef) out.maxDef = Math.round(stats.maxDef * TOP_TIER.def);
+    if (stats.magicDamageBonus) out.magicDamageBonus = stats.magicDamageBonus + TOP_TIER.magicDamage;
+    if (stats.resistenciaMagica) out.resistenciaMagica = stats.resistenciaMagica + TOP_TIER.magicResistance;
+    return out;
+}
 
 // Bonos del set (ver tierSets.ts). Solo cuentan lugares distintos.
 const BONUSES = [
@@ -94,42 +121,35 @@ const BONUSES = [
     { pieces: 4, hpPct: 20, dmgPct: 25 },
 ];
 
-// Cuánto suben las versiones sobre la base.
-const VARIANT_LEVEL = [
-    { suffix: /\+\s*1\s*$/i, level: 1 },
-    { suffix: /\+\s*2\s*$/i, level: 2 },
-    { suffix: /legendari[oa]\s*$/i, level: 3 },
-];
-const HIT_FACTOR = [1, 1.03, 1.06, 1.1];
-const DEF_FACTOR = [1, 1.05, 1.1, 1.15];
-const DM_EXTRA = [0, 2, 4, 6];
-const RM_EXTRA = [0, 0, 1, 2];
+type ObjectRecord = Record<string, unknown> & { name?: string; clasesNoPermitidas?: number[] };
 
-const baseName = (name: unknown) => String(name ?? "").replace(/\s*(\+\s*\d|legendari[oa])\s*$/i, "").trim();
-
-function variantStats(stats: Stats, level: number): Stats {
-    const out: Stats = {};
-    if (stats.minHit !== undefined) out.minHit = Math.round(stats.minHit * HIT_FACTOR[level]);
-    if (stats.maxHit !== undefined) out.maxHit = Math.round(stats.maxHit * HIT_FACTOR[level]);
-    if (stats.minDef !== undefined) out.minDef = Math.round(stats.minDef * DEF_FACTOR[level]);
-    if (stats.maxDef !== undefined) out.maxDef = Math.round(stats.maxDef * DEF_FACTOR[level]);
-    if (stats.magicDamageBonus !== undefined) out.magicDamageBonus = stats.magicDamageBonus + DM_EXTRA[level];
-    if (stats.resistenciaMagica !== undefined) out.resistenciaMagica = stats.resistenciaMagica + RM_EXTRA[level];
-    return out;
+// Las clases del set tienen que poder usar todas sus piezas.
+function checkClasses(objects: Record<string, ObjectRecord>) {
+    for (const set of SETS) {
+        for (const piece of set.pieces) {
+            const item = objects[String(piece.id)];
+            if (!item) throw new Error(`No existe la pieza ${piece.id} (${set.name})`);
+            const blocked = set.classes.filter((classId) => (item.clasesNoPermitidas ?? []).includes(classId));
+            if (blocked.length) throw new Error(`${item.name} (#${piece.id}) no se permite para las clases ${blocked.join(", ")}`);
+        }
+    }
 }
 
-function updateObjects(relativePath: string, plan: Map<number, Stats>) {
+function updateObjects(relativePath: string) {
     const fullPath = path.join(root, relativePath);
-    const objects = JSON.parse(fs.readFileSync(fullPath, "utf8")) as Record<string, Record<string, unknown>>;
+    const objects = JSON.parse(fs.readFileSync(fullPath, "utf8")) as Record<string, ObjectRecord>;
+    checkClasses(objects);
     let changed = 0;
-    for (const [id, stats] of plan) {
-        const item = objects[String(id)];
-        if (!item) throw new Error(`No existe el objeto ${id} en ${relativePath}`);
-        for (const [key, value] of Object.entries(stats) as Array<[keyof Stats, number]>) {
-            const next = Math.max(Number(item[key] ?? 0), value);
-            if (Number(item[key] ?? 0) !== next) {
-                item[key] = next;
-                changed++;
+    for (const set of SETS) {
+        for (const piece of set.pieces) {
+            const item = objects[String(piece.id)];
+            const stats = topTierStats(piece.stats);
+            for (const key of MANAGED_FIELDS) {
+                const next = stats[key] ?? 0;
+                if (Number(item[key] ?? 0) !== next) {
+                    item[key] = next;
+                    changed++;
+                }
             }
         }
     }
@@ -137,30 +157,17 @@ function updateObjects(relativePath: string, plan: Map<number, Stats>) {
     return changed;
 }
 
-const objects = JSON.parse(fs.readFileSync(path.join(root, OBJECT_PATHS[0]), "utf8")) as Record<string, { name?: string }>;
-const plan = new Map<number, Stats>();
-const sets = SETS.map((set) => {
-    const pieces: Partial<Record<Slot, number[]>> = {};
-    for (const piece of set.pieces) {
-        const ids: number[] = [];
-        for (const baseId of piece.baseIds) {
-            const base = baseName(objects[baseId]?.name);
-            if (!base) throw new Error(`No existe la pieza base ${baseId}`);
-            for (const [rawId, item] of Object.entries(objects)) {
-                if (baseName(item.name) !== base) continue;
-                const id = Number(rawId);
-                const variant = VARIANT_LEVEL.find((v) => v.suffix.test(String(item.name)));
-                plan.set(id, variantStats(piece.stats, variant?.level ?? 0));
-                ids.push(id);
-            }
-        }
-        pieces[piece.slot] = ids.sort((a, b) => a - b);
-    }
-    return { id: set.id, name: set.name, season: 1, classes: set.classes, pieces, bonuses: BONUSES };
-});
+const sets = SETS.map((set) => ({
+    id: set.id,
+    name: set.name,
+    season: 1,
+    classes: set.classes,
+    pieces: Object.fromEntries(set.pieces.map((piece) => [piece.slot, [piece.id]])),
+    bonuses: BONUSES,
+}));
 
-fs.writeFileSync(path.join(root, SETS_PATH), `${JSON.stringify({ version: 1, sets }, null, 4)}\n`, "utf8");
 for (const relativePath of OBJECT_PATHS) {
-    console.log(`${relativePath}: ${updateObjects(relativePath, plan)} stats actualizados en ${plan.size} piezas.`);
+    console.log(`${relativePath}: ${updateObjects(relativePath)} stats actualizados en ${SETS.length * 4} piezas.`);
 }
+fs.writeFileSync(path.join(root, SETS_PATH), `${JSON.stringify({ version: 2, sets }, null, 4)}\n`, "utf8");
 console.log(`${SETS_PATH}: ${sets.length} sets.`);

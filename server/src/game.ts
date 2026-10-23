@@ -1254,7 +1254,9 @@ function applyMagicBonuses(baseDamage: number, caster: GameCharacter) {
     const helmet = getEquippedHelmetData(caster);
     const body = getEquippedBodyData(caster);
     const ring = getEquippedRingData(caster);
-    const equipment = getMagicEquipmentTotals([weapon, helmet, body, ring]);
+    // El escudo también suma: los sets de mago y druida traen escudo con daño mágico.
+    const shield = getEquippedShieldData(caster);
+    const equipment = getMagicEquipmentTotals([weapon, helmet, body, ring, shield]);
     const damage = calculateMagicDamage(baseDamage, caster.level, getMagicDamageModifier(caster.idClase), equipment);
 
     return { damage, magicPenetration: equipment.penetration };

@@ -12,7 +12,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { BEST_ARROW, pickGear, type GearProfile, type GearRole, type GearSlot } from "./gear";
+import { BEST_ARROW, hasOwnSetPiece, pickGear, type GearProfile, type GearRole, type GearSlot } from "./gear";
 import { scoreResults, type SimResult } from "./targets";
 
 const SRC = path.resolve(__dirname, "../..");
@@ -84,7 +84,10 @@ function gearFor(classId: number, profile: GearProfile, mode: string): Record<st
     }
     gear.body = pick("armadura");
     gear.helmet = pick("casco");
-    gear.shield = Number(vars.modEscudo[classId] ?? 0) > 0 && mode !== "rango" ? pick("escudo") : 0;
+    // Escudo: las clases que bloquean con él (modEscudo) y, con set, cualquiera cuyo set traiga escudo
+    // (mago, druida y arquero también lo usan para completar las 4 piezas).
+    const usesShield = (Number(vars.modEscudo[classId] ?? 0) > 0 && mode !== "rango") || (profile === "tier" && hasOwnSetPiece(classId, "escudo"));
+    gear.shield = usesShield ? pick("escudo") : 0;
     gear.ring = pick("anillo");
     for (const key of Object.keys(gear)) if (!gear[key]) delete gear[key];
     return gear;

@@ -14,8 +14,8 @@ const game = require("./game");
 const tierSets = require("./tierSets");
 const { getEquippedNpcGoldBonusPct } = require("./equipmentRewardBonuses");
 
-// Set del Caído del Guerrero: espada, armadura, casco y escudo (con sus versiones +1/+2/LEGENDARIA).
-const WARRIOR_SET = { weapon: 1503, body: 1424, helmet: 1490, shield: 1466 };
+// Set del Verdugo (guerrero): espada, armadura, yelmo y escudo.
+const WARRIOR_SET = { weapon: 1770, body: 1772, helmet: 1769, shield: 1771 };
 
 function makeWarrior(gear: Partial<Record<"weapon" | "body" | "helmet" | "shield" | "ring", number>>) {
     const inv: Record<string, { idItem: number; amount: number; equipped: number }> = {};
@@ -46,9 +46,12 @@ test("el set cuenta lugares distintos y da el escalón alcanzado", () => {
     assert.equal(full.pieces, 4);
     assert.equal(full.hpPct, 20);
     assert.equal(full.dmgPct, 25);
-    // La versión base y la LEGENDARIA de la misma pieza ocupan el mismo lugar.
-    assert.equal(tierSets.getEquippedSetBonus([1369, 1503]).pieces, 1);
+    // La misma pieza repetida ocupa un solo lugar.
+    assert.equal(tierSets.getEquippedSetBonus([WARRIOR_SET.weapon, WARRIOR_SET.weapon]).pieces, 1);
     assert.equal(tierSets.isTierSetItem(402), false);
+    // Las piezas de los sets viejos (Desterrado y del Caído) ya no son de tier.
+    assert.equal(tierSets.isTierSetItem(1503), false);
+    assert.equal(tierSets.isTierSetItem(1341), false);
 });
 
 test("la vida del set se suma sin acumularse y se guarda la base", () => {

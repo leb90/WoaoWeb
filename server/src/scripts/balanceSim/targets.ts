@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import path from "node:path";
+
 // Matriz objetivo de balance PvP: cuántos aciertos hacen falta para matar.
 // Ancla del pedido: mago contra mago del mismo nivel y equipo = 2 (nivel 30), 2-3 (nivel 40), 3 (nivel 50).
 // Ejemplo del pedido: mago 50 con set contra guerrero sin set 2-3; contra guerrero con set 4-5.
@@ -39,9 +42,23 @@ export const GEAR_FACTOR: Record<string, number> = { "comun|comun": 1, "tier|tie
 export const MIN_HITS = 2;
 export const TOLERANCE = 0.5;
 
+// Clases con set de tier (jsons/sets.json). Para las que no tienen, "con set" es su equipo común y se
+// las mide como tal (por ejemplo, el cazador: el set Silvano es solo del arquero).
+const CLASSES_WITH_SET = new Set<number>(
+    (() => {
+        try {
+            const file = path.resolve(__dirname, "../../../jsons/sets.json");
+            return (JSON.parse(fs.readFileSync(file, "utf8")).sets ?? []).flatMap((set: { classes: number[] }) => set.classes);
+        } catch {
+            return [];
+        }
+    })(),
+);
+const effectiveProfile = (classId: number, profile: string) => (profile === "tier" && !CLASSES_WITH_SET.has(classId) ? "comun" : profile);
+
 export function targetHits(result: SimResult): number | null {
     const offset = ATTACKER_OFFSET[`${result.atkClass}|${result.mode}`];
-    const factor = GEAR_FACTOR[`${result.atkProfile}|${result.defProfile}`];
+    const factor = GEAR_FACTOR[`${effectiveProfile(result.atkClass, result.atkProfile)}|${effectiveProfile(result.defClass, result.defProfile)}`];
     const base = BASE_HITS[result.level];
     if (offset === undefined || factor === undefined || base === undefined) return null;
     const kind = result.mode === "magia" ? "magia" : "fisico";

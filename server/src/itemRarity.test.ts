@@ -11,12 +11,14 @@ const itemRarity = require("./itemRarity");
 const { canAddToInventory, equipInventoryItem, unequipInventoryItem, EQUIPMENT_STORAGE_SLOTS } = require("./equipmentStorage");
 
 const MATADRAGONES = 402; // arma común
-const TIER_SWORD = 1503; // Espada del Caído LEGENDARIO (set del guerrero)
+const TIER_SWORD = 1770; // Espada del Verdugo (set del guerrero)
+const OLD_SET_SWORD = 1503; // Espada del Caído LEGENDARIO: era del set viejo, ya no es de tier
 const RED_POTION = 38; // no lleva rareza
 
 test("los sets de tier son siempre legendarios y lo no elegible es Normal", () => {
     assert.equal(itemRarity.getItemRarity(TIER_SWORD, 0), 3);
     assert.equal(itemRarity.getItemRarity(TIER_SWORD, 1), 3);
+    assert.equal(itemRarity.getItemRarity(OLD_SET_SWORD, 0), 0);
     assert.equal(itemRarity.getItemRarity(RED_POTION, 3), 0);
     assert.equal(itemRarity.getItemRarity(MATADRAGONES, 2), 2);
     assert.equal(itemRarity.getItemRarity(MATADRAGONES, 9), 3);

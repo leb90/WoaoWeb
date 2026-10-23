@@ -384,7 +384,11 @@ type StabResult = {
     stabbed: boolean;
     extraDamage: number;
     totalDamage: number;
+    // Apuñalada por la espalda a un jugador: daño de cada tick del desangrado (0 = no sangra).
+    bleedDamage?: number;
 };
+// Desangrado de la apuñalada (ver startBleeding / processBleedTick).
+type BleedState = { attackerId: EntityId; tickDamage: number; endsAt: number; nextTickAt: number };
 type FloorItemRegistryEntry = {
     mapId: number;
     pos: Position;
@@ -457,6 +461,7 @@ type GameCharacter = RuntimeCharacter & {
     cooldownAgilidad: number;
     envenenado?: number;
     cooldownVeneno?: number;
+    bleed?: BleedState | null;
     ceguera?: NumericFlag;
     cooldownCeguera?: number;
     estupidez?: NumericFlag;
@@ -584,6 +589,14 @@ function rollStabbingSuccess(skillApu: number, isAsesino: boolean): boolean {
     const roll = funct.randomIntFromInterval(1, suerte);
     return isAsesino ? roll <= 4 : roll === 2;
 }
+
+// Apuñalada por la espalda a un jugador: suma poco daño en el momento pero abre un desangrado que cada
+// BLEED_TICK_MS saca lo mismo que el golpe, durante BLEED_DURATION_MS. Curarse no lo corta: hay que
+// curarse muy rápido (magias de otros jugadores o pociones seguidas) o se muere. Contra NPC sigue el
+// daño doble de siempre.
+const STAB_PVP_EXTRA_DAMAGE_PCT = 0.1;
+const BLEED_DURATION_MS = 10000;
+const BLEED_TICK_MS = 2000;
 
 const COMBAT_HIT_FX_ID = 14;
 const COMBAT_SHIELD_BLOCK_FX_ID = 88;
@@ -1907,6 +1920,91 @@ function syncCharacterVisibility(idUser: EntityId) {
 
     syncVisibleCharactersForViewer(idUser);
     syncCharacterVisibilityForOthers(idUser);
+}
+
+function startBleeding(attacker: GameCharacter, target: GameCharacter, tickDamage: number, now = Date.now()) {
+    // Una apuñalada nueva reinicia el desangrado con el daño de ese golpe.
+    target.bleed = { attackerId: attacker.id, tickDamage: Math.max(1, Math.floor(tickDamage)), endsAt: now + BLEED_DURATION_MS, nextTickAt: now + BLEED_TICK_MS };
+    withUserClient(target.id, (targetClient) => handleProtocol.bleedState(BLEED_DURATION_MS, targetClient));
+}
+
+function stopBleeding(target: GameCharacter, message?: string) {
+    if (!target.bleed) {
+        return;
+    }
+
+    target.bleed = null;
+    withUserClient(target.id, (targetClient) => {
+        handleProtocol.bleedState(0, targetClient);
+        if (message) {
+            handleProtocol.console(message, "white", 0, 0, targetClient);
+        }
+    });
+}
+
+// Muerte por desangrado: cuenta como si la hubiera matado el atacante (criminalidad, arenas, experiencia).
+// Si el atacante ya no está, muere como por veneno.
+function killByBleeding(target: GameCharacter, attackerId: EntityId) {
+    const attackerClient = getCharacterById(attackerId) ? getClientById(attackerId) : null;
+    if (attackerClient) {
+        require("./respawn").muere(attackerClient, target.id);
+        return;
+    }
+
+    game.putBodyAndHeadDead(target.id);
+    void game.tirarItemsUser(target.id);
+}
+
+function processBleedTick(now: number) {
+    for (const idUser in vars.personajes) {
+        const target = getCharacterById(idUser);
+        const bleed = target?.bleed;
+        if (!target || !bleed) {
+            continue;
+        }
+
+        if (target.dead || Number(target.hp ?? 0) <= 0) {
+            stopBleeding(target);
+            continue;
+        }
+
+        if (Number(target.zonaSegura ?? 0) === 1) {
+            stopBleeding(target, "Estás en zona segura: la herida dejó de sangrar.");
+            continue;
+        }
+
+        while (target.bleed && bleed.nextTickAt <= now && bleed.nextTickAt <= bleed.endsAt) {
+            bleed.nextTickAt += BLEED_TICK_MS;
+            target.hp = Math.max(0, Number(target.hp ?? 0) - bleed.tickDamage);
+            interruptPendingLogoutOnAttack(target.id, "[Servidor] La salida se canceló porque te estás desangrando.");
+            // Misma animación de sangre que un golpe y el daño arriba del personaje.
+            emitCharacterFxToUserArea(target.id, COMBAT_HIT_FX_ID);
+            loopAreaByUserId(target.id, (areaTarget: AreaTarget) => {
+                if (areaTarget.isNpc) return;
+                const areaClient = getClientById(areaTarget.id);
+                if (areaClient && canReceiveCharacterEvent(areaTarget.id, target.id)) {
+                    handleProtocol.dialog(target.id, `-${bleed.tickDamage}`, "", "red", 0, areaClient);
+                }
+            });
+            withUserClient(target.id, (targetClient) => {
+                handleProtocol.updateHP(target.hp, targetClient);
+                handleProtocol.console(`Te desangrás: -${bleed.tickDamage}.`, "red", 1, 0, targetClient);
+            });
+            if (isAdminSummonedBot(target)) {
+                broadcastCharacterVitalsDelta(target);
+            }
+
+            if (target.hp <= 0) {
+                stopBleeding(target);
+                killByBleeding(target, bleed.attackerId);
+                break;
+            }
+        }
+
+        if (target.bleed && bleed.nextTickAt > bleed.endsAt) {
+            stopBleeding(target, "La herida dejó de sangrar.");
+        }
+    }
 }
 
 function interruptPendingLogoutOnAttack(
@@ -3566,6 +3664,7 @@ export type GameApi = {
     existPjOrClose: (ws: RuntimeClient) => boolean;
     worldSave: (callback: RuntimeCallback<WorldSaveResult>) => Promise<void>;
     processAdminSummonedBotTick: (now: number) => void;
+    processBleedTick: (now: number) => void;
     respawnNpc: (map: number, aguaValida: boolean, tierraInvalida?: boolean) => RespawnPosition;
     validPosRespawn: (pos: Position, map: number, aguaValida: boolean) => boolean;
     validPosRespawnNpc: (pos: Position, map: number, aguaValida: boolean, tierraInvalida?: boolean) => boolean;
@@ -6074,6 +6173,8 @@ function Game(this: GameApi) {
             funct.dumpError(err);
         }
     };
+
+    this.processBleedTick = processBleedTick;
 
     this.processAdminSummonedBotTick = function (now: number) {
         try {
@@ -10572,9 +10673,15 @@ function Game(this: GameApi) {
 
                 if (stabResult.stabbed) {
                     emitCharacterFxToUserArea(idUserAttacked, COMBAT_STABBING_FX_ID);
+                    const bleeding = Number(stabResult.bleedDamage ?? 0) > 0 && userAttacked.hp > 0;
                     withUserClient(idUser, (userClient) => {
                         handleProtocol.console(
-                            "¡Has apuñalado a " + userAttacked.nameCharacter + " por " + stabResult.totalDamage + "!",
+                            "¡Has apuñalado a " +
+                                userAttacked.nameCharacter +
+                                " por " +
+                                stabResult.totalDamage +
+                                "!" +
+                                (bleeding ? " Se está desangrando." : ""),
                             "red",
                             1,
                             0,
@@ -10583,13 +10690,20 @@ function Game(this: GameApi) {
                     });
                     withUserClient(idUserAttacked, (targetClient) => {
                         handleProtocol.console(
-                            user.nameCharacter + " te ha apuñalado por " + stabResult.totalDamage + "!",
+                            user.nameCharacter +
+                                " te ha apuñalado por " +
+                                stabResult.totalDamage +
+                                "!" +
+                                (bleeding ? " ¡Te estás desangrando, curate rápido!" : ""),
                             "red",
                             1,
                             0,
                             targetClient,
                         );
                     });
+                    if (bleeding) {
+                        startBleeding(user, userAttacked, Number(stabResult.bleedDamage));
+                    }
                 } else {
                     emitCharacterFxToUserArea(idUserAttacked, COMBAT_HIT_FX_ID);
                     switch (lugarCuerpo) {
@@ -10950,8 +11064,11 @@ function Game(this: GameApi) {
 
             if (rollStabbingSuccess(skillApu, isAsesino)) {
                 const fromBehind = user.heading === userAttacked.heading;
-                const totalDamage = fromBehind ? dmg * 2 : dmg;
-                const extraDamage = totalDamage - dmg;
+                // Asesino por la espalda: un poco de daño extra y el desangrado (cada tick = el daño del golpe).
+                // Las demás clases que apuñalan siguen con el daño doble por la espalda.
+                const bleeds = fromBehind && isAsesino;
+                const extraDamage = !fromBehind ? 0 : bleeds ? Math.max(1, Math.round(dmg * STAB_PVP_EXTRA_DAMAGE_PCT)) : dmg;
+                const totalDamage = dmg + extraDamage;
 
                 if (extraDamage > 0) {
                     userAttacked.hp -= extraDamage;
@@ -10961,6 +11078,7 @@ function Game(this: GameApi) {
                     stabbed: true,
                     extraDamage,
                     totalDamage,
+                    bleedDamage: bleeds ? dmg : 0,
                 };
             }
 

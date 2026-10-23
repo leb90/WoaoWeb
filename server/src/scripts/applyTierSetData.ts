@@ -23,6 +23,8 @@ type Stats = {
     magicDamageBonus?: number;
     resistenciaMagica?: number;
     objetoEspecial?: number;
+    // 1 = arma de apuñalar (la del asesino; ver puedeApu en game.ts).
+    apu?: number;
 };
 type PieceDef = { slot: Slot; id: number; stats: Stats };
 type SetDef = { id: string; name: string; classes: number[]; pieces: PieceDef[] };
@@ -31,7 +33,7 @@ const root = path.resolve(__dirname, "../../..");
 const OBJECT_PATHS = ["server/jsons/objs.json", "api/src/jsons/objs.json"];
 const SETS_PATH = "server/jsons/sets.json";
 // Campos que el script controla: lo que no figura en `stats` queda en 0.
-const MANAGED_FIELDS: Array<keyof Stats> = ["minHit", "maxHit", "minDef", "maxDef", "magicDamageBonus", "resistenciaMagica", "objetoEspecial"];
+const MANAGED_FIELDS: Array<keyof Stats> = ["minHit", "maxHit", "minDef", "maxDef", "magicDamageBonus", "resistenciaMagica", "objetoEspecial", "apu"];
 
 const RM = 5;
 const SETS: SetDef[] = [
@@ -94,7 +96,7 @@ const SETS: SetDef[] = [
     {
         id: "t1-umbral", name: "Set del Umbral", classes: [4], pieces: [
             { slot: "casco", id: 1777, stats: { minDef: 20, maxDef: 28, resistenciaMagica: RM, objetoEspecial: 6 } },
-            { slot: "arma", id: 1778, stats: { minHit: 34, maxHit: 46, objetoEspecial: 4 } },
+            { slot: "arma", id: 1778, stats: { minHit: 34, maxHit: 46, objetoEspecial: 4, apu: 1 } },
             { slot: "escudo", id: 1779, stats: { minDef: 22, maxDef: 30, resistenciaMagica: RM, objetoEspecial: 3 } },
             { slot: "armadura", id: 1780, stats: { minDef: 44, maxDef: 60, resistenciaMagica: RM, objetoEspecial: 4 } },
         ],

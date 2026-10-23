@@ -30,7 +30,7 @@ const CLASSES: Array<{ id: number; name: string; modes: string[]; identity: stri
     { id: 2, name: "Clérigo", modes: ["melee", "magia"], identity: "Como el druida, pero puede usar más armas: pega más cuerpo a cuerpo que con magia. Con set mata a un mago con set con un combo (golpe + magia) la mayoría de las veces." },
     { id: 6, name: "Bardo", modes: ["magia", "melee"], identity: "Mixto: un poco de magia y un poco de arma (identidad a confirmar)." },
     { id: 8, name: "Paladín", modes: ["melee", "magia"], identity: "Mucho cuerpo a cuerpo, poca magia." },
-    { id: 4, name: "Asesino", modes: ["melee", "magia"], identity: "Golpe común por debajo del guerrero; su fuerte es la apuñalada por la espalda." },
+    { id: 4, name: "Asesino", modes: ["melee", "magia"], identity: "Golpe común por debajo del guerrero; su fuerte es la apuñalada por la espalda: +10 % de daño y un desangrado de 10 s que cada 2 s saca lo mismo que el golpe (el simulador mide golpes de frente, sin apuñalada)." },
     { id: 3, name: "Guerrero", modes: ["melee"], identity: "El que más pega físico. Nada de magia." },
     { id: 9, name: "Cazador", modes: ["rango", "melee"], identity: "Arco; el cuerpo a cuerpo queda en segundo plano." },
 ];

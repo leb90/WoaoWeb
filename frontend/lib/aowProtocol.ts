@@ -92,6 +92,7 @@ export const CLIENT_PACKET_ID = {
     transmogState: 94,
     shopState: 95,
     aggroState: 96,
+    bleedState: 97,
 } as const;
 
 export const CHARACTER_SWING_WEAPON = 1;
@@ -458,6 +459,9 @@ export type ShopProductPayload = {
     setName: string | null;
     unavailableReason: string | null;
 };
+
+// Desangrado de la apuñalada (server/src/game.ts, startBleeding): ms que quedan, 0 = terminó.
+export type BleedStatePayload = { remainingMs: number };
 
 // Criaturas que tienen de objetivo al jugador (server/src/aggroState.ts).
 export type AggroEntry = {
@@ -835,6 +839,8 @@ export interface PlayerHudState {
     transmogState?: TransmogStatePayload;
     shopState?: ShopStatePayload;
     aggroState?: AggroStatePayload;
+    // Hasta cuándo dura el desangrado (Date.now() del cliente; 0 o ausente = no sangra).
+    bleedUntil?: number;
     castleState?: CastleStatePayload;
     factionWarState?: FactionWarStatePayload;
     rankedState?: RankedStatePayload;
@@ -1420,6 +1426,7 @@ export type ParsedServerPacket =
     | { type: "transmogState"; payload: TransmogStatePayload }
     | { type: "shopState"; payload: ShopStatePayload }
     | { type: "aggroState"; payload: AggroStatePayload }
+    | { type: "bleedState"; payload: BleedStatePayload }
     | { type: "castleState"; payload: CastleStatePayload }
     | { type: "factionWarState"; payload: FactionWarStatePayload }
     | { type: "rankedState"; payload: RankedStatePayload }
@@ -2632,6 +2639,19 @@ function parseServerPacketById(
                 return {
                     type: "aggroState",
                     payload: JSON.parse(rawPayload) as AggroStatePayload,
+                };
+            } catch {
+                return { type: "unknown", payload: { packetId } };
+            }
+        }
+
+        case CLIENT_PACKET_ID.bleedState: {
+            const rawPayload = reader.getString();
+
+            try {
+                return {
+                    type: "bleedState",
+                    payload: JSON.parse(rawPayload) as BleedStatePayload,
                 };
             } catch {
                 return { type: "unknown", payload: { packetId } };

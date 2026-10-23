@@ -105,6 +105,15 @@ function Vars(this: any) {
         // Ticks de pensamiento seguidos con el camino de vuelta tapado antes
         // de que la criatura se quede donde está.
         leashReturnBlockedTicks: 6,
+        // Aggro: una criatura sin objetivo solo empieza a perseguir a quien esté a esta distancia o
+        // menos (a quien la ataca lo enfrenta desde donde lo vea).
+        aggroRadiusTiles: 6,
+        // Paseo sin objetivo: camina hacia puntos al azar a esta distancia como mucho de donde nació,
+        // con pausas entre uno y otro; si queda tapada unos ticks, elige otro destino.
+        wanderRadiusTiles: 8,
+        wanderPauseMinMs: 1500,
+        wanderPauseMaxMs: 4500,
+        wanderBlockedTicks: 3,
         targetSwitchMargin: 10,
         targetScoreWeights: {
             distance: 3,

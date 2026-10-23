@@ -697,7 +697,8 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                             createAttackRangePacket(
                                 resolvedCombatTarget.x,
                                 resolvedCombatTarget.y,
-                                resolvedCombatTarget.map,
+                                resolvedCombatTarget.map || engine.mapNumber,
+                                resolvedCombatTarget.entityId,
                             ),
                         );
                         engine.playLocalCombatSwing();
@@ -766,7 +767,8 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                             resolvedSpellTarget.x,
                             resolvedSpellTarget.y,
                             resolvedSpellTarget.preferSelfIfEmpty,
-                            resolvedSpellTarget.map,
+                            resolvedSpellTarget.map || engine.mapNumber,
+                            resolvedSpellTarget.resolvedEntityId,
                         ),
                     );
                     options.recordClientGameAction("spell_attack", {
@@ -883,7 +885,16 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                     options.updateActiveDialogBubblePositions(engine);
                     options.updateActiveCastBarPositions(engine);
                     options.updateEntityFXPositions(engine);
-                    updateHoverHighlight(engine, findVisibleEntityAtExactTile);
+                    updateHoverHighlight(engine, (hoverEngine, pointer, tile) => {
+                        const target = options.resolveCombatReleaseTarget(
+                            hoverEngine,
+                            { global: pointer },
+                            { targetTileX: tile.x, targetTileY: tile.y },
+                        );
+                        return typeof target.entityId === "number"
+                            ? (hoverEngine.personajes[target.entityId] ?? null)
+                            : null;
+                    });
                 };
                 app.ticker.add(dialogBubbleTicker);
                 engine.dialogBubbleTicker = dialogBubbleTicker;

@@ -14,6 +14,9 @@ import {
     getCombatTileMatchRank,
     getPointerTargetPriority,
     isPointerOverMarkedSprite,
+    getPointerSpriteMatch,
+    getTargetAssistForClass,
+    type PointerSpriteMatch,
     isSelfFirstSupportSpell,
 } from "../input/combatTargeting";
 
@@ -40,6 +43,7 @@ type ResourceReactionSample = ResourceChangeSample & {
 type PointerEntityTarget = {
     entity: Character;
     isSelf: boolean;
+    spriteMatch: PointerSpriteMatch;
     isNpc: boolean;
     priority: number;
     tileMatchRank: number;
@@ -637,21 +641,23 @@ export function useCombatController(options: UseCombatControllerOptions) {
                     pos: entityViewerTile,
                 };
 
-                const isPointerOverSprite = isPointerOverMarkedSprite(
+                const spriteMatch = getPointerSpriteMatch(
                     container,
                     hitMarkers,
                     pointerX,
                     pointerY,
                     isTouchTolerant,
+                    getTargetAssistForClass(playerHudRef.current?.idClase),
                 );
 
-                if (!isPointerOverSprite) {
+                if (!spriteMatch) {
                     return;
                 }
 
                 const candidate = {
                     entity,
                     isSelf,
+                    spriteMatch,
                     isNpc: Boolean(entity.isNpc),
                     priority: getPointerTargetPriority(
                         entity,
@@ -672,22 +678,30 @@ export function useCombatController(options: UseCombatControllerOptions) {
                     zIndex: Number(container.zIndex ?? 0),
                 };
 
+                // Con las áreas agrandadas pueden pisarse: gana la que tiene el puntero sobre el dibujo
+                // (como "select_high" de Dota 2) y, si no, sigue el orden de siempre.
                 if (
                     !matchedTarget ||
-                    candidate.tileMatchRank < matchedTarget.tileMatchRank ||
-                    (candidate.tileMatchRank === matchedTarget.tileMatchRank &&
+                    (candidate.spriteMatch.tight && !matchedTarget.spriteMatch.tight) ||
+                    (candidate.spriteMatch.tight === matchedTarget.spriteMatch.tight &&
+                        candidate.tileMatchRank < matchedTarget.tileMatchRank) ||
+                    (candidate.spriteMatch.tight === matchedTarget.spriteMatch.tight &&
+                        candidate.tileMatchRank === matchedTarget.tileMatchRank &&
                         candidate.columnDistance <
                             matchedTarget.columnDistance) ||
-                    (candidate.tileMatchRank === matchedTarget.tileMatchRank &&
+                    (candidate.spriteMatch.tight === matchedTarget.spriteMatch.tight &&
+                        candidate.tileMatchRank === matchedTarget.tileMatchRank &&
                         candidate.columnDistance ===
                             matchedTarget.columnDistance &&
                         candidate.tileDistance < matchedTarget.tileDistance) ||
-                    (candidate.tileMatchRank === matchedTarget.tileMatchRank &&
+                    (candidate.spriteMatch.tight === matchedTarget.spriteMatch.tight &&
+                        candidate.tileMatchRank === matchedTarget.tileMatchRank &&
                         candidate.columnDistance ===
                             matchedTarget.columnDistance &&
                         candidate.tileDistance === matchedTarget.tileDistance &&
                         candidate.priority < matchedTarget.priority) ||
-                    (candidate.tileMatchRank === matchedTarget.tileMatchRank &&
+                    (candidate.spriteMatch.tight === matchedTarget.spriteMatch.tight &&
+                        candidate.tileMatchRank === matchedTarget.tileMatchRank &&
                         candidate.columnDistance ===
                             matchedTarget.columnDistance &&
                         candidate.tileDistance === matchedTarget.tileDistance &&
@@ -719,7 +733,7 @@ export function useCombatController(options: UseCombatControllerOptions) {
 
             return matchedTarget;
         },
-        [isTouchTolerant],
+        [isTouchTolerant, playerHudRef],
     );
 
     const resolveCombatReleaseTarget = useCallback(
@@ -858,6 +872,7 @@ export function useCombatController(options: UseCombatControllerOptions) {
                     event.global.x,
                     event.global.y,
                     isTouchTolerant,
+                    getTargetAssistForClass(playerHudRef.current?.idClase),
                 )
             ) {
                 const confirmedPosition =

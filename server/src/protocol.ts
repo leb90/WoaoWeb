@@ -39,6 +39,7 @@ const login = require("./login") as LoginApi;
 const socket = require("./socket") as SocketApi;
 const funct = require("./functions");
 const vars = require("./vars");
+const targetAssist = require("./targetAssist") as typeof import("./targetAssist");
 const command = require("./commands");
 const chatAuditLogger = require("./chatAuditLogger");
 const respawn = require("./respawn");
@@ -2077,6 +2078,7 @@ function processUserMovement(ws: RuntimeClient, heading: number, moveId: number,
     vars.mapData[previousMap][oldY][oldX].id = 0;
     vars.mapData[targetMap][posY][posX].id = ws.id;
 
+    targetAssist.recordTileLeft(user, previousMap, oldX, oldY, now);
     user.map = targetMap;
     user.pos.x = posX;
     user.pos.y = posY;
@@ -3804,6 +3806,8 @@ function attackRange(ws: RuntimeClient) {
             y: pkg.getByte(),
         };
         const requestedMap = pkg.canReadBytes(2) ? pkg.getShort() : 0;
+        // Apuntado asistido: a quién apuntó el cliente (targetAssist.ts).
+        const requestedTargetId = pkg.canReadBytes(8) ? pkg.getDouble() : 0;
 
         if (pos.x < 1 || pos.x > 100) {
             return;
@@ -3814,7 +3818,9 @@ function attackRange(ws: RuntimeClient) {
         }
 
         const targetMap = resolveRequestedTargetMap(user, requestedMap);
-        let selectedTarget = resolveClickedTarget(user, targetMap, pos.x, pos.y);
+        let selectedTarget =
+            targetAssist.resolveAssistedTarget(user, requestedTargetId, targetMap, pos.x, pos.y) ??
+            resolveClickedTarget(user, targetMap, pos.x, pos.y);
 
         if (!selectedTarget && pos.y < 100) {
             selectedTarget = resolveClickedTarget(user, targetMap, pos.x, pos.y + 1);
@@ -4083,6 +4089,8 @@ function attackSpell(ws: RuntimeClient) {
         };
         const preferSelfIfEmpty = pkg.canReadBytes(1) ? pkg.getByte() === 1 : false;
         const requestedMap = pkg.canReadBytes(2) ? pkg.getShort() : 0;
+        // Apuntado asistido: a quién apuntó el cliente (targetAssist.ts).
+        const requestedTargetId = pkg.canReadBytes(8) ? pkg.getDouble() : 0;
         const targetMap = resolveRequestedTargetMap(user, requestedMap);
 
         if (pos.x < 1 || pos.x > 100) {
@@ -4163,7 +4171,9 @@ function attackSpell(ws: RuntimeClient) {
             return;
         }
 
-        let selectedTarget = resolveClickedTarget(user, targetMap, pos.x, pos.y);
+        let selectedTarget =
+            targetAssist.resolveAssistedTarget(user, requestedTargetId, targetMap, pos.x, pos.y) ??
+            resolveClickedTarget(user, targetMap, pos.x, pos.y);
 
         if (!selectedTarget && pos.y < 100) {
             selectedTarget = resolveClickedTarget(user, targetMap, pos.x, pos.y + 1);

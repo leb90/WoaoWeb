@@ -44,6 +44,7 @@ const vars = require("./vars");
 const worldLayout = require("./worldLayout");
 const socket = require("./socket") as SocketApi;
 const funct = require("./functions");
+const targetAssist = require("./targetAssist") as typeof import("./targetAssist");
 const game = require("./game") as GameApi;
 const handleProtocol = require("./handleProtocol") as HandleProtocolApi;
 const itemRarity = require("./itemRarity") as typeof import("./itemRarity");
@@ -3380,6 +3381,7 @@ function Npcs(this: NpcsApi) {
             }
 
             vars.mapData[tile.map][tile.y][tile.x].id = idNpc;
+            targetAssist.recordTileLeft(npc, oldMap, oldX, oldY);
             npc.pos.x = tile.x;
             npc.pos.y = tile.y;
 

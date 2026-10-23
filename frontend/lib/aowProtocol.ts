@@ -3048,16 +3048,22 @@ export function createAttackMeleePacket(): ArrayBuffer {
     return new PacketWriter(SERVER_PACKET_ID.attackMele).toArrayBuffer();
 }
 
+// `targetId`: a quién apuntó el jugador (apuntado asistido, server/src/targetAssist.ts). Va al final y
+// obliga a mandar el mapa; un server viejo lo ignora.
 export function createAttackRangePacket(
     x: number,
     y: number,
     map = 0,
+    targetId: number | null = null,
 ): ArrayBuffer {
     const writer = new PacketWriter(SERVER_PACKET_ID.attackRange);
     writer.writeByte(x);
     writer.writeByte(y);
     if (map > 0) {
         writer.writeShort(map);
+        if (targetId && targetId > 0) {
+            writer.writeDouble(targetId);
+        }
     }
     return writer.toArrayBuffer();
 }
@@ -3068,6 +3074,7 @@ export function createAttackSpellPacket(
     y: number,
     preferSelfIfEmpty = false,
     map = 0,
+    targetId: number | null = null,
 ): ArrayBuffer {
     const writer = new PacketWriter(SERVER_PACKET_ID.attackSpell);
     writer.writeByte(spellSlot);
@@ -3076,6 +3083,9 @@ export function createAttackSpellPacket(
     writer.writeByte(preferSelfIfEmpty ? 1 : 0);
     if (map > 0) {
         writer.writeShort(map);
+        if (targetId && targetId > 0) {
+            writer.writeDouble(targetId);
+        }
     }
     return writer.toArrayBuffer();
 }

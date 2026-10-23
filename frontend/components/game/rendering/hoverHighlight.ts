@@ -96,16 +96,18 @@ function getEntityContainer(engine: Engine, entity: Character): HostContainer | 
 }
 
 // Se llama en cada cuadro: la cámara se mueve y el personaje camina, así que se recalcula siempre.
+// `findTarget` es la misma búsqueda que usa el click (área agrandada sobre el dibujo, con la ayuda de la
+// clase), así el contorno marca a quien le vas a pegar y no se corta mientras el otro camina.
 export function updateHoverHighlight(
     engine: Engine & { hoverPointerGlobal?: { x: number; y: number } | null; hoveredEntityId?: number | null },
-    findEntityAtTile: (engine: Engine, tileX: number, tileY: number) => Character | null,
+    findTarget: (engine: Engine, pointer: { x: number; y: number }, tile: { x: number; y: number }) => Character | null,
 ) {
     let next: Character | null = null;
     const pointer = engine.hoverPointerGlobal;
     if (pointer && engine.mapContainer) {
         const local = engine.mapContainer.toLocal(pointer);
         const tile = engine.worldToCurrentMapTile(local.x, local.y);
-        const candidate = findEntityAtTile(engine, tile.x, tile.y);
+        const candidate = findTarget(engine, pointer, tile);
         const container = candidate ? getEntityContainer(engine, candidate) : null;
         // No delatar invisibles ni muertos: si casi no se ve, no se resalta.
         if (candidate && container && !candidate.dead && container.visible && container.alpha > 0.2) {

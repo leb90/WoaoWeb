@@ -21,7 +21,7 @@ export const BASE_HITS: Record<number, number> = { 30: 2, 40: 2.5, 50: 3 };
 export const ATTACKER_OFFSET: Record<string, number> = {
     "1|magia": 0, // Mago: el que más pega con magia, nada físico
     "7|magia": 1, "7|melee": 1, // Druida: menos magia que el mago, arma útil
-    "2|melee": 0.5, "2|magia": 1.5, // Clérigo: más arma que magia
+    "2|melee": 0, "2|magia": 0.5, // Clérigo: más arma que magia; con set mata al mago con un combo (golpe + magia) la mayoría de las veces
     "8|melee": 0, "8|magia": 2.5, // Paladín: mucho arma, poca magia
     "3|melee": -0.5, // Guerrero: el que más pega físico, nada de magia
     "6|magia": 1, "6|melee": 1, // Bardo: mixto

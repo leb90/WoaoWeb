@@ -88,9 +88,9 @@ const DEFAULT_BALANCE_DATA: RuntimeBalanceData = {
     // Medidos con el simulador (server/src/scripts/balanceSim) para Mago, Druida, Clérigo, Bardo, Paladín,
     // Asesino, Guerrero y Cazador. El resto usa los valores de su par más cercano (guerrero para el golpe,
     // cazador para la flecha) hasta que se mida.
-    modDmgPvpArmas: { 1: 1, 2: 0.5, 3: 0.5, 4: 0.4, 5: 0.5, 6: 0.5, 7: 1.2, 8: 0.45, 9: 0.45, 12: 0.5, 13: 0.5, 14: 0.5, 15: 0.5, 16: 0.5, 17: 0.5, 18: 0.5, 19: 0.5, 20: 0.5, 21: 0.5 },
+    modDmgPvpArmas: { 1: 1, 2: 0.575, 3: 0.5, 4: 0.4, 5: 0.5, 6: 0.5, 7: 1.2, 8: 0.45, 9: 0.45, 12: 0.5, 13: 0.5, 14: 0.5, 15: 0.5, 16: 0.5, 17: 0.5, 18: 0.5, 19: 0.5, 20: 0.5, 21: 0.5 },
     modDmgPvpProyectiles: { 1: 0.9, 2: 0.9, 3: 0.9, 4: 0.9, 5: 0.9, 6: 0.9, 7: 0.9, 8: 0.9, 9: 0.9, 12: 0.9, 13: 0.9, 14: 0.9, 15: 0.9, 16: 0.9, 17: 0.9, 18: 0.9, 19: 0.9, 20: 0.9, 21: 0.9 },
-    modDmgPvpMagia: { 1: 1.1, 2: 1.25, 3: 1, 4: 1.5, 5: 1, 6: 1.5, 7: 1, 8: 1.45, 9: 1, 12: 1, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1, 18: 1, 19: 1, 20: 1, 21: 1 },
+    modDmgPvpMagia: { 1: 1.1, 2: 1.62, 3: 1, 4: 1.5, 5: 1, 6: 1.5, 7: 1, 8: 1.45, 9: 1, 12: 1, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1, 18: 1, 19: 1, 20: 1, 21: 1 },
 };
 
 function cloneNumericRecord<T>(record: Record<number, T>): Record<number, T> {

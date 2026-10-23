@@ -55,7 +55,8 @@ Capturas de cada cosa en el juego: [capturas/](capturas/).
 
 ### Resultado en el simulador
 
-- Cruces dentro de ±0,5 aciertos del objetivo: **906 de 1344 (67 %)**, error cuadrático medio **0,40**. Antes del trabajo de balance: 286 de 1344 (21 %) y 3,66.
+- Cruces dentro de ±0,5 aciertos del objetivo: **932 de 1344 (69 %)**, error cuadrático medio **0,38**. Antes del trabajo de balance: 286 de 1344 (21 %) y 3,66.
+- **Combo del clérigo** (pedido de Leandro): con set contra un mago con set, un golpe cuerpo a cuerpo y una magia lo matan la mayoría de las veces y, si no, lo dejan con poca vida. Nivel 50: 80 % con set y 73 % con equipo común (nivel 30 y 40: 95 %, solo falla si erra el golpe). Para eso el clérigo pasó a `modDmgPvpArmas` 0,575 y `modDmgPvpMagia` 1,62; su golpe sigue debajo del del paladín y su magia debajo de la del mago. El simulador mide el combo (`combos` en el resultado) y la guía lo muestra para todas las clases híbridas.
 - Lo pedido: mago contra mago **2 / 2 / 3** aciertos a nivel 30 / 40 / 50. Mago 50 con set contra guerrero sin set: **3** (pedido 2-3). Contra guerrero con set: **5** (pedido 4-5).
 - Efecto del set a nivel 50 (promedio): con set contra sin set mata en ×0,81 de los aciertos (objetivo ×0,75); sin set contra uno con set tarda ×1,37 (objetivo ×1,3).
 

@@ -9,7 +9,8 @@ import { targetHits, type SimResult } from "./targets";
 
 type Row = SimResult & { hp: number; dmgAvg: number; dmgP10: number; dmgP90: number; hitRate: number; casts: number | null };
 type Loadout = { gear: Record<string, number>; maxHp?: number; maxMana?: number; spell?: { name: string; mana: number; damage: string } | null };
-type Data = { results: Row[]; loadouts: Record<string, Loadout> };
+type Combo = { level: number; atkClass: number; atkProfile: string; defClass: number; defProfile: string; killPct: number; leftPct: number };
+type Data = { results: Row[]; loadouts: Record<string, Loadout>; combos?: Combo[] };
 
 const [currentFile, resultFile, outArg] = process.argv.slice(2);
 if (!currentFile || !resultFile) {
@@ -26,7 +27,7 @@ const objects: Record<string, Record<string, any>> = JSON.parse(fs.readFileSync(
 const CLASSES: Array<{ id: number; name: string; modes: string[]; identity: string }> = [
     { id: 1, name: "Mago", modes: ["magia"], identity: "El que más daño hace con magia. Nada de daño físico." },
     { id: 7, name: "Druida", modes: ["magia", "melee"], identity: "Menos magia que el mago y un arma que sirva." },
-    { id: 2, name: "Clérigo", modes: ["melee", "magia"], identity: "Como el druida, pero puede usar más armas: pega más cuerpo a cuerpo que con magia." },
+    { id: 2, name: "Clérigo", modes: ["melee", "magia"], identity: "Como el druida, pero puede usar más armas: pega más cuerpo a cuerpo que con magia. Con set mata a un mago con set con un combo (golpe + magia) la mayoría de las veces." },
     { id: 6, name: "Bardo", modes: ["magia", "melee"], identity: "Mixto: un poco de magia y un poco de arma (identidad a confirmar)." },
     { id: 8, name: "Paladín", modes: ["melee", "magia"], identity: "Mucho cuerpo a cuerpo, poca magia." },
     { id: 4, name: "Asesino", modes: ["melee", "magia"], identity: "Golpe común por debajo del guerrero; su fuerte es la apuñalada por la espalda." },
@@ -110,6 +111,27 @@ const worseWithSet = CLASSES.flatMap((cls) =>
         .map((mode) => `el ${cls.name.toLowerCase()} (${MODE[mode]})`),
 );
 
+// Combo golpe + magia contra un mago (clases que tienen las dos cosas), con los dos del mismo equipo.
+function comboSection(): string[] {
+    const combos = proposal.combos ?? [];
+    if (!combos.length) return [];
+    const pct = (atkClass: number, level: number, profile: string) => {
+        const combo = combos.find((c) => c.atkClass === atkClass && c.defClass === 1 && c.level === level && c.atkProfile === profile && c.defProfile === profile);
+        return combo ? `${Math.round(combo.killPct * 100)} %` : "—";
+    };
+    const hybrids = CLASSES.filter((cls) => cls.modes.includes("melee") && cls.modes.includes("magia"));
+    return [
+        "## Combo golpe + magia contra un mago",
+        "",
+        "Chance de matar a un mago con un golpe cuerpo a cuerpo y enseguida una magia, los dos con el mismo equipo. Si el golpe falla, el combo no mata.",
+        "",
+        `| Clase | ${LEVELS.map((level) => `Nivel ${level} común | Nivel ${level} con set`).join(" | ")} |`,
+        `|---|${LEVELS.map(() => "---:|---:").join("|")}|`,
+        ...hybrids.map((cls) => `| ${cls.name} | ${LEVELS.map((level) => `${pct(cls.id, level, "comun")} | ${pct(cls.id, level, "tier")}`).join(" | ")} |`),
+        "",
+    ];
+}
+
 const lines: string[] = [];
 const push = (...text: string[]) => lines.push(...text);
 // Escalones del set (todos los sets usan los mismos; si alguno difiere se avisa).
@@ -166,6 +188,7 @@ push(
     "",
     "![Efecto del set ahora](graficos/efecto-set-nivel-50-ahora.svg)",
     "",
+    ...comboSection(),
     "## Todas las clases a nivel 50, en una tabla",
     "",
     "Equipo común contra común.",

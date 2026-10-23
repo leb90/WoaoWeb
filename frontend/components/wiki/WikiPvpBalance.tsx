@@ -13,7 +13,7 @@ const MODE_LABELS: Record<string, string> = { magia: "magia", melee: "golpe", ra
 const CLASS_IDENTITY: Array<{ id: number; text: string }> = [
     { id: 1, text: "El que más daño hace con magia. Nada de daño físico." },
     { id: 7, text: "Menos magia que el mago y un arma que sirve." },
-    { id: 2, text: "Como el druida, pero con más armas: pega más cuerpo a cuerpo que con magia." },
+    { id: 2, text: "Como el druida, pero con más armas: pega más cuerpo a cuerpo que con magia. Con set, a un mago con set lo mata con un golpe y una magia la mayoría de las veces." },
     { id: 6, text: "Mixto: un poco de magia y un poco de arma." },
     { id: 8, text: "Mucho cuerpo a cuerpo y poca magia." },
     { id: 4, text: "Golpe común por debajo del guerrero; su fuerte es la apuñalada por la espalda." },

@@ -6,6 +6,11 @@ import type { Character } from "../engine/Engine";
 
 const GHOST_ALPHA = 0.45;
 const PARTY_INVISIBLE_ALPHA = 0.4;
+// Invisible peleando contra jugadores: mientras dura la ventana de combate hace fade in / fade out
+// completos (de invisible del todo a visible del todo y vuelta), así el rival lo sigue. Al terminar la
+// ventana se apaga suave.
+const PVP_REVEAL_PERIOD_MS = 1400;
+const PVP_REVEAL_FADE_OUT_MS = 500;
 
 export type TreeFadeSource = "object" | "layer3";
 
@@ -164,6 +169,25 @@ export function getInvisibilityCycleAlpha(
     );
 }
 
+// Arranca invisible, aparece del todo a mitad del ciclo y vuelve a desaparecer (coseno).
+export function getPvpRevealAlpha(
+    startedAt: number,
+    revealUntil: number,
+    hiddenAlpha: number,
+    now = Date.now(),
+): number {
+    const phase =
+        (Math.max(0, now - startedAt) % PVP_REVEAL_PERIOD_MS) /
+        PVP_REVEAL_PERIOD_MS;
+    const wave = (1 - Math.cos(phase * Math.PI * 2)) / 2;
+    const alpha = lerp(hiddenAlpha, 1, wave);
+    const remainingMs = revealUntil - now;
+    if (remainingMs < PVP_REVEAL_FADE_OUT_MS) {
+        return lerp(hiddenAlpha, alpha, Math.max(0, remainingMs) / PVP_REVEAL_FADE_OUT_MS);
+    }
+    return alpha;
+}
+
 export function isTreeObjectData(objectData: ObjectData | undefined): boolean {
     if (!objectData) {
         return false;
@@ -208,16 +232,19 @@ export function getCharacterRenderAlpha(
         // Para los enemigos solo parpadea mientras pelea contra jugadores (el server manda la ventana);
         // fuera de eso queda invisible del todo y la invisibilidad sirve para escapar.
         const now = Date.now();
-        if ((character.pvpRevealUntil ?? 0) <= now) {
-            return Math.min(
-                clampAlpha(timing.visualEffects.invisibilityMinAlpha),
-                clampAlpha(timing.visualEffects.invisibilityMaxAlpha),
-            );
+        const hiddenAlpha = Math.min(
+            clampAlpha(timing.visualEffects.invisibilityMinAlpha),
+            clampAlpha(timing.visualEffects.invisibilityMaxAlpha),
+        );
+        const revealUntil = character.pvpRevealUntil ?? 0;
+        if (revealUntil <= now) {
+            return hiddenAlpha;
         }
 
-        return getInvisibilityCycleAlpha(
+        return getPvpRevealAlpha(
             character.invisibilityCycleStartedAt ?? now,
-            timing,
+            revealUntil,
+            hiddenAlpha,
             now,
         );
     }

@@ -31,6 +31,8 @@ Documento previo de referencia: [combat-balance.md](combat-balance.md), del PR #
 
 La rareza **no** suma a `resistenciaMagica`: es un porcentaje de reducción y +3 por pieza llevaba el set de guerrero de 17 % a 26 %, lo que descalibraba la magia contra cualquiera con set.
 
+Capturas de cada cosa en el juego: [capturas/](capturas/).
+
 ### Resultado en el simulador
 
 - Cruces dentro de ±0,5 aciertos del objetivo: **900 de 1344 (67 %)**, error cuadrático medio **0,40**. En `main`: 306 de 1344 (23 %) y 3,38.
@@ -325,6 +327,7 @@ El simulador usa Humano en todos los cruces.
 | `tune.ts` | Barrido de factores PvP por fila de atacante contra la matriz objetivo. |
 | `charts.ts` | Gráficos de barras SVG en `docs/balance/graficos/`. |
 | `guide.ts` | Genera [NIVELACION_POR_CLASE.md](NIVELACION_POR_CLASE.md) con el equipo de cada clase y sus números. |
+| `wiki.ts` | Genera `frontend/lib/wiki-pvp-balance.json`, los datos de la guía PvP de la Wiki (`/wiki/pvp`). |
 | `propuestas/` | Cambios a probar sobre el código actual, sin tocar el juego. Claves: `pvpMelee`, `pvpRanged` y `pvpMagic` (pisan `modDmgPvp*`; clave = id de clase o `default`), `balance` (tablas de `balanceData`), `spells` y `objects` (campos de `spells.json` y `objs.json`). La propuesta original (`propuesta-v1.json`) ya está implementada y se borró; `ejemplo-cazador.json` prueba bajar la flecha del cazador (pendiente de la sección 0). |
 
 Uso:

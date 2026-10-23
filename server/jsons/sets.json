@@ -265,6 +265,39 @@
                     "dmgPct": 25
                 }
             ]
+        },
+        {
+            "id": "t1-elemental",
+            "name": "Set Elemental",
+            "season": 1,
+            "classes": [
+                22
+            ],
+            "pieces": {
+                "casco": [
+                    1817
+                ],
+                "arma": [
+                    1818
+                ],
+                "escudo": [
+                    1819
+                ],
+                "armadura": [
+                    1820
+                ]
+            },
+            "bonuses": [
+                {
+                    "pieces": 2,
+                    "hpPct": 10
+                },
+                {
+                    "pieces": 4,
+                    "hpPct": 20,
+                    "dmgPct": 25
+                }
+            ]
         }
     ]
 }

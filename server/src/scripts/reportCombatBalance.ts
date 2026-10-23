@@ -19,6 +19,7 @@ const classes: Array<[number, string]> = [
     [6, "Bardo"], [7, "Druida"], [8, "Paladin"], [9, "Cazador"], [12, "Bandido"],
     [13, "Pescador"], [14, "Herrero"], [15, "Lenador"], [16, "Minero"],
     [17, "Carpintero"], [18, "Pirata"], [19, "Ermitano"], [20, "Arquero"], [21, "Domador"],
+    [22, "Chaman"],
 ];
 
 const races: Array<[number, string]> = [

@@ -554,8 +554,8 @@ export async function loadGraphicsDB(): Promise<GraphicsDB> {
     try {
         const optimizedGraphicsDb =
             await fetchJsonWithFallback<CompactGraphicsDB>(
-                "/init/graficos_optimized.json?v=3.33",
-                "/init/graficos_optimized.json?v=3.33",
+                "/init/graficos_optimized.json?v=3.34",
+                "/init/graficos_optimized.json?v=3.34",
                 "optimized graphics database",
                 { preferLocal: PREFER_LOCAL_GRAPHICS },
             );
@@ -589,8 +589,8 @@ export async function loadGraphicsDB(): Promise<GraphicsDB> {
 export async function loadObjectsDB(): Promise<ObjectsDB> {
     try {
         return await fetchJsonWithFallback<ObjectsDB>(
-            "/init/objs.json?v=3.8",
-            "/init/objs.json?v=3.8",
+            "/init/objs.json?v=3.9",
+            "/init/objs.json?v=3.9",
             "objects database",
         );
     } catch (error) {
@@ -892,8 +892,8 @@ export async function loadHeadsDB(): Promise<HeadsDB> {
 
 export async function loadWeaponsDB(): Promise<WeaponsDB> {
     return await fetchJsonWithFallback<WeaponsDB>(
-        "/init/armas.json?v=3.25",
-        "/init/armas.json?v=3.25",
+        "/init/armas.json?v=3.26",
+        "/init/armas.json?v=3.26",
         "Weapons database",
     );
 }
@@ -908,8 +908,8 @@ export async function loadShieldsDB(): Promise<ShieldsDB> {
 
 export async function loadHelmetsDB(): Promise<HelmetsDB> {
     return await fetchJsonWithFallback<HelmetsDB>(
-        "/init/cascos.json?v=3.14",
-        "/init/cascos.json?v=3.14",
+        "/init/cascos.json?v=3.15",
+        "/init/cascos.json?v=3.15",
         "Helmets database",
     );
 }
@@ -917,8 +917,8 @@ export async function loadHelmetsDB(): Promise<HelmetsDB> {
 export async function loadFXsDB(): Promise<FXsDB> {
     try {
         return await fetchJsonWithFallback<FXsDB>(
-            "/init/fxs.json?v=3.4",
-            "/init/fxs.json?v=3.4",
+            "/init/fxs.json?v=3.5",
+            "/init/fxs.json?v=3.5",
             "effects database",
         );
     } catch (error) {
@@ -930,8 +930,8 @@ export async function loadFXsDB(): Promise<FXsDB> {
 export async function loadSpellsDB(): Promise<SpellsDB> {
     try {
         return await fetchJsonWithFallback<SpellsDB>(
-            "/init/spells.json?v=3.0",
-            "/init/spells.json",
+            "/init/spells.json?v=3.1",
+            "/init/spells.json?v=3.1",
             "spells database",
             { preferLocal: PREFER_LOCAL_SPELLS_ASSETS },
         );

@@ -200,6 +200,7 @@ export const GAME_CLASSES: ClassMeta[] = [
   { id: 19, name: "Ermitaño", category: "worker" },
   { id: 20, name: "Arquero", category: "combat" },
   { id: 21, name: "Domador", category: "worker" },
+  { id: 22, name: "Chamán", category: "magic" },
 ];
 
 export function getClassName(classId: number): string {

@@ -1,3 +1,4 @@
+import type { ElementalEntityState, ElementalStatePayload } from "../../../lib/elementalState";
 import type {
     CharacterStatsSnapshot,
     CharacterStatsSnapshotChunk,
@@ -108,6 +109,8 @@ export type IncomingPacketHandlerContext = {
     onQuestProgressNotice?: ((notice: QuestProgressNoticePayload) => void) | undefined;
     onLevelUpNotice?: ((notice: LevelUpNoticePayload) => void) | undefined;
     renderEntityFX: (engine: any, id: number, fxGrh: number) => Promise<void>;
+    // Efectos del chamán de un personaje: guarda el estado, dibuja sus auras y lo devuelve en tiempos absolutos.
+    setElementalState?: ((payload: ElementalStatePayload) => ElementalEntityState | undefined) | undefined;
     renderSpellProjectileVisual: (
         engine: any,
         start: { x: number; y: number; map?: number },

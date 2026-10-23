@@ -40,6 +40,8 @@ const socket = require("./socket") as SocketApi;
 const funct = require("./functions");
 const vars = require("./vars");
 const targetAssist = require("./targetAssist") as typeof import("./targetAssist");
+const elementalEffects = require("./elementalEffects") as typeof import("./elementalEffects");
+const spellArea = require("./spellArea") as typeof import("./spellArea");
 const command = require("./commands");
 const chatAuditLogger = require("./chatAuditLogger");
 const respawn = require("./respawn");
@@ -154,7 +156,8 @@ function isSupportSpell(datSpell: Record<string, unknown> | undefined): boolean 
             Number(datSpell.subeMana ?? 0) === 1 ||
             Number(datSpell.subeHam ?? 0) === 1 ||
             Number(datSpell.subeSed ?? 0) === 1 ||
-            Number(datSpell.protec ?? 0) > 0),
+            Number(datSpell.protec ?? 0) > 0 ||
+            elementalEffects.hasSupportElementalEffect(datSpell)),
     );
 }
 
@@ -738,6 +741,7 @@ function isHostileCombatSpell(datSpell: Record<string, unknown> | undefined) {
             Number(datSpell.subeHam ?? 0) === 2 ||
             Number(datSpell.subeSed ?? 0) === 2 ||
             Number(datSpell.subeMana ?? 0) === 2 ||
+            elementalEffects.hasHostileElementalEffect(datSpell) ||
             name === "remover invisibilidad",
     );
 }
@@ -813,7 +817,8 @@ function isSelfTargetFallbackEligibleSpell(datSpell: Record<string, unknown> | u
                 datSpell.subeFz ||
                 datSpell.subeMana ||
                 Number(datSpell.subeHp ?? 0) === 1 ||
-                Number(datSpell.protec ?? 0) > 0),
+                Number(datSpell.protec ?? 0) > 0 ||
+                elementalEffects.hasSupportElementalEffect(datSpell)),
     );
 }
 
@@ -1412,6 +1417,11 @@ function toggleHiddenSkill(ws: RuntimeClient) {
 
     if (user.hiddenSkill) {
         handleProtocol.console("Ya estás oculto.", "white", 0, 0, ws);
+        return;
+    }
+
+    if (!elementalEffects.canBecomeInvisible(user)) {
+        handleProtocol.console("Durante la Evasión de viento no puedes ocultarte.", "white", 0, 0, ws);
         return;
     }
 
@@ -2082,7 +2092,8 @@ function processUserMovement(ws: RuntimeClient, heading: number, moveId: number,
     user.map = targetMap;
     user.pos.x = posX;
     user.pos.y = posY;
-    user.nextWalkAt = now + vars.timing.walkStepMs;
+    // Descarga eléctrica del chamán: ralentizado, cada paso tarda el doble.
+    user.nextWalkAt = now + vars.timing.walkStepMs * elementalEffects.getWalkStepMultiplier(user, now);
     user.stateVersion = Number(user.stateVersion ?? 0) + 1;
     user.lastMovementActivityAt = now;
 
@@ -3539,6 +3550,12 @@ function attackMele(ws: RuntimeClient) {
             return;
         }
 
+        const meleeBlock = elementalEffects.getActionBlockReason(user, "melee");
+        if (meleeBlock) {
+            handleProtocol.console(meleeBlock, "white", 0, 0, ws);
+            return;
+        }
+
         const itemWeapon = user.inv[user.idItemWeapon];
 
         if (itemWeapon) {
@@ -3743,6 +3760,12 @@ function attackRange(ws: RuntimeClient) {
 
         if (user.meditar) {
             handleProtocol.console("Debes dejar de meditar para realizar esta acción.", "white", 0, 0, ws);
+            return;
+        }
+
+        const rangedBlock = elementalEffects.getActionBlockReason(user, "ranged");
+        if (rangedBlock) {
+            handleProtocol.console(rangedBlock, "white", 0, 0, ws);
             return;
         }
 
@@ -3959,6 +3982,94 @@ function attackRange(ws: RuntimeClient) {
 
 const ARROW_SAVE_CHANCE_BY_OE: Record<number, number> = { 1: 33, 53: 50, 54: 75 };
 
+// Ventisca, Llamarada (campo `aoe`): le pega a cada uno en la cruz de 5 baldosas alrededor del clic, menos a quien
+// la lanza. Cada objetivo pasa por las mismas reglas que un hechizo común (zona segura, facciones, castillos) y
+// el maná se cobra una sola vez si le pegó a alguien.
+const AREA_SPELL_MAX_RANGE_X = 11;
+const AREA_SPELL_MAX_RANGE_Y = 9;
+
+function castAreaSpell(
+    ws: RuntimeClient,
+    user: any,
+    idSpell: number,
+    datSpell: Record<string, any>,
+    targetMap: number,
+    center: { x: number; y: number },
+    manaCost: number,
+    now: number,
+) {
+    const clientId = ws.id!;
+    const viewerCenter = worldLayout.toViewerFrame(user.map, targetMap, center.x, center.y);
+    if (
+        !viewerCenter ||
+        Math.abs(viewerCenter.x - user.pos.x) > AREA_SPELL_MAX_RANGE_X ||
+        Math.abs(viewerCenter.y - user.pos.y) > AREA_SPELL_MAX_RANGE_Y
+    ) {
+        handleProtocol.console("El objetivo está demasiado lejos.", "white", 1, 0, ws);
+        user.spellsErrados++;
+        return;
+    }
+
+    if (isHostileCombatSpell(datSpell)) {
+        user.lastCombatActivityAt = now;
+    }
+
+    sendSpellProjectileToCombatViewers(
+        ws,
+        clientId,
+        { map: user.map, x: user.pos.x, y: user.pos.y },
+        { map: targetMap, x: center.x, y: center.y },
+        idSpell,
+    );
+
+    const hitIds: EntityId[] = [];
+    for (const tile of spellArea.getAreaTiles(center.x, center.y, Number(datSpell.aoe))) {
+        const resolved = resolveClickedTarget(user, targetMap, tile.x, tile.y);
+        const target = resolved?.target as AreaTarget | undefined;
+        if (!resolved || !target || String(resolved.id) === String(clientId) || target.dead) continue;
+        if (hitIds.some((id) => String(id) === String(target.id))) continue;
+        if (!target.isNpc && isInvisibleAdmin(target as RuntimeCharacter)) continue;
+        if (target.isNpc && (isOwnSummonTarget(clientId, target) || isNonAttackableNpcTarget(target))) continue;
+        if (getSafeZoneBoundaryAttackMessage(user, target)) continue;
+        if (!target.isNpc && game.getFriendlyFireBlockReason(clientId, target.id)) continue;
+
+        const result = target.isNpc
+            ? game.userSpellNpc(clientId, target.id, idSpell)
+            : game.userSpellUser(clientId, target.id, idSpell);
+        game.consumeSpellAreaTargets();
+        if (result === 0) continue;
+
+        hitIds.push(target.id);
+        sendSpellImpactToAreaViewers(ws, clientId, target.id, { fxGrh: datSpell.fxGrh, soundId: datSpell.wav });
+        if (target.isNpc && typeof result === "number" && result > 0) {
+            game.loopArea(ws, function (viewer: AreaTarget) {
+                if (viewer.isNpc) return;
+                withTargetClient(viewer.id, (viewerClient) => {
+                    if (canReceiveCharacterEvent(viewer.id, clientId)) {
+                        handleProtocol.dialog(target.id, "" + result, "", "red", 0, viewerClient);
+                    }
+                });
+            });
+            game.setSummonTargetNpc(clientId, target.id);
+        }
+        respawn.muere(ws, target.id);
+    }
+
+    if (!hitIds.length) {
+        handleProtocol.console("No había nadie en el área del hechizo.", "white", 1, 0, ws);
+        user.spellsErrados++;
+        return;
+    }
+
+    user.mana -= manaCost;
+    applyElfManaRestore(user);
+    if (String(datSpell.palabrasMagicas ?? "").trim()) {
+        sendSpellImpactToAreaViewers(ws, clientId, clientId, { msg: datSpell.palabrasMagicas });
+    }
+    handleProtocol.updateMana(user.mana, ws);
+    user.spellsAcertados++;
+}
+
 function attackSpell(ws: RuntimeClient) {
     try {
         if (!game.existPjOrClose(ws)) {
@@ -4028,6 +4139,31 @@ function attackSpell(ws: RuntimeClient) {
         const idSpell = user.spells[idPos].idSpell;
         const datSpell = vars.datSpell[idSpell];
         const isSummonSpell = Number(datSpell.type ?? 0) === 4 && Number(datSpell.numNpc ?? 0) > 0;
+
+        // La magia elemental es solo del chamán; quien la aprendió antes ya no la puede lanzar.
+        if (
+            elementalEffects.isElementalSpell(datSpell) &&
+            Number(user.idClase) !== Number(vars.clases.chaman) &&
+            Number(user.privileges ?? 0) <= 0
+        ) {
+            handleProtocol.console("Solo el Chamán puede usar la magia elemental.", "white", 0, 0, ws);
+            return;
+        }
+
+        const elementalBlock = elementalEffects.getActionBlockReason(
+            user,
+            isHostileCombatSpell(datSpell) || isSummonSpell ? "spell" : "support",
+            now,
+        );
+        if (elementalBlock) {
+            handleProtocol.console(elementalBlock, "white", 0, 0, ws);
+            return;
+        }
+
+        if (datSpell.invisibilidad && !elementalEffects.canBecomeInvisible(user, now)) {
+            handleProtocol.console("Durante la Evasión de viento no puedes hacerte invisible.", "white", 0, 0, ws);
+            return;
+        }
         const isPartialInvisibilityRemoval = isPartialInvisibilityRemovalSpell(datSpell);
         const reviveSpell = isReviveSpell(datSpell);
 
@@ -4103,6 +4239,11 @@ function attackSpell(ws: RuntimeClient) {
 
         if (isPartialInvisibilityRemoval) {
             castPartialInvisibilityRemovalSpell(ws, user, datSpell);
+            return;
+        }
+
+        if (spellArea.isAreaSpell(datSpell)) {
+            castAreaSpell(ws, user, idSpell, datSpell, targetMap, pos, manaCost, now);
             return;
         }
 
@@ -4182,6 +4323,11 @@ function attackSpell(ws: RuntimeClient) {
         let tileSelected: { id: EntityId } | undefined = selectedTarget ? { id: selectedTarget.id } : undefined;
 
         if (!tileSelected?.id && preferSelfIfEmpty && isSelfTargetFallbackEligibleSpell(datSpell)) {
+            tileSelected = { id: clientId };
+        }
+
+        // Escudos propios y Evasión de viento: siempre sobre uno mismo, se haga clic donde se haga.
+        if (elementalEffects.isSelfOnlySpell(datSpell)) {
             tileSelected = { id: clientId };
         }
 

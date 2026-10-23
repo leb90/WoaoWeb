@@ -88,7 +88,9 @@ function strongestSingleTargetSpellForClass(classId: number): number {
 assert.equal(objects[821].spellIndex, 45);
 assert.equal(objects[1214].spellIndex, 61);
 assert.equal(strongestSingleTargetSpellForClass(1), 45, "El mejor hechizo de Mago debe ser Llama de Dragon");
-assert.equal(strongestSingleTargetSpellForClass(7), 61, "El mejor hechizo de Druida debe ser Incinerar/Lluvia de Fuego");
+// Incinerar (la "lluvia de fuego") pasó a ser del Chamán; el druida usa LLuvia de Sangre (docs/CHAMAN_ELEMENTAL.md).
+assert.equal(strongestSingleTargetSpellForClass(7), 44, "El mejor hechizo de Druida debe ser LLuvia de Sangre");
+assert.equal(strongestSingleTargetSpellForClass(22), 61, "El mejor hechizo de Chamán debe ser Incinerar");
 assert.equal(strongestSingleTargetSpellForClass(2), 75, "El mejor hechizo de Clerigo debe ser Purificar");
 assert.equal(strongestSingleTargetSpellForClass(4), 73, "El mejor hechizo de Asesino debe ser Destello infernal");
 

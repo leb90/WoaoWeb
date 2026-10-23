@@ -227,6 +227,10 @@ function getStarterLoadout(
         "asesino",
         "ermitano",
     ]);
+    // El chamán solo usa magia elemental: arranca con Flecha eléctrica en vez de Dardo Mágico.
+    if (classKey === "chaman") {
+        return { items, spells: [7] };
+    }
     return {
         items,
         spells: casterClasses.has(classKey) ? [2] : [],
@@ -364,6 +368,7 @@ function toAuthCharacterSummary(
         19: "Ermitaño",
         20: "Arquero",
         21: "Domador",
+        22: "Chamán",
     };
     const raceNameById: Record<number, string> = {
         1: "Humano",

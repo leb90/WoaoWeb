@@ -40,6 +40,7 @@ const DEFAULT_CLASS_PROGRESS: Record<
     19: { vida: 8.5, vidaMin: 7, vidaMax: 10, manaInicial: 2.5, multMana: 1, hitPre36: 2, hitPost36: 2 },
     20: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
     21: { vida: 9, vidaMin: 7, vidaMax: 11, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
+    22: { vida: 8.5, vidaMin: 7, vidaMax: 10, manaInicial: 2.5, multMana: 2, hitPre36: 2, hitPost36: 2 },
 };
 
 const clampLevel = (level: number): number => Math.max(1, Math.min(MAX_LEVEL, Math.floor(level)));

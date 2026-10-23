@@ -38,6 +38,8 @@ import {
 } from "../rendering/textStyles";
 import { Engine } from "../engine/Engine";
 import { updateHoverHighlight } from "../rendering/hoverHighlight";
+import { updateSpellAreaPreview } from "../rendering/spellAreaPreview";
+import { getSpellDataForTargeting } from "../admin/npcInspector";
 import {
     isAdminInspector,
     buildInspectableNpc,
@@ -728,12 +730,37 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                         return;
                     }
 
-                    const resolvedSpellTarget =
+                    const releasedSpell = getSpellDataForTargeting(
+                        engine,
+                        targetingMode.slot,
+                        options.playerHudRef.current?.spells,
+                    ) as { aoe?: number } | null;
+                    const isAreaSpell = Number(releasedSpell?.aoe ?? 0) > 0;
+                    const assistedSpellTarget =
                         options.resolveSpellReleaseTarget(
                             engine,
                             event,
                             interaction,
                         );
+                    // De área: el centro es la baldosa clickeada, sin la ayuda de apuntado (si no, la cruz verde
+                    // saltaría al personaje más cercano).
+                    const clickedInsideMap =
+                        interaction.targetTileX >= 1 &&
+                        interaction.targetTileX <= 100 &&
+                        interaction.targetTileY >= 1 &&
+                        interaction.targetTileY <= 100;
+                    const resolvedSpellTarget =
+                        isAreaSpell && clickedInsideMap
+                            ? {
+                                  ...assistedSpellTarget,
+                                  x: interaction.targetTileX,
+                                  y: interaction.targetTileY,
+                                  map: engine.mapNumber,
+                                  preferSelfIfEmpty: false,
+                                  resolvedEntityId: undefined,
+                                  resolvedEntityType: assistedSpellTarget.resolvedEntityType,
+                              }
+                            : assistedSpellTarget;
                     if (
                         resolvedSpellTarget.resolvedEntityType !== "self" &&
                         resolvedSpellTarget.resolvedEntityType === "npc" &&
@@ -895,6 +922,12 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                             ? (hoverEngine.personajes[target.entityId] ?? null)
                             : null;
                     });
+                    const targeting = options.targetingModeRef.current;
+                    const targetingSpell =
+                        targeting?.type === "spell"
+                            ? getSpellDataForTargeting(engine, targeting.slot, options.playerHudRef.current?.spells)
+                            : null;
+                    updateSpellAreaPreview(engine, Number((targetingSpell as { aoe?: number } | null)?.aoe ?? 0));
                 };
                 app.ticker.add(dialogBubbleTicker);
                 engine.dialogBubbleTicker = dialogBubbleTicker;

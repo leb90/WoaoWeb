@@ -87,6 +87,9 @@ const workProfessions = require("./workProfessions");
 const skills = require("./skills");
 const tierSets = require("./tierSets") as typeof import("./tierSets");
 const itemRarity = require("./itemRarity") as typeof import("./itemRarity");
+const elementalEffects = require("./elementalEffects") as typeof import("./elementalEffects");
+type SelfShieldKind = import("./elementalEffects").SelfShieldKind;
+type AllyShieldKind = import("./elementalEffects").AllyShieldKind;
 
 const SURVIVAL_HAMBRE_MAX = Number(balance.MAX_HAMBRE ?? 100);
 const SURVIVAL_SED_MAX = Number(balance.MAX_SED ?? 100);
@@ -462,6 +465,7 @@ type GameCharacter = RuntimeCharacter & {
     envenenado?: number;
     cooldownVeneno?: number;
     bleed?: BleedState | null;
+    elemental?: import("./elementalEffects").ElementalState | null;
     ceguera?: NumericFlag;
     cooldownCeguera?: number;
     estupidez?: NumericFlag;
@@ -2013,6 +2017,248 @@ function processBleedTick(now: number) {
     }
 }
 
+// ---- Chamán elemental (elementalEffects.ts tiene las reglas) ----
+// Fuego chico que aparece en cada golpe de la quemadura y gráfico de la piedra del escudo de energía.
+const BURN_TICK_FX_ID = 153;
+// Piedra chica recortada de la roca del efecto 80 (indexada para el chamán).
+const ENERGY_STONE_GRH = 38035;
+const ENERGY_STONE_FLIGHT_MS = 300;
+const ENERGY_STONE_SPELL = {
+    name: "Piedra",
+    minHp: elementalEffects.ENERGY_STONE_MIN_DAMAGE,
+    maxHp: elementalEffects.ENERGY_STONE_MAX_DAMAGE,
+    elemental: 1,
+};
+
+/** Estado de los efectos del chamán para el propio jugador y quienes lo ven (auras, lentitud, contadores). */
+function sendElementalState(target: GameCharacter | undefined, now = Date.now()) {
+    if (!target) return;
+    const payload = { id: target.id, ...elementalEffects.buildPayload(target, now) };
+    withUserClient(target.id, (targetClient) => handleProtocol.elementalState(payload, targetClient));
+    loopAreaByUserId(target.id, (areaTarget: AreaTarget) => {
+        if (areaTarget.isNpc || isSameEntityId(areaTarget.id, target.id)) return;
+        const areaClient = getClientById(areaTarget.id);
+        if (areaClient && canReceiveCharacterEvent(areaTarget.id, target.id)) {
+            handleProtocol.elementalState(payload, areaClient);
+        }
+    });
+}
+
+/** Escudos propios, escudos para aliados y Evasión de viento. Devuelve el efecto o null si no se pudo. */
+function castElementalBuff(
+    caster: GameCharacter,
+    target: GameCharacter,
+    datSpell: Record<string, unknown>,
+): "Elemental" | null {
+    const now = Date.now();
+    const tell = (message: string) =>
+        withUserClient(caster.id, (casterClient) => handleProtocol.console(message, "white", 1, 0, casterClient));
+
+    if (datSpell.escudoPropio) {
+        elementalEffects.setSelfShield(target, String(datSpell.escudoPropio) as SelfShieldKind, now);
+    } else if (datSpell.escudoAliado) {
+        elementalEffects.setAllyShield(target, String(datSpell.escudoAliado) as AllyShieldKind, now);
+    } else {
+        const waitMs = elementalEffects.startWindEvasion(target, now);
+        if (waitMs > 0) {
+            tell(`La Evasión de viento estará lista en ${Math.ceil(waitMs / 1000)} s.`);
+            return null;
+        }
+        // No se puede estar invisible ni oculto mientras dura.
+        if (target.invisibleSpell) setSpellInvisibility(target.id, false);
+    }
+
+    sendElementalState(target, now);
+    return "Elemental";
+}
+
+/**
+ * Lo que un hechizo elemental deja además del daño: lentitud, silencios y quemadura.
+ * Devuelve false solo si el hechizo no tenía otro efecto y el silencio no entró (ya silenciado o en el respiro).
+ */
+function applyElementalStatusOnHit(caster: GameCharacter, target: GameCharacter, datSpell: Record<string, unknown>) {
+    const now = Date.now();
+    let changed = false;
+    let silenceRejected = false;
+
+    const slowMs = Number(datSpell.ralentiza ?? 0);
+    if (slowMs > 0) {
+        elementalEffects.applySlow(target, slowMs, now);
+        changed = true;
+    }
+
+    const magicSilenceMs = Number(datSpell.silencioMagia ?? 0);
+    if (magicSilenceMs > 0) {
+        elementalEffects.applyMagicSilence(target, magicSilenceMs, now);
+        changed = true;
+    }
+
+    const fullSilenceMs = Number(datSpell.silencioTotal ?? 0);
+    if (fullSilenceMs > 0) {
+        const result = elementalEffects.applyFullSilence(
+            target,
+            fullSilenceMs,
+            now,
+            Number(datSpell.silencioRespiro ?? 0),
+            datSpell.silencioTipo === "rayo" ? "rayo" : "agua",
+        );
+        if (result === "applied") changed = true;
+        else silenceRejected = true;
+    }
+
+    const burnDamage = Number(datSpell.quema ?? 0);
+    if (burnDamage > 0) {
+        elementalEffects.startBurn(target, burnDamage, caster.id, now);
+        changed = true;
+    }
+
+    if (changed) {
+        sendElementalState(target, now);
+    }
+
+    elementalEffects.rememberTarget(caster, target.id, false, now);
+    return !(silenceRejected && !changed);
+}
+
+function processBurnTick(target: GameCharacter, now: number) {
+    const burn = target.elemental?.burn;
+    if (!burn || burn.nextTickAt > now) return;
+
+    if (Number(target.zonaSegura ?? 0) === 1) {
+        elementalEffects.stopBurn(target);
+        sendElementalState(target, now);
+        withUserClient(target.id, (targetClient) =>
+            handleProtocol.console("Estás en zona segura: las llamas se apagaron.", "white", 0, 0, targetClient),
+        );
+        return;
+    }
+
+    burn.nextTickAt = now + elementalEffects.BURN_TICK_MS;
+    const damage = applyIncomingHit(target, burn.damage, "elemental", false, burn.attackerId);
+    target.hp = Math.max(0, Number(target.hp ?? 0));
+    interruptPendingLogoutOnAttack(target.id, "[Servidor] La salida se canceló porque te estás quemando.");
+    emitCharacterFxToUserArea(target.id, BURN_TICK_FX_ID);
+    loopAreaByUserId(target.id, (areaTarget: AreaTarget) => {
+        if (areaTarget.isNpc) return;
+        const areaClient = getClientById(areaTarget.id);
+        if (areaClient && canReceiveCharacterEvent(areaTarget.id, target.id)) {
+            handleProtocol.dialog(target.id, `-${damage}`, "", "#ff8a3d", 0, areaClient);
+        }
+    });
+    withUserClient(target.id, (targetClient) => {
+        handleProtocol.updateHP(target.hp, targetClient);
+        handleProtocol.console(`Te estás quemando: -${damage}.`, "#ff8a3d", 1, 0, targetClient);
+    });
+    if (isAdminSummonedBot(target)) {
+        broadcastCharacterVitalsDelta(target);
+    }
+
+    if (Number(target.hp ?? 0) <= 0) {
+        elementalEffects.stopBurn(target);
+        sendElementalState(target, now);
+        killByBleeding(target, burn.attackerId);
+    }
+}
+
+/** Escudo de energía: cada 2 s una piedra vuela del chamán a quien atacó hace poco, si está a 4 baldosas o menos. */
+function processEnergyStone(shaman: GameCharacter, now: number) {
+    const shield = shaman.elemental?.selfShield;
+    if (!shield || shield.kind !== "energia" || shield.nextStoneAt > now) return;
+    shield.nextStoneAt = now + elementalEffects.ENERGY_STONE_INTERVAL_MS;
+
+    const remembered = elementalEffects.getStoneTarget(shaman, now);
+    if (!remembered || Number(shaman.zonaSegura ?? 0) === 1) return;
+
+    const target = remembered.isNpc ? (vars.npcs[remembered.id] as GameNpc | undefined) : getCharacterById(remembered.id);
+    if (!target || target.map !== shaman.map || Number(target.hp ?? 0) <= 0 || (target as GameCharacter).dead) return;
+    if (!remembered.isNpc && Number((target as GameCharacter).zonaSegura ?? 0) === 1) return;
+    const distance = Math.max(Math.abs(target.pos.x - shaman.pos.x), Math.abs(target.pos.y - shaman.pos.y));
+    if (distance > elementalEffects.ENERGY_STONE_RANGE_TILES) return;
+
+    const start = { map: shaman.map, x: shaman.pos.x, y: shaman.pos.y };
+    const end = { map: target.map, x: target.pos.x, y: target.pos.y };
+    loopAreaByUserId(shaman.id, (areaTarget: AreaTarget) => {
+        if (areaTarget.isNpc) return;
+        const areaClient = getClientById(areaTarget.id);
+        if (areaClient && canReceiveCharacterEvent(areaTarget.id, shaman.id)) {
+            handleProtocol.createProjectile(start, end, ENERGY_STONE_GRH, areaClient);
+        }
+    });
+    withUserClient(shaman.id, (shamanClient) => handleProtocol.createProjectile(start, end, ENERGY_STONE_GRH, shamanClient));
+
+    // El golpe llega cuando la piedra termina de volar.
+    setTimeout(() => hitWithEnergyStone(shaman.id, remembered.id, remembered.isNpc), ENERGY_STONE_FLIGHT_MS);
+}
+
+function hitWithEnergyStone(shamanId: EntityId, targetId: EntityId, isNpc: boolean) {
+    const shaman = getCharacterById(shamanId);
+    const shamanClient = getClientById(shamanId);
+    if (!shaman || shaman.dead || !shamanClient || elementalEffects.getSelfShield(shaman) !== "energia") return;
+
+    let damage = 0;
+    if (isNpc) {
+        const npc = vars.npcs[targetId] as GameNpc | undefined;
+        if (!npc || Number(npc.hp ?? 0) <= 0 || npc.map !== shaman.map) return;
+        markNpcAggressor(targetId, shamanId);
+        damage = applyNpcSpellDamage(shaman, npc, ENERGY_STONE_SPELL);
+        game.calcularExp(shamanId, targetId, damage);
+        broadcastNpcVitalsDelta(npc);
+    } else {
+        const target = getCharacterById(targetId);
+        if (!target || target.dead || target.map !== shaman.map) return;
+        const landed = applyUserSpellDamage(shaman, target, ENERGY_STONE_SPELL);
+        if (landed == null) return;
+        damage = landed;
+        markUsersInPvpCombat(shaman, target);
+        withUserClient(targetId, (targetClient) => handleProtocol.updateHP(target.hp, targetClient));
+        if (isAdminSummonedBot(target)) broadcastCharacterVitalsDelta(target);
+    }
+
+    emitCharacterFxToUserArea(targetId, COMBAT_HIT_FX_ID);
+    loopAreaByUserId(shamanId, (areaTarget: AreaTarget) => {
+        if (areaTarget.isNpc) return;
+        const areaClient = getClientById(areaTarget.id);
+        if (areaClient && canReceiveCharacterEvent(areaTarget.id, shamanId)) {
+            handleProtocol.dialog(targetId, `${damage}`, "", "#d8b27a", 0, areaClient);
+        }
+    });
+    require("./respawn").muere(shamanClient, targetId);
+}
+
+// Cada 2 s se reenvía el estado de quien tenga efectos: así lo ve también quien recién llega a la zona.
+const ELEMENTAL_REFRESH_MS = 2000;
+const elementalRefreshAt = new Map<string, number>();
+
+function processElementalTick(now: number) {
+    for (const idUser in vars.personajes) {
+        const user = getCharacterById(idUser);
+        if (!user?.elemental) {
+            elementalRefreshAt.delete(idUser);
+            continue;
+        }
+
+        if (user.dead || Number(user.hp ?? 0) <= 0) {
+            if (elementalEffects.hasVisibleEffects(user, now)) {
+                elementalEffects.clearOnDeath(user);
+                sendElementalState(user, now);
+            } else {
+                elementalEffects.clearOnDeath(user);
+            }
+            continue;
+        }
+
+        if (elementalEffects.expire(user, now)) {
+            sendElementalState(user, now);
+            elementalRefreshAt.set(idUser, now + ELEMENTAL_REFRESH_MS);
+        } else if (elementalEffects.hasVisibleEffects(user, now) && (elementalRefreshAt.get(idUser) ?? 0) <= now) {
+            sendElementalState(user, now);
+            elementalRefreshAt.set(idUser, now + ELEMENTAL_REFRESH_MS);
+        }
+        processBurnTick(user, now);
+        processEnergyStone(user, now);
+    }
+}
+
 function interruptPendingLogoutOnAttack(
     idUser: EntityId,
     reason = "[Servidor] La salida se canceló porque recibiste un ataque.",
@@ -2890,7 +3136,8 @@ function isSupportSpell(datSpell: Record<string, unknown> | undefined): boolean 
             Number(datSpell.subeMana ?? 0) === 1 ||
             Number(datSpell.subeHam ?? 0) === 1 ||
             Number(datSpell.subeSed ?? 0) === 1 ||
-            Number(datSpell.protec ?? 0) > 0),
+            Number(datSpell.protec ?? 0) > 0 ||
+            elementalEffects.hasSupportElementalEffect(datSpell)),
     );
 }
 
@@ -2917,6 +3164,7 @@ function isOffensiveSpellData(datSpell: Record<string, unknown> | undefined): bo
             Number(datSpell.subeHam ?? 0) === 2 ||
             Number(datSpell.subeSed ?? 0) === 2 ||
             Number(datSpell.subeMana ?? 0) === 2 ||
+            elementalEffects.hasHostileElementalEffect(datSpell) ||
             name === "remover invisibilidad",
     );
 }
@@ -2998,13 +3246,18 @@ function isAreaNpcImmune(npc: GameNpc): boolean {
     );
 }
 
+// Daño elemental (chamán): se calcula como el mágico pero no lo frenan la resistencia ni la defensa mágica.
+const isElementalSpell = (datSpell: { elemental?: unknown } | undefined) => elementalEffects.isElementalSpell(datSpell);
+
 function applyNpcSpellDamage(
     user: GameCharacter,
     npc: GameNpc,
-    datSpell: { minHp?: number; maxHp?: number },
+    datSpell: { minHp?: number; maxHp?: number; elemental?: unknown },
 ): number {
     const magicCalc = applyMagicBonuses(funct.randomIntFromInterval(datSpell.minHp, datSpell.maxHp), user);
-    let dmg = applyMagicResistanceToNpc(magicCalc.damage, user, npc, magicCalc.magicPenetration);
+    let dmg = isElementalSpell(datSpell)
+        ? magicCalc.damage
+        : applyMagicResistanceToNpc(magicCalc.damage, user, npc, magicCalc.magicPenetration);
 
     if (dmg < 1) {
         dmg = 1;
@@ -3017,17 +3270,20 @@ function applyNpcSpellDamage(
 function applyUserSpellDamage(
     user: GameCharacter,
     userAttacked: GameCharacter,
-    datSpell: { minHp?: number; maxHp?: number },
+    datSpell: { minHp?: number; maxHp?: number; elemental?: unknown },
 ): number | null {
     if (shouldIgnoreHarmfulSpell(userAttacked)) {
         return null;
     }
 
+    const elemental = isElementalSpell(datSpell);
     const magicCalc = applyMagicBonuses(funct.randomIntFromInterval(datSpell.minHp, datSpell.maxHp), user);
     const mountedDamage = require("./mounts").applyOutgoingDamage(user, magicCalc.damage, "magic", false);
-    let dmg = applyMagicResistanceToUser(mountedDamage, user, userAttacked, magicCalc.magicPenetration);
+    let dmg = elemental
+        ? mountedDamage
+        : applyMagicResistanceToUser(mountedDamage, user, userAttacked, magicCalc.magicPenetration);
 
-    if (Number(userAttacked.protec ?? 0) > 0) {
+    if (!elemental && Number(userAttacked.protec ?? 0) > 0) {
         dmg -= Math.round((dmg * Number(userAttacked.protec)) / 100);
     }
 
@@ -3038,7 +3294,7 @@ function applyUserSpellDamage(
         dmg = 1;
     }
 
-    return applyIncomingHit(userAttacked, dmg, "magic", false, user.id);
+    return applyIncomingHit(userAttacked, dmg, elemental ? "elemental" : "magic", false, user.id);
 }
 
 function notifyNpcSpellDamage(user: GameCharacter, npc: GameNpc, dmg: number) {
@@ -3671,6 +3927,7 @@ export type GameApi = {
     worldSave: (callback: RuntimeCallback<WorldSaveResult>) => Promise<void>;
     processAdminSummonedBotTick: (now: number) => void;
     processBleedTick: (now: number) => void;
+    processElementalTick: (now: number) => void;
     respawnNpc: (map: number, aguaValida: boolean, tierraInvalida?: boolean) => RespawnPosition;
     validPosRespawn: (pos: Position, map: number, aguaValida: boolean) => boolean;
     validPosRespawnNpc: (pos: Position, map: number, aguaValida: boolean, tierraInvalida?: boolean) => boolean;
@@ -6001,6 +6258,11 @@ function Game(this: GameApi) {
                         return;
                     }
 
+                    if (!user.invisibleSpell && !elementalEffects.canBecomeInvisible(user)) {
+                        handleProtocol.console("Durante la Evasión de viento no puedes hacerte invisible.", "white", 0, 0, ws);
+                        return;
+                    }
+
                     setSpellInvisibility(clientId, !user.invisibleSpell);
                     handleProtocol.console(
                         user.invisibleSpell ? "Te ocultas bajo la Capa Hobbit." : "Te quitas la Capa Hobbit.",
@@ -6182,6 +6444,7 @@ function Game(this: GameApi) {
     };
 
     this.processBleedTick = processBleedTick;
+    this.processElementalTick = processElementalTick;
 
     this.processAdminSummonedBotTick = function (now: number) {
         try {
@@ -9588,6 +9851,7 @@ function Game(this: GameApi) {
 
             if (Number(npc.hp ?? 0) < hpBeforeSpell) {
                 require("./npcPowers").onDamagedByUser(npc, user, hpBeforeSpell);
+                elementalEffects.rememberTarget(user, idNpc, true);
             }
 
             if (dmg !== 0) {
@@ -9772,6 +10036,7 @@ function Game(this: GameApi) {
                 | "Sed"
                 | "Morph"
                 | "Protec"
+                | "Elemental"
                 | null = null;
 
             if (datSpell.paraliza || datSpell.paralizaarea) {
@@ -9904,6 +10169,33 @@ function Game(this: GameApi) {
                 userAttacked.protec = Number(datSpell.protec);
                 userAttacked.cooldownProtec = Date.now();
                 spellEffect = "Protec";
+            } else if (datSpell.escudoPropio || datSpell.escudoAliado || Number(datSpell.evasionViento ?? 0) === 1) {
+                const result = castElementalBuff(user, userAttacked, datSpell);
+                if (!result) {
+                    return 0;
+                }
+                spellEffect = result;
+            } else if (Number(datSpell.silencioTotal ?? 0) > 0 && ![2, 3, 4].includes(Number(datSpell.subeHp ?? 0))) {
+                // Prisión de agua: sin daño, solo el silencio.
+                if (idUser == idUserAttacked) {
+                    withUserClient(idUser, (userClient) => {
+                        handleProtocol.console("¡No puedes atacarte a ti mismo!", "white", 1, 0, userClient);
+                    });
+                    return 0;
+                }
+
+                if (!applyOpenWorldAttackRules(user, userAttacked, arenaCombat)) {
+                    return 0;
+                }
+
+                markUsersInPvpCombat(user, userAttacked);
+                if (!applyElementalStatusOnHit(user, userAttacked, datSpell)) {
+                    withUserClient(idUser, (userClient) => {
+                        handleProtocol.console("El objetivo ya está silenciado.", "white", 1, 0, userClient);
+                    });
+                    return 0;
+                }
+                spellEffect = "Elemental";
             } else if (Number(datSpell.morph ?? 0) === 1) {
                 const morphBodies = [5, 6, 9, 10, 13, 42, 51, 59, 68, 71, 73, 88];
                 if (userAttacked.navegando || userAttacked.dead || userAttacked.mounted) {
@@ -9962,6 +10254,7 @@ function Game(this: GameApi) {
                     }
 
                     dmg = resisted;
+                    applyElementalStatusOnHit(user, userAttacked, datSpell);
 
                     if (Number(datSpell.subeHp) === 3 || Number(datSpell.subeHp) === 4) {
                         applyAreaSpellDamageToUsers(user, datSpell, idUserAttacked);
@@ -10085,6 +10378,10 @@ function Game(this: GameApi) {
                 } else if (datSpell.curaVeneno) {
                     userAttacked.envenenado = 0;
                     userAttacked.cooldownVeneno = 0;
+                    // Curar efectos: también apaga la quemadura del Rayo de Fuego.
+                    if (Number(datSpell.curaEfectos ?? 0) === 1 && elementalEffects.stopBurn(userAttacked)) {
+                        sendElementalState(userAttacked);
+                    }
                     spellEffect = "CuraVeneno";
                 } else if (datSpell.ceguera) {
                     if (idUser === idUserAttacked) {
@@ -10312,6 +10609,7 @@ function Game(this: GameApi) {
             }
 
             markNpcAggressor(idNpc, idUser);
+            elementalEffects.rememberTarget(user, idNpc, true);
 
             const poderAtaque = game.poderAtaqueArma(idUser);
 
@@ -10574,7 +10872,8 @@ function Game(this: GameApi) {
 
             let probExito = clampChance(50 + (poderAtaque - userAttackedEvasion) * 0.4);
             const hitRoll = funct.randomIntFromInterval(1, 100);
-            const userImpacto = hitRoll <= probExito;
+            // Evasión de viento del chamán: el 90 % de los golpes y flechas no le entran.
+            const userImpacto = hitRoll <= probExito && !elementalEffects.rollWindEvasion(userAttacked);
 
             let dmg = 0;
             let attackMissed = false;
@@ -10590,6 +10889,7 @@ function Game(this: GameApi) {
             }
 
             markUsersInPvpCombat(user, userAttacked);
+            elementalEffects.rememberTarget(user, idUserAttacked, false);
 
             interruptPendingLogoutOnAttack(idUserAttacked);
 

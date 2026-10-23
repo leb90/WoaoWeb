@@ -12,7 +12,7 @@ const spellChanges: Record<number, Record<string, number>> = {
     6: { minHp: 10, maxHp: 15, manaRequired: 30 },
     7: { minHp: 14, maxHp: 20, manaRequired: 45 },
     8: { minHp: 20, maxHp: 28, manaRequired: 85 },
-    15: { minHp: 32, maxHp: 42, manaRequired: 250 },
+    15: { minHp: 32, maxHp: 42, manaRequired: 120 },
     23: { minHp: 38, maxHp: 50, manaRequired: 350 },
     25: { minHp: 50, maxHp: 55, manaRequired: 950 },
     32: { minHp: 85, maxHp: 105, manaRequired: 520 },
@@ -66,6 +66,11 @@ function updateJson(relativePath: string, update: (data: Record<string, any>) =>
 }
 
 function syncSpellDescription(spellId: number, spell: Record<string, any>): void {
+    // Las descripciones de la magia elemental (daño elemental, lentitud, silencios, quemadura) las arma applyShamanData.ts.
+    if (Number(spell.elemental ?? 0) === 1) {
+        return;
+    }
+
     const minHp = Number(spell.minHp ?? 0);
     const maxHp = Number(spell.maxHp ?? 0);
 

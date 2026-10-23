@@ -1,3 +1,5 @@
+import type { ElementalEntityState, ElementalStatePayload } from "./elementalState";
+
 export const CLIENT_PACKET_ID = {
     getMyCharacter: 1,
     getCharacter: 2,
@@ -93,6 +95,7 @@ export const CLIENT_PACKET_ID = {
     shopState: 95,
     aggroState: 96,
     bleedState: 97,
+    elementalState: 98,
 } as const;
 
 export const CHARACTER_SWING_WEAPON = 1;
@@ -841,6 +844,8 @@ export interface PlayerHudState {
     aggroState?: AggroStatePayload;
     // Hasta cuándo dura el desangrado (Date.now() del cliente; 0 o ausente = no sangra).
     bleedUntil?: number;
+    // Efectos del chamán sobre el propio personaje (escudos, evasión, silencios, lentitud, quemadura).
+    elemental?: ElementalEntityState;
     castleState?: CastleStatePayload;
     factionWarState?: FactionWarStatePayload;
     rankedState?: RankedStatePayload;
@@ -1427,6 +1432,7 @@ export type ParsedServerPacket =
     | { type: "shopState"; payload: ShopStatePayload }
     | { type: "aggroState"; payload: AggroStatePayload }
     | { type: "bleedState"; payload: BleedStatePayload }
+    | { type: "elementalState"; payload: ElementalStatePayload }
     | { type: "castleState"; payload: CastleStatePayload }
     | { type: "factionWarState"; payload: FactionWarStatePayload }
     | { type: "rankedState"; payload: RankedStatePayload }
@@ -2652,6 +2658,19 @@ function parseServerPacketById(
                 return {
                     type: "bleedState",
                     payload: JSON.parse(rawPayload) as BleedStatePayload,
+                };
+            } catch {
+                return { type: "unknown", payload: { packetId } };
+            }
+        }
+
+        case CLIENT_PACKET_ID.elementalState: {
+            const rawPayload = reader.getString();
+
+            try {
+                return {
+                    type: "elementalState",
+                    payload: JSON.parse(rawPayload) as ElementalStatePayload,
                 };
             } catch {
                 return { type: "unknown", payload: { packetId } };

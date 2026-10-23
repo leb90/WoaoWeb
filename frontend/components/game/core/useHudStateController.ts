@@ -195,6 +195,9 @@ export function useHudStateController({
                       ...(hud.bleedUntil === undefined && previousHud?.bleedUntil
                           ? { bleedUntil: previousHud.bleedUntil }
                           : {}),
+                      ...(!hud.elemental && previousHud?.elemental
+                          ? { elemental: previousHud.elemental }
+                          : {}),
                   }
                 : hud;
 

@@ -2,19 +2,25 @@ import {
     ArrowDownCircle,
     ArrowUpCircle,
     Brain,
+    Droplets,
     EyeOff,
     Flame,
     FlaskConical,
     Ghost,
     HeartPulse,
     Heart,
+    Hammer,
     type LucideIcon,
+    Mountain,
+    Shield,
+    ShieldPlus,
     Skull,
     Snowflake,
     Sparkles,
     Unlock,
     Utensils,
     Wand2,
+    Wind,
     Zap,
 } from "lucide-react";
 import type { SpellData } from "../types/game";
@@ -47,6 +53,28 @@ export function getSpellVisual(
     if (flag(data, "revivir")) {
         return { Icon: HeartPulse, color: "#fde68a" };
     }
+    // Chamán elemental: escudos, Evasión de viento y Prisión de agua.
+    if (data.escudoPropio === "magico") {
+        return { Icon: Shield, color: "#a78bfa" };
+    }
+    if (data.escudoPropio === "fisico") {
+        return { Icon: Shield, color: "#d6b27a" };
+    }
+    if (data.escudoPropio === "energia") {
+        return { Icon: Mountain, color: "#fbbf24" };
+    }
+    if (data.escudoAliado) {
+        return { Icon: ShieldPlus, color: data.escudoAliado === "magico" ? "#7dd3fc" : "#d6b27a" };
+    }
+    if (flag(data, "evasionViento")) {
+        return { Icon: Wind, color: "#a5f3fc" };
+    }
+    if (flag(data, "silencioTotal") && !flag(data, "subeHp")) {
+        return { Icon: Droplets, color: "#60a5fa" };
+    }
+    if (flag(data, "paraliza") && /petrific/.test(lowerName)) {
+        return { Icon: Mountain, color: "#c4a37a" };
+    }
     if (flag(data, "paraliza") || flag(data, "inmoviliza") || flag(data, "paralizaarea")) {
         return { Icon: Snowflake, color: "#7dd3fc" };
     }
@@ -77,7 +105,13 @@ export function getSpellVisual(
         return { Icon: Heart, color: "#4ade80" };
     }
     if (subeHp >= 2) {
-        if (/fuego|tormenta|apocalipsis|llama|infierno/.test(lowerName)) {
+        if (/martillo/.test(lowerName)) {
+            return { Icon: Hammer, color: "#fde68a" };
+        }
+        if (/viento|r[aá]faga|ventisca/.test(lowerName)) {
+            return { Icon: Wind, color: "#a5f3fc" };
+        }
+        if (/fuego|tormenta|apocalipsis|llama|infierno|incinerar/.test(lowerName)) {
             return { Icon: Flame, color: "#fb923c" };
         }
         if (/el[eé]ctric|descarga|rayo|trueno/.test(lowerName)) {

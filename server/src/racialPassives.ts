@@ -179,6 +179,10 @@ export function applyVampireOnHit(user: Combatant | null | undefined): number {
 }
 
 export function shouldIgnoreHarmfulSpell(user: Combatant | null | undefined): boolean {
+    // Evasión de viento del chamán: esquiva el 90 % de los hechizos de daño.
+    if ((require("./elementalEffects") as typeof import("./elementalEffects")).rollWindEvasion(user as any)) {
+        return true;
+    }
     return raceId(user) === WOAO_RACE.orco && chance(10);
 }
 
@@ -229,17 +233,20 @@ export function applyElfManaRestore(user: Combatant | null | undefined): number 
 export function applyIncomingHit(
     user: Combatant | null | undefined,
     damage: number,
-    kind: "melee" | "ranged" | "magic",
+    kind: "melee" | "ranged" | "magic" | "elemental",
     fromNpc = false,
     attackerId?: string | number,
 ): number {
-    let next = kind === "magic" ? damage : modifyIncomingPhysicalDamage(user, damage, kind);
+    const spellLike = kind === "magic" || kind === "elemental";
+    let next = spellLike ? damage : modifyIncomingPhysicalDamage(user, damage, kind);
     try {
         const mounts = require("./mounts") as typeof import("./mounts");
-        next = mounts.applyIncomingMountDamage(user as any, next, kind, fromNpc);
+        next = mounts.applyIncomingMountDamage(user as any, next, kind === "elemental" ? "magic" : kind, fromNpc);
     } catch {
         /* mounts optional during early boot */
     }
+    // Escudos del chamán (propios y de aliados).
+    next = (require("./elementalEffects") as typeof import("./elementalEffects")).applyShieldReduction(user as any, next, kind);
     next = applyLethalSave(user, next);
     if (user) {
         user.hp = Number(user.hp ?? 0) - next;

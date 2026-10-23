@@ -536,6 +536,8 @@ export class Engine {
     scrollPixelsPerFrameX = 8.5;
     scrollPixelsPerFrameY = 8.5;
     timeWalkMS = DEFAULT_RUNTIME_TIMING.walkStepMs;
+    // Descarga eléctrica del chamán: cuánto más tarda cada paso de esa entidad (2 = mitad de velocidad).
+    elementalWalkMultiplier: (entityId: number) => number = () => 1;
     runtimeTiming: RuntimeTimingConfig = DEFAULT_RUNTIME_TIMING;
 
     // Timing

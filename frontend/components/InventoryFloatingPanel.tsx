@@ -1244,38 +1244,41 @@ const WEATHER_ICONS: Record<number, LucideIcon> = {
     [WEATHER.niebla]: CloudFog,
 };
 
-type EnvironmentChip = { key: string; icon: LucideIcon | undefined; label: string | undefined };
+type EnvironmentChip = { key: string; icon: LucideIcon | undefined; label: string | undefined; iconOnly?: boolean };
 
 function getEnvironmentChips(environment: EnvironmentState) {
     const chips: EnvironmentChip[] = [
-        { key: "season", icon: SEASON_ICONS[environment.season], label: SEASON_LABELS[environment.season] },
-        { key: "phase", icon: DAY_PHASE_ICONS[environment.dayPhase], label: DAY_PHASE_LABELS[environment.dayPhase] },
+        { key: "season", icon: SEASON_ICONS[environment.season], label: SEASON_LABELS[environment.season], iconOnly: true },
+        { key: "phase", icon: DAY_PHASE_ICONS[environment.dayPhase], label: DAY_PHASE_LABELS[environment.dayPhase], iconOnly: true },
         { key: "weather", icon: WEATHER_ICONS[environment.weather], label: WEATHER_LABELS[environment.weather] },
         { key: "temperature", icon: Thermometer, label: `${environment.temperatureC}°C` },
     ];
     return chips.filter(
-        (chip): chip is { key: string; icon: LucideIcon; label: string } =>
+        (chip): chip is { key: string; icon: LucideIcon; label: string; iconOnly?: boolean } =>
             chip.icon !== undefined && Boolean(chip.label),
     );
 }
 
-// Estación, momento del día, clima y temperatura en chips que bajan de línea si no entran (antes era
-// una sola línea de 8 px que se cortaba en pantallas angostas).
+// Estación, momento del día, clima y temperatura en una fila de chips (antes era una línea de 8 px con
+// truncate que se cortaba en pantallas angostas). Tiene que entrar en una sola fila: el panel tiene alto fijo
+// y si esto crece, el detalle del ítem pierde su segunda línea. Por eso estación y momento del día van solo
+// con ícono (el nombre está en el título y para lectores de pantalla) y clima y temperatura con texto.
 function EnvironmentChips({ environment }: { environment: EnvironmentState }) {
     const chips = getEnvironmentChips(environment);
     return (
         <div
             data-environment-chips="true"
-            className="mb-1 flex flex-wrap gap-1"
+            className="mb-1 flex min-w-0 items-center gap-[3px]"
             title={chips.map((chip) => chip.label).join(" · ")}
         >
-            {chips.map(({ key, icon: Icon, label }) => (
+            {chips.map(({ key, icon: Icon, label, iconOnly }) => (
                 <span
                     key={key}
-                    className="inline-flex items-center gap-1 whitespace-nowrap rounded-sm border border-[#6b5636]/50 bg-black/30 px-1 py-px text-[9px] font-semibold leading-tight text-[#d9c39d]"
+                    title={label}
+                    className={`inline-flex items-center gap-[3px] whitespace-nowrap rounded-sm border border-[#6b5636]/50 bg-black/30 px-[3px] py-[2px] text-[9px] font-semibold leading-none text-[#d9c39d] ${iconOnly ? "shrink-0" : "min-w-0"}`}
                 >
                     <Icon className="h-2.5 w-2.5 shrink-0 text-[#c9a86a]" aria-hidden="true" />
-                    {label}
+                    {iconOnly ? <span className="sr-only">{label}</span> : <span className="truncate">{label}</span>}
                 </span>
             ))}
         </div>
@@ -3977,7 +3980,7 @@ export default function InventoryFloatingPanel({
                                     <button
                                         type="button"
                                         onClick={() => setIsWorldMapOpen(true)}
-                                        className="mb-1 w-full text-left text-[9px] font-semibold tracking-[0.04em] text-[#cbb18e] transition hover:text-amber-100"
+                                        className="mb-1 block w-full truncate text-left text-[9px] font-semibold tracking-[0.04em] text-[#cbb18e] transition hover:text-amber-100"
                                         aria-label="Abrir mapa del mundo"
                                         title={
                                             hud

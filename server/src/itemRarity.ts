@@ -87,7 +87,7 @@ export function getEffectiveItemData(idItem: number, storedRarity?: unknown): Ob
     add("maxDef", rarity);
     add("minDefMag", rarity);
     add("maxDefMag", rarity);
-    add("resistenciaMagica", rarity);
+    // resistenciaMagica no: es un porcentaje de reducción y +3 por pieza pesa mucho más que el resto.
     add("magicDamageBonus", rarity * 2);
     cache.set(key, effective);
     return effective;

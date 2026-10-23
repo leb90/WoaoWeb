@@ -1310,6 +1310,7 @@ createDynamicScheduler(
         processCrowdControlTick(now);
         processActionCooldownTick(now);
         game.processAdminSummonedBotTick(now);
+        game.processBleedTick(now);
         const populationBotsTickStart = process.hrtime.bigint();
         populationBots.processPopulationBotTick(now);
         populationBotsTickSamplesMs.push(Number(process.hrtime.bigint() - populationBotsTickStart) / 1e6);

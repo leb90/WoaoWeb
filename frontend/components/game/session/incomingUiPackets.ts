@@ -238,6 +238,12 @@ export async function handleIncomingUiPacket({
         case "aggroState":
             ctx.mergeHud({ aggroState: packet.payload });
             return true;
+
+        case "bleedState": {
+            const remainingMs = Number(packet.payload.remainingMs ?? 0);
+            ctx.mergeHud({ bleedUntil: remainingMs > 0 ? Date.now() + remainingMs : 0 });
+            return true;
+        }
         case "shopState":
             ctx.mergeHud({ shopState: packet.payload });
             return true;

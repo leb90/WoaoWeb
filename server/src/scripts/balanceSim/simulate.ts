@@ -178,6 +178,10 @@ const modesFor = (classId: number) => [
 
 const results: Array<SimResult & Record<string, unknown>> = [];
 const loadouts: Record<string, unknown> = {};
+// Daños que entraron por cruce y modo, para medir el combo (un golpe más una magia).
+const landedByCell = new Map<string, { landed: number[]; hitRate: number; hp: number }>();
+const cellKey = (level: number, atkClass: number, atkProfile: string, defClass: number, defProfile: string, mode: string) =>
+    `${level}|${atkClass}|${atkProfile}|${defClass}|${defProfile}|${mode}`;
 for (const level of LEVELS) {
     for (const atkProfile of PROFILES) {
         for (const atkClass of ATTACKERS) {
@@ -203,6 +207,11 @@ for (const level of LEVELS) {
                             if (damage > 0) landed.push(damage);
                         }
                         landed.sort((a, b) => a - b);
+                        landedByCell.set(cellKey(level, atkClass, atkProfile, defClass, defProfile, mode), {
+                            landed,
+                            hitRate: landed.length / TRIALS,
+                            hp: defender.realMaxHp,
+                        });
                         const pct = (q: number) => (landed.length ? landed[Math.min(landed.length - 1, Math.floor(q * landed.length))] : 0);
                         results.push({
                             level, atkClass, atkProfile, mode, defClass, defProfile, spell: spell?.id ?? null,
@@ -221,8 +230,33 @@ for (const level of LEVELS) {
     }
 }
 
+// Combo: un golpe cuerpo a cuerpo y enseguida una magia, para las clases que tienen las dos cosas.
+// killPct = chance de matar con ese combo (si el golpe falla, no mata); leftPct = vida que le queda al
+// defensor, en % de su máximo, cuando sobrevive.
+const combos: Array<Record<string, unknown>> = [];
+for (const [key, melee] of landedByCell) {
+    if (!key.endsWith("|melee")) continue;
+    const magic = landedByCell.get(key.replace(/\|melee$/, "|magia"));
+    if (!magic || !melee.landed.length || !magic.landed.length) continue;
+    const [level, atkClass, atkProfile, defClass, defProfile] = key.split("|");
+    const runs = 20000;
+    let kills = 0;
+    let leftTotal = 0;
+    for (let run = 0; run < runs; run++) {
+        const hit = Math.random() < melee.hitRate ? melee.landed[Math.floor(Math.random() * melee.landed.length)] : 0;
+        const total = hit + magic.landed[Math.floor(Math.random() * magic.landed.length)];
+        if (total >= melee.hp) kills++;
+        else leftTotal += (melee.hp - total) / melee.hp;
+    }
+    combos.push({
+        level: Number(level), atkClass: Number(atkClass), atkProfile, defClass: Number(defClass), defProfile,
+        killPct: Number((kills / runs).toFixed(3)),
+        leftPct: runs > kills ? Number((leftTotal / (runs - kills)).toFixed(3)) : 0,
+    });
+}
+
 const output = option("--salida", "balance-sim.json");
-fs.writeFileSync(output, JSON.stringify({ trials: TRIALS, race: RACE, buffed: BUFFED, proposal: proposalPath || null, loadouts, results }, null, 1));
+fs.writeFileSync(output, JSON.stringify({ trials: TRIALS, race: RACE, buffed: BUFFED, proposal: proposalPath || null, loadouts, results, combos }, null, 1));
 const score = scoreResults(results);
 console.log(
     `${results.length} combinaciones -> ${output}. Contra la matriz objetivo: ${score.within}/${score.total} a ±0,5 aciertos ` +

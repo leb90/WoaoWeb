@@ -16,6 +16,7 @@ import { MapRenderer } from "../../components/game";
 import AdminIntervalsModal from "../../components/AdminIntervalsModal";
 import BuffStatusSidebar from "../../components/BuffStatusSidebar";
 import InvisibilityCornerTimer from "../../components/InvisibilityCornerTimer";
+import BleedBanner from "../../components/BleedBanner";
 import AggroPanel from "../../components/AggroPanel";
 import MacroBar from "../../components/MacroBar";
 import BailModal from "../../components/BailModal";
@@ -3704,6 +3705,15 @@ function HomeContent() {
                                 ) : null}
 
                                 {!isMobile ? (
+                                    <BleedBanner
+                                        bleedUntil={hud?.bleedUntil}
+                                        dead={Boolean(hud?.dead)}
+                                        className="absolute left-1/2 -translate-x-1/2"
+                                        style={{ top: activeFactionWarState ? 120 : 64 }}
+                                    />
+                                ) : null}
+
+                                {!isMobile ? (
                                     <InvisibilityCornerTimer
                                         hud={hud}
                                         runtimeTiming={runtimeTiming}
@@ -4235,6 +4245,15 @@ function HomeContent() {
                                     />
                                     <AggroPanel aggro={hud?.aggroState} />
                                 </div>
+                            ) : null}
+
+                            {isMobile ? (
+                                <BleedBanner
+                                    bleedUntil={hud?.bleedUntil}
+                                    dead={Boolean(hud?.dead)}
+                                    className="fixed left-1/2 -translate-x-1/2"
+                                    style={{ top: "calc(env(safe-area-inset-top) + 96px)" }}
+                                />
                             ) : null}
 
                             {isMobile ? (

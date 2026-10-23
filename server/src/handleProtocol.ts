@@ -474,6 +474,7 @@ export type HandleProtocolApi = {
     transmogState: (payload: unknown, client: RuntimeClient) => void;
     shopState: (payload: unknown, client: RuntimeClient) => void;
     aggroState: (payload: unknown, client: RuntimeClient) => void;
+    bleedState: (remainingMs: number, client: RuntimeClient) => void;
     castleState: (payload: unknown, client: RuntimeClient) => void;
     factionWarState: (payload: FactionWarStatePayload, client: RuntimeClient) => void;
     rankedState: (payload: unknown, client: RuntimeClient) => void;
@@ -1584,6 +1585,13 @@ const handleServer: HandleProtocolApi = {
     aggroState(payload, client) {
         pkg.setPackageID(pkg.clientPacketID.aggroState);
         pkg.writeString(JSON.stringify(payload));
+        socket.send(client);
+    },
+
+    // Desangrado de la apuñalada: ms que le quedan (0 = terminó). El cliente muestra el cartel con la cuenta.
+    bleedState(remainingMs, client) {
+        pkg.setPackageID(pkg.clientPacketID.bleedState);
+        pkg.writeString(JSON.stringify({ remainingMs: Math.max(0, Math.round(remainingMs)) }));
         socket.send(client);
     },
 

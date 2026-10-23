@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, EyeOff, Gem, Shield, Sparkles, Swords, Target } from "lucide-react";
+import { ArrowRight, Droplets, EyeOff, Gem, Shield, Sparkles, Swords, Target } from "lucide-react";
 import { WikiSection, WikiTag } from "@/components/wiki/WikiUi";
 import { RARITY_COLORS, RARITY_NAMES } from "@/lib/itemRarity";
 import balance from "@/lib/wiki-pvp-balance.json";
@@ -13,10 +13,10 @@ const MODE_LABELS: Record<string, string> = { magia: "magia", melee: "golpe", ra
 const CLASS_IDENTITY: Array<{ id: number; text: string }> = [
     { id: 1, text: "El que más daño hace con magia. Nada de daño físico." },
     { id: 7, text: "Menos magia que el mago y un arma que sirve." },
-    { id: 2, text: "Como el druida, pero con más armas: pega más cuerpo a cuerpo que con magia." },
+    { id: 2, text: "Como el druida, pero con más armas: pega más cuerpo a cuerpo que con magia. Con set, a un mago con set lo mata con un golpe y una magia la mayoría de las veces." },
     { id: 6, text: "Mixto: un poco de magia y un poco de arma." },
     { id: 8, text: "Mucho cuerpo a cuerpo y poca magia." },
-    { id: 4, text: "Golpe común por debajo del guerrero; su fuerte es la apuñalada por la espalda." },
+    { id: 4, text: "Golpe común por debajo del guerrero; su fuerte es la apuñalada por la espalda, que deja al otro desangrándose." },
     { id: 3, text: "El que más pega físico. Nada de magia." },
     { id: 9, text: "Arco; el cuerpo a cuerpo queda en segundo plano." },
 ];
@@ -280,6 +280,38 @@ export default function WikiPvpBalance() {
                     <WikiTag>El nombre muestra el nivel: &quot;+1&quot;, &quot;+2&quot; o &quot;+3&quot;</WikiTag>
                     <WikiTag>El borde del inventario toma el color de la rareza</WikiTag>
                     <WikiTag>Mercado y subastas no aceptan objetos con rareza</WikiTag>
+                </div>
+            </WikiSection>
+
+            <WikiSection title="Apuñalada y desangrado">
+                <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+                    <div className="space-y-3 text-sm leading-6 text-stone-400">
+                        <p>
+                            Cuando un <strong className="text-stone-200">asesino</strong> con un arma de apuñalar acierta una apuñalada <strong className="text-stone-200">por la espalda</strong> a otro jugador, el golpe suma apenas un 10 % de daño, pero abre una herida:
+                        </p>
+                        <ul className="space-y-2">
+                            {[
+                                "Durante 10 segundos, cada 2 segundos la herida saca lo mismo que el golpe que la abrió.",
+                                "Curarse no la cierra: hay que curarse muy rápido, con magias de otros jugadores o tomando pociones seguidas, o se muere.",
+                                "Una apuñalada nueva reinicia el desangrado. Entrar a zona segura lo corta.",
+                                "Si te mata, cuenta como que te mató el asesino.",
+                            ].map((text) => (
+                                <li key={text} className="flex gap-3 border border-red-900/40 bg-red-950/10 px-3 py-2">
+                                    <Droplets className="mt-1 h-4 w-4 shrink-0 text-red-400/80" aria-hidden />
+                                    <span>{text}</span>
+                                </li>
+                            ))}
+                        </ul>
+                        <p className="text-xs text-stone-500">
+                            Mientras sangrás, arriba de la pantalla aparece &quot;Te estás desangrando&quot; con la cuenta de 10 a 0. Las demás clases que apuñalan hacen el daño doble de siempre, sin desangrado.
+                        </p>
+                    </div>
+                    <div className="border border-stone-800 bg-black/30 p-4 text-sm leading-6 text-stone-400">
+                        <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-stone-500">Ejemplo, nivel 50</span>
+                        <p className="mt-2">
+                            Si el golpe pega 200, la apuñalada hace 220 y después vienen 5 golpes de 200: en total 1220 en 10 segundos. Un mago tiene unos 390 de vida (466 con su set).
+                        </p>
+                    </div>
                 </div>
             </WikiSection>
 

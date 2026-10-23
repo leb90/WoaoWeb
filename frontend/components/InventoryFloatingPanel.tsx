@@ -30,6 +30,18 @@ import {
     Clock3,
     Swords,
     ShoppingBag,
+    Flower2,
+    Leaf,
+    Snowflake,
+    Sun,
+    Sunrise,
+    Sunset,
+    Moon,
+    CloudRain,
+    CloudLightning,
+    CloudFog,
+    Thermometer,
+    type LucideIcon,
 } from "lucide-react";
 import type {
     CharacterStatsSnapshot,
@@ -1210,16 +1222,64 @@ const WEATHER_LABELS: Record<number, string> = {
     [WEATHER.niebla]: "Niebla",
 };
 
-function formatEnvironmentLabel(environment: EnvironmentState | null | undefined) {
-    if (!environment) {
-        return null;
-    }
+const SEASON_ICONS: Record<number, LucideIcon> = {
+    [SEASON.verano]: Sun,
+    [SEASON.otono]: Leaf,
+    [SEASON.invierno]: Snowflake,
+    [SEASON.primavera]: Flower2,
+};
 
-    const season = SEASON_LABELS[environment.season] ?? "";
-    const dayPhase = DAY_PHASE_LABELS[environment.dayPhase] ?? "";
-    const weather = WEATHER_LABELS[environment.weather] ?? "";
+const DAY_PHASE_ICONS: Record<number, LucideIcon> = {
+    [DAY_PHASE.manana]: Sunrise,
+    [DAY_PHASE.mediodia]: Sun,
+    [DAY_PHASE.tarde]: Sunset,
+    [DAY_PHASE.noche]: Moon,
+};
 
-    return `${season} · ${dayPhase} · ${weather} · ${environment.temperatureC}°C`;
+const WEATHER_ICONS: Record<number, LucideIcon> = {
+    [WEATHER.despejado]: Sun,
+    [WEATHER.lluvia]: CloudRain,
+    [WEATHER.tormenta]: CloudLightning,
+    [WEATHER.nieve]: Snowflake,
+    [WEATHER.niebla]: CloudFog,
+};
+
+type EnvironmentChip = { key: string; icon: LucideIcon | undefined; label: string | undefined };
+
+function getEnvironmentChips(environment: EnvironmentState) {
+    const chips: EnvironmentChip[] = [
+        { key: "season", icon: SEASON_ICONS[environment.season], label: SEASON_LABELS[environment.season] },
+        { key: "phase", icon: DAY_PHASE_ICONS[environment.dayPhase], label: DAY_PHASE_LABELS[environment.dayPhase] },
+        { key: "weather", icon: WEATHER_ICONS[environment.weather], label: WEATHER_LABELS[environment.weather] },
+        { key: "temperature", icon: Thermometer, label: `${environment.temperatureC}°C` },
+    ];
+    return chips.filter(
+        (chip): chip is { key: string; icon: LucideIcon; label: string } =>
+            chip.icon !== undefined && Boolean(chip.label),
+    );
+}
+
+// Estación, momento del día, clima y temperatura en chips que bajan de línea si no entran (antes era
+// una sola línea de 8 px que se cortaba en pantallas angostas).
+function EnvironmentChips({ environment }: { environment: EnvironmentState }) {
+    const chips = getEnvironmentChips(environment);
+    return (
+        <div
+            data-environment-chips="true"
+            className="mb-1 flex flex-wrap gap-1"
+            title={chips.map((chip) => chip.label).join(" · ")}
+        >
+            {chips.map(({ key, icon: Icon, label }) => (
+                <span
+                    key={key}
+                    className="inline-flex items-center gap-1 whitespace-nowrap rounded-sm border border-[#6b5636]/50 bg-black/30 px-1 py-px text-[9px] font-semibold leading-tight text-[#d9c39d]"
+                >
+                    <Icon className="h-2.5 w-2.5 shrink-0 text-[#c9a86a]" aria-hidden="true" />
+                    {label}
+                </span>
+            ))}
+        </div>
+    );
 }
 
 export default function InventoryFloatingPanel({
@@ -3928,9 +3988,7 @@ export default function InventoryFloatingPanel({
                                         {mapName || "Sin mapa cargado"}
                                     </button>
                                     {environment ? (
-                                        <p className="mb-1 truncate text-[8px] font-semibold uppercase tracking-[0.03em] text-[#a6926f]">
-                                            {formatEnvironmentLabel(environment)}
-                                        </p>
+                                        <EnvironmentChips environment={environment} />
                                     ) : null}
                                     <VitalBars
                                         hp={hud?.hp || 0}

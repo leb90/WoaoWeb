@@ -1,3 +1,4 @@
+import fs from "fs";
 import path from "path";
 
 import pool from "../db";
@@ -12,6 +13,7 @@ import {
   loadSmeltingRecipesJsonFromFile,
 } from "../lib/gameData";
 import { upsertGameCraftingRecipe } from "../repositories/gameCraftingRecipes";
+import { upsertGameBalance } from "../repositories/gameBalance";
 import { upsertGameNpc } from "../repositories/gameNpcs";
 import { upsertGameObject } from "../repositories/gameObjects";
 import { upsertGameSmeltingRecipe } from "../repositories/gameSmeltingRecipes";
@@ -92,6 +94,13 @@ async function importSmeltingRecipes(filePath?: string | null): Promise<{ total:
   return { total: rows.length, changed, unchanged };
 }
 
+async function importBalance(filePath?: string | null): Promise<{ changed: number; unchanged: number }> {
+  const resolvedPath = filePath ?? path.resolve(__dirname, "../jsons/balance.json");
+  const data = JSON.parse(fs.readFileSync(resolvedPath, "utf8")) as Record<string, unknown>;
+  const result = await upsertGameBalance(data);
+  return { changed: result.unchanged ? 0 : 1, unchanged: result.unchanged ? 1 : 0 };
+}
+
 async function main(): Promise<void> {
   const positionalArgs = process.argv.slice(2).filter((argument) => argument !== "--");
   const mode = (positionalArgs[0] ?? "all").trim().toLowerCase();
@@ -99,10 +108,11 @@ async function main(): Promise<void> {
   const npcsPath = resolveOptionalPath(getOptionValue("npcs-path"));
   const craftingPath = resolveOptionalPath(getOptionValue("crafting-path"));
   const smeltingPath = resolveOptionalPath(getOptionValue("smelting-path"));
+  const balancePath = resolveOptionalPath(getOptionValue("balance-path"));
 
-  if (!["all", "objs", "npcs", "crafting", "smelting"].includes(mode)) {
+  if (!["all", "objs", "npcs", "crafting", "smelting", "balance"].includes(mode)) {
     throw new Error(
-      "Uso: pnpm import-game-data [all|objs|npcs|crafting|smelting] [--objects-path ruta] [--npcs-path ruta] [--crafting-path ruta] [--smelting-path ruta]",
+      "Uso: pnpm import-game-data [all|objs|npcs|crafting|smelting|balance] [--objects-path ruta] [--npcs-path ruta] [--crafting-path ruta] [--smelting-path ruta] [--balance-path ruta]",
     );
   }
 
@@ -132,6 +142,11 @@ async function main(): Promise<void> {
     console.log(
       `Fundicion importada. Total: ${smelting.total}. Nuevos/actualizados: ${smelting.changed}. Sin cambios: ${smelting.unchanged}.`,
     );
+  }
+
+  if (mode === "all" || mode === "balance") {
+    const balance = await importBalance(balancePath);
+    console.log(`Balance importado. Actualizados: ${balance.changed}. Sin cambios: ${balance.unchanged}.`);
   }
 }
 

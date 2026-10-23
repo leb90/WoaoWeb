@@ -2,6 +2,7 @@ import type { DataObject, EntityId, Position, RuntimeCharacter, RuntimeClient, S
 import type { HandleProtocolApi } from "./handleProtocol";
 import { getCharacterById, getClientById } from "./runtimeRegistry";
 import { getSmeltingRecipesByMineral } from "./smeltingRecipes";
+import { canAddToInventory, isInventorySlot } from "./equipmentStorage";
 
 export {};
 
@@ -98,13 +99,7 @@ function addIngotsToInventory(user: SmeltingUser, itemId: number, amount: number
 }
 
 function canReceiveIngots(user: SmeltingUser, itemId: number, amount: number) {
-    for (const item of Object.values(user.inv)) {
-        if (item.idItem === itemId && item.cant + amount <= 10000) {
-            return true;
-        }
-    }
-
-    return Object.keys(user.inv).length < 21;
+    return canAddToInventory(user.inv, itemId, amount);
 }
 
 function canReceiveIngotsAfterConvert(
@@ -114,21 +109,21 @@ function canReceiveIngotsAfterConvert(
     ingotItemId: number,
     ingotAmount: number,
 ) {
-    for (const [key, item] of Object.entries(user.inv)) {
-        if (key === slotKey) {
-            continue;
-        }
-
-        if (item.idItem === ingotItemId && item.cant + ingotAmount <= 10000) {
-            return true;
-        }
-    }
+    const inventoryAfterConvert = Object.fromEntries(
+        Object.entries(user.inv).map(([key, item]) => [key, { ...item }]),
+    );
 
     if (remainingMenas <= 0) {
-        return true;
+        delete inventoryAfterConvert[slotKey];
+    } else if (isInventorySlot(slotKey)) {
+        inventoryAfterConvert[slotKey].cant = remainingMenas;
     }
 
-    return Object.keys(user.inv).length < 21;
+    return canAddToInventory(
+        inventoryAfterConvert,
+        ingotItemId,
+        ingotAmount,
+    );
 }
 
 function convertMenasFromSlot(ws: RuntimeClient, user: SmeltingUser, idPos: number | string) {

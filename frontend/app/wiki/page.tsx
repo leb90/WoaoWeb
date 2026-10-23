@@ -3,6 +3,7 @@ import Link from "next/link";
 import {
     Anvil,
     BookOpen,
+    Calculator,
     Map,
     ScrollText,
     Sparkles,
@@ -16,6 +17,7 @@ import { formatWikiNumber } from "@/lib/wiki-query";
 import { absoluteUrl } from "@/lib/seo";
 
 const shortcuts = [
+    { href: "/wiki/personajes#simulador", label: "Calculadora", icon: Calculator, description: "Vida min/promedio/máx, maná y mapas por nivel" },
     { href: "/wiki/objetos", label: "Objetos", icon: Swords, description: "Equipamiento, consumibles y materiales" },
     { href: "/wiki/npcs", label: "NPC", icon: Sparkles, description: "Criaturas, comerciantes y sus drops" },
     { href: "/wiki/mapas", label: "Mapas", icon: Map, description: "Atlas, zonas y criaturas presentes" },
@@ -88,7 +90,7 @@ export default async function WikiPage() {
                     <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-amber-300">Enciclopedia</p>
                     <h2 className="mt-1 font-[var(--font-cinzel)] text-2xl font-semibold text-stone-100">Consultá los datos del juego</h2>
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                     {shortcuts.map((shortcut) => {
                         const Icon = shortcut.icon;
                         return (

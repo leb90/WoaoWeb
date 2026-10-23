@@ -17,6 +17,10 @@ import {
     getEquippedItemAction,
     getInventoryItemEquipmentKind,
 } from "../../../lib/equipmentKinds";
+import {
+    getSpecialItemAccent,
+    getSpecialItemSlotClasses,
+} from "../../../lib/specialItems";
 
 const MIN_SLOTS = 21;
 const DOUBLE_TAP_MS = 300;
@@ -102,24 +106,14 @@ export function MobileInventoryModal({
 
     const items = React.useMemo(() => hud?.inventory ?? [], [hud?.inventory]);
 
-    const startSlot = React.useMemo(() => {
-        if (items.length === 0) {
-            return 0;
-        }
-        const lowest = Math.min(...items.map((item) => item.slot));
-        return lowest === 0 ? 0 : 1;
-    }, [items]);
+    const startSlot = 1;
 
     const slots = React.useMemo(() => {
         const bySlot = new Map(items.map((item) => [item.slot, item]));
-        const highest = items.length
-            ? Math.max(...items.map((item) => item.slot))
-            : 0;
-        const total = Math.max(MIN_SLOTS, highest - startSlot + 1);
 
-        // Lo equipado se ve solo en el panel de equipo (en el server sigue
-        // ocupando su lugar del inventario).
-        return Array.from({ length: total }, (_, index) => ({
+        // Los seis slots persistentes de equipo quedan fuera de los 21 lugares
+        // de la mochila.
+        return Array.from({ length: MIN_SLOTS }, (_, index) => ({
             slot: index + startSlot,
             item: bySlot.get(index + startSlot),
         })).filter(
@@ -318,17 +312,10 @@ export function MobileInventoryModal({
         const dragged = items.find((entry) => entry.slot === drag.slot);
 
         if (drag.source === "equipment") {
-            // Del equipo al inventario: se lo saca (y se mueve si el lugar
-            // donde lo soltaste está vacío).
+            // El servidor ubica la pieza en un lugar libre o rechaza la acción
+            // si la mochila está llena.
             if (Number.isFinite(targetSlot) && dragged?.equipped) {
                 onEquip(drag.slot);
-                const occupied = items.some(
-                    (entry) => entry.slot === targetSlot,
-                );
-                if (targetSlot !== drag.slot && !occupied) {
-                    onMove(drag.slot, targetSlot);
-                    setSelectedSlot(targetSlot);
-                }
             }
             return;
         }
@@ -399,7 +386,19 @@ export function MobileInventoryModal({
 
                 <div className="flex min-h-0 flex-col gap-3 overflow-y-auto p-3 landscape:flex-row landscape:items-start">
                     <div className="grid min-w-0 flex-1 grid-cols-7 gap-1.5">
-                        {slots.map(({ slot, item }) => (
+                        {slots.map(({ slot, item }) => {
+                            const specialAccent = item
+                                ? getSpecialItemAccent(
+                                      item.idItem,
+                                      objectsDB?.[String(item.idItem)],
+                                  )
+                                : null;
+                            const specialSlotClasses = getSpecialItemSlotClasses(
+                                specialAccent,
+                                { selected: selectedSlot === slot },
+                            );
+
+                            return (
                             <button
                                 key={slot}
                                 type="button"
@@ -419,9 +418,10 @@ export function MobileInventoryModal({
                                 }
                                 className={`relative flex aspect-square touch-none select-none items-center justify-center rounded-lg border [-webkit-touch-callout:none] ${
                                     item
-                                        ? selectedSlot === slot
-                                            ? "border-cyan-300/85 bg-[#3a2817]"
-                                            : "border-amber-500/25 bg-[#2b2016]"
+                                        ? specialSlotClasses ||
+                                          (selectedSlot === slot
+                                              ? "border-cyan-300/85 bg-[#3a2817]"
+                                              : "border-amber-500/25 bg-[#2b2016]")
                                         : "border-[#433126] bg-[#140f0a]"
                                 } ${ghost && selectedSlot === slot ? "opacity-40" : ""}`}
                             >
@@ -449,24 +449,14 @@ export function MobileInventoryModal({
                                     </>
                                 ) : null}
                             </button>
-                        ))}
+                            );
+                        })}
                     </div>
                     <div className="shrink-0 landscape:w-[300px]">
                         <EquipmentPanel
                             items={items}
                             objectsDB={objectsDB}
                             graphicsDB={graphicsDB}
-                            appearance={
-                                hud?.idBody
-                                    ? {
-                                          head: hud.idHead ?? 0,
-                                          body: hud.idBody,
-                                          helmet: hud.idHelmet ?? 0,
-                                          weapon: hud.idWeapon ?? 0,
-                                          shield: hud.idShield ?? 0,
-                                      }
-                                    : null
-                            }
                             draggingKind={
                                 ghost && ghost.source !== "equipment"
                                     ? getInventoryItemEquipmentKind(

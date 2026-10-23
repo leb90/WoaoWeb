@@ -294,7 +294,7 @@ export async function createCharacter(
                 class: "guerrero",
                 race: "humano",
                 gender: "male",
-                headId: 1,
+                headId: 3,
             }),
         },
     );

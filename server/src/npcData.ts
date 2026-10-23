@@ -90,6 +90,12 @@ const NPC_DEFAULTS: Record<string, unknown> = {
 };
 
 const REQUIRED_NPC_KEYS = new Set(["name", "npcType", "idHead", "idBody", "movement"]);
+const LEGACY_COMBAT_POTION_REPLACEMENTS = new Map([
+    [848, 37],
+    [849, 38],
+    [1091, 37],
+    [1092, 38],
+]);
 
 function isSameDefaultValue(value: unknown, defaultValue: unknown): boolean {
     if (Array.isArray(defaultValue)) {
@@ -108,6 +114,7 @@ function normalizeNpc(npcData: DataNpc): DataNpc {
         drop: Array.isArray(npcData.drop)
             ? npcData.drop.map((entry, index) => ({
                   ...entry,
+                  item: LEGACY_COMBAT_POTION_REPLACEMENTS.get(Number(entry.item)) ?? Number(entry.item),
                   chancePercent: getNpcDropChancePercent(entry, getLegacyNpcDropChancePercent(index)),
               }))
             : [],

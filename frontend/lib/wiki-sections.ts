@@ -24,8 +24,8 @@ export const WIKI_CATEGORIES = [
     {
         slug: "personajes",
         label: "Personajes y progresión",
-        description: "Clases, razas, atributos, experiencia y equipamiento.",
-        links: ["Clases", "Razas", "Atributos", "Progresión"],
+        description: "Clases, razas, atributos, calculadora de vida y equipamiento.",
+        links: ["Calculadora", "Clases", "Razas", "Progresión"],
     },
     {
         slug: "habilidades",

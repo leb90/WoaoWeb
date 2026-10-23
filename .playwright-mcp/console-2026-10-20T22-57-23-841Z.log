@@ -1,0 +1,16 @@
+[     919ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[    1126ms] [LOG] [HMR] connected @ http://127.0.0.1:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[    1712ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:3000/api/auth/me:0
+[    1729ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:3000/api/auth/me:0
+[    1751ms] [INFO] Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner. @ http://127.0.0.1:3000/play:0
+[    1951ms] [LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[    2168ms] [LOG] [Fast Refresh] done in 392ms @ http://127.0.0.1:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[    2270ms] [LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[    2295ms] [LOG] [Fast Refresh] done in 126ms @ http://127.0.0.1:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[    2520ms] [LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[    2594ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:3000/api/auth/me:0
+[    2603ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:3000/api/auth/me:0
+[    2692ms] [LOG] [Fast Refresh] done in 285ms @ http://127.0.0.1:3000/_next/static/chunks/0cco_next_dist_0uq~hyz._.js:2477
+[    2743ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:3000/api/auth/me:0
+[    2766ms] [INFO] Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner. @ http://127.0.0.1:3000/login?redirect=%2Fplay:0
+[    2849ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ http://127.0.0.1:3000/login?redirect=%2Fplay:0

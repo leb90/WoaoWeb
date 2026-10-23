@@ -1,6 +1,10 @@
 import type { EntityId, InventoryItem, RuntimeCharacter, RuntimeClient, SpellSlot } from "./types/runtime";
 import type { SocketApi } from "./socket";
 import { type CharacterFaction, getFactionColor } from "./factions";
+import {
+    getEquipmentStorageSlotForObjectType,
+    normalizeEquipmentStorage,
+} from "./equipmentStorage";
 
 export {};
 const funct = require("./functions");
@@ -66,6 +70,69 @@ type StoredCharacter = RuntimeCharacter & {
     clanMinJoinLevel?: number | null;
     clanRole?: "leader" | "co_leader" | "member" | null;
 };
+
+function resolveEquipmentStorageSlot(item: InventoryItem) {
+    const object = vars.datObj[item.idItem];
+    if (!object) {
+        return null;
+    }
+
+    return getEquipmentStorageSlotForObjectType(
+        itemKinds.getEquipObjectType(object),
+        vars.objType,
+    );
+}
+
+function hydrateEquipmentState(character: StoredCharacter): void {
+    character.idItemWeapon = 0;
+    character.idItemBody = 0;
+    character.idItemShield = 0;
+    character.idItemHelmet = 0;
+    character.idItemArrow = 0;
+    character.idItemRing = 0;
+
+    if (character.dead) {
+        return;
+    }
+
+    for (const [idPos, inventoryItem] of Object.entries(character.inv)) {
+        if (!inventoryItem.equipped) {
+            continue;
+        }
+
+        const object = vars.datObj[inventoryItem.idItem];
+        if (!object) {
+            continue;
+        }
+
+        const equipType = itemKinds.getEquipObjectType(object);
+        if (equipType === vars.objType.armaduras) {
+            if (!character.navegando) {
+                character.idBody = object.anim;
+            }
+            character.idItemBody = Number(idPos);
+        } else if (equipType === vars.objType.armas) {
+            if (!character.navegando) {
+                character.idWeapon = object.anim;
+            }
+            character.idItemWeapon = Number(idPos);
+        } else if (equipType === vars.objType.anillos) {
+            character.idItemRing = Number(idPos);
+        } else if (equipType === vars.objType.escudos) {
+            if (!character.navegando) {
+                character.idShield = object.anim;
+            }
+            character.idItemShield = Number(idPos);
+        } else if (equipType === vars.objType.cascos) {
+            if (!character.navegando) {
+                character.idHelmet = object.anim;
+            }
+            character.idItemHelmet = Number(idPos);
+        } else if (equipType === vars.objType.flechas) {
+            character.idItemArrow = Number(idPos);
+        }
+    }
+}
 
 const JAIL_MAP = 66;
 const JAIL_X = 68;
@@ -738,11 +805,14 @@ function Login(this: LoginApi) {
 
                 personaje.level = balance.clampLevel(personaje.level || 1);
                 personaje.expNextLevel = balance.getLegacyExpNextLevelForLevel(personaje.level);
-                personaje.maxHp = balance.getMaxHpForLevel(
-                    personaje.idClase,
-                    personaje.attrConstitucion,
-                    personaje.level,
-                );
+                const storedMaxHp = Number(personaje.maxHp ?? 0);
+                personaje.maxHp = storedMaxHp > 0
+                    ? Math.floor(storedMaxHp)
+                    : balance.getMaxHpForLevel(
+                          personaje.idClase,
+                          personaje.attrConstitucion,
+                          personaje.level,
+                      );
                 personaje.maxMana = balance.getMaxManaForLevel(
                     personaje.idClase,
                     personaje.attrInteligencia,
@@ -838,39 +908,15 @@ function Login(this: LoginApi) {
 
                     if (!obj) {
                         delete personaje.inv[idPos];
-                        return;
-                    }
-
-                    if (!personaje.dead && item.equipped) {
-                        const equipType = itemKinds.getEquipObjectType(obj);
-
-                        if (equipType == vars.objType.armaduras) {
-                            if (!personaje.navegando) {
-                                personaje.idBody = obj.anim;
-                            }
-                            personaje.idItemBody = idPos;
-                        } else if (equipType == vars.objType.armas) {
-                            if (!personaje.navegando) {
-                                personaje.idWeapon = obj.anim;
-                            }
-                            personaje.idItemWeapon = idPos;
-                        } else if (equipType == vars.objType.anillos) {
-                            personaje.idItemRing = idPos;
-                        } else if (equipType == vars.objType.escudos) {
-                            if (!personaje.navegando) {
-                                personaje.idShield = obj.anim;
-                            }
-                            personaje.idItemShield = idPos;
-                        } else if (equipType == vars.objType.cascos) {
-                            if (!personaje.navegando) {
-                                personaje.idHelmet = obj.anim;
-                            }
-                            personaje.idItemHelmet = idPos;
-                        } else if (equipType == vars.objType.flechas) {
-                            personaje.idItemArrow = idPos;
-                        }
                     }
                 });
+
+                const normalizedEquipment = normalizeEquipmentStorage(
+                    personaje.inv,
+                    resolveEquipmentStorageSlot,
+                );
+                personaje.inv = normalizedEquipment.inventory;
+                hydrateEquipmentState(personaje);
 
                 (personaje.bankItems ?? []).map((item) => {
                     const idPos = item.idPos;
@@ -965,6 +1011,18 @@ function Login(this: LoginApi) {
                               mana: 0,
                               maxMana: 0,
                               spells: [],
+                          }
+                        : {}),
+                    ...(normalizedEquipment.changed
+                        ? {
+                              items: Object.entries(personaje.inv).map(
+                                  ([idPos, item]) => ({
+                                      idPos: Number(idPos),
+                                      idItem: item.idItem,
+                                      cant: item.cant,
+                                      equipped: Boolean(item.equipped),
+                                  }),
+                              ),
                           }
                         : {}),
                     updatedAt: new Date(),
@@ -1318,6 +1376,13 @@ function Login(this: LoginApi) {
             idItemArrow: character.idItemArrow || 0,
             idItemRing: character.idItemRing || 0,
         };
+
+        const normalizedEquipment = normalizeEquipmentStorage(
+            newCharacter.inv,
+            resolveEquipmentStorageSlot,
+        );
+        newCharacter.inv = normalizedEquipment.inventory;
+        hydrateEquipmentState(newCharacter as unknown as StoredCharacter);
 
         require("./woaoProgress").hydrateUser(newCharacter);
         require("./skills").ensureSkills(newCharacter);

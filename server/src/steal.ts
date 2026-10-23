@@ -1,5 +1,7 @@
 export {};
 
+import { isInventorySlot } from "./equipmentStorage";
+
 const vars = require("./vars");
 const game = require("./game");
 const handleProtocol = require("./handleProtocol");
@@ -59,7 +61,10 @@ function isRobableItem(item: { idItem?: number; cant?: number; equipped?: number
 
 function findRobableSlot(victim: any): string | null {
     const slots = Object.keys(victim.inv ?? {})
-        .filter((slot) => isRobableItem(victim.inv[slot]))
+        .filter(
+            (slot) =>
+                isInventorySlot(slot) && isRobableItem(victim.inv[slot]),
+        )
         .sort((a, b) => Number(a) - Number(b));
 
     if (slots.length === 0) {

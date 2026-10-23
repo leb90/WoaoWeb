@@ -33,6 +33,8 @@ export async function POST(request: Request) {
     const cellWidth = Number(form.get("cellWidth") || reference.cellWidth);
     const cellHeight = Number(form.get("cellHeight") || reference.cellHeight);
     const contentScale = Number(form.get("contentScale") || (kindValue === "shield" ? 0.62 : kindValue === "weapon" ? 0.9 : 1));
+    const contentScaleX = form.has("contentScaleX") ? Number(form.get("contentScaleX")) : undefined;
+    const contentScaleY = form.has("contentScaleY") ? Number(form.get("contentScaleY")) : undefined;
     const align: AlignMode = form.get("align") === "center" || kindValue !== "body" ? "center" : "bottom";
     const input = Buffer.from(await file.arrayBuffer());
     const jobId = await saveJob(input);
@@ -49,6 +51,8 @@ export async function POST(request: Request) {
         Math.max(8, Math.min(160, Math.round(cellHeight))),
         align,
         contentScale,
+        contentScaleX,
+        contentScaleY,
       );
     }
 
@@ -64,6 +68,8 @@ export async function POST(request: Request) {
       cellHeight,
       align,
       contentScale,
+      contentScaleX,
+      contentScaleY,
     });
   } catch (error) {
     return jsonError(error);

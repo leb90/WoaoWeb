@@ -17,6 +17,8 @@ type RaceBalanceRecord = {
 };
 type ClassProgressRecord = {
     vida: number;
+    vidaMin: number;
+    vidaMax: number;
     manaInicial: number;
     multMana: number;
     hitPre36: number;
@@ -67,6 +69,8 @@ const raceBalanceSchema = z.object({
 });
 const classProgressSchema = z.object({
     vida: z.coerce.number(),
+    vidaMin: z.coerce.number().optional(),
+    vidaMax: z.coerce.number().optional(),
     manaInicial: z.coerce.number(),
     multMana: z.coerce.number(),
     hitPre36: z.coerce.number(),
@@ -120,14 +124,59 @@ function normalizeOuterNumericKeys<T extends Record<string, unknown>>(
     );
 }
 
-function normalizeGameBalanceData(
-    data: GameBalanceInputData,
-): GameBalanceRecordData {
+const DEFAULT_HP_RANGES: Record<string, { vidaMin: number; vidaMax: number }> = {
+    "1": { vidaMin: 6, vidaMax: 10 },
+    "2": { vidaMin: 7, vidaMax: 10 },
+    "3": { vidaMin: 9, vidaMax: 13 },
+    "4": { vidaMin: 7, vidaMax: 11 },
+    "5": { vidaMin: 8, vidaMax: 12 },
+    "6": { vidaMin: 7, vidaMax: 11 },
+    "7": { vidaMin: 7, vidaMax: 10 },
+    "8": { vidaMin: 8, vidaMax: 12 },
+    "9": { vidaMin: 8, vidaMax: 12 },
+    "10": { vidaMin: 6, vidaMax: 10 },
+    "11": { vidaMin: 8, vidaMax: 12 },
+    "12": { vidaMin: 7, vidaMax: 11 },
+    "13": { vidaMin: 6, vidaMax: 10 },
+    "14": { vidaMin: 6, vidaMax: 10 },
+    "15": { vidaMin: 6, vidaMax: 10 },
+    "16": { vidaMin: 6, vidaMax: 10 },
+    "17": { vidaMin: 6, vidaMax: 10 },
+    "18": { vidaMin: 8, vidaMax: 12 },
+    "19": { vidaMin: 7, vidaMax: 10 },
+    "20": { vidaMin: 6, vidaMax: 10 },
+    "21": { vidaMin: 7, vidaMax: 11 },
+};
+
+function normalizeClassProgressMap(
+    input: Record<string, z.infer<typeof classProgressSchema>>,
+): Record<string, ClassProgressRecord> {
+    return Object.fromEntries(
+        Object.entries(input).map(([rawKey, value]) => {
+            const key = String(Number(rawKey));
+            const defaults = DEFAULT_HP_RANGES[key] ?? {
+                vidaMin: Math.max(1, Math.floor(value.vida - 2)),
+                vidaMax: Math.max(1, Math.ceil(value.vida + 2)),
+            };
+
+            return [
+                key,
+                {
+                    ...value,
+                    vidaMin: Number(value.vidaMin ?? defaults.vidaMin),
+                    vidaMax: Number(value.vidaMax ?? defaults.vidaMax),
+                },
+            ];
+        }),
+    );
+}
+
+function normalizeGameBalanceData(data: unknown): GameBalanceRecordData {
     const parsed = gameBalanceSchema.parse(data);
 
     return {
         balanceRazas: normalizeOuterNumericKeys(parsed.balanceRazas),
-        classProgress: normalizeOuterNumericKeys(parsed.classProgress),
+        classProgress: normalizeClassProgressMap(parsed.classProgress),
         modEscudo: normalizeNumberMap(parsed.modEscudo),
         modDmgMagia: normalizeNumberMap(
             parsed.modDmgMagia ?? loadSeedBalanceJson().modDmgMagia,

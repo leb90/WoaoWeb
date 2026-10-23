@@ -2,6 +2,8 @@ import { z } from "zod";
 import type { PoolClient } from "pg";
 import pool from "../db";
 
+const MAX_CHARACTER_ITEM_SLOT = 27;
+
 const vaultItemSchema = z.object({
     idPos: z.coerce.number().int(),
     idItem: z.coerce.number().int().positive(),
@@ -35,7 +37,11 @@ const syncVaultSchema = z
         characterItems: z
             .array(
                 z.object({
-                    idPos: z.coerce.number().int(),
+                    idPos: z.coerce
+                        .number()
+                        .int()
+                        .min(1)
+                        .max(MAX_CHARACTER_ITEM_SLOT),
                     idItem: z.coerce.number().int().positive(),
                     cant: z.coerce.number().int().positive(),
                     equipped: z

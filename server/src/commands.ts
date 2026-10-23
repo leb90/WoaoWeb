@@ -26,6 +26,10 @@ import {
     replaceAllMapNpcPlacements,
 } from "./mapNpcStorage";
 import * as safeZone from "./safeZone";
+import {
+    isEquipmentStorageSlot,
+    unequipInventoryItem,
+} from "./equipmentStorage";
 
 export {};
 
@@ -1506,24 +1510,38 @@ function rebuildCharacterEquipmentState(user: CommandCharacter) {
     }
 }
 
-function normalizeEquippedItemsForCurrentClass(user: CommandCharacter) {
-    let changed = false;
-    const currentClassId = Number(user.idClase ?? 0);
+function buildInventoryForClass(user: CommandCharacter, classId: number) {
+    let inventory = Object.fromEntries(
+        Object.entries(user.inv ?? {}).map(([slot, item]) => [
+            slot,
+            { ...item },
+        ]),
+    );
 
-    for (const item of Object.values(user.inv ?? {})) {
+    for (const [slot, item] of Object.entries(inventory)) {
         if (!item?.equipped) {
             continue;
         }
 
-        if (!itemBlockedForClass(user, currentClassId, item.idItem)) {
+        if (!itemBlockedForClass(user, classId, item.idItem)) {
+            continue;
+        }
+
+        const equipmentSlot = Number(slot);
+        if (isEquipmentStorageSlot(equipmentSlot)) {
+            const result = unequipInventoryItem(inventory, equipmentSlot);
+            if (!result.ok) {
+                return null;
+            }
+
+            inventory = result.inventory;
             continue;
         }
 
         item.equipped = 0;
-        changed = true;
     }
 
-    return changed;
+    return inventory;
 }
 
 async function changeCharacterClassByAdmin(target: CommandCharacter, classInput: string, ws: RuntimeClient) {
@@ -1540,8 +1558,21 @@ async function changeCharacterClassByAdmin(target: CommandCharacter, classInput:
         return;
     }
 
+    const nextInventory = buildInventoryForClass(target, classId);
+
+    if (!nextInventory) {
+        handleProtocol.console(
+            "No se puede cambiar la clase: el personaje necesita espacio para guardar el equipo incompatible.",
+            "#E69500",
+            0,
+            0,
+            ws as CommandClient,
+        );
+        return;
+    }
+
     resetCharacterClassState(target, classId);
-    normalizeEquippedItemsForCurrentClass(target);
+    target.inv = nextInventory;
     rebuildCharacterEquipmentState(target);
 
     const targetClient = getClient(target.id);

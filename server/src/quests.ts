@@ -1,4 +1,8 @@
 import { getProgress, MAX_QUESTS, saveProgress, type QuestProgress } from "./woaoProgress";
+import {
+    countOccupiedInventorySlots,
+    isInventorySlot,
+} from "./equipmentStorage";
 
 const game = require("./game");
 const vars = require("./vars");
@@ -97,7 +101,10 @@ function notifyQuestProgress(
 
 function countItem(user: { inv?: Record<string, { idItem?: number; cant?: number; amount?: number }> }, itemId: number) {
     let total = 0;
-    for (const item of Object.values(user.inv ?? {})) {
+    for (const [slot, item] of Object.entries(user.inv ?? {})) {
+        if (!isInventorySlot(slot)) {
+            continue;
+        }
         if (Number(item?.idItem) === itemId) {
             total += Number(item.cant ?? item.amount ?? 0);
         }
@@ -106,7 +113,7 @@ function countItem(user: { inv?: Record<string, { idItem?: number; cant?: number
 }
 
 function countFreeSlots(user: { inv?: Record<string, unknown> }) {
-    return Math.max(0, 21 - Object.keys(user.inv ?? {}).length);
+    return Math.max(0, 21 - countOccupiedInventorySlots(user.inv ?? {}));
 }
 
 function removeItems(idUser: string, itemId: number, amount: number) {
@@ -121,7 +128,7 @@ function removeItems(idUser: string, itemId: number, amount: number) {
             break;
         }
 
-        if (Number(item?.idItem) !== itemId) {
+        if (!isInventorySlot(slot) || Number(item?.idItem) !== itemId) {
             continue;
         }
 

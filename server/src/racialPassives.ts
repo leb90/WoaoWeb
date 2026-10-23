@@ -59,9 +59,7 @@ export function getRacialEvasionMultiplier(user: Combatant | null | undefined): 
     return multiplier;
 }
 
-// Golpe crítico de Licantropo (SistemaCombate.bas: UserDañoUser). Vieja fórmula:
-// probi = random(1,100) + floor(Suerte/40); crítico (+20% de daño) si probi > 1,
-// es decir, prácticamente garantizado y escala (muy poco) con Suerte.
+// Balance actual: 10-15% de probabilidad de critico segun Suerte.
 function getLicantropoSkillSuerte(user: Combatant | null | undefined): number {
     try {
         const skills = require("./skills");
@@ -95,9 +93,9 @@ export function modifyOutgoingPhysicalDamage(
 
     if (id === WOAO_RACE.licantropo) {
         const suerte = getLicantropoSkillSuerte(user);
-        const probi = Math.floor(Math.random() * 100) + 1 + Math.floor(suerte / 40);
+        const criticalChance = Math.min(15, 10 + Math.floor(suerte / 40) * 2);
 
-        if (probi > 1) {
+        if (chance(criticalChance)) {
             next = next + Math.round(next * 0.2);
         }
     }
@@ -105,19 +103,18 @@ export function modifyOutgoingPhysicalDamage(
     return next;
 }
 
-// Vampiro: al golpear a un NPC se regenera (Trabajo/SistemaCombate: UserDañoNpc).
-// bup = random(1,10); éxito si bup > 1 (90%), cura 15% de su vida máxima.
+// Balance actual: 20% de probabilidad, recupera 5% de la vida maxima.
 export function applyVampireLifestealOnNpcHit(attacker: Combatant | null | undefined): number {
     if (!attacker || raceId(attacker) !== WOAO_RACE.vampiro) {
         return 0;
     }
 
-    if (!chance(90)) {
+    if (!chance(20)) {
         return 0;
     }
 
     const maxHp = Number(attacker.maxHp ?? 0);
-    const heal = Math.floor(maxHp * 0.15);
+    const heal = Math.floor(maxHp * 0.05);
     if (heal <= 0) {
         return 0;
     }
@@ -167,12 +164,12 @@ export function applyVampireOnHit(user: Combatant | null | undefined): number {
         return 0;
     }
 
-    if (!chance(10)) {
+    if (!chance(8)) {
         return 0;
     }
 
     const maxHp = Number(user.maxHp ?? 0);
-    const heal = Math.floor(maxHp * 0.15);
+    const heal = Math.floor(maxHp * 0.05);
     if (heal <= 0) {
         return 0;
     }

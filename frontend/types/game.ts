@@ -31,6 +31,11 @@ export interface ObjectData {
     magicDamageBonus?: number;
     magicDamagePercent?: number;
     objetoEspecial?: number;
+    /** 1 = ítem especial (marco en inventario + aura al equipar). */
+    itemEspecial?: number;
+    bonusGoldNpcPct?: number;
+    bonusExpNpcPct?: number;
+    bonusDropNpcPct?: number;
     mataHobbits?: number;
     subtipo?: number;
     clasesNoPermitidas?: number[];

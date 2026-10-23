@@ -761,6 +761,27 @@ function dataObj(idItem: number) {
             }
         }
 
+        const rewardBonusParts: string[] = [];
+        const bonusExpNpcPct = Number(obj.bonusExpNpcPct ?? 0);
+        const bonusGoldNpcPct = Number(obj.bonusGoldNpcPct ?? 0);
+        const bonusDropNpcPct = Number(obj.bonusDropNpcPct ?? 0);
+
+        if (bonusExpNpcPct > 0) {
+            rewardBonusParts.push(`+${bonusExpNpcPct}% de experiencia extra`);
+        }
+        if (bonusGoldNpcPct > 0) {
+            rewardBonusParts.push(`+${bonusGoldNpcPct}% de oro extra`);
+        }
+        if (bonusDropNpcPct > 0) {
+            rewardBonusParts.push(`+${bonusDropNpcPct}% de chance de drop`);
+        }
+
+        if (rewardBonusParts.length > 0) {
+            data = data
+                ? `${data} | ${rewardBonusParts.join(" | ")}`
+                : rewardBonusParts.join(" | ");
+        }
+
         if (itemTier > 0) {
             data += data ? ` | Tier: ${itemTier}` : `Tier: ${itemTier}`;
         }

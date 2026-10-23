@@ -228,7 +228,10 @@ function refreshConnectedCharactersFromBalance(): number {
         user.attrInteligencia = nextAttrInteligencia;
         user.attrConstitucion = nextAttrConstitucion;
 
-        const newMaxHp = balance.getMaxHpForLevel(classId, nextAttrConstitucion, level);
+        const storedMaxHp = Number(user.maxHp ?? 0);
+        const newMaxHp = storedMaxHp > 0
+            ? Math.floor(storedMaxHp)
+            : balance.getMaxHpForLevel(classId, nextAttrConstitucion, level);
         const newMaxMana = balance.getMaxManaForLevel(classId, nextAttrInteligencia, level);
         const newMinHit = balance.getMinHitForLevel(classId, level);
         const newMaxHit = balance.getMaxHitForLevel(classId, level);

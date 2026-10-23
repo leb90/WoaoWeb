@@ -54,6 +54,21 @@ import {
     hasOpenClientById,
 } from "./runtimeRegistry";
 import * as safeZone from "./safeZone";
+import {
+    INVENTORY_SLOT_COUNT,
+    countOccupiedInventorySlots,
+    getEquipmentStorageSlotForObjectType,
+    isInventorySlot,
+    normalizeEquipmentStorage,
+} from "./equipmentStorage";
+import {
+    calculateMagicDamage,
+    clampMagicResistance,
+    getMagicEquipmentTotals,
+    getHealthPotionRecovery,
+    getManaPotionRecovery,
+    getPlayerHealingAmount,
+} from "./combatBalance";
 
 export {};
 const funct = require("./functions");
@@ -71,20 +86,16 @@ const { isWaterGraphic } = require("./waterTiles");
 const workProfessions = require("./workProfessions");
 const skills = require("./skills");
 
-const getPotionRecoveryAmount = (maxStat: number, percentage: number | undefined, fixedAmount: number): number => {
-    const recoveryPercentage = Number(percentage ?? 0);
-
-    if (recoveryPercentage > 0) {
-        return Math.floor((maxStat * recoveryPercentage) / 100);
-    }
-
-    return fixedAmount;
-};
-
 const SURVIVAL_HAMBRE_MAX = Number(balance.MAX_HAMBRE ?? 100);
 const SURVIVAL_SED_MAX = Number(balance.MAX_SED ?? 100);
 const HUNGER_DRAIN_INTERVAL_MS = 8000;
 const STA_REGEN_INTERVAL_MS = 2000;
+/**
+ * Regeneración pasiva de vida (legacy Sanar / SanaIntervaloSinDescansar).
+ * En el motor viejo: 400 ticks del GameTimer (40ms) ≈ 16s entre curas.
+ * Cura Random(2, 5% de maxSta) si hay hambre y sed > 0.
+ */
+const HP_REGEN_INTERVAL_MS = 16000;
 // Inanición: con hambre Y sed en 0 a la vez, la estamina deja de regenerar y en
 // cambio se drena. Además se resta un % FIJO de la vida máxima una sola vez (no es
 // un daño por tiempo: 100/100 -> 90/100 y se queda ahí), y se devuelve ese mismo
@@ -915,10 +926,18 @@ function rebuildEquippedInventoryState(user: GameCharacter): void {
     user.idItemHelmet = 0;
     user.idItemArrow = 0;
     user.idItemRing = 0;
-    user.idBody = game.bodyNaked(user.id);
-    user.idWeapon = 0;
-    user.idShield = 0;
-    user.idHelmet = 0;
+    const nakedBody = game.bodyNaked(user.id);
+    if (user.navegando) {
+        user.idLastBody = nakedBody;
+        user.idLastWeapon = 0;
+        user.idLastShield = 0;
+        user.idLastHelmet = 0;
+    } else {
+        user.idBody = nakedBody;
+        user.idWeapon = 0;
+        user.idShield = 0;
+        user.idHelmet = 0;
+    }
 
     for (const [idPos, item] of Object.entries(user.inv)) {
         if (!item.equipped) {
@@ -934,24 +953,32 @@ function rebuildEquippedInventoryState(user: GameCharacter): void {
         const equipType = itemKinds.getEquipObjectType(obj);
 
         if (equipType == vars.objType.armaduras) {
-            if (!user.navegando) {
+            if (user.navegando) {
+                user.idLastBody = obj.anim;
+            } else {
                 user.idBody = obj.anim;
             }
             user.idItemBody = idPos;
         } else if (equipType == vars.objType.armas) {
-            if (!user.navegando) {
+            if (user.navegando) {
+                user.idLastWeapon = obj.anim;
+            } else {
                 user.idWeapon = obj.anim;
             }
             user.idItemWeapon = idPos;
         } else if (equipType == vars.objType.anillos) {
             user.idItemRing = idPos;
         } else if (equipType == vars.objType.escudos) {
-            if (!user.navegando) {
+            if (user.navegando) {
+                user.idLastShield = obj.anim;
+            } else {
                 user.idShield = obj.anim;
             }
             user.idItemShield = idPos;
         } else if (equipType == vars.objType.cascos) {
-            if (!user.navegando) {
+            if (user.navegando) {
+                user.idLastHelmet = obj.anim;
+            } else {
                 user.idHelmet = obj.anim;
             }
             user.idItemHelmet = idPos;
@@ -1019,39 +1046,18 @@ function canAutoEquipInventoryItem(user: GameCharacter, obj: DataObject | undefi
 }
 
 function restoreAutoEquippedInventoryState(user: GameCharacter): void {
-    const equippedByType = new Set<number>();
-
-    for (const item of Object.values(user.inv)) {
-        item.equipped = 0;
-    }
-
-    for (const [idPos, item] of Object.entries(user.inv)) {
+    const normalized = normalizeEquipmentStorage(user.inv, (item) => {
         const obj = vars.datObj[item.idItem] as DataObject | undefined;
-
         if (!canAutoEquipInventoryItem(user, obj, item.idItem)) {
-            continue;
+            return null;
         }
 
-        const objType = itemKinds.getEquipObjectType(obj);
-
-        if (
-            objType !== vars.objType.armaduras &&
-            objType !== vars.objType.armas &&
-            objType !== vars.objType.escudos &&
-            objType !== vars.objType.cascos &&
-            objType !== vars.objType.flechas &&
-            objType !== vars.objType.anillos
-        ) {
-            continue;
-        }
-
-        if (equippedByType.has(objType)) {
-            continue;
-        }
-
-        user.inv[idPos].equipped = 1;
-        equippedByType.add(objType);
-    }
+        return getEquipmentStorageSlotForObjectType(
+            itemKinds.getEquipObjectType(obj),
+            vars.objType,
+        );
+    });
+    user.inv = normalized.inventory;
 
     rebuildEquippedInventoryState(user);
 }
@@ -1150,26 +1156,14 @@ function getMagicDamageModifier(classId: number): number {
 }
 
 function applyMagicBonuses(baseDamage: number, caster: GameCharacter) {
-    let damage = baseDamage + Math.round((baseDamage * (3 * caster.level)) / 100);
-    let magicPenetration = 0;
     const weapon = getEquippedWeaponData(caster);
     const helmet = getEquippedHelmetData(caster);
     const body = getEquippedBodyData(caster);
     const ring = getEquippedRingData(caster);
+    const equipment = getMagicEquipmentTotals([weapon, helmet, body, ring]);
+    const damage = calculateMagicDamage(baseDamage, caster.level, getMagicDamageModifier(caster.idClase), equipment);
 
-    for (const item of [weapon, helmet, body, ring]) {
-        if (!item) {
-            continue;
-        }
-
-        damage += safeNumber(item.magicDamageBonus);
-        damage += Math.round((damage * safeNumber(item.magicDamagePercent)) / 100);
-        magicPenetration += Number(item.magicPenetration ?? 0);
-    }
-
-    damage = Math.floor(damage * getMagicDamageModifier(caster.idClase));
-
-    return { damage, magicPenetration };
+    return { damage, magicPenetration: equipment.penetration };
 }
 
 function applyMagicResistanceToNpc(
@@ -1185,7 +1179,9 @@ function applyMagicResistanceToNpc(
 
     if (npcMagicResistance > 0) {
         const diffSkill = npcMagicResistance - casterMagicSkill;
-        const percentReduction = Math.max(0, npcMagicDef + (diffSkill > 0 ? diffSkill * 2 : 0) - magicPenetration);
+        const percentReduction = clampMagicResistance(
+            npcMagicDef + (diffSkill > 0 ? diffSkill * 2 : 0) - magicPenetration,
+        );
         nextDamage -= Math.floor((nextDamage * percentReduction) / 100);
     }
 
@@ -1205,8 +1201,7 @@ function applyMagicResistanceToUser(
     const targetItemMagicResistance = getTargetMagicResistanceBonus(target);
     const targetClassMagicResistance = getClassMagicResistanceBonus(target.idClase);
     const diffSkill = targetMagicResistance - casterMagicSkill;
-    const percentReduction = Math.max(
-        0,
+    const percentReduction = clampMagicResistance(
         targetItemMagicResistance +
             targetClassMagicResistance +
             getRacialMagicResistPercent(target) +
@@ -2817,7 +2812,8 @@ function applyUserSpellDamage(
     }
 
     const magicCalc = applyMagicBonuses(funct.randomIntFromInterval(datSpell.minHp, datSpell.maxHp), user);
-    let dmg = applyMagicResistanceToUser(magicCalc.damage, user, userAttacked, magicCalc.magicPenetration);
+    const mountedDamage = require("./mounts").applyOutgoingDamage(user, magicCalc.damage, "magic", false);
+    let dmg = applyMagicResistanceToUser(mountedDamage, user, userAttacked, magicCalc.magicPenetration);
 
     if (Number(userAttacked.protec ?? 0) > 0) {
         dmg -= Math.round((dmg * Number(userAttacked.protec)) / 100);
@@ -3376,10 +3372,25 @@ function distribuirExpNpcEscalada(idUser: EntityId, npc: GameNpc, exp: number) {
         return;
     }
 
+    const rewardBonuses = require("./equipmentRewardBonuses") as {
+        applyPercentBonus: (baseAmount: number, bonusPct: number) => number;
+        getEquippedNpcExpBonusPct: (user: GameCharacter) => number;
+    };
+
     eligibleRecipients.forEach((recipient) => {
-        recipient.exp += share;
+        const awarded = rewardBonuses.applyPercentBonus(
+            share,
+            rewardBonuses.getEquippedNpcExpBonusPct(recipient),
+        );
+        recipient.exp += awarded;
         withUserClient(recipient.id, (recipientClient) => {
-            handleProtocol.console("¡Has ganado " + share + " puntos de experiencia!", "red", 1, 0, recipientClient);
+            handleProtocol.console(
+                "¡Has ganado " + awarded + " puntos de experiencia!",
+                "red",
+                1,
+                0,
+                recipientClient,
+            );
         });
         game.checkUserLevel(recipient.id);
     });
@@ -3518,7 +3529,7 @@ export type GameApi = {
     quitarUserInvItem: (idUser: EntityId, idPos: number | string, cant: number) => void;
     userSpellNpc: (idUser: EntityId, idNpc: EntityId, idSpell: number) => number | SpellEffect;
     userSpellUser: (idUser: EntityId, idUserAttacked: EntityId, idSpell: number) => number | UserSpellEffect;
-    calcularDmg: (idUser: EntityId) => number;
+    calcularDmg: (idUser: EntityId, targetIsNpc?: boolean) => number;
     userDmgNpc: (idUser: EntityId, idNpc: EntityId) => CombatResult;
     userDmgUser: (idUser: EntityId, idUserAttacked: EntityId) => CombatResult;
     apuNpc: (idUser: EntityId, idNpc: EntityId, dmg: number) => StabResult;
@@ -3667,7 +3678,7 @@ const game = {} as GameApi;
 Game.call(game);
 const AREA_RANGE_X = vars.areaVisionRangeX;
 const AREA_RANGE_Y = vars.areaVisionRangeY;
-const MAX_INVENTORY_SLOTS = 21;
+const MAX_INVENTORY_SLOTS = INVENTORY_SLOT_COUNT;
 const MAX_BANK_SLOTS = 100;
 const NPC_TARGET_LOCK_MS = vars.npcAi.targetLockMs as number;
 const characterPersistenceQueue = new Map<string, Promise<void>>();
@@ -5108,7 +5119,20 @@ function remapEquippedInventorySlots(user: GameCharacter, sourceSlot: number, ta
     }
 }
 
-function findAvailableRecordSlot(record: Record<string, unknown>): number {
+function findAvailableRecordSlot(
+    record: Record<string, unknown>,
+    maxSlot?: number,
+): number {
+    if (typeof maxSlot === "number") {
+        for (let slot = 1; slot <= maxSlot; slot += 1) {
+            if (!record[String(slot)]) {
+                return slot;
+            }
+        }
+
+        return 0;
+    }
+
     let nextSlot = 1;
     const usedSlots = Object.keys(record)
         .map((value) => Number(value))
@@ -5145,7 +5169,12 @@ function addItemToRecord(
     let existingCapacity = 0;
 
     for (const [idPos, item] of Object.entries(record)) {
-        if (item.idItem !== idItem || item.cant >= 10000) {
+        if (
+            (typeof options?.maxSlots === "number" &&
+                Number(idPos) > options.maxSlots) ||
+            item.idItem !== idItem ||
+            item.cant >= 10000
+        ) {
             continue;
         }
 
@@ -5157,7 +5186,15 @@ function addItemToRecord(
     const maxSlots = options?.maxSlots;
     const slotsNeeded = Math.ceil(Math.max(0, cant - existingCapacity) / 10000);
 
-    if (typeof maxSlots === "number" && Object.keys(record).length + slotsNeeded > maxSlots) {
+    const occupiedSlots =
+        maxSlots === INVENTORY_SLOT_COUNT
+            ? countOccupiedInventorySlots(record)
+            : Object.keys(record).filter(
+                  (slot) =>
+                      typeof maxSlots !== "number" || Number(slot) <= maxSlots,
+              ).length;
+
+    if (typeof maxSlots === "number" && occupiedSlots + slotsNeeded > maxSlots) {
         return null;
     }
 
@@ -5181,7 +5218,10 @@ function addItemToRecord(
     }
 
     while (remaining > 0) {
-        const idPos = findAvailableRecordSlot(record);
+        const idPos = findAvailableRecordSlot(record, maxSlots);
+        if (!idPos) {
+            return null;
+        }
         const amountToAdd = Math.min(remaining, 10000);
 
         record[idPos] = {
@@ -5597,10 +5637,10 @@ function Game(this: GameApi) {
 
                     if (obj.tipoPocion == vars.typePociones.vida) {
                         if (user.hp < user.maxHp) {
-                            const recoveredHp = getPotionRecoveryAmount(
+                            const recoveredHp = getHealthPotionRecovery(
                                 user.maxHp,
-                                obj.porcentaje,
                                 funct.randomIntFromInterval(obj.minModificador, obj.maxModificador),
+                                Number(obj.porcentaje ?? 0),
                             );
 
                             user.hp += recoveredHp;
@@ -5615,10 +5655,11 @@ function Game(this: GameApi) {
                         consumido = true;
                     } else if (obj.tipoPocion == vars.typePociones.mana) {
                         if (user.mana < user.maxMana) {
-                            const recoveredMana = getPotionRecoveryAmount(
+                            const recoveredMana = getManaPotionRecovery(
                                 user.maxMana,
-                                obj.porcentaje,
-                                Math.floor(user.maxMana * 0.04 + user.level / 2 + 40 / user.level),
+                                user.level,
+                                funct.randomIntFromInterval(obj.minModificador, obj.maxModificador),
+                                Number(obj.porcentaje ?? 0),
                             );
 
                             user.mana += recoveredMana;
@@ -5941,10 +5982,10 @@ function Game(this: GameApi) {
                 adminBot.hp = Math.min(
                     Number(adminBot.maxHp ?? 0),
                     Number(adminBot.hp ?? 0) +
-                        getPotionRecoveryAmount(
+                        getHealthPotionRecovery(
                             Number(adminBot.maxHp ?? 0),
-                            potionData.porcentaje,
                             funct.randomIntFromInterval(potionData.minModificador, potionData.maxModificador),
+                            Number(potionData.porcentaje ?? 0),
                         ),
                 );
 
@@ -6257,6 +6298,10 @@ function Game(this: GameApi) {
 
             if (user.huntersGame) {
                 handleProtocol.console("No puedes tirar items dentro de Hunters Game.", "white", 0, 0, ws);
+                return;
+            }
+
+            if (!isInventorySlot(idPos)) {
                 return;
             }
 
@@ -6715,6 +6760,7 @@ function Game(this: GameApi) {
 
         if (
             !Number.isInteger(slot) ||
+            !isInventorySlot(slot) ||
             !Number.isInteger(quantity) ||
             !Number.isInteger(startPrice) ||
             !Number.isInteger(durationHours) ||
@@ -7171,6 +7217,7 @@ function Game(this: GameApi) {
 
         if (
             !Number.isInteger(slot) ||
+            !isInventorySlot(slot) ||
             !Number.isInteger(quantity) ||
             !Number.isInteger(price) ||
             quantity < 1 ||
@@ -8363,10 +8410,6 @@ function Game(this: GameApi) {
             user.idItemHelmet = 0;
             user.idItemRing = 0;
 
-            for (let idSlot in user.inv) {
-                user.inv[idSlot].equipped = 0;
-            }
-
             if (hadMovementRestriction && userClient) {
                 handleProtocol.inmo(idUser, 0, userClient);
             }
@@ -8736,18 +8779,19 @@ function Game(this: GameApi) {
             user.deadWorldActive = false;
             user.deadWorldTransitionEndsAt = 0;
 
-            if (user.navegando && reviveOnWater) {
-                applyBoatVisualState(user);
-            } else {
-                user.idBody = game.bodyNaked(idUser);
-                user.idHead = user.idLastHead;
-            }
-
             if (isAdminSummonedBot(user)) {
                 restoreAutoEquippedInventoryState(user);
                 enforceAdminSummonedBotMaxBuffs(user, Date.now());
                 user.nextUseItemAt = 0;
                 user.nextUseItemAfterMeleeAt = 0;
+            } else {
+                rebuildEquippedInventoryState(user);
+            }
+
+            if (user.navegando && reviveOnWater) {
+                applyBoatVisualState(user);
+            } else {
+                user.idHead = user.idLastHead;
             }
 
             handleProtocol.selfVitalsDelta(
@@ -8853,12 +8897,12 @@ function Game(this: GameApi) {
 
                 user.expNextLevel = balance.getLegacyExpNextLevelForLevel(user.level);
 
-                const newMaxHp = balance.getMaxHpForLevel(user.idClase, user.attrConstitucion, user.level);
+                const aumentoHP = balance.rollHpGain(user.idClase, user.attrConstitucion);
+                const newMaxHp = user.maxHp + aumentoHP;
                 const newMaxMana = balance.getMaxManaForLevel(user.idClase, user.attrInteligencia, user.level);
                 const newMinHit = balance.getMinHitForLevel(user.idClase, user.level);
                 const newMaxHit = balance.getMaxHitForLevel(user.idClase, user.level);
 
-                const aumentoHP = newMaxHp - user.maxHp;
                 const aumentoMana = newMaxMana - user.maxMana;
                 const aumentoHIT = newMaxHit - user.maxHit;
 
@@ -8924,6 +8968,9 @@ function Game(this: GameApi) {
                 emitCharacterFxToUserArea(idUser, LEVEL_UP_FX_ID);
                 emitCharacterSoundToUserArea(idUser, vars.arSounds.SND_NIVEL);
                 relocateUserIfCurrentMapLevelDenied(user, client, `checkUserLevel ${user.level}`);
+                void persistCharacterSnapshot(user, { connected: true }).catch((error: unknown) => {
+                    funct.dumpError(error);
+                });
             }
         } catch (err) {
             funct.dumpError(err);
@@ -9181,13 +9228,7 @@ function Game(this: GameApi) {
             } else {
                 if (datSpell.subeHp === 1) {
                     //Cura HP
-                    let curo = funct.randomIntFromInterval(datSpell.minHp, datSpell.maxHp);
-
-                    curo += Math.round((curo * (3 * user.level)) / 100);
-
-                    if (curo < 1) {
-                        curo = 1;
-                    }
+                    let curo = getPlayerHealingAmount(funct.randomIntFromInterval(datSpell.minHp, datSpell.maxHp));
 
                     if (npc.hp + curo > npc.maxHp) {
                         curo = npc.maxHp - npc.hp;
@@ -9620,13 +9661,7 @@ function Game(this: GameApi) {
             } else {
                 if (datSpell.subeHp === 1) {
                     //Cura HP
-                    let curo = funct.randomIntFromInterval(datSpell.minHp, datSpell.maxHp);
-
-                    curo += Math.round((curo * (3 * user.level)) / 100);
-
-                    if (curo < 1) {
-                        curo = 1;
-                    }
+                    let curo = getPlayerHealingAmount(funct.randomIntFromInterval(datSpell.minHp, datSpell.maxHp));
 
                     if (userAttacked.hp + curo > userAttacked.maxHp) {
                         curo = userAttacked.maxHp - userAttacked.hp;
@@ -9908,7 +9943,7 @@ function Game(this: GameApi) {
      * @param  {[type]} idUser [description]
      * @return {[type]}        [description]
      */
-    this.calcularDmg = function (idUser: EntityId): number {
+    this.calcularDmg = function (idUser: EntityId, targetIsNpc = false): number {
         try {
             const user = getCharacterById(idUser);
 
@@ -9970,7 +10005,7 @@ function Game(this: GameApi) {
                 user,
                 modifyOutgoingPhysicalDamage(user, dmg, isRanged ? "ranged" : "melee"),
                 isRanged ? "ranged" : "melee",
-                false,
+                targetIsNpc,
             );
         } catch (err) {
             funct.dumpError(err);
@@ -10015,7 +10050,7 @@ function Game(this: GameApi) {
                 const weaponItemId = Number(weaponItem?.idItem ?? 0);
                 const isDragonSlayerHit =
                     isDragonSlayerSword(weaponItemId) && Number(npc.npcType ?? 0) === Number(vars.npcType.dragon);
-                let dmg = game.calcularDmg(idUser);
+                let dmg = game.calcularDmg(idUser, true);
 
                 if (isDragonSlayerHit) {
                     dmg = Math.max(1, npc.hp);
@@ -11579,6 +11614,10 @@ function Game(this: GameApi) {
                     return;
                 }
 
+                if (!isInventorySlot(idPos)) {
+                    return;
+                }
+
                 const itemUser = user.inv[idPos];
 
                 if (!itemUser) {
@@ -11986,10 +12025,25 @@ function Game(this: GameApi) {
                 return;
             }
 
+            const rewardBonuses = require("./equipmentRewardBonuses") as {
+                applyPercentBonus: (baseAmount: number, bonusPct: number) => number;
+                getEquippedNpcGoldBonusPct: (user: GameCharacter) => number;
+            };
+
             recipients.forEach((recipient) => {
-                recipient.gold = balance.clampGold(recipient.gold + share);
+                const awarded = rewardBonuses.applyPercentBonus(
+                    share,
+                    rewardBonuses.getEquippedNpcGoldBonusPct(recipient),
+                );
+                recipient.gold = balance.clampGold(recipient.gold + awarded);
                 withUserClient(recipient.id, (recipientClient) => {
-                    handleProtocol.console("¡Has ganado " + share + " monedas de oro!", "red", 1, 0, recipientClient);
+                    handleProtocol.console(
+                        "¡Has ganado " + awarded + " monedas de oro!",
+                        "red",
+                        1,
+                        0,
+                        recipientClient,
+                    );
                     handleProtocol.actGold(recipient.gold, recipientClient);
                 });
             });
@@ -12644,6 +12698,37 @@ function Game(this: GameApi) {
                 if (nextSta !== Number(user.sta ?? 0)) {
                     user.sta = nextSta;
                     changed = true;
+                }
+            }
+
+            // Vida pasiva (legacy Sanar): solo con hambre y sed por encima de 0.
+            const canRegenHp =
+                Number(user.hambre ?? 0) > 0 && Number(user.sed ?? 0) > 0;
+            const maxHp = Number(user.maxHp ?? 0);
+            const currentHp = Number(user.hp ?? 0);
+            const starvationCap = user.starvationPenaltyApplied
+                ? Math.max(
+                      1,
+                      maxHp - Number(user.starvationPenaltyAmount ?? 0),
+                  )
+                : maxHp;
+            const hpRegenCap = Math.min(maxHp, starvationCap);
+
+            if (canRegenHp && currentHp > 0 && currentHp < hpRegenCap) {
+                const lastHp = Number(user.lastHpRegenAt ?? 0);
+                if (now - lastHp >= HP_REGEN_INTERVAL_MS) {
+                    user.lastHpRegenAt = now;
+                    const maxSta = Number(user.maxSta ?? 0);
+                    const maxHeal = Math.max(
+                        2,
+                        Math.floor((maxSta * 5) / 100),
+                    );
+                    const heal = funct.randomIntFromInterval(2, maxHeal);
+                    const nextHp = Math.min(hpRegenCap, currentHp + heal);
+                    if (nextHp !== currentHp) {
+                        user.hp = nextHp;
+                        changed = true;
+                    }
                 }
             }
 

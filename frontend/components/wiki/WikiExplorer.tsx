@@ -10,6 +10,7 @@ import {
     type WikiSection,
 } from "@/lib/wiki-sections";
 import type { PublicWikiResponse } from "@/lib/wiki";
+import { WIKI_TRAINING_MAP_GROUPS } from "@/lib/wiki-training-maps";
 import { getTexturePath, loadGraphicsDB } from "@/utils/gameLoader";
 
 type WikiExplorerProps = {
@@ -51,25 +52,10 @@ function formatNpcDropChance(chancePercent: number | undefined): string | null {
     return `${chancePercent.toFixed(2).replace(/\.00$/, "").replace(/0$/, "")}%`;
 }
 
-const TRAINING_MAP_GROUPS = [
-    { label: "Dungeons Newbie", mapIds: [37, 168] },
-    { label: "Isla Pirata", mapIds: [201] },
-    { label: "Nueva Esperanza", mapIds: [111, 112, 113, 114] },
-    { label: "Dungeon Marabel", mapIds: [115, 116] },
-    {
-        label: "Dungeon Veriil",
-        mapIds: [140, 141, 142, 146, 143, 144, 145, 48],
-    },
-    { label: "Mausoleo", mapIds: [281] },
-    { label: "Dungeon Inferno", mapIds: [184] },
-    { label: "Ruinas de Earost", mapIds: [283, 284, 285] },
-    { label: "Polo Norte", mapIds: [286, 287, 288] },
-    { label: "Montaña", mapIds: [264, 265, 266, 267, 268, 269, 270, 271] },
-    { label: "Dungeon Dragon", mapIds: [166] },
-] as const;
+const TRAINING_MAP_GROUPS = WIKI_TRAINING_MAP_GROUPS;
 
 const TRAINING_MAP_ID_SET = new Set<number>(
-    TRAINING_MAP_GROUPS.flatMap((group) => group.mapIds),
+    TRAINING_MAP_GROUPS.flatMap((group) => [...group.mapIds]),
 );
 
 const FACTION_GUIDES = [

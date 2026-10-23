@@ -1,4 +1,5 @@
 import { Assets, Container, Sprite, Texture } from "pixi.js";
+import { DONATION_TUNIC_BODY_ACCENTS } from "@/lib/specialItems";
 
 export type EquippedPieces = {
     body: number;
@@ -16,12 +17,34 @@ type AuraLayers = {
 type AuraSet = {
     id: string;
     body: number;
-    helmet: number;
-    weapon: number;
-    shield: number;
+    /** Si true, alcanza con equipar ese body (no exige casco/arma/escudo). */
+    bodyOnly?: boolean;
+    helmet?: number;
+    weapon?: number;
+    shield?: number;
     /** Ancho del aura respecto del ancho del cuerpo, en píxeles del mundo. */
     widthScale: number;
+    /**
+     * Desplazamiento vertical desde los pies (negativo = subir).
+     * Las auras altas de donación necesitan subir para envolver el torso.
+     */
+    offsetY?: number;
+    /** Tint Pixi (equivalente a recolorear con CSS filter). */
+    tint?: number;
     layers: AuraLayers;
+};
+
+const DONATION_AURA_LAYERS: AuraLayers = {
+    base: "/auras/donation/base.png",
+    glow: "/auras/donation/glow.png",
+    energy: "/auras/donation/energy.png",
+};
+
+/** Tints acordes al color de cada túnica de donación. */
+const DONATION_AURA_TINTS: Record<string, number> = {
+    suerte: 0x3dff7a,
+    experiencia: 0x4eb6ff,
+    dorada: 0xffd24a,
 };
 
 type BodyBox = { x: number; y: number; width: number; height: number };
@@ -48,11 +71,26 @@ const AURA_SETS: AuraSet[] = [
             energy: "/auras/arcane/energy.png",
         },
     },
+    ...Object.entries(DONATION_TUNIC_BODY_ACCENTS).map(([bodyId, accent]) => ({
+        id: `donation-tunic-${accent}`,
+        body: Number(bodyId),
+        bodyOnly: true,
+        widthScale: 2.15,
+        // Sube el centro del aura (antes quedaba pegado al piso).
+        offsetY: -28,
+        tint: DONATION_AURA_TINTS[accent] ?? 0xffffff,
+        layers: DONATION_AURA_LAYERS,
+    })),
 ];
 
-export const AURA_OPACITY_STORAGE_KEY = "ao-play-aura-opacity";
-/** 0 invisible, 1 la intensidad de las capas. Por defecto queda suave. */
-export const DEFAULT_AURA_OPACITY = 0.4;
+/**
+ * Intensidad global de auras de equipo (0 = invisible, 1 = máxima).
+ * Se define solo por código; no hay slider/localStorage de usuario.
+ */
+export const EQUIPMENT_AURA_OPACITY = 0.1;
+
+/** @deprecated Usar EQUIPMENT_AURA_OPACITY. */
+export const DEFAULT_AURA_OPACITY = EQUIPMENT_AURA_OPACITY;
 
 /** Debajo del cuerpo (0.2), la cabeza y el equipo. */
 const AURA_Z_INDEX = 0.05;
@@ -66,53 +104,29 @@ type AuraRig = {
     setId: string;
     size: number;
     hidden: boolean;
+    tint: number;
 };
 
 const rigs = new Set<AuraRig>();
 const rigByContainer = new WeakMap<Container, AuraRig>();
 const textureCache = new Map<string, Texture>();
 const textureLoads = new Map<string, Promise<Texture | null>>();
-let auraOpacity = DEFAULT_AURA_OPACITY;
-let opacityLoaded = false;
 let legacyOverlayRemoved = false;
 
-function clampOpacity(value: number): number {
-    if (!Number.isFinite(value)) return DEFAULT_AURA_OPACITY;
-    return Math.min(1, Math.max(0, value));
-}
-
-function ensureOpacityLoaded(): void {
-    if (opacityLoaded || typeof window === "undefined") return;
-    opacityLoaded = true;
-    try {
-        const raw = window.localStorage.getItem(AURA_OPACITY_STORAGE_KEY);
-        if (raw == null) return;
-        auraOpacity = clampOpacity(Number.parseFloat(raw));
-    } catch {
-        auraOpacity = DEFAULT_AURA_OPACITY;
-    }
-}
-
 export function getEquipmentAuraOpacity(): number {
-    ensureOpacityLoaded();
-    return auraOpacity;
-}
-
-export function setEquipmentAuraOpacity(value: number): void {
-    auraOpacity = clampOpacity(value);
-    opacityLoaded = true;
-    if (typeof window === "undefined") return;
-    try {
-        window.localStorage.setItem(AURA_OPACITY_STORAGE_KEY, String(auraOpacity));
-    } catch {
-        // El navegador puede bloquear storage; la opacidad igual vale en esta sesión.
-    }
+    return EQUIPMENT_AURA_OPACITY;
 }
 
 export function resolveEquipmentAura(gear: EquippedPieces): AuraSet | null {
+    const bodyOnly = AURA_SETS.find(
+        (set) => set.bodyOnly && gear.body === set.body,
+    );
+    if (bodyOnly) return bodyOnly;
+
     return (
         AURA_SETS.find(
             (set) =>
+                !set.bodyOnly &&
                 gear.body === set.body &&
                 gear.helmet === set.helmet &&
                 gear.weapon === set.weapon &&
@@ -177,9 +191,17 @@ function removeRig(container: Container): void {
     destroyRig(rig);
 }
 
-function placeRig(rig: AuraRig, body: BodyBox, widthScale: number): void {
-    // Centro del sigilo en los pies. El cuerpo se dibuja encima.
-    rig.root.position.set(body.x + body.width / 2, body.y + body.height - 2);
+function placeRig(
+    rig: AuraRig,
+    body: BodyBox,
+    widthScale: number,
+    offsetY = 0,
+): void {
+    // Por defecto el centro queda cerca de los pies; offsetY negativo lo sube.
+    rig.root.position.set(
+        body.x + body.width / 2,
+        body.y + body.height - 2 + offsetY,
+    );
     rig.size = Math.max(12, body.width * widthScale);
     rig.root.zIndex = AURA_Z_INDEX;
 }
@@ -207,6 +229,10 @@ export function syncEquipmentAura(
         const glow = createLayer(set.layers.glow);
         const base = createLayer(set.layers.base);
         const energy = createLayer(set.layers.energy);
+        const tint = set.tint ?? 0xffffff;
+        glow.tint = tint;
+        base.tint = tint;
+        energy.tint = tint;
         glow.zIndex = 0;
         base.zIndex = 1;
         energy.zIndex = 2;
@@ -221,6 +247,7 @@ export function syncEquipmentAura(
             setId: set.id,
             size: 0,
             hidden: !visible,
+            tint,
         };
         rigs.add(rig);
         rigByContainer.set(container, rig);
@@ -230,7 +257,14 @@ export function syncEquipmentAura(
 
     rig.hidden = !visible;
     rig.root.visible = visible;
-    placeRig(rig, body, set.widthScale);
+    const tint = set.tint ?? 0xffffff;
+    if (rig.tint !== tint) {
+        rig.tint = tint;
+        rig.glow.tint = tint;
+        rig.base.tint = tint;
+        rig.energy.tint = tint;
+    }
+    placeRig(rig, body, set.widthScale, set.offsetY ?? 0);
 }
 
 function layoutLayer(sprite: Sprite, size: number): void {
@@ -239,10 +273,10 @@ function layoutLayer(sprite: Sprite, size: number): void {
 }
 
 export function updateEquipmentAuras(host: AuraHost): void {
-    ensureOpacityLoaded();
     removeLegacyOverlay();
     if (host.isDestroyed) return;
 
+    const auraOpacity = EQUIPMENT_AURA_OPACITY;
     const now = performance.now();
     const baseRot = ((now % 8000) / 8000) * Math.PI * 2;
     const energyRot = -((now % 6500) / 6500) * Math.PI * 2;

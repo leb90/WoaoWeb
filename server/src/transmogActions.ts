@@ -1,5 +1,10 @@
 export {};
 
+import {
+    countOccupiedInventorySlots,
+    isInventorySlot,
+} from "./equipmentStorage";
+
 // Acciones de la transfiguración: poner y quitar objetos de los espacios,
 // avisar a los clientes del área y persistir inventario + transfiguración en
 // una sola escritura (así un objeto nunca queda en los dos lados).
@@ -19,8 +24,6 @@ type ActionUser = {
 };
 
 type ActionResult = { ok: boolean; message: string };
-
-const MAX_INVENTORY_SLOTS = 21;
 
 function getGame() {
     return require("./game");
@@ -46,7 +49,7 @@ function tell(idUser: string | number, message: string, color = "#E69500") {
 }
 
 function hasFreeInventorySlot(user: ActionUser): boolean {
-    return Object.keys(user.inv ?? {}).length < MAX_INVENTORY_SLOTS;
+    return countOccupiedInventorySlots(user.inv ?? {}) < 21;
 }
 
 export function sendTransmogState(idUser: string | number): void {
@@ -228,8 +231,11 @@ export function removeItem(idUser: string | number, slotRaw: unknown): ActionRes
         return { ok: false, message: "Quitá primero el disfraz de cuerpo completo: los demás espacios están desactivados." };
     }
 
-    const existingStack = Object.values(user.inv ?? {}).some(
-        (item) => Number(item?.idItem) === idItem && Number(item?.cant ?? 0) < 10000,
+    const existingStack = Object.entries(user.inv ?? {}).some(
+        ([inventorySlot, item]) =>
+            isInventorySlot(inventorySlot) &&
+            Number(item?.idItem) === idItem &&
+            Number(item?.cant ?? 0) < 10000,
     );
 
     if (!existingStack && !hasFreeInventorySlot(user)) {

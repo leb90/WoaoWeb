@@ -39,7 +39,10 @@
         "start": "node dist/server.js",
         "lint": "eslint './src/**/*.ts'",
         "world-map": "node scripts/build-world-map.cjs",
-        "compare-original-data": "tsx src/scripts/compareOriginalData.ts"
+        "compare-original-data": "tsx src/scripts/compareOriginalData.ts",
+        "apply-combat-balance": "tsx src/scripts/applyCombatBalanceData.ts",
+        "report-combat-balance": "tsx src/scripts/reportCombatBalance.ts",
+        "test-combat-balance": "tsx src/balance.test.ts && tsx src/combatBalance.test.ts"
     },
     "repository": {
         "type": "git",

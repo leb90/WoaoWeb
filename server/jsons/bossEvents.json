@@ -1,17 +1,14 @@
 {
   "mummyPharaoh": {
-    "nextSpawnAt": 1792524813173
+    "nextSpawnAt": 1792769761635
   },
   "iceKnight": {
-    "nextSpawnAt": 1792532013173
+    "nextSpawnAt": 1792776961635
   },
   "darkKnight": {
-    "nextSpawnAt": 0,
-    "activeNpcId": 1792518685005,
-    "spawnedAt": 1792518685005,
-    "despawnAt": 0
+    "nextSpawnAt": 1792791361635
   },
   "gollum": {
-    "nextSpawnAt": 1792532013173
+    "nextSpawnAt": 1792776961635
   }
 }

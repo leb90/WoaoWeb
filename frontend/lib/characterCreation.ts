@@ -66,6 +66,8 @@ export type CharacterClassOption = {
 
 type ClassProgress = {
     vida: number;
+    vidaMin: number;
+    vidaMax: number;
     manaInicial: number;
     multMana: number;
     hitPre36: number;
@@ -225,47 +227,47 @@ export const ATTRIBUTE_GUIDE: Record<keyof RaceBonus, { label: string; hint: str
 };
 
 const classProgressByKey: Record<CharacterClassKey, ClassProgress> = {
-    mago: { vida: 7.5, manaInicial: 8.33, multMana: 2.65, hitPre36: 1, hitPost36: 1 },
-    clerigo: { vida: 8.5, manaInicial: 2.5, multMana: 2, hitPre36: 2, hitPost36: 2 },
-    guerrero: { vida: 10.5, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
-    asesino: { vida: 9, manaInicial: 2.5, multMana: 1, hitPre36: 3, hitPost36: 2 },
-    ladron: { vida: 8, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
-    bardo: { vida: 8.5, manaInicial: 2.5, multMana: 2, hitPre36: 2, hitPost36: 2 },
-    druida: { vida: 8.5, manaInicial: 2.5, multMana: 2, hitPre36: 2, hitPost36: 2 },
-    bandido: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
-    paladin: { vida: 10, manaInicial: 2.5, multMana: 1, hitPre36: 3, hitPost36: 2 },
-    cazador: { vida: 10, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
-    pescador: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
-    herrero: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
-    lenador: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
-    minero: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
-    carpintero: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
-    pirata: { vida: 10, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
-    ermitano: { vida: 8.5, manaInicial: 2.5, multMana: 1, hitPre36: 2, hitPost36: 2 },
-    arquero: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
-    domador: { vida: 9, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
+    mago: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 8.33, multMana: 2.65, hitPre36: 1, hitPost36: 1 },
+    clerigo: { vida: 8.5, vidaMin: 7, vidaMax: 10, manaInicial: 2.5, multMana: 2, hitPre36: 2, hitPost36: 2 },
+    guerrero: { vida: 11, vidaMin: 9, vidaMax: 13, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+    asesino: { vida: 9, vidaMin: 7, vidaMax: 11, manaInicial: 2.5, multMana: 1, hitPre36: 3, hitPost36: 2 },
+    ladron: { vida: 10, vidaMin: 8, vidaMax: 12, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+    bardo: { vida: 9, vidaMin: 7, vidaMax: 11, manaInicial: 2.5, multMana: 2, hitPre36: 2, hitPost36: 2 },
+    druida: { vida: 8.5, vidaMin: 7, vidaMax: 10, manaInicial: 2.5, multMana: 2, hitPre36: 2, hitPost36: 2 },
+    bandido: { vida: 9, vidaMin: 7, vidaMax: 11, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+    paladin: { vida: 10, vidaMin: 8, vidaMax: 12, manaInicial: 2.5, multMana: 1, hitPre36: 3, hitPost36: 2 },
+    cazador: { vida: 10, vidaMin: 8, vidaMax: 12, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+    pescador: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
+    herrero: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
+    lenador: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
+    minero: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
+    carpintero: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
+    pirata: { vida: 10, vidaMin: 8, vidaMax: 12, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+    ermitano: { vida: 8.5, vidaMin: 7, vidaMax: 10, manaInicial: 2.5, multMana: 1, hitPre36: 2, hitPost36: 2 },
+    arquero: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+    domador: { vida: 9, vidaMin: 7, vidaMax: 11, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
 };
 
 export const classCombatMods: Record<CharacterClassKey, ClassCombatMods> = {
-    mago: { evasion: 80, aciertoArmas: 50, aciertoProyectiles: 50, danoArmas: 50, danoProyectiles: 50, escudos: 60, danoMagia: 120, resistMagia: 120 },
-    guerrero: { evasion: 100, aciertoArmas: 100, aciertoProyectiles: 80, danoArmas: 110, danoProyectiles: 100, escudos: 100, danoMagia: 90, resistMagia: 90 },
-    cazador: { evasion: 90, aciertoArmas: 80, aciertoProyectiles: 120, danoArmas: 90, danoProyectiles: 90, escudos: 80, danoMagia: 90, resistMagia: 90 },
-    paladin: { evasion: 90, aciertoArmas: 85, aciertoProyectiles: 75, danoArmas: 90, danoProyectiles: 80, escudos: 100, danoMagia: 90, resistMagia: 90 },
-    bandido: { evasion: 90, aciertoArmas: 85, aciertoProyectiles: 90, danoArmas: 80, danoProyectiles: 75, escudos: 80, danoMagia: 90, resistMagia: 90 },
-    asesino: { evasion: 110, aciertoArmas: 85, aciertoProyectiles: 75, danoArmas: 90, danoProyectiles: 80, escudos: 80, danoMagia: 100, resistMagia: 100 },
-    pirata: { evasion: 100, aciertoArmas: 95, aciertoProyectiles: 85, danoArmas: 90, danoProyectiles: 85, escudos: 85, danoMagia: 90, resistMagia: 90 },
-    ladron: { evasion: 110, aciertoArmas: 75, aciertoProyectiles: 80, danoArmas: 80, danoProyectiles: 75, escudos: 70, danoMagia: 90, resistMagia: 90 },
-    bardo: { evasion: 120, aciertoArmas: 80, aciertoProyectiles: 70, danoArmas: 80, danoProyectiles: 70, escudos: 75, danoMagia: 110, resistMagia: 110 },
-    clerigo: { evasion: 80, aciertoArmas: 70, aciertoProyectiles: 70, danoArmas: 80, danoProyectiles: 70, escudos: 90, danoMagia: 110, resistMagia: 110 },
-    druida: { evasion: 80, aciertoArmas: 70, aciertoProyectiles: 75, danoArmas: 75, danoProyectiles: 75, escudos: 75, danoMagia: 100, resistMagia: 100 },
-    arquero: { evasion: 80, aciertoArmas: 50, aciertoProyectiles: 120, danoArmas: 50, danoProyectiles: 130, escudos: 60, danoMagia: 90, resistMagia: 90 },
-    pescador: { evasion: 80, aciertoArmas: 60, aciertoProyectiles: 65, danoArmas: 60, danoProyectiles: 60, escudos: 70, danoMagia: 90, resistMagia: 90 },
-    lenador: { evasion: 80, aciertoArmas: 60, aciertoProyectiles: 70, danoArmas: 70, danoProyectiles: 60, escudos: 70, danoMagia: 90, resistMagia: 90 },
-    minero: { evasion: 80, aciertoArmas: 60, aciertoProyectiles: 65, danoArmas: 75, danoProyectiles: 70, escudos: 70, danoMagia: 90, resistMagia: 90 },
-    herrero: { evasion: 80, aciertoArmas: 60, aciertoProyectiles: 65, danoArmas: 75, danoProyectiles: 70, escudos: 70, danoMagia: 90, resistMagia: 90 },
-    carpintero: { evasion: 80, aciertoArmas: 60, aciertoProyectiles: 70, danoArmas: 70, danoProyectiles: 70, escudos: 70, danoMagia: 90, resistMagia: 90 },
-    ermitano: { evasion: 80, aciertoArmas: 80, aciertoProyectiles: 75, danoArmas: 80, danoProyectiles: 75, escudos: 80, danoMagia: 90, resistMagia: 90 },
-    domador: { evasion: 80, aciertoArmas: 50, aciertoProyectiles: 50, danoArmas: 50, danoProyectiles: 50, escudos: 60, danoMagia: 90, resistMagia: 90 },
+    mago: { evasion: 35, aciertoArmas: 50, aciertoProyectiles: 50, danoArmas: 50, danoProyectiles: 50, escudos: 0, danoMagia: 105, resistMagia: 0 },
+    guerrero: { evasion: 100, aciertoArmas: 110, aciertoProyectiles: 85, danoArmas: 105, danoProyectiles: 87, escudos: 100, danoMagia: 0, resistMagia: 12 },
+    cazador: { evasion: 90, aciertoArmas: 80, aciertoProyectiles: 95, danoArmas: 85, danoProyectiles: 93, escudos: 75, danoMagia: 0, resistMagia: 6 },
+    paladin: { evasion: 85, aciertoArmas: 103, aciertoProyectiles: 78, danoArmas: 100, danoProyectiles: 80, escudos: 90, danoMagia: 78, resistMagia: 5 },
+    bandido: { evasion: 70, aciertoArmas: 70, aciertoProyectiles: 75, danoArmas: 90, danoProyectiles: 80, escudos: 70, danoMagia: 0, resistMagia: 4 },
+    asesino: { evasion: 90, aciertoArmas: 100, aciertoProyectiles: 70, danoArmas: 95, danoProyectiles: 75, escudos: 80, danoMagia: 76, resistMagia: 5 },
+    pirata: { evasion: 125, aciertoArmas: 90, aciertoProyectiles: 90, danoArmas: 95, danoProyectiles: 80, escudos: 0, danoMagia: 0, resistMagia: 6 },
+    ladron: { evasion: 110, aciertoArmas: 75, aciertoProyectiles: 80, danoArmas: 80, danoProyectiles: 75, escudos: 70, danoMagia: 0, resistMagia: 4 },
+    bardo: { evasion: 100, aciertoArmas: 88, aciertoProyectiles: 70, danoArmas: 82, danoProyectiles: 75, escudos: 65, danoMagia: 93, resistMagia: 2 },
+    clerigo: { evasion: 80, aciertoArmas: 98, aciertoProyectiles: 80, danoArmas: 85, danoProyectiles: 75, escudos: 80, danoMagia: 88, resistMagia: 4 },
+    druida: { evasion: 90, aciertoArmas: 80, aciertoProyectiles: 60, danoArmas: 75, danoProyectiles: 75, escudos: 0, danoMagia: 92, resistMagia: 3 },
+    arquero: { evasion: 80, aciertoArmas: 50, aciertoProyectiles: 100, danoArmas: 50, danoProyectiles: 110, escudos: 60, danoMagia: 0, resistMagia: 4 },
+    pescador: { evasion: 80, aciertoArmas: 80, aciertoProyectiles: 70, danoArmas: 80, danoProyectiles: 70, escudos: 70, danoMagia: 0, resistMagia: 4 },
+    lenador: { evasion: 80, aciertoArmas: 80, aciertoProyectiles: 70, danoArmas: 80, danoProyectiles: 60, escudos: 70, danoMagia: 0, resistMagia: 4 },
+    minero: { evasion: 80, aciertoArmas: 80, aciertoProyectiles: 70, danoArmas: 80, danoProyectiles: 70, escudos: 70, danoMagia: 0, resistMagia: 4 },
+    herrero: { evasion: 80, aciertoArmas: 80, aciertoProyectiles: 70, danoArmas: 80, danoProyectiles: 70, escudos: 70, danoMagia: 0, resistMagia: 4 },
+    carpintero: { evasion: 80, aciertoArmas: 80, aciertoProyectiles: 70, danoArmas: 80, danoProyectiles: 70, escudos: 70, danoMagia: 0, resistMagia: 4 },
+    ermitano: { evasion: 80, aciertoArmas: 80, aciertoProyectiles: 70, danoArmas: 80, danoProyectiles: 75, escudos: 70, danoMagia: 50, resistMagia: 4 },
+    domador: { evasion: 80, aciertoArmas: 50, aciertoProyectiles: 50, danoArmas: 50, danoProyectiles: 50, escudos: 60, danoMagia: 0, resistMagia: 4 },
 };
 
 export const raceOptions: RaceOption[] = [
@@ -274,7 +276,7 @@ export const raceOptions: RaceOption[] = [
         label: "Humano",
         faction: "alianza",
         summary: "Los humanos tienen 5% de resistencia mágica y el hechizo Remover Paralisis consume 50% menos de mana.",
-        bonus: { fuerza: 2, inteligencia: 1, agilidad: 1, carisma: 0, constitucion: 2 },
+        bonus: { fuerza: 1, inteligencia: 0, agilidad: 1, carisma: 0, constitucion: 2 },
         genders: {
             male: { bodyId: 21, startHeadId: 3, endHeadId: 53 },
             female: { bodyId: 39, startHeadId: 70, endHeadId: 82 },
@@ -285,7 +287,7 @@ export const raceOptions: RaceOption[] = [
         label: "Elfo",
         faction: "alianza",
         summary: "Los elfos tienen 10% probabilidad de restaurar un 15% de su mana total, al lanzar cualquier hechizo.",
-        bonus: { fuerza: -1, inteligencia: 2, agilidad: 3, carisma: 2, constitucion: 1 },
+        bonus: { fuerza: 0, inteligencia: 2, agilidad: 2, carisma: 1, constitucion: 1 },
         genders: {
             male: { bodyId: 21, startHeadId: 101, endHeadId: 119 },
             female: { bodyId: 39, startHeadId: 170, endHeadId: 180 },
@@ -296,7 +298,7 @@ export const raceOptions: RaceOption[] = [
         label: "Enano",
         faction: "alianza",
         summary: "Los enanos cuando tienen menos de 33% de vida, su daño físico aumenta un 50%.",
-        bonus: { fuerza: 3, inteligencia: -2, agilidad: 0, carisma: 0, constitucion: 3 },
+        bonus: { fuerza: 3, inteligencia: -3, agilidad: 0, carisma: -1, constitucion: 3 },
         genders: {
             male: { bodyId: 53, startHeadId: 401, endHeadId: 411 },
             female: { bodyId: 60, startHeadId: 470, endHeadId: 476 },
@@ -307,7 +309,7 @@ export const raceOptions: RaceOption[] = [
         label: "Gnomo",
         faction: "alianza",
         summary: "Los gnomos tienen un 10% de evasión extra.",
-        bonus: { fuerza: -2, inteligencia: 4, agilidad: 3, carisma: 0, constitucion: 0 },
+        bonus: { fuerza: -2, inteligencia: 4, agilidad: 3, carisma: 2, constitucion: 0 },
         genders: {
             male: { bodyId: 53, startHeadId: 301, endHeadId: 315 },
             female: { bodyId: 60, startHeadId: 370, endHeadId: 373 },
@@ -340,7 +342,7 @@ export const raceOptions: RaceOption[] = [
         label: "Elfo Oscuro",
         faction: "horda",
         summary: "Los elfos de la noche poseen 3% de evasión extra y 2% de daño extra con arcos.",
-        bonus: { fuerza: 2, inteligencia: -1, agilidad: 3, carisma: 0, constitucion: 2 },
+        bonus: { fuerza: 2, inteligencia: 1, agilidad: 1, carisma: -1, constitucion: 1 },
         genders: {
             male: { bodyId: 32, startHeadId: 201, endHeadId: 216 },
             female: { bodyId: 40, startHeadId: 270, endHeadId: 277 },
@@ -361,7 +363,7 @@ export const raceOptions: RaceOption[] = [
         key: "vampiro",
         label: "Vampiro",
         faction: "horda",
-        summary: "Los Vampiros tienen 10% probabilidad de restaurar un 15% de su vida total, al recibir cualquier tipo de daño.",
+        summary: "Los Vampiros pueden restaurar un 5% de su vida al recibir daño y tienen robo de vida reducido contra criaturas.",
         bonus: { fuerza: -1, inteligencia: 2, agilidad: 3, carisma: 2, constitucion: 1 },
         genders: {
             male: { bodyId: 32, startHeadId: 505, endHeadId: 512 },
@@ -684,13 +686,46 @@ export function getHitModifierForLevel(classKey: CharacterClassKey, level: numbe
     return 35 * classProgress.hitPre36 + (safeLevel - 36) * classProgress.hitPost36;
 }
 
-export function getMaxHpForLevel(classKey: CharacterClassKey, constitucion: number, level: number): number {
-    const safeLevel = clampLevel(level);
+export type HpGainRange = {
+    min: number;
+    average: number;
+    max: number;
+};
+
+export type HpLevelRange = HpGainRange & {
+    gains: HpGainRange;
+};
+
+export function getHpGainRange(classKey: CharacterClassKey, constitucion: number): HpGainRange {
     const classProgress = classProgressByKey[classKey];
-    const total =
-        constitucion +
-        (classProgress.vida - (21 - constitucion) * 0.5) * (safeLevel - 1);
-    return Math.round(total);
+    const constitutionDelta = (constitucion - 21) * 0.5;
+
+    return {
+        min: Math.floor(classProgress.vidaMin + constitutionDelta),
+        average: (classProgress.vidaMin + classProgress.vidaMax) / 2 + constitutionDelta,
+        max: Math.ceil(classProgress.vidaMax + constitutionDelta),
+    };
+}
+
+export function getHpRangeForLevel(
+    classKey: CharacterClassKey,
+    constitucion: number,
+    level: number,
+): HpLevelRange {
+    const safeLevel = clampLevel(level);
+    const gains = getHpGainRange(classKey, constitucion);
+    const steps = safeLevel - 1;
+
+    return {
+        min: Math.round(constitucion + gains.min * steps),
+        average: Math.round(constitucion + gains.average * steps),
+        max: Math.round(constitucion + gains.max * steps),
+        gains,
+    };
+}
+
+export function getMaxHpForLevel(classKey: CharacterClassKey, constitucion: number, level: number): number {
+    return getHpRangeForLevel(classKey, constitucion, level).average;
 }
 
 export function getMaxManaForLevel(classKey: CharacterClassKey, inteligencia: number, level: number): number {
@@ -738,7 +773,7 @@ export function getCombatPreview(
         evasion: Math.round(agilidadEx * (mods.evasion / 100)),
         defensaFisica: 20,
         defensaEscudos: Math.round((mods.escudos / 100) * 10),
-        resistMagia: Math.round(20 * (mods.resistMagia / 100)),
+        resistMagia: Math.round(mods.resistMagia),
         danoMagia: Math.round(danoMagia),
     };
 }

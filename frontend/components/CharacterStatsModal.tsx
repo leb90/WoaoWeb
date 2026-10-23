@@ -3,12 +3,18 @@
 import React from "react";
 import type {
     CharacterStatsSnapshot,
+    InventoryItem,
     PlayerHudState,
 } from "../lib/aowProtocol";
-import { OBJECT_TYPE } from "../lib/aowProtocol";
 import { formatNumber as formatLocalizedNumber } from "../lib/number-format";
-import type { ObjectsDB } from "../types/game";
-import { loadObjectsDB } from "../utils/gameLoader";
+import {
+    getInventoryItemEquipmentKind,
+    type EquipmentKind,
+} from "../lib/equipmentKinds";
+import type { GraphicData, ObjectData, ObjectsDB } from "../types/game";
+import { loadGraphicsDB, loadObjectsDB } from "../utils/gameLoader";
+import CharacterSpritePreview from "./CharacterSpritePreview";
+import { ItemGraphic } from "./MacroBar";
 
 type CharacterStatsModalProps = {
     hud: PlayerHudState | null;
@@ -28,6 +34,63 @@ const classLabels: Record<number, string> = {
     8: "Paladin",
     9: "Cazador",
 };
+
+const EQUIPMENT_SLOT_LABELS: Record<EquipmentKind, string> = {
+    casco: "Casco",
+    armadura: "Armadura",
+    accesorio: "Accesorio",
+    arma: "Arma",
+    escudo: "Escudo",
+    flechas: "Flechas",
+};
+
+const LEFT_EQUIPMENT_SLOTS: EquipmentKind[] = ["casco", "armadura", "arma"];
+const RIGHT_EQUIPMENT_SLOTS: EquipmentKind[] = [
+    "escudo",
+    "accesorio",
+    "flechas",
+];
+
+function getSpecialBonuses(objectData?: ObjectData) {
+    switch (Number(objectData?.objetoEspecial ?? 0)) {
+        case 2:
+            return { strength: 5, agility: 0, maxMana: 0 };
+        case 3:
+            return { strength: 2, agility: 0, maxMana: 0 };
+        case 4:
+            return { strength: 3, agility: 0, maxMana: 0 };
+        case 5:
+            return { strength: 0, agility: 5, maxMana: 0 };
+        case 6:
+            return { strength: 0, agility: 2, maxMana: 0 };
+        case 7:
+            return { strength: 0, agility: 3, maxMana: 0 };
+        case 8:
+            return { strength: 0, agility: 0, maxMana: 100 };
+        case 9:
+            return { strength: 0, agility: 0, maxMana: 200 };
+        case 10:
+            return { strength: 0, agility: 0, maxMana: 300 };
+        case 12:
+            return { strength: 1, agility: 3, maxMana: 0 };
+        case 13:
+            return { strength: 2, agility: 2, maxMana: 0 };
+        case 14:
+            return { strength: 5, agility: 2, maxMana: 0 };
+        case 15:
+            return { strength: 3, agility: 2, maxMana: 0 };
+        case 16:
+            return { strength: 1, agility: 1, maxMana: 0 };
+        case 17:
+            return { strength: 0, agility: 2, maxMana: 200 };
+        case 18:
+            return { strength: 0, agility: 1, maxMana: 0 };
+        case 19:
+            return { strength: 0, agility: 0, maxMana: 55 };
+        default:
+            return { strength: 0, agility: 0, maxMana: 0 };
+    }
+}
 
 function formatSignedNumber(value?: number | null, suffix = "") {
     if (typeof value !== "number" || Number.isNaN(value)) {
@@ -55,6 +118,10 @@ function formatRange(min?: number | null, max?: number | null) {
     }
 
     return `${formatNumber(min)}/${formatNumber(max)}`;
+}
+
+function formatSignedRange(min: number, max: number) {
+    return `${formatSignedNumber(min)} / ${formatSignedNumber(max)}`;
 }
 
 function getActiveFactionSnapshot(snapshot: CharacterStatsSnapshot) {
@@ -135,6 +202,47 @@ function DetailRow({
     );
 }
 
+function EquipmentSlotCard({
+    kind,
+    item,
+    graphicData,
+}: {
+    kind: EquipmentKind;
+    item?: InventoryItem;
+    graphicData?: GraphicData;
+}) {
+    return (
+        <div
+            title={item?.name ?? EQUIPMENT_SLOT_LABELS[kind]}
+            className={`flex h-[54px] min-w-0 items-center gap-2 border px-2 ${
+                item
+                    ? "border-amber-300/30 bg-[#21170f]"
+                    : "border-white/8 bg-black/20"
+            }`}
+        >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-amber-200/15 bg-black/35 [image-rendering:pixelated]">
+                {item ? (
+                    <ItemGraphic
+                        graphicData={graphicData}
+                        name={item.name}
+                        size={34}
+                    />
+                ) : (
+                    <span className="text-lg text-stone-700">-</span>
+                )}
+            </div>
+            <div className="min-w-0">
+                <p className="text-[9px] font-semibold uppercase text-amber-200/70">
+                    {EQUIPMENT_SLOT_LABELS[kind]}
+                </p>
+                <p className="truncate text-[10px] text-stone-300">
+                    {item?.name ?? "Vacío"}
+                </p>
+            </div>
+        </div>
+    );
+}
+
 export default function CharacterStatsModal({
     hud,
     snapshot,
@@ -143,6 +251,10 @@ export default function CharacterStatsModal({
     onClose,
 }: CharacterStatsModalProps) {
     const [objectsDB, setObjectsDB] = React.useState<ObjectsDB | null>(null);
+    const [graphicsDB, setGraphicsDB] = React.useState<Record<
+        string,
+        GraphicData
+    > | null>(null);
     const activeFactionSnapshot = React.useMemo(
         () => (snapshot ? getActiveFactionSnapshot(snapshot) : null),
         [snapshot],
@@ -187,18 +299,60 @@ export default function CharacterStatsModal({
         };
     }, [isOpen, objectsDB]);
 
+    React.useEffect(() => {
+        if (!isOpen || graphicsDB) {
+            return;
+        }
+
+        let active = true;
+
+        loadGraphicsDB()
+            .then((data) => {
+                if (active) {
+                    setGraphicsDB(data);
+                }
+            })
+            .catch(() => {
+                if (active) {
+                    setGraphicsDB({});
+                }
+            });
+
+        return () => {
+            active = false;
+        };
+    }, [graphicsDB, isOpen]);
+
+    const equippedByKind = React.useMemo(() => {
+        const result: Partial<Record<EquipmentKind, InventoryItem>> = {};
+        if (!hud) {
+            return result;
+        }
+
+        for (const item of hud.inventory) {
+            if (!item.equipped) {
+                continue;
+            }
+
+            const kind = getInventoryItemEquipmentKind(item, objectsDB);
+            if (kind && !result[kind]) {
+                result[kind] = item;
+            }
+        }
+
+        return result;
+    }, [hud, objectsDB]);
+
     const equipmentStats = React.useMemo(() => {
         if (!hud || !objectsDB) {
             return null;
         }
 
-        const hasProjectileWeapon = hud.inventory.some((item) => {
-            if (!item.equipped || item.objType !== OBJECT_TYPE.armas) {
-                return false;
-            }
-
-            return Boolean(objectsDB[item.idItem.toString()]?.proyectil);
-        });
+        const equippedWeapon = equippedByKind.arma;
+        const hasProjectileWeapon = Boolean(
+            equippedWeapon &&
+                objectsDB[equippedWeapon.idItem.toString()]?.proyectil,
+        );
 
         return hud.inventory.reduce(
             (total, item) => {
@@ -213,12 +367,13 @@ export default function CharacterStatsModal({
                 }
 
                 total.equippedCount += 1;
+                const kind = getInventoryItemEquipmentKind(item, objectsDB);
 
                 if (
-                    item.objType === OBJECT_TYPE.armaduras ||
-                    item.objType === OBJECT_TYPE.anillos ||
-                    item.objType === OBJECT_TYPE.escudos ||
-                    item.objType === OBJECT_TYPE.cascos
+                    kind === "armadura" ||
+                    kind === "accesorio" ||
+                    kind === "escudo" ||
+                    kind === "casco"
                 ) {
                     total.minDef += objectData.minDef ?? 0;
                     total.maxDef += objectData.maxDef ?? 0;
@@ -229,9 +384,8 @@ export default function CharacterStatsModal({
                 }
 
                 if (
-                    item.objType === OBJECT_TYPE.armas ||
-                    (item.objType === OBJECT_TYPE.flechas &&
-                        hasProjectileWeapon)
+                    kind === "arma" ||
+                    (kind === "flechas" && hasProjectileWeapon)
                 ) {
                     total.minWeaponHit += objectData.minHit ?? 0;
                     total.maxWeaponHit += objectData.maxHit ?? 0;
@@ -239,8 +393,22 @@ export default function CharacterStatsModal({
 
                 total.magicDamageBonus += objectData.magicDamageBonus ?? 0;
                 total.magicDamagePercent += objectData.magicDamagePercent ?? 0;
+                total.bonusExpNpcPct += Number(
+                    objectData.bonusExpNpcPct ?? 0,
+                );
+                total.bonusGoldNpcPct += Number(
+                    objectData.bonusGoldNpcPct ?? 0,
+                );
+                total.bonusDropNpcPct += Number(
+                    objectData.bonusDropNpcPct ?? 0,
+                );
 
-                if (item.objType === OBJECT_TYPE.armas && !total.weaponName) {
+                const specialBonuses = getSpecialBonuses(objectData);
+                total.strengthBonus += specialBonuses.strength;
+                total.agilityBonus += specialBonuses.agility;
+                total.maxManaBonus += specialBonuses.maxMana;
+
+                if (kind === "arma" && !total.weaponName) {
                     total.weaponName = item.name;
                     total.isProjectileWeapon = Boolean(objectData.proyectil);
                     total.isStabWeapon = Boolean(objectData.apu);
@@ -262,9 +430,114 @@ export default function CharacterStatsModal({
                 maxWeaponHit: 0,
                 magicDamageBonus: 0,
                 magicDamagePercent: 0,
+                bonusExpNpcPct: 0,
+                bonusGoldNpcPct: 0,
+                bonusDropNpcPct: 0,
+                strengthBonus: 0,
+                agilityBonus: 0,
+                maxManaBonus: 0,
             },
         );
-    }, [hud, objectsDB]);
+    }, [equippedByKind.arma, hud, objectsDB]);
+
+    const equipmentImprovements = React.useMemo(() => {
+        if (!equipmentStats) {
+            return [];
+        }
+
+        const improvements: Array<{
+            key: string;
+            label: string;
+            value: string;
+            direction: number;
+        }> = [];
+        const addRange = (key: string, label: string, min: number, max: number) => {
+            if (min === 0 && max === 0) {
+                return;
+            }
+            improvements.push({
+                key,
+                label,
+                value: formatSignedRange(min, max),
+                direction: min < 0 || max < 0 ? -1 : 1,
+            });
+        };
+        const addValue = (
+            key: string,
+            label: string,
+            value: number,
+            suffix = "",
+        ) => {
+            if (value === 0) {
+                return;
+            }
+            improvements.push({
+                key,
+                label,
+                value: formatSignedNumber(value, suffix),
+                direction: Math.sign(value),
+            });
+        };
+
+        addRange(
+            "damage",
+            "Daño físico",
+            equipmentStats.minWeaponHit,
+            equipmentStats.maxWeaponHit,
+        );
+        addRange(
+            "defense",
+            "Defensa física",
+            equipmentStats.minDef,
+            equipmentStats.maxDef,
+        );
+        addRange(
+            "magic-defense",
+            "Defensa mágica",
+            equipmentStats.minDefMag,
+            equipmentStats.maxDefMag,
+        );
+        addValue(
+            "magic-resistance",
+            "Resistencia mágica",
+            equipmentStats.resistenciaMagica,
+            "%",
+        );
+        addValue(
+            "magic-damage",
+            "Ataque mágico",
+            equipmentStats.magicDamageBonus,
+        );
+        addValue(
+            "magic-damage-percent",
+            "Daño mágico",
+            equipmentStats.magicDamagePercent,
+            "%",
+        );
+        addValue("strength", "Fuerza", equipmentStats.strengthBonus);
+        addValue("agility", "Agilidad", equipmentStats.agilityBonus);
+        addValue("max-mana", "Maná máximo", equipmentStats.maxManaBonus);
+        addValue(
+            "bonus-exp-npc",
+            "Experiencia extra",
+            equipmentStats.bonusExpNpcPct,
+            "%",
+        );
+        addValue(
+            "bonus-gold-npc",
+            "Oro extra",
+            equipmentStats.bonusGoldNpcPct,
+            "%",
+        );
+        addValue(
+            "bonus-drop-npc",
+            "Chance de drop",
+            equipmentStats.bonusDropNpcPct,
+            "%",
+        );
+
+        return improvements;
+    }, [equipmentStats]);
 
     if (!isOpen) {
         return null;
@@ -280,10 +553,10 @@ export default function CharacterStatsModal({
                                 Personaje
                             </p>
                             <h2 className="mt-2 text-2xl font-semibold text-[#f5ead2]">
-                                Estadisticas
+                                Estadísticas
                             </h2>
                             <p className="mt-2 text-sm text-stone-300/85">
-                                Vista enfocada en combate del personaje actual.
+                                Equipo, atributos y progreso del personaje.
                             </p>
                         </div>
 
@@ -304,23 +577,123 @@ export default function CharacterStatsModal({
                         </div>
                     ) : (
                         <div className="space-y-6">
-                            <div className="grid gap-3 md:grid-cols-3">
-                                <StatCard
-                                    label="Nombre"
-                                    value={hud.nameCharacter || "-"}
-                                    tone="accent"
-                                />
-                                <StatCard
-                                    label="Clase"
-                                    value={
-                                        classLabels[hud.idClase ?? 0] ??
-                                        `Clase ${hud.idClase ?? "-"}`
-                                    }
-                                />
-                                <StatCard
-                                    label="Nivel"
-                                    value={formatNumber(hud.level)}
-                                />
+                            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(300px,0.85fr)]">
+                                <section className="border border-amber-300/20 bg-black/25 p-4">
+                                    <div className="flex items-start justify-between gap-3 border-b border-amber-200/10 pb-3">
+                                        <div>
+                                            <h3 className="text-[11px] font-semibold uppercase tracking-[0.26em] text-amber-300/85">
+                                                Equipamiento
+                                            </h3>
+                                            <p className="mt-1 text-lg font-semibold text-stone-100">
+                                                {hud.nameCharacter || "Personaje"}
+                                            </p>
+                                        </div>
+                                        <div className="text-right text-xs leading-5 text-stone-400">
+                                            <p>
+                                                {classLabels[hud.idClase ?? 0] ??
+                                                    `Clase ${hud.idClase ?? "-"}`}
+                                            </p>
+                                            <p>Nivel {formatNumber(hud.level)}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-4 grid grid-cols-[minmax(0,1fr)_128px_minmax(0,1fr)] items-center gap-3">
+                                        <div className="space-y-2">
+                                            {LEFT_EQUIPMENT_SLOTS.map((kind) => {
+                                                const item = equippedByKind[kind];
+                                                return (
+                                                    <EquipmentSlotCard
+                                                        key={kind}
+                                                        kind={kind}
+                                                        item={item}
+                                                        graphicData={
+                                                            item
+                                                                ? graphicsDB?.[
+                                                                      item.grhIndex.toString()
+                                                                  ]
+                                                                : undefined
+                                                        }
+                                                    />
+                                                );
+                                            })}
+                                        </div>
+
+                                        <div className="flex h-[190px] items-center justify-center border border-amber-300/20 bg-[radial-gradient(circle_at_center,rgba(170,111,32,0.18),rgba(0,0,0,0.18)_68%)]">
+                                            <CharacterSpritePreview
+                                                bodyId={hud.idBody ?? 0}
+                                                headId={hud.idHead ?? 0}
+                                                helmetId={hud.idHelmet ?? 0}
+                                                weaponId={hud.idWeapon ?? 0}
+                                                shieldId={hud.idShield ?? 0}
+                                                scale={1.08}
+                                                framed={false}
+                                                className="bg-transparent"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            {RIGHT_EQUIPMENT_SLOTS.map((kind) => {
+                                                const item = equippedByKind[kind];
+                                                return (
+                                                    <EquipmentSlotCard
+                                                        key={kind}
+                                                        kind={kind}
+                                                        item={item}
+                                                        graphicData={
+                                                            item
+                                                                ? graphicsDB?.[
+                                                                      item.grhIndex.toString()
+                                                                  ]
+                                                                : undefined
+                                                        }
+                                                    />
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <section className="border border-amber-300/20 bg-black/25 p-4">
+                                    <div className="flex items-center justify-between gap-3 border-b border-amber-200/10 pb-3">
+                                        <h3 className="text-[11px] font-semibold uppercase tracking-[0.26em] text-amber-300/85">
+                                            Mejoras del equipo
+                                        </h3>
+                                        <span className="text-xs text-stone-500">
+                                            {equipmentStats?.equippedCount ?? 0} piezas
+                                        </span>
+                                    </div>
+
+                                    {equipmentImprovements.length > 0 ? (
+                                        <div className="mt-3 grid gap-x-5 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                                            {equipmentImprovements.map(
+                                                (improvement) => (
+                                                    <div
+                                                        key={improvement.key}
+                                                        className="flex min-h-9 items-center justify-between gap-3 border-b border-white/8 py-2"
+                                                    >
+                                                        <span className="text-xs text-stone-400">
+                                                            {improvement.label}
+                                                        </span>
+                                                        <span
+                                                            className={`whitespace-nowrap text-xs font-semibold ${
+                                                                improvement.direction < 0
+                                                                    ? "text-rose-300"
+                                                                    : "text-emerald-300"
+                                                            }`}
+                                                        >
+                                                            {improvement.value}
+                                                        </span>
+                                                    </div>
+                                                ),
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="flex min-h-[160px] items-center justify-center px-5 text-center text-sm leading-6 text-stone-500">
+                                            El equipo actual no aporta mejoras de
+                                            combate registradas.
+                                        </div>
+                                    )}
+                                </section>
                             </div>
 
                             <div className="grid gap-4 lg:grid-cols-2">

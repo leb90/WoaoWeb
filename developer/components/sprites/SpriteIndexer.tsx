@@ -157,6 +157,8 @@ export function SpriteIndexer() {
   const [cellWidth, setCellWidth] = useState(26);
   const [cellHeight, setCellHeight] = useState(46);
   const [contentScale, setContentScale] = useState(1);
+  const [contentScaleX, setContentScaleX] = useState(0.75);
+  const [contentScaleY, setContentScaleY] = useState(0.98);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [rowRole, setRowRole] = useState<Record<number, Direction>>({});
   const [frameRole, setFrameRole] = useState<Record<string, Direction>>({});
@@ -261,6 +263,8 @@ export function SpriteIndexer() {
     form.set("cellWidth", String(cellWidth));
     form.set("cellHeight", String(cellHeight));
     form.set("contentScale", String(contentScale));
+    form.set("contentScaleX", String(contentScaleX));
+    form.set("contentScaleY", String(contentScaleY));
     form.set("align", kind === "body" ? "bottom" : "center");
     const response = await fetch("/api/sprites/analyze", { method: "POST", body: form });
     const data = (await response.json()) as Analysis & { error?: string };
@@ -273,6 +277,12 @@ export function SpriteIndexer() {
     setCellWidth(data.cellWidth);
     setCellHeight(data.cellHeight);
     setContentScale(data.contentScale);
+    if (typeof (data as { contentScaleX?: number }).contentScaleX === "number") {
+      setContentScaleX((data as { contentScaleX: number }).contentScaleX);
+    }
+    if (typeof (data as { contentScaleY?: number }).contentScaleY === "number") {
+      setContentScaleY((data as { contentScaleY: number }).contentScaleY);
+    }
     setSplitFrames(data.suggestion.splitFrames);
     const roles: Record<number, Direction> = {};
     for (const row of data.rows) roles[row.index] = row.role === "icon" ? "icon" : "ignore";
@@ -308,6 +318,8 @@ export function SpriteIndexer() {
           cellHeight,
           align: kind === "body" ? "bottom" : "center",
           contentScale,
+          contentScaleX,
+          contentScaleY,
           directions,
           iconBox: iconRow?.frames[0],
           headOffsetX,
@@ -405,6 +417,8 @@ export function SpriteIndexer() {
       cellWidth,
       cellHeight,
       contentScale,
+      contentScaleX,
+      contentScaleY,
       headOffsetX,
       headOffsetY,
       offsetX: selected.offsetX,
@@ -422,6 +436,8 @@ export function SpriteIndexer() {
         cellWidth: number;
         cellHeight: number;
         contentScale: number;
+        contentScaleX: number;
+        contentScaleY: number;
         headOffsetX: number;
         headOffsetY: number;
         stats: Record<string, number>;
@@ -429,6 +445,8 @@ export function SpriteIndexer() {
       if (typeof payload.cellWidth === "number") setCellWidth(payload.cellWidth);
       if (typeof payload.cellHeight === "number") setCellHeight(payload.cellHeight);
       if (typeof payload.contentScale === "number") setContentScale(payload.contentScale);
+      if (typeof payload.contentScaleX === "number") setContentScaleX(payload.contentScaleX);
+      if (typeof payload.contentScaleY === "number") setContentScaleY(payload.contentScaleY);
       if (typeof payload.headOffsetX === "number") setHeadOffsetX(payload.headOffsetX);
       if (typeof payload.headOffsetY === "number") setHeadOffsetY(payload.headOffsetY);
       if (payload.stats) setStats(payload.stats);
@@ -567,7 +585,8 @@ export function SpriteIndexer() {
                   />
                   <input className="sprite-input" type="number" value={cellWidth} onChange={(event) => { setCellWidth(Number(event.target.value)); markDirty(); }} title="Ancho de celda" />
                   <input className="sprite-input" type="number" value={cellHeight} onChange={(event) => { setCellHeight(Number(event.target.value)); markDirty(); }} title="Alto de celda" />
-                  <input className="sprite-input" type="number" min={0.2} max={1} step={0.05} value={contentScale} onChange={(event) => { setContentScale(Number(event.target.value)); markDirty(); }} title="Escala dentro de la celda" />
+                  <input className="sprite-input" type="number" min={0.2} max={1.5} step={0.05} value={contentScaleX} onChange={(event) => { setContentScaleX(Number(event.target.value)); markDirty(); }} title="Escala de ancho (independiente)" />
+                  <input className="sprite-input" type="number" min={0.2} max={1.5} step={0.05} value={contentScaleY} onChange={(event) => { setContentScaleY(Number(event.target.value)); markDirty(); }} title="Escala de alto (independiente)" />
                 </div>
                 <div className="sprite-toolbar">
                   <button type="button" className="sprite-btn primary" onClick={() => void analyze()} disabled={busy !== ""}>
@@ -583,7 +602,7 @@ export function SpriteIndexer() {
                       Cada frame de la fila es una direccion.
                     </label>
                     <p className="sprite-message">
-                      Hoja {analysis.width}x{analysis.height}. Celda {cellWidth}x{cellHeight}. Escala {contentScale}.
+                      Hoja {analysis.width}x{analysis.height}. Celda {cellWidth}x{cellHeight}. Escala X {contentScaleX} / Y {contentScaleY}.
                     </p>
                     <MannequinPreview
                       kind={kind}

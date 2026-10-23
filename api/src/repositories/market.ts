@@ -3,9 +3,10 @@ import type { PoolClient } from "pg";
 import pool from "../db";
 
 const MARKET_MAX_ACTIVE_LISTINGS_PER_ACCOUNT = 20;
+const MAX_CHARACTER_ITEM_SLOT = 27;
 
 const characterItemSchema = z.object({
-    idPos: z.coerce.number().int(),
+    idPos: z.coerce.number().int().min(1).max(MAX_CHARACTER_ITEM_SLOT),
     idItem: z.coerce.number().int().positive(),
     cant: z.coerce.number().int().positive(),
     equipped: z

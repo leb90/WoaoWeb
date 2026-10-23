@@ -43,7 +43,12 @@ export type SpritePlan = {
   cellWidth: number;
   cellHeight: number;
   align: AlignMode;
+  /** Escala proporcional legacy; se usa si no hay scaleX/scaleY. */
   contentScale: number;
+  /** Escala de ancho independiente (ej. 0.8). Si difiere de scaleY, no mantiene proporción. */
+  contentScaleX?: number;
+  /** Escala de alto independiente (ej. 0.95). */
+  contentScaleY?: number;
   directions: DirectionPlacement[];
   iconBox?: SourceBox;
   headOffsetX: number;
@@ -481,27 +486,69 @@ export function readJob(jobId: string): Buffer {
   return fs.readFileSync(filePath);
 }
 
+function clampScale(value: unknown, fallback = 1): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(1.5, Math.max(0.2, parsed));
+}
+
+function resolveContentScales(plan: Pick<SpritePlan, "contentScale" | "contentScaleX" | "contentScaleY">): {
+  scaleX: number;
+  scaleY: number;
+  stretch: boolean;
+} {
+  const legacy = clampScale(plan.contentScale, 1);
+  const hasX = Number.isFinite(Number(plan.contentScaleX));
+  const hasY = Number.isFinite(Number(plan.contentScaleY));
+  const scaleX = clampScale(hasX ? plan.contentScaleX : legacy, legacy);
+  const scaleY = clampScale(hasY ? plan.contentScaleY : legacy, legacy);
+  return {
+    scaleX,
+    scaleY,
+    // Con scaleX/scaleY explícitos se permite deformar (ej. más fino y más alto).
+    stretch: hasX || hasY,
+  };
+}
+
 async function renderCell(
   sheet: Buffer,
   box: SourceBox,
   cellWidth: number,
   cellHeight: number,
   align: AlignMode,
-  contentScale: number,
+  scaleX: number,
+  scaleY: number,
+  stretch: boolean,
   dx: number,
   dy: number,
 ): Promise<Buffer> {
-  const scale = Math.min(1, Math.max(0.2, contentScale));
-  const maxWidth = Math.max(1, Math.round(cellWidth * scale));
-  const maxHeight = Math.max(1, Math.round(cellHeight * scale));
-  const resized = await sharp(sheet)
+  const targetWidth = Math.max(1, Math.round(cellWidth * clampScale(scaleX)));
+  const targetHeight = Math.max(1, Math.round(cellHeight * clampScale(scaleY)));
+  const extracted = await sharp(sheet)
     .extract({
       left: Math.max(0, Math.round(box.x)),
       top: Math.max(0, Math.round(box.y)),
       width: Math.max(1, Math.round(box.width)),
       height: Math.max(1, Math.round(box.height)),
     })
-    .resize({ width: maxWidth, height: maxHeight, fit: "inside" })
+    .ensureAlpha()
+    .png()
+    .toBuffer();
+
+  // Recorta padding vacío para que el cuerpo ocupe el alto/ancho pedido.
+  let content = extracted;
+  try {
+    content = await sharp(extracted).trim({ threshold: 12 }).png().toBuffer();
+  } catch {
+    content = extracted;
+  }
+
+  const resized = await sharp(content)
+    .resize({
+      width: targetWidth,
+      height: targetHeight,
+      fit: stretch ? "fill" : "inside",
+    })
     .png()
     .toBuffer();
   const meta = await sharp(resized).metadata();
@@ -526,10 +573,17 @@ export async function renderPreviewCells(
   cellHeight: number,
   align: AlignMode,
   contentScale: number,
+  contentScaleX?: number,
+  contentScaleY?: number,
 ): Promise<string[]> {
+  const { scaleX, scaleY, stretch } = resolveContentScales({
+    contentScale,
+    contentScaleX,
+    contentScaleY,
+  });
   const previews: string[] = [];
   for (const frame of frames) {
-    const png = await renderCell(sheet, frame, cellWidth, cellHeight, align, contentScale, 0, 0);
+    const png = await renderCell(sheet, frame, cellWidth, cellHeight, align, scaleX, scaleY, stretch, 0, 0);
     previews.push(`data:image/png;base64,${png.toString("base64")}`);
   }
   return previews;
@@ -557,13 +611,18 @@ export function normalizePlan(plan: SpritePlan, reference: ReferenceInfo): Sprit
     };
   });
 
+  const hasScaleX = Number.isFinite(Number(plan.contentScaleX));
+  const hasScaleY = Number.isFinite(Number(plan.contentScaleY));
+  const { scaleX, scaleY } = resolveContentScales(plan);
   return {
     ...plan,
     kind: reference ? plan.kind : plan.kind,
     cellWidth: clampCell(plan.cellWidth, reference.cellWidth),
     cellHeight: clampCell(plan.cellHeight, reference.cellHeight),
     align: plan.align === "center" ? "center" : "bottom",
-    contentScale: Math.min(1, Math.max(0.2, Number(plan.contentScale) || 1)),
+    contentScale: clampScale(plan.contentScale, 1),
+    contentScaleX: hasScaleX ? scaleX : undefined,
+    contentScaleY: hasScaleY ? scaleY : undefined,
     directions: completed,
     headOffsetX: Number.isFinite(plan.headOffsetX) ? Math.round(plan.headOffsetX) : reference.headOffsetX,
     headOffsetY: Number.isFinite(plan.headOffsetY) ? Math.round(plan.headOffsetY) : reference.headOffsetY,
@@ -580,6 +639,8 @@ async function composeAtlas(sheet: Buffer, plan: SpritePlan): Promise<{ atlas: B
   const atlasHeight = plan.directions.length * plan.cellHeight;
   const composites: Array<{ input: Buffer; left: number; top: number }> = [];
 
+  const { scaleX, scaleY, stretch } = resolveContentScales(plan);
+
   for (let rowIndex = 0; rowIndex < plan.directions.length; rowIndex += 1) {
     const row = plan.directions[rowIndex];
     for (let column = 0; column < row.frames.length; column += 1) {
@@ -590,7 +651,9 @@ async function composeAtlas(sheet: Buffer, plan: SpritePlan): Promise<{ atlas: B
         plan.cellWidth,
         plan.cellHeight,
         plan.align,
-        plan.contentScale,
+        scaleX,
+        scaleY,
+        stretch,
         frame.dx,
         frame.dy,
       );
@@ -610,7 +673,7 @@ async function composeAtlas(sheet: Buffer, plan: SpritePlan): Promise<{ atlas: B
     .toBuffer();
 
   const iconSource = plan.iconBox ?? plan.directions.find((row) => row.direction === "2")?.frames[0]?.box ?? plan.directions[0].frames[0].box;
-  const icon = await renderCell(sheet, iconSource, 32, 32, "center", 1, 0, 0);
+  const icon = await renderCell(sheet, iconSource, 32, 32, "center", 1, 1, true, 0, 0);
   return { atlas, icon, columns };
 }
 

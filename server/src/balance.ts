@@ -9,19 +9,37 @@ const MAX_GOLD = 2147483647;
 
 const DEFAULT_CLASS_PROGRESS: Record<
     number,
-    { vida: number; manaInicial: number; multMana: number; hitPre36: number; hitPost36: number }
+    {
+        vida: number;
+        vidaMin: number;
+        vidaMax: number;
+        manaInicial: number;
+        multMana: number;
+        hitPre36: number;
+        hitPost36: number;
+    }
 > = {
-    1: { vida: 7.5, manaInicial: 8.33, multMana: 2.65, hitPre36: 1, hitPost36: 1 },
-    2: { vida: 8.5, manaInicial: 2.5, multMana: 2, hitPre36: 2, hitPost36: 2 },
-    3: { vida: 10.5, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
-    4: { vida: 9, manaInicial: 2.5, multMana: 1, hitPre36: 3, hitPost36: 2 },
-    5: { vida: 8, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
-    6: { vida: 8.5, manaInicial: 2.5, multMana: 2, hitPre36: 2, hitPost36: 2 },
-    7: { vida: 8.5, manaInicial: 2.5, multMana: 2, hitPre36: 2, hitPost36: 2 },
-    8: { vida: 10, manaInicial: 2.5, multMana: 1, hitPre36: 3, hitPost36: 2 },
-    9: { vida: 10, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
-    10: { vida: 8.5, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
-    11: { vida: 10, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+    1: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 8.33, multMana: 2.65, hitPre36: 1, hitPost36: 1 },
+    2: { vida: 8.5, vidaMin: 7, vidaMax: 10, manaInicial: 2.5, multMana: 2, hitPre36: 2, hitPost36: 2 },
+    3: { vida: 11, vidaMin: 9, vidaMax: 13, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+    4: { vida: 9, vidaMin: 7, vidaMax: 11, manaInicial: 2.5, multMana: 1, hitPre36: 3, hitPost36: 2 },
+    5: { vida: 10, vidaMin: 8, vidaMax: 12, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+    6: { vida: 9, vidaMin: 7, vidaMax: 11, manaInicial: 2.5, multMana: 2, hitPre36: 2, hitPost36: 2 },
+    7: { vida: 8.5, vidaMin: 7, vidaMax: 10, manaInicial: 2.5, multMana: 2, hitPre36: 2, hitPost36: 2 },
+    8: { vida: 10, vidaMin: 8, vidaMax: 12, manaInicial: 2.5, multMana: 1, hitPre36: 3, hitPost36: 2 },
+    9: { vida: 10, vidaMin: 8, vidaMax: 12, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+    10: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+    11: { vida: 10, vidaMin: 8, vidaMax: 12, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+    12: { vida: 9, vidaMin: 7, vidaMax: 11, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+    13: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
+    14: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
+    15: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
+    16: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
+    17: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
+    18: { vida: 10, vidaMin: 8, vidaMax: 12, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+    19: { vida: 8.5, vidaMin: 7, vidaMax: 10, manaInicial: 2.5, multMana: 1, hitPre36: 2, hitPost36: 2 },
+    20: { vida: 8, vidaMin: 6, vidaMax: 10, manaInicial: 0, multMana: 0, hitPre36: 3, hitPost36: 2 },
+    21: { vida: 9, vidaMin: 7, vidaMax: 11, manaInicial: 0, multMana: 0, hitPre36: 2, hitPost36: 2 },
 };
 
 const clampLevel = (level: number): number => Math.max(1, Math.min(MAX_LEVEL, Math.floor(level)));
@@ -30,9 +48,27 @@ const clampGold = (gold: number): number => Math.max(0, Math.min(MAX_GOLD, Math.
 const getClassProgress = () =>
     vars.classProgress && Object.keys(vars.classProgress).length > 0 ? vars.classProgress : DEFAULT_CLASS_PROGRESS;
 
-const getHpAveragePerLevel = (classId: number, constitucion: number): number => {
+type HpGainRange = { min: number; max: number; average: number };
+
+const getHpGainRange = (classId: number, constitucion: number): HpGainRange => {
     const classProgress = getClassProgress()[classId] ?? DEFAULT_CLASS_PROGRESS[1];
-    return classProgress.vida - (21 - constitucion) * 0.5;
+    const baseAverage = Number(classProgress.vida) || 1;
+    const baseMin = Number(classProgress.vidaMin ?? Math.floor(baseAverage - 2));
+    const baseMax = Number(classProgress.vidaMax ?? Math.ceil(baseAverage + 2));
+    const average = (baseMin + baseMax) / 2 + (Number(constitucion) - 21) * 0.5;
+    const halfWidth = Math.max(0, (baseMax - baseMin) / 2);
+    const min = Math.max(1, Math.floor(average - halfWidth));
+    const max = Math.max(min, Math.ceil(average + halfWidth));
+
+    return { min, max, average: (min + max) / 2 };
+};
+
+const getHpAveragePerLevel = (classId: number, constitucion: number): number =>
+    getHpGainRange(classId, constitucion).average;
+
+const rollHpGain = (classId: number, constitucion: number, random = Math.random): number => {
+    const range = getHpGainRange(classId, constitucion);
+    return Math.floor(random() * (range.max - range.min + 1)) + range.min;
 };
 
 const getMaxHpForLevel = (classId: number, constitucion: number, level: number): number => {
@@ -41,9 +77,19 @@ const getMaxHpForLevel = (classId: number, constitucion: number, level: number):
     return Math.round(total);
 };
 
+const getMinHpForLevel = (classId: number, constitucion: number, level: number): number => {
+    const safeLevel = clampLevel(level);
+    return Math.round(constitucion + getHpGainRange(classId, constitucion).min * (safeLevel - 1));
+};
+
+const getMaxRolledHpForLevel = (classId: number, constitucion: number, level: number): number => {
+    const safeLevel = clampLevel(level);
+    return Math.round(constitucion + getHpGainRange(classId, constitucion).max * (safeLevel - 1));
+};
+
 const getHpAverageDelta = (classId: number, constitucion: number): number => {
     const classProgress = getClassProgress()[classId] ?? DEFAULT_CLASS_PROGRESS[1];
-    const classAverage = Number(classProgress.vida) || 0;
+    const classAverage = (Number(classProgress.vidaMin) + Number(classProgress.vidaMax)) / 2;
     return getHpAveragePerLevel(classId, constitucion) - classAverage;
 };
 
@@ -107,7 +153,12 @@ module.exports = {
     MAX_EXP_LEVEL,
     clampLevel,
     clampGold,
+    getHpGainRange,
+    getHpAveragePerLevel,
+    rollHpGain,
     getMaxHpForLevel,
+    getMinHpForLevel,
+    getMaxRolledHpForLevel,
     getHpAverageDelta,
     getMaxManaForLevel,
     getMaxStaForLevel,

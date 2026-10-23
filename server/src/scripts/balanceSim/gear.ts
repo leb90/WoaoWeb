@@ -2,7 +2,7 @@
 // Elige el mejor ítem por lugar entre tres perfiles, siempre para razas altas:
 // - "venta": lo que venden los comerciantes.
 // - "comun": lo mejor que no es premio (comerciante, crafteo, drop o misión).
-// - "tier": los sets de premios de canje (Desterrado, del Caído) y sus versiones +1/+2/LEGENDARIA.
+// - "tier": el set de tier de la clase (jsons/sets.json); donde no tiene pieza, lo mejor común.
 import fs from "node:fs";
 import path from "node:path";
 
@@ -111,11 +111,15 @@ function best(classId: number, role: GearRole, slot: GearSlot, filter: (id: numb
 const ownSetItems = (classId: number) =>
     new Set(tierSets.filter((set) => set.classes.includes(classId)).flatMap((set) => Object.values(set.pieces).flat()));
 
-// Si el set de tier no tiene pieza para ese lugar, se completa con lo mejor común.
+// El set de la clase trae pieza para ese lugar (por ejemplo, el escudo de los sets de mago y druida).
+export const hasOwnSetPiece = (classId: number, slot: GearSlot) =>
+    [...ownSetItems(classId)].some((id) => objects[String(id)] && slotOf(objects[String(id)]) === slot);
+
+// Si el set de tier no tiene pieza para ese lugar (o la clase no tiene set), se completa con lo mejor común.
 export function pickGear(classId: number, role: GearRole, slot: GearSlot, profile: GearProfile): number {
     if (profile === "tier") {
         const own = ownSetItems(classId);
-        return best(classId, role, slot, (id) => own.has(id)) || best(classId, role, slot, isTier) || best(classId, role, slot, isCommon);
+        return best(classId, role, slot, (id) => own.has(id)) || best(classId, role, slot, isCommon);
     }
     return best(classId, role, slot, FILTERS[profile]);
 }

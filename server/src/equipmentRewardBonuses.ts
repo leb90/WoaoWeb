@@ -6,7 +6,7 @@ type InventorySlotLike = {
 
 type CharacterLike = {
     idItemBody?: number | string;
-    items?: Record<string | number, InventorySlotLike>;
+    inv?: Record<string | number, InventorySlotLike> | InventorySlotLike[] | null;
 } | null | undefined;
 
 type ObjectLike = {
@@ -25,6 +25,15 @@ function toPercent(value: unknown): number {
     return Math.min(500, parsed);
 }
 
+function getInventorySlot(user: CharacterLike, slotKey: string): InventorySlotLike {
+    const bag = user?.inv;
+    if (!bag || typeof bag !== "object" || Array.isArray(bag)) {
+        return null;
+    }
+
+    return (bag as Record<string, InventorySlotLike>)[slotKey] ?? null;
+}
+
 function getEquippedBodyObject(user: CharacterLike): ObjectLike {
     if (!user) {
         return null;
@@ -35,7 +44,7 @@ function getEquippedBodyObject(user: CharacterLike): ObjectLike {
         return null;
     }
 
-    const inventoryItem = user.items?.[slotKey as string | number];
+    const inventoryItem = getInventorySlot(user, String(slotKey));
     const itemId = Number(inventoryItem?.idItem ?? 0);
     if (!itemId) {
         return null;

@@ -134,3 +134,23 @@ test("las túnicas especiales leen el equipo del inventario en juego", () => {
     const [id, data] = tunic as [string, { bonusGoldNpcPct: number }];
     assert.equal(getEquippedNpcGoldBonusPct({ idItemBody: 22, inv: { 22: { idItem: Number(id) } } }), Number(data.bonusGoldNpcPct));
 });
+
+test("el set Silvano completo hace fallar 3 de cada 10 parálisis", () => {
+    const silvano = [1773, 1774, 1775, 1776];
+    assert.equal(tierSets.getEquippedSetBonus(silvano).paralysisResistPct, 30);
+    assert.equal(tierSets.getEquippedSetBonus(silvano.slice(0, 3)).paralysisResistPct, 0);
+    assert.equal(tierSets.getEquippedSetBonus(Object.values(WARRIOR_SET)).paralysisResistPct, 0);
+
+    const archer = makeWarrior({ helmet: 1773, weapon: 1774, shield: 1775, body: 1776 });
+    archer.idClase = 20;
+    const original = Math.random;
+    try {
+        Math.random = () => 0.29;
+        assert.equal(game.resistsParalysisBySet(archer), true);
+        Math.random = () => 0.31;
+        assert.equal(game.resistsParalysisBySet(archer), false);
+    } finally {
+        Math.random = original;
+    }
+});
+

@@ -660,7 +660,7 @@ function tryNpcCastSpell(
         game.interruptPendingLogoutOnAttack(target.id, "[Servidor] La salida se canceló porque una criatura te atacó.");
 
         if (spellEffect === "paraliza") {
-            if (shouldAvoidParalysis(target)) {
+            if (shouldAvoidParalysis(target) || game.resistsParalysisBySet(target)) {
                 return true;
             }
             target.paralizado = 1;
@@ -676,6 +676,9 @@ function tryNpcCastSpell(
         }
 
         if (spellEffect === "inmoviliza") {
+            if (game.resistsParalysisBySet(target)) {
+                return true;
+            }
             target.inmovilizado = 1;
             target.cooldownParalizado = now;
 

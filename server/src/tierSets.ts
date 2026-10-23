@@ -6,7 +6,7 @@ import path from "node:path";
 
 export {};
 
-type SetBonusStep = { pieces: number; hpPct?: number; dmgPct?: number; manaPct?: number };
+type SetBonusStep = { pieces: number; hpPct?: number; dmgPct?: number; manaPct?: number; paralysisResistPct?: number };
 type TierSet = {
     id: string;
     name: string;
@@ -24,14 +24,17 @@ export type EquippedSetBonus = {
     hpPct: number;
     dmgPct: number;
     manaPct: number;
+    // Chance de que falle una parálisis o inmovilización sobre quien lo tiene (por ejemplo, Silvano completo).
+    paralysisResistPct: number;
 };
 
 // Topes por si se edita sets.json a mano.
 const MAX_HP_PCT = 20;
 const MAX_DMG_PCT = 25;
 const MAX_MANA_PCT = 20;
+const MAX_PARALYSIS_RESIST_PCT = 30;
 
-const EMPTY: EquippedSetBonus = { setId: null, name: null, pieces: 0, totalPieces: 0, hpPct: 0, dmgPct: 0, manaPct: 0 };
+const EMPTY: EquippedSetBonus = { setId: null, name: null, pieces: 0, totalPieces: 0, hpPct: 0, dmgPct: 0, manaPct: 0, paralysisResistPct: 0 };
 
 let sets: TierSet[] = [];
 const pieceByItemId = new Map<number, { setId: string; slot: string }>();
@@ -83,6 +86,7 @@ export function getEquippedSetBonus(equippedItemIds: number[]): EquippedSetBonus
             hpPct: Math.min(MAX_HP_PCT, Number(step?.hpPct ?? 0)),
             dmgPct: Math.min(MAX_DMG_PCT, Number(step?.dmgPct ?? 0)),
             manaPct: Math.min(MAX_MANA_PCT, Number(step?.manaPct ?? 0)),
+            paralysisResistPct: Math.min(MAX_PARALYSIS_RESIST_PCT, Number(step?.paralysisResistPct ?? 0)),
         };
     }
     return best;

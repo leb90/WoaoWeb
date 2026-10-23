@@ -33,6 +33,8 @@ const CLASSES: Array<{ id: number; name: string; modes: string[]; identity: stri
     { id: 4, name: "Asesino", modes: ["melee", "magia"], identity: "Golpe común por debajo del guerrero; su fuerte es la apuñalada por la espalda: +10 % de daño y un desangrado de 10 s que cada segundo saca lo mismo que el golpe (el simulador mide golpes de frente, sin apuñalada)." },
     { id: 3, name: "Guerrero", modes: ["melee"], identity: "El que más pega físico. Nada de magia." },
     { id: 9, name: "Cazador", modes: ["rango", "melee"], identity: "Arco; el cuerpo a cuerpo queda en segundo plano." },
+    { id: 18, name: "Pirata", modes: ["melee", "magia"], identity: "Golpe y aguante cercanos al guerrero, con un poco de magia. No tiene set de tier." },
+    { id: 20, name: "Arquero", modes: ["rango"], identity: "Flechas muy fuertes y rápidas: con set mata a un mago en 2 flechas, a los semimagos en 3-4 y a un guerrero en 4-6. Tiene poca vida y aguanta poca magia; depende de que no lo paralicen (con el set Silvano completo, 3 de cada 10 parálisis le fallan)." },
 ];
 const NAME: Record<number, string> = Object.fromEntries(CLASSES.map((c) => [c.id, c.name]));
 const MODE: Record<string, string> = { magia: "magia", melee: "golpe", rango: "flecha" };
@@ -79,7 +81,7 @@ function hitsCell(level: number, atkClass: number, mode: string, defClass: numbe
     if (!after) return "—";
     const target = targetHits(after);
     const mark = target !== null && Math.abs(after.mean - target) > 0.5 ? " ⚠" : "";
-    return `${num(before?.mean ?? NaN)} → **${num(after.mean)}**${target !== null ? ` (${num(target)})` : ""}${mark}`;
+    return `${before ? num(before.mean) : "—"} → **${num(after.mean)}**${target !== null ? ` (${num(target)})` : ""}${mark}`;
 }
 
 function damageCell(level: number, atkClass: number, mode: string, defClass: number) {
@@ -245,7 +247,8 @@ for (const cls of CLASSES) {
     }
 
     // Contra mago, guerrero y su misma clase (si no es una de esas dos).
-    const opponents = [1, 3, ...(cls.id === 1 || cls.id === 3 ? [] : [cls.id])];
+    // El arquero tiene objetivos por defensor: se muestran también los semimagos y el paladín.
+    const opponents = cls.id === 20 ? [1, 7, 2, 6, 8, 3, 20] : [1, 3, ...(cls.id === 1 || cls.id === 3 ? [] : [cls.id])];
     for (const mode of cls.modes) {
         push(
             "",

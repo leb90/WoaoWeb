@@ -57,6 +57,7 @@ function describeBonus(bonus: { hpPct?: number; manaPct?: number; dmgPct?: numbe
 }
 
 const modesOf = (classId: number) => balance.classes.find((cls) => cls.id === classId)?.modes ?? [];
+const hasSet = (classId: number) => balance.sets.some((set) => set.classes.includes(classId));
 const defenders = balance.classes.map((cls) => cls.id);
 type HitsByDefender = Record<string, number | null>;
 const vsOf = (row: (typeof balance.attackers)[number], level: number) => (row.vs as Record<string, HitsByDefender>)[String(level)] ?? {};
@@ -189,7 +190,7 @@ export default function WikiPvpBalance() {
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
                     <div className="min-w-0 space-y-3 text-sm leading-6 text-stone-400">
                         <p>
-                            Cada clase tiene su set de premios. El bono depende de cuántas piezas distintas tengas puestas y se aplica el escalón más alto, sin sumarse:
+                            Cada clase tiene su set de cuatro piezas (el cazador y el pirata todavía no). El bono depende de cuántas piezas distintas tengas puestas y se aplica el escalón más alto, sin sumarse:
                         </p>
                         <ul className="space-y-2">
                             {setSteps.map((step) => (
@@ -217,7 +218,7 @@ export default function WikiPvpBalance() {
                                 </thead>
                                 <tbody className="divide-y divide-amber-200/10">
                                     {balance.attackers
-                                        .filter((row) => modesOf(row.classId)[0] === row.mode)
+                                        .filter((row) => modesOf(row.classId)[0] === row.mode && hasSet(row.classId))
                                         .map((row) => (
                                             <tr key={row.classId} className="bg-black/20">
                                                 <td className="px-3 py-2 text-stone-200">{attackerLabel(row.classId, row.mode, modesOf(row.classId))}</td>

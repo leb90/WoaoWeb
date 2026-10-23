@@ -81,7 +81,7 @@ const sets = setsFile.sets.map((set) => ({
     season: set.season,
     classes: set.classes,
     bonuses: set.bonuses,
-    // Primera pieza de cada lugar (las demás son las versiones +1, +2 y LEGENDARIA o las de otra altura).
+    // Primera pieza de cada lugar (si un lugar acepta varias, el resto figura como variantes).
     pieces: Object.entries(set.pieces).map(([slot, ids]) => ({ slot: SLOT_NAMES[slot] ?? slot, id: ids[0], name: objects[String(ids[0])]?.name ?? `#${ids[0]}`, variants: ids.length })),
 }));
 

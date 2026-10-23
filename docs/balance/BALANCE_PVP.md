@@ -1,6 +1,6 @@
 # Balance PvP: análisis, propuesta e implementación
 
-Fecha: 2026-10-23. Estado: **implementado en el PR #54** (rama `docs-balance-combate`), salvo lo que figura como pendiente en la sección 0. Las secciones 1 a 7 son el análisis original; la 0 y la 8 tienen los valores finales.
+Fecha: 2026-10-23. Estado: **implementado** (PR #54 y, para los sets de tier nuevos, la rama `feat-sets-tier-nuevos`), salvo lo que figura como pendiente en la sección 0. Las secciones 1 a 7 son el análisis original; la 0 y la 8 tienen los valores finales.
 
 Este documento sirve para retomar el trabajo en cualquier momento. Tiene:
 - qué se pidió;
@@ -24,20 +24,40 @@ Documento previo de referencia: [combat-balance.md](combat-balance.md), del PR #
 |---|---|---|
 | 7.1 Tope de atributos | Fuerza y agilidad efectivas con tope 40 (buff + objetos), **solo en PvP** | `game.ts`: `getCombatFuerza`, `getCombatAgilidad`, `PVP_ATTRIBUTE_CAP` |
 | 7.2 Factores PvP | Daño contra jugadores por clase: `modDmgPvpArmas`, `modDmgPvpProyectiles`, `modDmgPvpMagia` | `balanceData.ts`, `api/src/jsons/balance.json`, `game.ts` (`getPvpDamageFactor`, `calcularDmg`, `applyUserSpellDamage`) |
-| 7.4 Bonos del set | 2 piezas: +10 % de vida. 4 piezas: +20 % de vida y +25 % de daño contra jugadores. Se aplica el escalón más alto, sin acumular | `server/jsons/sets.json`, `tierSets.ts`, `game.ts` (`refreshEquipmentVitals`, `getEquippedSetBonus`) |
+| 7.4 Sets de tier | Un set de 4 piezas por clase (ítems 1749 a 1780, ver abajo). 2 piezas: +10 % de vida. 4 piezas: +20 % de vida y +25 % de daño contra jugadores. Se aplica el escalón más alto, sin acumular | `server/jsons/sets.json` (lo arma `scripts/applyTierSetData.ts`), `tierSets.ts`, `game.ts` (`refreshEquipmentVitals`, `getEquippedSetBonus`) |
 | 7.6 Rarezas | Normal, Mejorado, Épico y Legendario por instancia de ítem (+1/+2/+3 al golpe y a la defensa, +2/+4/+6 al daño mágico). El Legendario no se cae al morir. **Las piezas de set son siempre Legendarias.** Mercado y subastas no aceptan ítems con rareza | `itemRarity.ts`, columna `rarity` en `character_items`, `character_bank_items`, `account_vault_items` y `clan_vault_items`, cliente `lib/itemRarity.ts` |
 | 7.7 Bugs | Maná de los ítems con "+maná" (OE) ahora suma; túnicas especiales leen el equipo en juego; pirata | `game.ts`, `equipmentRewardBonuses.ts`, `balanceData.ts` |
 | 7.8 Pociones | Intervalo de usar ítem 50 → 160 ms (como AoDrag) | `vars.ts` (`actionCooldowns.useItemMs`) |
 
 La rareza **no** suma a `resistenciaMagica`: es un porcentaje de reducción y +3 por pieza llevaba el set de guerrero de 17 % a 26 %, lo que descalibraba la magia contra cualquiera con set.
 
+### Los sets de tier
+
+| Clase | Set | Piezas |
+|---|---|---|
+| Mago | Arcano | 1749 Corona · 1750 Báculo · 1751 Escudo · 1752 Túnica |
+| Druida | Silvestre | 1753 Corona · 1754 Báculo · 1755 Escudo · 1756 Túnica |
+| Clérigo | Templario | 1757 Yelmo · 1758 Espada · 1759 Escudo · 1760 Armadura |
+| Paladín | Paladín | 1761 Yelmo · 1762 Espada · 1763 Escudo · 1764 Armadura |
+| Bardo | Bardo | 1765 Yelmo · 1766 Daga · 1767 Escudo · 1768 Armadura |
+| Guerrero | Verdugo | 1769 Yelmo · 1770 Espada · 1771 Escudo · 1772 Armadura |
+| Arquero | Silvano | 1773 Yelmo · 1774 Arco · 1775 Escudo · 1776 Armadura |
+| Asesino | Umbral | 1777 Yelmo · 1778 Daga · 1779 Escudo · 1780 Armadura |
+
+- **Stats:** las piezas venían con valores de relleno iguales para todas las clases (armadura 4-7, arma 8-12 con +28 de daño mágico y +300 de maná, incluso la del guerrero). `applyTierSetData.ts` les pone los de la calibración, por clase y lugar: un poco por encima de lo mejor común, con resistencia mágica en las clases físicas. Encima, la rareza Legendaria suma +3 al golpe o la defensa y +6 al daño mágico.
+- **Escudo de mago y druida:** lleva el daño mágico que en los sets viejos daba el anillo. El escudo ahora suma daño mágico como el resto del equipo (`applyMagicBonuses` en `game.ts`); con el tope de 90 el mago no sube.
+- **Clases sin set:** el cazador y el pirata (Silvano es solo del arquero y Verdugo solo del guerrero, según las restricciones de los ítems). En el simulador se los mide con su equipo común.
+- **Sets viejos (Desterrado y del Caído):** ya no son de tier (sin bono ni Legendario fijo) y volvieron a los stats que tenían antes del PR #54. Se siguen canjeando en premios.
+- **Cómo se consiguen:** hoy las piezas 1749 a 1780 no están en premios, tienda, drops ni misiones. Falta definir dónde se obtienen.
+- Las apariencias de la tienda (1781 en adelante) son cosméticas y no cuentan como pieza.
+
 Capturas de cada cosa en el juego: [capturas/](capturas/).
 
 ### Resultado en el simulador
 
-- Cruces dentro de ±0,5 aciertos del objetivo: **900 de 1344 (67 %)**, error cuadrático medio **0,40**. En `main`: 306 de 1344 (23 %) y 3,38.
+- Cruces dentro de ±0,5 aciertos del objetivo: **906 de 1344 (67 %)**, error cuadrático medio **0,40**. Antes del trabajo de balance: 286 de 1344 (21 %) y 3,66.
 - Lo pedido: mago contra mago **2 / 2 / 3** aciertos a nivel 30 / 40 / 50. Mago 50 con set contra guerrero sin set: **3** (pedido 2-3). Contra guerrero con set: **5** (pedido 4-5).
-- Efecto del set a nivel 50 (promedio): con set contra sin set mata en ×0,80 de los aciertos (objetivo ×0,75); sin set contra uno con set tarda ×1,42 (objetivo ×1,3).
+- Efecto del set a nivel 50 (promedio): con set contra sin set mata en ×0,81 de los aciertos (objetivo ×0,75); sin set contra uno con set tarda ×1,37 (objetivo ×1,3).
 
 ### Qué hay que hacer en producción al desplegar
 
@@ -48,10 +68,11 @@ Capturas de cada cosa en el juego: [capturas/](capturas/).
 
 ### Pendiente
 
-- **7.5 Normalizar las piezas de tier.** Algunas piezas de set pegan menos que la mejor común (por ejemplo, el Puñal Desterrado del asesino), así que el set no les sirve. Hay que normalizarlas y volver a calibrar.
+- **Dónde se consiguen los sets nuevos** (premios, tienda, drops o misiones).
+- **Set para cazador y pirata**, o habilitarles Silvano y Verdugo.
 - **Cazador:** la flecha sigue rápida contra todos (⚠ en las tablas); hace falta bajar `modDmgPvpProyectiles` del cazador o revisar su objetivo.
 - **Clases fuera de la matriz** (bardo como identidad final, pirata, ladrón, bandido, arquero) y **razas** distintas de la humana.
-- **Temporadas:** qué set es el de la temporada actual y qué pasa con el anterior (decisión 6).
+- **Razas bajas:** las armaduras de los sets nuevos no tienen versión para enanos, gnomos y goblins (`razaEnana` 0), así que no se las pueden poner.
 
 ---
 
@@ -262,7 +283,9 @@ Otros códigos, según la auditoría que pasó Leandro, confirmada en el código
 
 **No hay campos de "tier" ni de "temporada" en los objetos.** El sistema de temporadas del código (`environment.ts`) es solo del clima.
 
-Los sets que funcionan como tier son los **premios de canje** (`server/jsons/premios.json`): 40 piezas a 650 puntos de canje, de las familias **Desterrado** y **del Caído**, una por clase. En `objs.json` existen además sus versiones **+1, +2 y LEGENDARIA**. No se venden ni dropean.
+> **Nota (2026-10-23):** esta sección describe el análisis original. Los sets de tier reales son los de los ítems 1749 a 1780 (Arcano, Silvestre, Templario, Paladín, Bardo, Verdugo, Silvano y Umbral; ver la sección 0). Desterrado y del Caído quedaron como premios comunes, sin bono de set.
+
+En el análisis se tomaron como tier los **premios de canje** (`server/jsons/premios.json`): 40 piezas a 650 puntos de canje, de las familias **Desterrado** y **del Caído**, una por clase. En `objs.json` existen además sus versiones **+1, +2 y LEGENDARIA**. No se venden ni dropean.
 
 | Familia | Qué tiene | Problema |
 |---|---|---|
@@ -589,23 +612,23 @@ Sin esto, cualquier cambio de `balanceData.ts` no llega al juego.
 
 Tablas completas en [BALANCE_PVP_TABLAS.md](BALANCE_PVP_TABLAS.md) y, por clase, en [NIVELACION_POR_CLASE.md](NIVELACION_POR_CLASE.md).
 
-Nivel 50, equipo común contra común. Celda: aciertos `antes (main) → ahora (objetivo)`:
+Nivel 50, equipo común contra común. Celda: aciertos `antes → ahora (objetivo)`:
 
 | Atacante | Mago | Clérigo | Paladín | Guerrero |
 |---|---|---|---|---|
 | Mago, magia | 3,0 → **3,0** (3,0) | 3,0 → **3,0** (3,0) | 4,0 → **3,1** (3,5) | 4,0 → **4,0** (4,0) |
 | Druida, magia | 3,0 → **3,0** (4,0) ⚠ | 4,0 → **4,0** (4,0) | 4,0 → **4,0** (4,5) | 5,0 → **5,0** (5,0) |
 | Clérigo, golpe | 1,0 → **2,5** (3,0) | 1,9 → **3,8** (4,0) | 2,0 → **4,5** (4,5) | 2,0 → **4,6** (4,5) |
-| Paladín, golpe | 1,0 → **2,0** (2,5) | 1,0 → **3,1** (3,5) | 1,8 → **3,8** (4,0) | 1,9 → **3,9** (4,0) |
+| Paladín, golpe | 1,0 → **2,0** (2,5) | 1,0 → **3,1** (3,5) | 1,8 → **3,7** (4,0) | 1,9 → **3,9** (4,0) |
 | Asesino, golpe | 1,0 → **3,0** (3,0) | 1,6 → **4,0** (4,0) | 2,0 → **4,6** (4,5) | 2,0 → **4,8** (4,5) |
 | Guerrero, golpe | 1,0 → **2,0** (2,0) | 1,0 → **2,8** (3,0) | 1,0 → **3,0** (3,5) ⚠ | 1,5 → **3,0** (3,5) |
-| Cazador, flecha | 2,0 → **2,0** (3,0) ⚠ | 2,9 → **3,3** (4,0) ⚠ | 3,0 → **3,9** (4,5) ⚠ | 3,4 → **3,9** (4,5) ⚠ |
+| Cazador, flecha | 2,0 → **2,0** (3,0) ⚠ | 2,9 → **3,4** (4,0) ⚠ | 3,0 → **3,9** (4,5) ⚠ | 3,4 → **4,0** (4,5) ⚠ |
 
 Lo que todavía queda lejos del objetivo:
 - **Cazador con flecha:** mata más rápido que lo pedido contra todos.
 - **Druida con magia contra mago:** 3 en vez de 4 (el druida queda igual que el mago contra un mago).
 - **Guerrero contra paladín:** 3 en vez de 3,5.
-- **Lado defensivo del set:** sin set contra uno con set da ×1,42 (objetivo ×1,3). Con las piezas normalizadas (7.5) hay que volver a ajustar.
+- **Lado defensivo del set:** sin set contra uno con set da ×1,37 (objetivo ×1,3).
 - **Sin buffs** el físico queda lento. La matriz está pensada para el estado normal de PvP, con los dos buffeados; es el incentivo clásico de AO para buffearse.
 
 ---
@@ -669,9 +692,9 @@ Al terminar cada etapa, actualizar este documento: estado, valores finales y res
 
 | Clase | Común | Set |
 |---|---|---|
-| Mago | Báculo Mago 753 (+28 DM), Túnica Lujosa Azul 732, Sombrero Hechizado 1223, Anillo de Energía 1221 | Báculo Desterrado (MAGO) LEGENDARIO 1512, Túnica Desterrada (Mago) 1341, Capucha Mágica del Caído +2 1474, Anillo Mago del Caído 1357 |
-| Guerrero | Espada MataDragones 402, Placas Doradas +5F 729, Casco Centurión 832, Escudo Sajón 824 (sin anillo útil: el Anillo de Resistencia Mágica 988 no se consigue) | Espada del Caído LEGENDARIA 1503, Armadura del Caído 1347, Casco del Caído +2 1489, Escudo del Caído +2 1465 |
-| Druida | Báculo de la Naturaleza 1225, Túnica Legendaria 519, Sombrero Hechizado 1223, Anillo de Energía 1221 | Báculo Desterrado (DRUIDA) LEGENDARIO 1515, Túnica Desterrada (Druida) 1342, Corona de Plumas del Caído 1356 o 1477, Anillo Naturaleza del Caído LEGENDARIO 1454 |
+| Mago | Báculo Mago 753 (+28 DM), Túnica Lujosa Azul 732, Sombrero Hechizado 1223, Anillo de Energía 1221 | Set Arcano: Báculo Arcano 1750, Túnica Arcana 1752, Corona Arcana 1749, Escudo Arcano 1751, más el Anillo de Energía 1221 común |
+| Guerrero | Espada MataDragones 402, Placas Doradas +5F 729, Casco Centurión 832, Escudo Sajón 824 (sin anillo útil: el Anillo de Resistencia Mágica 988 no se consigue) | Set del Verdugo: Espada 1770, Armadura 1772, Yelmo 1769, Escudo 1771 |
+| Druida | Báculo de la Naturaleza 1225, Túnica Legendaria 519, Sombrero Hechizado 1223, Anillo de Energía 1221 | Set Silvestre: Báculo 1754, Túnica 1756, Corona 1753, Escudo 1755, más el Anillo de Energía 1221 común |
 | Clérigo, Paladín, Bardo, Asesino, Cazador | Ver [NIVELACION_POR_CLASE.md](NIVELACION_POR_CLASE.md) | Ver [NIVELACION_POR_CLASE.md](NIVELACION_POR_CLASE.md) |
 
 **Hechizo principal por nivel** (el mejor que la clase puede aprender, lanzar y pagar):

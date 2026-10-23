@@ -27,18 +27,6 @@ function clampAlpha(value: number): number {
     return Math.max(0, Math.min(1, value));
 }
 
-function easeInCubic(progress: number): number {
-    const clampedProgress = Math.max(0, Math.min(1, progress));
-
-    return clampedProgress * clampedProgress * clampedProgress;
-}
-
-function easeOutCubic(progress: number): number {
-    const clampedProgress = Math.max(0, Math.min(1, progress));
-
-    return 1 - Math.pow(1 - clampedProgress, 3);
-}
-
 function lerp(start: number, end: number, progress: number): number {
     return start + (end - start) * progress;
 }
@@ -138,35 +126,6 @@ export function shouldHighlightClanTag(
     }
 
     return (playerHud?.zonaSegura ?? character?.zonaSegura) === 0;
-}
-
-export function getInvisibilityCycleAlpha(
-    startedAt: number,
-    timing: RuntimeTimingConfig,
-    now = Date.now(),
-): number {
-    const fadeOutMs = Math.max(1, timing.visualEffects.invisibilityFadeOutMs);
-    const fadeInMs = Math.max(1, timing.visualEffects.invisibilityFadeInMs);
-    const minAlpha = clampAlpha(timing.visualEffects.invisibilityMinAlpha);
-    const maxAlpha = clampAlpha(timing.visualEffects.invisibilityMaxAlpha);
-    const hiddenAlpha = Math.min(minAlpha, maxAlpha);
-    const visibleAlpha = Math.max(minAlpha, maxAlpha);
-    const cycleDurationMs = fadeOutMs + fadeInMs;
-    const elapsedInCycle = Math.max(0, now - startedAt) % cycleDurationMs;
-
-    if (elapsedInCycle < fadeOutMs) {
-        return lerp(
-            visibleAlpha,
-            hiddenAlpha,
-            easeOutCubic(elapsedInCycle / fadeOutMs),
-        );
-    }
-
-    return lerp(
-        hiddenAlpha,
-        visibleAlpha,
-        easeInCubic((elapsedInCycle - fadeOutMs) / fadeInMs),
-    );
 }
 
 // Arranca invisible, aparece del todo a mitad del ciclo y vuelve a desaparecer (coseno).

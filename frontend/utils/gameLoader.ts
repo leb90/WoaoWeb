@@ -589,8 +589,8 @@ export async function loadGraphicsDB(): Promise<GraphicsDB> {
 export async function loadObjectsDB(): Promise<ObjectsDB> {
     try {
         return await fetchJsonWithFallback<ObjectsDB>(
-            "/init/objs.json?v=3.7",
-            "/init/objs.json?v=3.7",
+            "/init/objs.json?v=3.8",
+            "/init/objs.json?v=3.8",
             "objects database",
         );
     } catch (error) {

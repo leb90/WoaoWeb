@@ -8,7 +8,7 @@ import {
     Texture,
 } from "pixi.js";
 import type { RefObject } from "react";
-import type { HelmetData, GraphicData } from "../../../types/game";
+import type { BodyData, HelmetData, GraphicData } from "../../../types/game";
 import type {
     CharacterSnapshot,
     PlayerHudState,
@@ -47,6 +47,7 @@ import {
 import { getRowZIndex, Z_INDEX_LAYERS } from "./mapLayers";
 import { getMapRowLayerContainer } from "./rowLayerContainers";
 import { syncEquipmentAura } from "./equipmentAuras";
+import { getWarpedBodyTextures, resolveWarpRaceBodyId, setLayoutBodyData } from "./armorWarp";
 
 export function shouldRenderHead(
     engine: Engine,
@@ -867,6 +868,54 @@ function attachWalkFrameMs(
         Number.isFinite(speed) && speed >= 20 ? speed : 1000 / 18;
 }
 
+// Armadura adaptada a la silueta de la raza (rendering/armorWarp.ts). Devuelve los cuadros deformados
+// y el cuerpo de la raza, que manda en la ubicación de cabeza / casco y en la velocidad de animación.
+async function resolveArmorWarp(
+    engine: Engine,
+    entity: Character,
+    direction: string,
+    bodyGraphicId: number,
+    bodyTextures: Texture[],
+    deps: Pick<
+        CharacterRendererDeps,
+        "loadCharacterTextures" | "resolveNakedBodyIdFromHeadId"
+    >,
+): Promise<{ textures: Texture[]; bodyData: BodyData; graphicData: GraphicData } | null> {
+    const raceBodyId = resolveWarpRaceBodyId(
+        entity,
+        engine.objectsDB,
+        deps.resolveNakedBodyIdFromHeadId,
+    );
+    const raceBodyData = raceBodyId
+        ? engine.bodiesDB?.[raceBodyId.toString()]
+        : undefined;
+    const raceGraphicId = raceBodyData?.[direction as "1" | "2" | "3" | "4"];
+    const raceGraphicData = raceGraphicId
+        ? engine.graphicsDB?.[raceGraphicId.toString()]
+        : undefined;
+    if (!raceBodyData || !raceGraphicId || !raceGraphicData) return null;
+
+    let raceTextures = engine.animatedTextureCache.get(raceGraphicId.toString());
+    if (!raceTextures) {
+        const loadedTextures = await deps.loadCharacterTextures(
+            engine,
+            raceGraphicId,
+            raceGraphicData,
+        );
+        if (!loadedTextures) return null;
+        raceTextures = loadedTextures;
+        engine.animatedTextureCache.set(raceGraphicId.toString(), loadedTextures);
+    }
+    const textures = getWarpedBodyTextures(
+        `${bodyGraphicId}>${raceGraphicId}`,
+        bodyTextures,
+        raceTextures,
+    );
+    return textures
+        ? { textures, bodyData: raceBodyData, graphicData: raceGraphicData }
+        : null;
+}
+
 function ensureSpriteCharacterChild(
     container: CharacterDisplayContainer,
     key: CharacterDisplayStorageKey,
@@ -1008,6 +1057,25 @@ export async function renderRemoteCharacter(
     }
     if (shouldAbortRender()) return;
     if (!bodyTextures || bodyTextures.length === 0) return;
+
+    let layoutBodyData = bodyData;
+    let walkGraphicData = bodyGraphicData;
+    if (!bodyRenderState?.isFallback) {
+        const warp = await resolveArmorWarp(
+            engine,
+            entity,
+            direction,
+            bodyGraphicId,
+            bodyTextures,
+            deps,
+        );
+        if (shouldAbortRender()) return;
+        if (warp) {
+            bodyTextures = warp.textures;
+            layoutBodyData = warp.bodyData;
+            walkGraphicData = warp.graphicData;
+        }
+    }
 
     if (weaponData) {
         const weaponGraphicId =
@@ -1156,7 +1224,8 @@ export async function renderRemoteCharacter(
         "isRemoteBody",
         bodyTextures,
     );
-    attachWalkFrameMs(bodySprite, bodyGraphicData);
+    attachWalkFrameMs(bodySprite, walkGraphicData);
+    setLayoutBodyData(container, entity.idBody, layoutBodyData);
     const bodyPosition = getBodySpritePosition(bodyTextures[0]);
     bodySprite.x = bodyPosition.x;
     bodySprite.y = bodyPosition.y;
@@ -1187,7 +1256,7 @@ export async function renderRemoteCharacter(
         const weaponPosition = getEquipmentSpritePosition(
             "weapon",
             weaponTextures[0],
-            bodyData.headOffsetY,
+            layoutBodyData.headOffsetY,
             weaponData,
         );
         weaponSprite.x = Math.round(weaponPosition.x);
@@ -1213,7 +1282,7 @@ export async function renderRemoteCharacter(
         const shieldPosition = getEquipmentSpritePosition(
             "shield",
             shieldTextures[0],
-            bodyData.headOffsetY,
+            layoutBodyData.headOffsetY,
             shieldData,
         );
         shieldSprite.x = Math.round(shieldPosition.x);
@@ -1238,7 +1307,7 @@ export async function renderRemoteCharacter(
         );
         const headPosition = getHeadSpritePosition(
             bodyMetrics,
-            bodyData,
+            layoutBodyData,
             headTexture,
         );
         headSprite.x = Math.round(headPosition.x);
@@ -1263,7 +1332,7 @@ export async function renderRemoteCharacter(
         );
         const helmetPosition = getHelmetSpritePosition(
             bodyMetrics,
-            bodyData,
+            layoutBodyData,
             helmetTexture,
             helmetData,
             headTexture ?? helmetTexture,
@@ -1415,7 +1484,8 @@ export async function renderRemoteCharacter(
                 : Boolean(clanLabelText && shouldShowRemoteName),
             showHealthBar:
                 !entity.adminSummonedBot &&
-                engine.healthBarEntityIds.has(entity.id),
+                (engine.healthBarEntityIds.has(entity.id) ||
+                    engine.hoveredEntityId === entity.id),
         },
         deps.destroyDisplayObjectSafely,
     );
@@ -1568,6 +1638,25 @@ export async function renderLocalPlayer(
         return;
     }
 
+    let layoutBodyData = bodyData;
+    let walkGraphicData = bodyGraphicData;
+    if (!bodyRenderState?.isFallback) {
+        const warp = await resolveArmorWarp(
+            engine,
+            engine.user,
+            direction,
+            bodyGraphicId,
+            bodyTextures,
+            deps,
+        );
+        if (isStaleRender()) return;
+        if (warp) {
+            bodyTextures = warp.textures;
+            layoutBodyData = warp.bodyData;
+            walkGraphicData = warp.graphicData;
+        }
+    }
+
     let weaponTextures: Texture[] | undefined;
     let shieldTextures: Texture[] | undefined;
     let headTexture: Texture | undefined;
@@ -1695,7 +1784,8 @@ export async function renderLocalPlayer(
         "isPlayerBody",
         bodyTextures,
     );
-    attachWalkFrameMs(bodySprite, bodyGraphicData);
+    attachWalkFrameMs(bodySprite, walkGraphicData);
+    setLayoutBodyData(container, engine.user.idBody, layoutBodyData);
     const bodyPosition = getBodySpritePosition(bodyTextures[0]);
     bodySprite.x = bodyPosition.x;
     bodySprite.y = bodyPosition.y;
@@ -1723,7 +1813,7 @@ export async function renderLocalPlayer(
         const weaponPosition = getEquipmentSpritePosition(
             "weapon",
             weaponTextures[0],
-            bodyData.headOffsetY,
+            layoutBodyData.headOffsetY,
             weaponData,
         );
         weaponSprite.x = Math.round(weaponPosition.x);
@@ -1748,7 +1838,7 @@ export async function renderLocalPlayer(
         const shieldPosition = getEquipmentSpritePosition(
             "shield",
             shieldTextures[0],
-            bodyData.headOffsetY,
+            layoutBodyData.headOffsetY,
             shieldData,
         );
         shieldSprite.x = Math.round(shieldPosition.x);
@@ -1772,7 +1862,7 @@ export async function renderLocalPlayer(
         );
         const headPosition = getHeadSpritePosition(
             bodyMetrics,
-            bodyData,
+            layoutBodyData,
             headTexture,
         );
         headSprite.x = Math.round(headPosition.x);
@@ -1796,7 +1886,7 @@ export async function renderLocalPlayer(
         );
         const helmetPosition = getHelmetSpritePosition(
             bodyMetrics,
-            bodyData,
+            layoutBodyData,
             helmetTexture,
             helmetData,
             headTexture ?? helmetTexture,

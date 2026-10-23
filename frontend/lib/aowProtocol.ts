@@ -283,6 +283,7 @@ export interface CharacterSnapshot {
     isClanMember?: boolean;
     // Invisible en pelea PvP: ms que le quedan parpadeando (0 = invisible del todo para los enemigos).
     pvpRevealRemainingMs?: number;
+    isHostileNpc?: boolean;
     color?: string;
     clan?: string;
     inmovilizado?: number;
@@ -1829,6 +1830,9 @@ function parseNpc(reader: PacketReader): CharacterSnapshot {
 
     if (reader.canReadBytes(1)) {
         snapshot.questStatus = reader.getByte();
+    }
+    if (reader.canReadBytes(2)) {
+        snapshot.isHostileNpc = reader.getByte() === 1;
     }
     snapshot.tt = reader.canReadBytes(1) ? reader.getByte() : 0;
     return snapshot;

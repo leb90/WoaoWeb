@@ -966,6 +966,8 @@ function writeNpcPayload(npc: ProtocolNpc, viewerId?: EntityId) {
     pkg.writeShort(npc.hp);
     pkg.writeShort(npc.maxHp);
     pkg.writeByte(getNpcQuestStatusForViewer(npc, viewerId));
+    // Hostil (ataca solo): el cliente lo usa para el color del contorno al pasar el mouse.
+    pkg.writeByte(Number((npc as { hostile?: number }).hostile ?? 0) === 1 || Number(npc.movement ?? 0) === 3 ? 1 : 0);
 }
 
 function writeAreaItemSnapshot(item: AreaItemSnapshot) {

@@ -164,6 +164,7 @@ function remapExistingItem(
     existing.anim = newest.anim;
     existing.grhIndex = newest.grhIndex;
     existing.noSeCae = 1;
+    existing.itemEspecial = 1;
     existing.newbie = 0;
     existing.razaEnana = 0;
     existing.minDef = 8;

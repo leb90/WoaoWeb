@@ -8,6 +8,8 @@ Este documento sirve para retomar el trabajo en cualquier momento. Tiene:
 - qué se midió y con qué herramienta;
 - qué cambiar, por qué y en qué archivo.
 
+**Para leer rápido** (gráficos y, por clase, qué ítems usa, cuánto pega y en cuántos aciertos mata, hoy y con la propuesta): [NIVELACION_POR_CLASE.md](NIVELACION_POR_CLASE.md).
+
 Las tablas completas están en [BALANCE_PVP_TABLAS.md](BALANCE_PVP_TABLAS.md). El simulador está en `server/src/scripts/balanceSim/`.
 
 Documento previo de referencia: [combat-balance.md](combat-balance.md), del PR #52, con el modelo de balance de Eze (ezesaraniti22).
@@ -93,6 +95,8 @@ Las anclas que pidió Leandro, una por una:
 | Mago con set contra guerrero con set, nivel 50 | 4-5 | 4,0 | 4,0 |
 | Guerrero contra mago, nivel 50, equipo común | (no pedido) | 1,0 | 2,0 |
 | Guerrero contra guerrero, nivel 50, equipo común | (no pedido) | 1,5 | 3,7 |
+
+![Lo pedido: hoy y con la propuesta](graficos/anclas-del-pedido.svg)
 
 El daño por acierto también sigue la identidad pedida (nivel 50, equipo común contra mago, en el simulador):
 
@@ -282,6 +286,8 @@ El simulador usa Humano en todos los cruces.
 | `targets.ts` | La matriz objetivo de la sección 6 y el puntaje (celdas a ±0,5, error cuadrático). |
 | `report.ts` | Tablas markdown (`tabla`, `comparar`). |
 | `tune.ts` | Barrido de factores PvP por fila de atacante contra la matriz objetivo. |
+| `charts.ts` | Gráficos de barras SVG en `docs/balance/graficos/`. |
+| `guide.ts` | Genera [NIVELACION_POR_CLASE.md](NIVELACION_POR_CLASE.md) con el equipo de cada clase y sus números. |
 | `propuestas/propuesta-v1.json` | La propuesta de este documento. |
 
 Uso:
@@ -618,9 +624,9 @@ Al terminar cada etapa, actualizar este documento: estado, valores finales y res
 | Clase | Común | Set |
 |---|---|---|
 | Mago | Báculo Mago 753 (+28 DM), Túnica Lujosa Azul 732, Sombrero Hechizado 1223, Anillo de Energía 1221 | Báculo Desterrado (MAGO) LEGENDARIO 1512, Túnica Desterrada (Mago) 1341, Capucha Mágica del Caído +2 1474, Anillo Mago del Caído 1357 |
-| Guerrero | Espada MataDragones 402, Placas Doradas +5F 729, Casco Centurión 832, Escudo Sajón 824, Anillo de Magia 1242 | Espada del Caído LEGENDARIA 1503, Armadura del Caído 1347, Casco del Caído +2 1489, Escudo del Caído +2 1465 |
+| Guerrero | Espada MataDragones 402, Placas Doradas +5F 729, Casco Centurión 832, Escudo Sajón 824 (sin anillo útil: el Anillo de Resistencia Mágica 988 no se consigue) | Espada del Caído LEGENDARIA 1503, Armadura del Caído 1347, Casco del Caído +2 1489, Escudo del Caído +2 1465 |
 | Druida | Báculo de la Naturaleza 1225, Túnica Legendaria 519, Sombrero Hechizado 1223, Anillo de Energía 1221 | Báculo Desterrado (DRUIDA) LEGENDARIO 1515, Túnica Desterrada (Druida) 1342, Corona de Plumas del Caído 1356 o 1477, Anillo Naturaleza del Caído LEGENDARIO 1454 |
-| Clérigo, Paladín, Bardo, Asesino, Cazador | Ver `loadouts` en la salida del simulador | Ver `loadouts` en la salida del simulador |
+| Clérigo, Paladín, Bardo, Asesino, Cazador | Ver [NIVELACION_POR_CLASE.md](NIVELACION_POR_CLASE.md) | Ver [NIVELACION_POR_CLASE.md](NIVELACION_POR_CLASE.md) |
 
 **Hechizo principal por nivel** (el mejor que la clase puede aprender, lanzar y pagar):
 

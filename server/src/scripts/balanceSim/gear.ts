@@ -96,6 +96,8 @@ function best(classId: number, role: GearRole, slot: GearSlot, filter: (id: numb
         const id = Number(rawId);
         if (slotOf(item) !== slot || !usableBy(item, classId) || !filter(id)) continue;
         const value = score(item, slot, role);
+        // Un ítem sin efecto en combate (por ejemplo, el Anillo de Magia #1242) no se equipa.
+        if (value <= 0) continue;
         if (!top || value > top.value) top = { id, value };
     }
     return top?.id ?? 0;

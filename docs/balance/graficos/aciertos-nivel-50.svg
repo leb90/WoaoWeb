@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="892" viewBox="0 0 900 892" font-family="Helvetica, Arial, sans-serif">
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="20" y="30" font-size="19" font-weight="700" fill="#111827">Nivel 50: aciertos para matar a alguien de tu nivel</text>
+<text x="20" y="52" font-size="12.5" fill="#4b5563">Equipo común contra común, buffeados. Promedio contra las 8 clases. Más alto = combate más largo.</text>
+<rect x="20" y="68" width="14" height="12" fill="#9ca3af" rx="2"/>
+<text x="40" y="79" font-size="12.5" fill="#374151">Hoy</text>
+<rect x="76.7" y="68" width="14" height="12" fill="#2563eb" rx="2"/>
+<text x="96.7" y="79" font-size="12.5" fill="#374151">Propuesta</text>
+<rect x="179.8" y="64" width="4" height="20" fill="#15803d"/>
+<text x="194.8" y="79" font-size="12.5" fill="#374151">Objetivo</text>
+<line x1="190" y1="104" x2="190" y2="846" stroke="#6b7280" stroke-width="1"/>
+<text x="190" y="864" font-size="11" text-anchor="middle" fill="#6b7280">0</text>
+<line x1="318" y1="104" x2="318" y2="846" stroke="#e5e7eb" stroke-width="1"/>
+<text x="318" y="864" font-size="11" text-anchor="middle" fill="#6b7280">2</text>
+<line x1="446" y1="104" x2="446" y2="846" stroke="#e5e7eb" stroke-width="1"/>
+<text x="446" y="864" font-size="11" text-anchor="middle" fill="#6b7280">4</text>
+<line x1="574" y1="104" x2="574" y2="846" stroke="#e5e7eb" stroke-width="1"/>
+<text x="574" y="864" font-size="11" text-anchor="middle" fill="#6b7280">6</text>
+<line x1="702" y1="104" x2="702" y2="846" stroke="#e5e7eb" stroke-width="1"/>
+<text x="702" y="864" font-size="11" text-anchor="middle" fill="#6b7280">8</text>
+<line x1="830" y1="104" x2="830" y2="846" stroke="#e5e7eb" stroke-width="1"/>
+<text x="830" y="864" font-size="11" text-anchor="middle" fill="#6b7280">10</text>
+<text x="510" y="884" font-size="12" text-anchor="middle" fill="#374151">Aciertos para matar</text>
+<text x="180" y="128.5" font-size="12.5" font-weight="600" text-anchor="end" fill="#111827">Mago</text>
+<text x="180" y="143.5" font-size="11.5" text-anchor="end" fill="#4b5563">magia</text>
+<rect x="190" y="116" width="216" height="13" fill="#9ca3af" rx="2"/>
+<rect x="190" y="132" width="203.12" height="13" fill="#2563eb" rx="2"/>
+<rect x="400" y="108" width="4" height="45" fill="#15803d"/>
+<text x="411" y="127" font-size="11" font-weight="600" fill="#111827" paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">3,4</text>
+<text x="398.12" y="143" font-size="11" font-weight="600" fill="#111827" paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">3,2</text>
+<rect x="190" y="157" width="640" height="53" fill="#f9fafb"/>
+<text x="180" y="181.5" font-size="12.5" font-weight="600" text-anchor="end" fill="#111827">Druida</text>
+<text x="180" y="196.5" font-size="11.5" text-anchor="end" fill="#4b5563">magia</text>
+<rect x="190" y="169" width="256" height="13" fill="#9ca3af" rx="2"/>
+<rect x="190" y="185" width="292.88" height="13" fill="#2563eb" rx="2"/>
+<rect x="464" y="161" width="4" height="45" fill="#15803d"/>
+<text x="451" y="180" font-size="11" font-weight="600" fill="#111827" paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">4,0</text>
+<text x="487.88" y="196" font-size="11" font-weight="600" fill="#111827" paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">4,6</text>
+<text x="180" y="234.5" font-size="12.5" font-weight="600" text-anchor="end" fill="#111827">Druida</text>
+<text x="180" y="249.5" font-size="11.5" text-anchor="end" fill="#4b5563">golpe</text>
+<rect x="190" y="222" width="285.2" height="13" fill="#9ca3af" rx="2"/>
+<rect x="190" y="238" width="267.03999999999996" height="13" fill="#2563eb" rx="2"/>
+<rect x="464" y="214" width="4" height="45" fill="#15803d"/>
+<text x="480.2" y="233" font-size="11" font-weight="600" fill="#111827" paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">4,5</text>
+<text x="462.03999999999996" y="249" font-size="11" font-weight="600" fill="#111827" paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">4,2</text>
+<rect x="190" y="263" width="640" height="53" fill="#f9fafb"/>
+<text x="180" y="287.5" font-size="12.5" font-weight="600" text-anchor="end" fill="#111827">Clérigo</text>
+<text x="180" y="302.5" font-size="11.5" text-anchor="end" fill="#4b5563">magia</text>
+<rect x="190" y="275" width="317.76" height="13" fill="#9ca3af" rx="2"/>
+<rect x="190" y="291" width="291.52" height="13" fill="#2563eb" rx="2"/>
+<rect x="496" y="267" width="4" height="45" fill="#15803d"/>
+<text x="512.76" y="286" font-size="11" font-weight="600" fill="#111827" paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">5,0</text>
+<text x="486.52" y="302" font-size="11" font-weight="600" fill="#111827" paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">4,6</text>
+<text x="180" y="340.5" font-size="12.5" font-weight="600" text-anchor="end" fill="#111827">Clérigo</text>
+<text x="180" y="355.5" font-size="11.5" text-anchor="end" fill="#4b5563">golpe</text>
+<rect x="190" y="328" width="111.92000000000002" height="13" fill="#9ca3af" rx="2"/>
+<rect x="190" y="344" width="243.83999999999997" height="13" fill="#2563eb" rx="2"/>
+<rect x="432" y="320" width="4" height="45" fill="#15803d"/>
+<text x="306.92" y="339" font-size="11" font-weight="600" fill="#111827" paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">1,7</text>
+<text x="438.84" y="355" font-size="11" font-weight="600" fill="#111827" paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">3,8</text>
+<rect x="190" y="369" width="640" height="53" fill="#f9fafb"/>
+<text x="180" y="393.5" font-size="12.5" font-weight="600" text-anchor="end" fill="#111827">Bardo</text>
+<text x="180" y="408.5" font-size="11.5" text-anchor="end" fill="#4b5563">magia</text>
+<rect x="190" y="381" width="354.56000000000006" height="13" fill="#9ca3af" rx="2"/>
+<rect x="190" y="397" width="279.76" height="13" fill="#2563eb" rx="2"/>
+<rect x="464" y="373" width="4" height="45" fill="#15803d"/>
+<text x="549.5600000000001" y="392" font-size="11" font-weight="600" fill="#111827" paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">5,5</text>
+<text x="474.76" y="408" font-size="11" font-weight="600" fill="#111827" paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">4,4</text>
+<text x="180" y="446.5" font-size="12.5" font-weight="600" text-anchor="end" fill="#111827">Bardo</text>
+<text x="180" y="461.5" font-size="11.5" text-anchor="end" fill="#4b5563">golpe</text>
+<rect x="190" y="434" width="124.80000000000001" height="13" fill="#9ca3af" rx="2"/>
+<rect x="190" y="450" width="290.96000000000004" height="13" fill="#2563eb" rx="2"/>
+<rect x="464" y="426" width="4" height="45" fill="#15803d"/>
+<text x="319.8" y="445" font-size="11" font-weight="600" fill="#111827" paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">1,9</text>
+<text x="485.96000000000004" y="461" font-size="11" font-weight="600" fill="#111827" paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">4,5</text>
+<rect x="190" y="475" width="640" height="53" fill="#f9fafb"/>
+<text x="180" y="499.5" font-size="12.5" font-weight="600" text-anchor="end" fill="#111827">Paladín</text>
+<text x="180" y="514.5" font-size="11.5" text-anchor="end" fill="#4b5563">magia</text>
+<rect x="190" y="487" width="494.55999999999995" height="13" fill="#9ca3af" rx="2"/>
+<rect x="190" y="503" width="347.52" height="13" fill="#2563eb" rx="2"/>
+<rect x="560" y="479" width="4" height="45" fill="#15803d"/>
+<text x="689.56" y="498" font-size="11" font-weight="600" fill="#111827" paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">7,7</text>
+<text x="542.52" y="514" font-size="11" font-weight="600" fill="#111827" paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">5,4</text>
+<text x="180" y="552.5" font-size="12.5" font-weight="600" text-anchor="end" fill="#111827">Paladín</text>
+<text x="180" y="567.5" font-size="11.5" text-anchor="end" fill="#4b5563">golpe</text>
+<rect x="190" y="540" width="84.24000000000001" height="13" fill="#9ca3af" rx="2"/>
+<rect x="190" y="556" width="195.91999999999996" height="13" fill="#2563eb" rx="2"/>
+<rect x="400" y="532" width="4" height="45" fill="#15803d"/>
+<text x="279.24" y="551" font-size="11" font-weight="600" fill="#111827" paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">1,3</text>
+<text x="390.91999999999996" y="567" font-size="11" font-weight="600" fill="#111827" paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">3,1</text>
+<rect x="190" y="581" width="640" height="53" fill="#f9fafb"/>
+<text x="180" y="605.5" font-size="12.5" font-weight="600" text-anchor="end" fill="#111827">Asesino</text>
+<text x="180" y="620.5" font-size="11.5" text-anchor="end" fill="#4b5563">magia</text>
+<rect x="190" y="593" width="510.24" height="13" fill="#9ca3af" rx="2"/>
+<rect x="190" y="609" width="337.03999999999996" height="13" fill="#2563eb" rx="2"/>
+<rect x="560" y="585" width="4" height="45" fill="#15803d"/>
+<text x="705.24" y="604" font-size="11" font-weight="600" fill="#111827" paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">8,0</text>
+<text x="532.04" y="620" font-size="11" font-weight="600" fill="#111827" paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">5,3</text>
+<text x="180" y="658.5" font-size="12.5" font-weight="600" text-anchor="end" fill="#111827">Asesino</text>
+<text x="180" y="673.5" font-size="11.5" text-anchor="end" fill="#4b5563">golpe</text>
+<rect x="190" y="646" width="105.92000000000002" height="13" fill="#9ca3af" rx="2"/>
+<rect x="190" y="662" width="215.12" height="13" fill="#2563eb" rx="2"/>
+<rect x="432" y="638" width="4" height="45" fill="#15803d"/>
+<text x="300.92" y="657" font-size="11" font-weight="600" fill="#111827" paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">1,7</text>
+<text x="410.12" y="673" font-size="11" font-weight="600" fill="#111827" paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">3,4</text>
+<rect x="190" y="687" width="640" height="53" fill="#f9fafb"/>
+<text x="180" y="711.5" font-size="12.5" font-weight="600" text-anchor="end" fill="#111827">Guerrero</text>
+<text x="180" y="726.5" font-size="11.5" text-anchor="end" fill="#4b5563">golpe</text>
+<rect x="190" y="699" width="68.07999999999998" height="13" fill="#9ca3af" rx="2"/>
+<rect x="190" y="715" width="191.51999999999998" height="13" fill="#2563eb" rx="2"/>
+<rect x="368" y="691" width="4" height="45" fill="#15803d"/>
+<text x="263.08" y="710" font-size="11" font-weight="600" fill="#111827" paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">1,1</text>
+<text x="386.52" y="726" font-size="11" font-weight="600" fill="#111827" paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">3,0</text>
+<text x="180" y="764.5" font-size="12.5" font-weight="600" text-anchor="end" fill="#111827">Cazador</text>
+<text x="180" y="779.5" font-size="11.5" text-anchor="end" fill="#4b5563">flecha</text>
+<rect x="190" y="752" width="178.55999999999995" height="13" fill="#9ca3af" rx="2"/>
+<rect x="190" y="768" width="267.04" height="13" fill="#2563eb" rx="2"/>
+<rect x="432" y="744" width="4" height="45" fill="#15803d"/>
+<text x="373.55999999999995" y="763" font-size="11" font-weight="600" fill="#111827" paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">2,8</text>
+<text x="462.04" y="779" font-size="11" font-weight="600" fill="#111827" paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">4,2</text>
+<rect x="190" y="793" width="640" height="53" fill="#f9fafb"/>
+<text x="180" y="817.5" font-size="12.5" font-weight="600" text-anchor="end" fill="#111827">Cazador</text>
+<text x="180" y="832.5" font-size="11.5" text-anchor="end" fill="#4b5563">golpe</text>
+<rect x="190" y="805" width="109.03999999999996" height="13" fill="#9ca3af" rx="2"/>
+<rect x="190" y="821" width="354.79999999999995" height="13" fill="#2563eb" rx="2"/>
+<rect x="496" y="797" width="4" height="45" fill="#15803d"/>
+<text x="304.03999999999996" y="816" font-size="11" font-weight="600" fill="#111827" paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">1,7</text>
+<text x="549.8" y="832" font-size="11" font-weight="600" fill="#111827" paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">5,5</text>
+</svg>

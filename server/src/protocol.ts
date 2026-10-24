@@ -4186,7 +4186,12 @@ function attackSpell(ws: RuntimeClient) {
             return;
         }
 
-        const manaCost = getSpellManaCost(user, datSpell, Number(datSpell.manaRequired ?? 0));
+        const baseManaCost = getSpellManaCost(user, datSpell, Number(datSpell.manaRequired ?? 0));
+        // Escudos mágico y físico del chamán: piden el mínimo y se llevan todo el maná que quede.
+        const manaCost =
+            Number(datSpell.gastaTodaMana ?? 0) === 1 && user.mana >= baseManaCost
+                ? Math.max(baseManaCost, Number(user.mana))
+                : baseManaCost;
         if (user.mana < manaCost) {
             handleProtocol.console("No tienes mana suficiente para lanzar ese hechizo.", "white", 0, 0, ws);
             return;

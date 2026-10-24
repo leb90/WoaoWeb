@@ -16,7 +16,8 @@ const npcPaths = ["server/jsons/npcs.json", "api/src/jsons/npcs.json"];
 // Campos que se agregan o cambian en hechizos que ya existen.
 const spellChanges: Record<number, Record<string, unknown>> = {
     1: { name: "Curar efectos", curaEfectos: 1 },
-    7: { elemental: 1 },
+    // Es el hechizo con el que arranca el chamán: a nivel 1 el tope de cada habilidad es 5 puntos.
+    7: { elemental: 1, minSkill: 5 },
     // Pega poco: pasa a ser para criaturas (como Onda de Luz) y gasta menos.
     15: { elemental: 1, target: 2, manaRequired: 120 },
     23: { name: "Descarga eléctrica", elemental: 1, ralentiza: 6000 },
@@ -84,8 +85,8 @@ type NewSpell = Record<string, unknown> & { name: string };
 // fxGrh 146 a 152 son efectos nuevos indexados para el chamán y el clérigo (ver el documento). Los escudos y la
 // evasión no tienen efecto al lanzar: el aura aparece enseguida y queda mientras dura (frontend elementalAuras.ts).
 const newSpells: Record<number, NewSpell> = {
-    76: { name: "Escudo mágico", escudoPropio: "magico", target: 1, manaRequired: 300, minSkill: 80, minNivel: 20, fxGrh: 0, wav: 16, palabrasMagicas: "AQUA VEL'MA" },
-    77: { name: "Escudo físico", escudoPropio: "fisico", target: 1, manaRequired: 300, minSkill: 80, minNivel: 20, fxGrh: 0, wav: 16, palabrasMagicas: "TERRA GUAR'D" },
+    76: { name: "Escudo mágico", escudoPropio: "magico", gastaTodaMana: 1, target: 1, manaRequired: 300, minSkill: 80, minNivel: 20, fxGrh: 0, wav: 16, palabrasMagicas: "AQUA VEL'MA" },
+    77: { name: "Escudo físico", escudoPropio: "fisico", gastaTodaMana: 1, target: 1, manaRequired: 300, minSkill: 80, minNivel: 20, fxGrh: 0, wav: 16, palabrasMagicas: "TERRA GUAR'D" },
     78: { name: "Escudo de energía", escudoPropio: "energia", target: 1, manaRequired: 450, minSkill: 110, minNivel: 30, fxGrh: 0, wav: 16, palabrasMagicas: "PETRA VOLX" },
     79: { name: "Ráfaga de viento", elemental: 1, subeHp: 2, minHp: 40, maxHp: 46, silencioMagia: 4000, target: 3, manaRequired: 600, minSkill: 110, minNivel: 25, fxGrh: 87, wav: 27, palabrasMagicas: "VEN'TO RAX" },
     80: { name: "Prisión de agua", elemental: 1, silencioTotal: 3000, silencioTipo: "agua", target: 1, manaRequired: 700, minSkill: 130, minNivel: 35, fxGrh: 0, wav: 16, palabrasMagicas: "AQUA CAR'CER" },
@@ -114,8 +115,9 @@ function describe(spell: Record<string, any>): string {
         if (Number(spell.silencioRespiro ?? 0) > 0) parts.push(`No se acumula y deja ${Number(spell.silencioRespiro) / 1000} s de respiro.`);
     }
     if (Number(spell.quema ?? 0) > 0) parts.push(`Lo quema: ${spell.quema} de daño cada 3 s hasta que se cure con Curar efectos.`);
-    if (spell.escudoPropio === "magico") parts.push("Escudo propio por 30 s: reduce a la mitad el daño mágico y elemental que recibes.");
-    if (spell.escudoPropio === "fisico") parts.push("Escudo propio por 30 s: reduce a la mitad el daño de golpes y flechas que recibes.");
+    if (spell.escudoPropio === "magico") parts.push("Escudo propio por 10 s: reduce a la mitad el daño mágico y elemental que recibes.");
+    if (spell.escudoPropio === "fisico") parts.push("Escudo propio por 10 s: reduce a la mitad el daño de golpes y flechas que recibes.");
+    if (Number(spell.gastaTodaMana ?? 0) === 1) parts.push(`Gasta todo tu maná (mínimo ${spell.manaRequired}).`);
     if (spell.escudoPropio === "energia") parts.push("Escudo propio por 30 s: cada 2 s una piedra golpea a quien atacaste, si está a 4 baldosas o menos.");
     if (spell.escudoAliado === "magico") parts.push("Por 60 s el objetivo recibe 5 % menos daño mágico y elemental.");
     if (spell.escudoAliado === "fisico") parts.push("Por 60 s el objetivo recibe 5 % menos daño de golpes y flechas.");

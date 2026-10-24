@@ -554,8 +554,8 @@ export async function loadGraphicsDB(): Promise<GraphicsDB> {
     try {
         const optimizedGraphicsDb =
             await fetchJsonWithFallback<CompactGraphicsDB>(
-                "/init/graficos_optimized.json?v=3.34",
-                "/init/graficos_optimized.json?v=3.34",
+                "/init/graficos_optimized.json?v=3.35",
+                "/init/graficos_optimized.json?v=3.35",
                 "optimized graphics database",
                 { preferLocal: PREFER_LOCAL_GRAPHICS },
             );
@@ -917,8 +917,8 @@ export async function loadHelmetsDB(): Promise<HelmetsDB> {
 export async function loadFXsDB(): Promise<FXsDB> {
     try {
         return await fetchJsonWithFallback<FXsDB>(
-            "/init/fxs.json?v=3.5",
-            "/init/fxs.json?v=3.5",
+            "/init/fxs.json?v=3.6",
+            "/init/fxs.json?v=3.6",
             "effects database",
         );
     } catch (error) {
@@ -930,8 +930,8 @@ export async function loadFXsDB(): Promise<FXsDB> {
 export async function loadSpellsDB(): Promise<SpellsDB> {
     try {
         return await fetchJsonWithFallback<SpellsDB>(
-            "/init/spells.json?v=3.1",
-            "/init/spells.json?v=3.1",
+            "/init/spells.json?v=3.2",
+            "/init/spells.json?v=3.2",
             "spells database",
             { preferLocal: PREFER_LOCAL_SPELLS_ASSETS },
         );

@@ -12,11 +12,11 @@ import {
 // Las auras viven dentro del contenedor del personaje, así se mueven con él y respetan su transparencia.
 
 // Efecto en bucle de cada aura (fxs.json) y si va detrás del cuerpo.
-type AuraKind = "shield" | "evasion" | "ally" | "silence";
-type AuraSpec = { fxId: number; behind: boolean; alpha: number };
+type AuraKind = "shield" | "evasion" | "ally" | "silence" | "mute";
+type AuraSpec = { fxId: number; behind: boolean; alpha: number; zIndex?: number };
 
 export const ELEMENTAL_AURA_FX: Record<
-    "magico" | "fisico" | "energia" | "evasion" | "ally" | "agua" | "rayo",
+    "magico" | "fisico" | "energia" | "evasion" | "ally" | "agua" | "rayo" | "mute",
     AuraSpec
 > = {
     magico: { fxId: 147, behind: false, alpha: 0.7 },
@@ -28,6 +28,8 @@ export const ELEMENTAL_AURA_FX: Record<
     // Silenciado: encerrado en la esfera de agua (Prisión de agua) o con chispas en la cabeza (Rayo Eléctrico).
     agua: { fxId: 149, behind: false, alpha: 0.8 },
     rayo: { fxId: 154, behind: false, alpha: 0.95 },
+    // Cara muda sobre la cabeza, como en Dota 2: cualquier silencio (Rayo Eléctrico, Prisión de agua, Ráfaga de viento).
+    mute: { fxId: 155, behind: false, alpha: 1, zIndex: 0.7 },
 };
 
 function desiredAuras(state: ElementalEntityState | undefined, now: number): Partial<Record<AuraKind, AuraSpec>> {
@@ -37,6 +39,7 @@ function desiredAuras(state: ElementalEntityState | undefined, now: number): Par
     if (state.evasionUntil > now) auras.evasion = ELEMENTAL_AURA_FX.evasion;
     if (state.allyMagicUntil > now || state.allyPhysicalUntil > now) auras.ally = ELEMENTAL_AURA_FX.ally;
     if (state.fullSilenceUntil > now) auras.silence = ELEMENTAL_AURA_FX[state.silenceKind === "rayo" ? "rayo" : "agua"];
+    if (state.fullSilenceUntil > now || state.magicSilenceUntil > now) auras.mute = ELEMENTAL_AURA_FX.mute;
     return auras;
 }
 
@@ -95,7 +98,7 @@ export function createElementalAuras(options: CreateElementalAurasOptions) {
         sprite.alpha = spec.alpha;
         // Detrás: debajo del cuerpo (0.2) y del arma de espaldas (0.12). Delante: arriba del escudo (0.5) y
         // debajo de las barras de vida y el nombre (0.53 en adelante).
-        sprite.zIndex = spec.behind ? 0.05 : 0.52;
+        sprite.zIndex = spec.zIndex ?? (spec.behind ? 0.05 : 0.52);
         sprite.elementalAura = kind;
         sprite.elementalAuraFx = spec.fxId;
         return sprite;

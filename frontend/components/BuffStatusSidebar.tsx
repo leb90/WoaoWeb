@@ -73,9 +73,9 @@ export function getHiddenSkillDurationMs(skill: number, classId?: number): numbe
     return Math.max(1000, durationCounter * 40);
 }
 
-// Efectos del chamán (server/src/elementalEffects.ts): escudo propio (30 s), escudos de aliados (60 s),
-// Evasión de viento (10 s) y su recarga (30 s desde que se tiró).
-const ELEMENTAL_SHIELD_MS = 30_000;
+// Efectos del chamán (server/src/elementalEffects.ts): escudo propio (mágico y físico 10 s, energía 30 s),
+// escudos de aliados (60 s), Evasión de viento (10 s) y su recarga (30 s desde que se tiró).
+const ELEMENTAL_SHIELD_MS = { magico: 10_000, fisico: 10_000, energia: 30_000 } as const;
 const ELEMENTAL_ALLY_SHIELD_MS = 60_000;
 const ELEMENTAL_EVASION_MS = 10_000;
 const ELEMENTAL_EVASION_COOLDOWN_MS = 30_000;
@@ -99,7 +99,7 @@ function getElementalEntries(state: PlayerHudState["elemental"], now: number): S
         entries.push({
             key: "elemental-shield",
             seconds,
-            progress: clampProgress((seconds * 1000) / ELEMENTAL_SHIELD_MS),
+            progress: clampProgress((seconds * 1000) / ELEMENTAL_SHIELD_MS[state.shield]),
             ...ELEMENTAL_SHIELD_ENTRIES[state.shield],
         });
     }

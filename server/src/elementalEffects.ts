@@ -3,7 +3,8 @@
 // el daño por tiempo y las piedras del escudo de energía los maneja game.ts, igual que el desangrado.
 export {};
 
-export const SELF_SHIELD_MS = 30_000;
+// El mágico y el físico son cortos y gastan todo el maná (pedido de Leandro); el de energía dura más.
+export const SELF_SHIELD_DURATION_MS = { magico: 10_000, fisico: 10_000, energia: 30_000 } as const;
 export const SELF_SHIELD_REDUCTION = 0.5;
 export const ALLY_SHIELD_MS = 60_000;
 export const ALLY_SHIELD_REDUCTION = 0.05;
@@ -69,6 +70,7 @@ export type ElementalPayload = {
 //   quema n              quemadura de n por golpe (Rayo de Fuego)
 //   curaEfectos 1        cura veneno y quemadura (Curar efectos)
 //   escudoPropio tipo    "magico" | "fisico" | "energia", solo sobre uno mismo
+//   gastaTodaMana 1      además del mínimo de manaRequired, se lleva todo el maná que quede (escudos mágico y físico)
 //   escudoAliado tipo    "magico" | "fisico", sobre cualquier jugador
 //   evasionViento 1      Evasión de viento, solo sobre uno mismo
 type SpellFlags = Record<string, unknown> | undefined;
@@ -205,7 +207,7 @@ export function stopBurn(user: Holder | undefined) {
 
 export function setSelfShield(user: Holder, kind: SelfShieldKind, now = Date.now()) {
     // Uno a la vez: el nuevo reemplaza al anterior.
-    state(user).selfShield = { kind, until: now + SELF_SHIELD_MS, nextStoneAt: now + ENERGY_STONE_INTERVAL_MS };
+    state(user).selfShield = { kind, until: now + SELF_SHIELD_DURATION_MS[kind], nextStoneAt: now + ENERGY_STONE_INTERVAL_MS };
 }
 
 export function setAllyShield(user: Holder, kind: AllyShieldKind, now = Date.now()) {
@@ -287,7 +289,7 @@ export function buildPayload(user: Holder | undefined, now = Date.now()): Elemen
 }
 
 module.exports = {
-    SELF_SHIELD_MS,
+    SELF_SHIELD_DURATION_MS,
     SELF_SHIELD_REDUCTION,
     ALLY_SHIELD_MS,
     ALLY_SHIELD_REDUCTION,

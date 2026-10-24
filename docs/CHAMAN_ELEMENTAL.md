@@ -45,8 +45,10 @@ Este documento junta lo pedido, las decisiones que hubo que tomar donde el pedid
 | Rayo de Fuego | Además quema: 10 de daño elemental cada 3 s, con fuego sobre el que se quema, hasta que se cure o muera (como el veneno). En zona segura se apaga | Pedido |
 | Curar veneno | Pasa a llamarse **Curar efectos** y cura veneno y quemadura | Pedido |
 | Rayo Eléctrico | Además silencia 3 s (no ataca ni lanza) con contador en pantalla. No se acumula: mientras dura no se renueva y al terminar hay 1 s de respiro | Pedido |
+| Silenciado | Cualquier silencio (Rayo Eléctrico, Prisión de agua, Ráfaga de viento) muestra una cara muda sobre la cabeza, como en Dota 2. La ven todos, también el silenciado | Pedido |
+| Flecha eléctrica | Pide 5 puntos de magia: es el hechizo inicial del chamán y a nivel 1 el tope de cada habilidad es 5 | Pedido ("máximo 10") |
 | Daño elemental | **[decisión]** Se calcula como el mágico (base del hechizo, nivel y equipo de daño mágico del chamán), pero **no lo reducen** la resistencia mágica ni la defensa mágica del equipo del que recibe. Lo reducen el escudo mágico del chamán y el escudo elemental de los aliados | Es lo que lo hace un tipo distinto |
-| Escudos propios | **[decisión]** Uno a la vez: tirar otro reemplaza al anterior. Duran 30 s | "Depende de sus escudos": hay que ir cambiando según la pelea |
+| Escudos propios | **[decisión]** Uno a la vez: tirar otro reemplaza al anterior. El mágico y el físico duran **10 s** y **gastan todo el maná** (mínimo 300); el de energía dura 30 s | Pedido de Leandro (2026-10-24) |
 | Escudo mágico | −50 % al daño mágico **y elemental** que recibe | Pedido; el elemental también, para que sirva contra otro chamán |
 | Escudo físico | −50 % al daño físico que recibe (golpes y flechas) | Pedido |
 | Escudo de energía | **[decisión]** Cada 2 s tira una piedra al enemigo más cercano a 4 baldosas o menos, con daño elemental de un tercio de una Llama | Pedido ("que ataque, que sean piedras") |
@@ -84,6 +86,7 @@ Láminas: [set y clase](chaman/chaman-set-y-clase.png) y [capturas del juego](ch
 | Aura de los escudos para aliados | 152 | Aro azul suave a los pies (JoesAlotofthings, CC-BY 4.0) |
 | Llama de cada golpe de la quemadura | 153 | Llama pintada (mikodrak, CC0) |
 | Silenciado por el Rayo Eléctrico | 154 | Chispas violetas en la cabeza (reactorcore, CC0) |
+| Cara muda de cualquier silencio | 155 | Medallón violeta con la boca tachada, dibujado para el juego |
 | Martillo de luz celestial | 146 | El ícono de la Maza pintado de dorado cae del cielo y estalla en el anillo de luz de la planilla 3096 |
 | Piedra que vuela | grh 38035 | Roca del efecto 80 achicada |
 | Ráfaga de viento | 87 | Tornado del juego que no usaba nadie |

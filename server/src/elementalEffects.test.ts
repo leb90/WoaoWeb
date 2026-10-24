@@ -21,8 +21,9 @@ test("escudos propios: uno a la vez, el físico frena golpes y el mágico magia 
     assert.equal(effects.applyShieldReduction(user, 100, "magic", now), 50);
     assert.equal(effects.applyShieldReduction(user, 100, "elemental", now), 50);
 
-    // Dura 30 s.
-    assert.equal(effects.applyShieldReduction(user, 100, "magic", now + effects.SELF_SHIELD_MS + 1), 100);
+    // El mágico y el físico duran 10 s.
+    assert.equal(effects.applyShieldReduction(user, 100, "magic", now + 9_999), 50);
+    assert.equal(effects.applyShieldReduction(user, 100, "magic", now + 10_001), 100);
 });
 
 test("escudos para aliados: 5 % cada uno, se suman al propio y duran 60 s", () => {
@@ -98,9 +99,12 @@ test("vencimientos, quemadura y muerte", () => {
     assert.equal(effects.buildPayload(user, now).burning, true);
     assert.deepEqual(effects.getStoneTarget(user, now), { id: 42, isNpc: true, at: now });
 
-    assert.equal(effects.expire(user, now + effects.SELF_SHIELD_MS + 1), true);
-    assert.equal(effects.getSelfShield(user, now + effects.SELF_SHIELD_MS + 1), null);
-    assert.equal(effects.getStoneTarget(user, now + effects.SELF_SHIELD_MS + 1), null);
+    // El de energía dura 30 s.
+    assert.equal(effects.getSelfShield(user, now + 29_000), "energia");
+    const energyEnd = now + effects.SELF_SHIELD_DURATION_MS.energia + 1;
+    assert.equal(effects.expire(user, energyEnd), true);
+    assert.equal(effects.getSelfShield(user, energyEnd), null);
+    assert.equal(effects.getStoneTarget(user, energyEnd), null);
 
     assert.equal(effects.stopBurn(user), true);
     effects.startWindEvasion(user, now);

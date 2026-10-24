@@ -1,4 +1,5 @@
 /* eslint-disable react-hooks/immutability */
+
 "use client";
 
 import React, { useEffect, useRef } from "react";
@@ -77,7 +78,6 @@ import { createEntityOverlays } from "../rendering/entityOverlays";
 import { createElementalAuras } from "../rendering/elementalAuras";
 import { WeatherAmbience } from "../../../lib/weatherAmbience";
 import { getSpellAreaOffsets } from "../../../lib/spellArea";
-import { TILE_SIZE } from "../../../lib/viewport";
 import type { AreaSpellFxPayload } from "../../../lib/aowProtocol";
 import {
     ELEMENTAL_SLOW_WALK_MULTIPLIER,
@@ -1737,20 +1737,12 @@ export default function MapRenderer({
         [entityOverlays],
     );
 
-    // Hechizos de área: un efecto grande (3 baldosas de ancho o más, como la Ventisca) cae una vez en el centro;
-    // uno chico (la Llamarada) cae en cada baldosa del área.
+    // Hechizos de área: un gráfico por cada baldosa del área, así se ve a quiénes alcanza (la Ventisca es hielo que
+    // cae y se rompe en cada baldosa; la Llamarada, una llama en cada una).
     const renderAreaSpellFx = React.useCallback(
         async (engine: Engine, payload: AreaSpellFxPayload) => {
-            const fxData = engine.fxsDB?.[String(payload.fxGrh)];
-            const graphic = fxData ? engine.graphicsDB?.[String(fxData.grh)] : undefined;
-            if (!graphic) {
-                return;
-            }
-            const firstFrame =
-                graphic.numFrames > 1 ? engine.graphicsDB?.[String(graphic.frames?.["1"])] : graphic;
-            const wide = Number(firstFrame?.width ?? 0) >= TILE_SIZE * 3;
             const offsets = getSpellAreaOffsets(payload.aoe);
-            const tiles = wide || !offsets.length ? [{ dx: 0, dy: 0 }] : offsets;
+            const tiles = offsets.length ? offsets : [{ dx: 0, dy: 0 }];
             await Promise.all(
                 tiles.map((tile) =>
                     entityOverlays.renderTileFX(engine, payload.map, payload.x + tile.dx, payload.y + tile.dy, payload.fxGrh),

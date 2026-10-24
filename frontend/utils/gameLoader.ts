@@ -930,8 +930,8 @@ export async function loadFXsDB(): Promise<FXsDB> {
 export async function loadSpellsDB(): Promise<SpellsDB> {
     try {
         return await fetchJsonWithFallback<SpellsDB>(
-            "/init/spells.json?v=3.4",
-            "/init/spells.json?v=3.4",
+            "/init/spells.json?v=3.3",
+            "/init/spells.json?v=3.3",
             "spells database",
             { preferLocal: PREFER_LOCAL_SPELLS_ASSETS },
         );

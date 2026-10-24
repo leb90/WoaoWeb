@@ -22,10 +22,10 @@ const spellChanges: Record<number, Record<string, unknown>> = {
     // Pega poco: pasa a ser para criaturas (como Onda de Luz) y gasta menos.
     15: { elemental: 1, target: 2, manaRequired: 120 },
     23: { name: "Descarga eléctrica", elemental: 1, ralentiza: 6000 },
-    // De área: cuadrado de 3x3 baldosas alrededor del clic, pintado en verde al apuntar (spellArea.ts).
-    51: { elemental: 1, aoe: 2 },
+    // De área: cruz de 5 baldosas alrededor del clic, pintada en verde al apuntar (spellArea.ts).
+    51: { elemental: 1, aoe: 1 },
     61: { elemental: 1 },
-    62: { elemental: 1, aoe: 2 },
+    62: { elemental: 1, aoe: 1 },
     63: { elemental: 1, quema: 10 },
     64: { elemental: 1, silencioTotal: 3000, silencioRespiro: 1000, silencioTipo: "rayo" },
     65: { elemental: 1 },
@@ -106,14 +106,7 @@ function describe(spell: Record<string, any>): string {
     const max = Number(spell.maxHp ?? 0);
     const kind = Number(spell.elemental ?? 0) === 1 ? "elemental" : "mágico";
     if ([2, 3, 4].includes(Number(spell.subeHp))) {
-        const where =
-            Number(spell.aoe ?? 0) === 2
-                ? " a todos en un cuadrado de 3x3 baldosas"
-                : Number(spell.aoe ?? 0) === 1
-                  ? " a todos en una cruz de 5 baldosas"
-                  : Number(spell.target) === 2
-                    ? " a una criatura"
-                    : "";
+        const where = Number(spell.aoe ?? 0) === 1 ? " a todos en una cruz de 5 baldosas" : Number(spell.target) === 2 ? " a una criatura" : "";
         parts.push(`Causa ${min} a ${max} puntos de daño ${kind}${where}.`);
     }
     if (Number(spell.ralentiza ?? 0) > 0) parts.push(`El objetivo camina a la mitad de velocidad durante ${Number(spell.ralentiza) / 1000} s.`);

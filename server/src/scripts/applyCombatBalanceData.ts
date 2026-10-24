@@ -10,7 +10,7 @@ const spellChanges: Record<number, Record<string, number>> = {
     3: { minHp: 5, maxHp: 12, manaRequired: 30 },
     5: { minHp: 35, maxHp: 55, manaRequired: 160 },
     6: { minHp: 10, maxHp: 15, manaRequired: 30 },
-    7: { minHp: 14, maxHp: 20, manaRequired: 45 },
+    7: { minHp: 14, maxHp: 20, manaRequired: 20 },
     8: { minHp: 20, maxHp: 28, manaRequired: 85 },
     15: { minHp: 32, maxHp: 42, manaRequired: 120 },
     23: { minHp: 38, maxHp: 50, manaRequired: 350 },

@@ -16,8 +16,9 @@ const npcPaths = ["server/jsons/npcs.json", "api/src/jsons/npcs.json"];
 // Campos que se agregan o cambian en hechizos que ya existen.
 const spellChanges: Record<number, Record<string, unknown>> = {
     1: { name: "Curar efectos", curaEfectos: 1 },
-    // Es el hechizo con el que arranca el chamán: a nivel 1 el tope de cada habilidad es 5 puntos.
-    7: { elemental: 1, minSkill: 5 },
+    // Es el hechizo con el que arranca el chamán: a nivel 1 el tope de cada habilidad es 5 puntos, y gasta lo mismo
+    // que el Dardo Mágico, el inicial de los otros magos.
+    7: { elemental: 1, minSkill: 5, manaRequired: 20 },
     // Pega poco: pasa a ser para criaturas (como Onda de Luz) y gasta menos.
     15: { elemental: 1, target: 2, manaRequired: 120 },
     23: { name: "Descarga eléctrica", elemental: 1, ralentiza: 6000 },

@@ -845,6 +845,59 @@ export function createEntityOverlays(options: CreateEntityOverlaysOptions) {
         options.getActiveCastBars().clear();
     };
 
+    // Efecto que cae sobre una baldosa y no sobre un personaje (hechizos de área): se ve aunque no haya nadie ahí
+    // o aunque el golpe mate a la criatura. Se juega una vez y lo saca el motor al terminar la animación.
+    const renderTileFX = async (engine: Engine, map: number, tileX: number, tileY: number, fxId: number) => {
+        const effectData = engine.fxsDB?.[String(fxId)];
+        if (!effectData || !engine.graphicsDB || !options.canUseEngineContainer(engine, engine.entityFXOverlayContainer)) {
+            return;
+        }
+
+        const graphicKey = String(effectData.grh);
+        if (!engine.textureCache.has(graphicKey) && !engine.animatedTextureCache.has(graphicKey)) {
+            await options.loadTextures(engine, [graphicKey]);
+        }
+        const graphicData = engine.graphicsDB[graphicKey];
+        if (!graphicData) {
+            return;
+        }
+
+        let sprite: Sprite | AnimatedSprite;
+        if (graphicData.numFrames > 1) {
+            const frames = engine.animatedTextureCache.get(graphicKey);
+            if (!frames?.length) {
+                return;
+            }
+            const animated = new AnimatedSprite(frames);
+            animated.stop();
+            (animated as any).frameCounter = 0.1;
+            engine.animatedSpriteFrameCounters.set(animated, { graphicId: graphicKey, graphicData, loop: false });
+            sprite = animated;
+        } else {
+            const texture = engine.textureCache.get(graphicKey);
+            if (!texture) {
+                return;
+            }
+            sprite = new Sprite(texture);
+            const durationMs = Math.max(options.defaultEntityFxDurationMs, Math.max(graphicData.speed || 500, 40));
+            window.setTimeout(() => {
+                sprite.parent?.removeChild(sprite);
+                options.destroyDisplayObjectSafely(sprite as any);
+            }, durationMs);
+        }
+
+        // Sin entidad: al terminar, el motor solo lo saca de la escena (ver updateAnimatedMapSprites).
+        (sprite as any).isEntityFX = true;
+        (sprite as any).entityId = 0;
+        sprite.alpha = options.entityFxAlpha;
+        const tileWorldX = engine.tileToWorldX(tileX, map);
+        const tileWorldY = engine.tileToWorldY(tileY, map);
+        const position = getFxSpritePosition(sprite.texture, Number(effectData.offsetX ?? 0), Number(effectData.offsetY ?? 0));
+        sprite.x = Math.round(tileWorldX + position.x);
+        sprite.y = Math.round(tileWorldY + position.y);
+        syncDisplayObjectToEntityFXRow(engine, tileWorldY, sprite);
+    };
+
     return {
         clearAllCastBars,
         clearAllDialogMessages,
@@ -853,6 +906,7 @@ export function createEntityOverlays(options: CreateEntityOverlaysOptions) {
         removeDialogBubbleFromContainer,
         removeDialogBubbleFromOverlay,
         renderEntityFX,
+        renderTileFX,
         renderProjectileVisual,
         renderSpellProjectileVisual,
         showDialogBubble,

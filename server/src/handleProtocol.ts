@@ -476,6 +476,7 @@ export type HandleProtocolApi = {
     aggroState: (payload: unknown, client: RuntimeClient) => void;
     bleedState: (remainingMs: number, client: RuntimeClient) => void;
     elementalState: (payload: Record<string, unknown>, client: RuntimeClient) => void;
+    areaSpellFx: (payload: Record<string, unknown>, client: RuntimeClient) => void;
     castleState: (payload: unknown, client: RuntimeClient) => void;
     factionWarState: (payload: FactionWarStatePayload, client: RuntimeClient) => void;
     rankedState: (payload: unknown, client: RuntimeClient) => void;
@@ -1599,6 +1600,13 @@ const handleServer: HandleProtocolApi = {
     // Efectos del chamán (elementalEffects.ts) de un personaje: escudos, evasión, silencios, lentitud y quemadura.
     elementalState(payload, client) {
         pkg.setPackageID(pkg.clientPacketID.elementalState);
+        pkg.writeString(JSON.stringify(payload));
+        socket.send(client);
+    },
+
+    // Hechizo de área (spellArea.ts): el efecto cae sobre las baldosas de la cruz, haya o no alguien, con un solo sonido.
+    areaSpellFx(payload, client) {
+        pkg.setPackageID(pkg.clientPacketID.areaSpellFx);
         pkg.writeString(JSON.stringify(payload));
         socket.send(client);
     },

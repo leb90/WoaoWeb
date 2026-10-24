@@ -13,8 +13,9 @@ const RAIN_COUNT_STORM = 220;
 const SNOW_COUNT = 110;
 const CLOUD_COUNT = 10;
 const VISUAL_FOG_ENABLED = false;
-const LIGHTNING_MIN_INTERVAL_MS = 4000;
-const LIGHTNING_MAX_INTERVAL_MS = 12000;
+// Cada relámpago trae un trueno de unos 8 s: más espaciados para que no se pisen.
+const LIGHTNING_MIN_INTERVAL_MS = 7000;
+const LIGHTNING_MAX_INTERVAL_MS = 18000;
 const LIGHTNING_FLASH_MS = 140;
 
 const CLOUD_IMAGE_PATH = "/imgs/weather/clouds.png";
@@ -290,7 +291,7 @@ function updateFog(state: WeatherFxState, width: number, height: number, deltaMs
     }
 }
 
-function updateLightning(state: WeatherFxState, weather: number, now: number): void {
+function updateLightning(state: WeatherFxState, weather: number, now: number, onLightning?: (() => void) | null): void {
     if (weather !== WEATHER.tormenta) {
         state.lightningLayer.alpha = 0;
         state.lightningUntil = 0;
@@ -300,6 +301,7 @@ function updateLightning(state: WeatherFxState, weather: number, now: number): v
     if (now >= state.nextLightningAt && state.lightningUntil === 0) {
         state.lightningUntil = now + LIGHTNING_FLASH_MS;
         state.nextLightningAt = now + randomBetween(LIGHTNING_MIN_INTERVAL_MS, LIGHTNING_MAX_INTERVAL_MS);
+        onLightning?.();
     }
 
     if (state.lightningUntil > 0) {
@@ -361,7 +363,7 @@ export function updateWeatherFx(engine: Engine, deltaMs: number): void {
         setCloudCount(state, 0, width, height);
     }
 
-    updateLightning(state, weather, now);
+    updateLightning(state, weather, now, engine.onLightning);
 }
 
 export function destroyWeatherFx(engine: Engine): void {

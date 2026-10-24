@@ -4021,6 +4021,14 @@ function castAreaSpell(
         { map: targetMap, x: center.x, y: center.y },
         idSpell,
     );
+    sendAreaSpellFxToViewers(ws, clientId, {
+        map: targetMap,
+        x: center.x,
+        y: center.y,
+        aoe: Number(datSpell.aoe),
+        fxGrh: Number(datSpell.fxGrh ?? 0),
+        soundId: Number(datSpell.wav ?? 0),
+    });
 
     const hitIds: EntityId[] = [];
     for (const tile of spellArea.getAreaTiles(center.x, center.y, Number(datSpell.aoe))) {
@@ -4040,7 +4048,6 @@ function castAreaSpell(
         if (result === 0) continue;
 
         hitIds.push(target.id);
-        sendSpellImpactToAreaViewers(ws, clientId, target.id, { fxGrh: datSpell.fxGrh, soundId: datSpell.wav });
         if (target.isNpc && typeof result === "number" && result > 0) {
             game.loopArea(ws, function (viewer: AreaTarget) {
                 if (viewer.isNpc) return;
@@ -4055,19 +4062,37 @@ function castAreaSpell(
         respawn.muere(ws, target.id);
     }
 
-    if (!hitIds.length) {
-        handleProtocol.console("No había nadie en el área del hechizo.", "white", 1, 0, ws);
-        user.spellsErrados++;
-        return;
-    }
-
+    // El hechizo se lanzó (se vio y sonó): cuesta el maná aunque no haya pegado a nadie.
     user.mana -= manaCost;
+    if (!hitIds.length) {
+        handleProtocol.console("El hechizo no alcanzó a nadie.", "white", 1, 0, ws);
+        user.spellsErrados++;
+    }
     applyElfManaRestore(user);
     if (String(datSpell.palabrasMagicas ?? "").trim()) {
         sendSpellImpactToAreaViewers(ws, clientId, clientId, { msg: datSpell.palabrasMagicas });
     }
     handleProtocol.updateMana(user.mana, ws);
-    user.spellsAcertados++;
+    if (hitIds.length) {
+        user.spellsAcertados++;
+    }
+}
+
+function sendAreaSpellFxToViewers(ws: RuntimeClient, casterId: EntityId, payload: { map: number; x: number; y: number; aoe: number; fxGrh: number; soundId: number }) {
+    const sent = new Set<string>();
+    const trySend = (viewerId: EntityId | null | undefined) => {
+        if (!viewerId || sent.has(String(viewerId))) return;
+        withTargetClient(viewerId, (viewerClient) => {
+            if (!canReceiveCharacterEvent(viewerId, casterId)) return;
+            sent.add(String(viewerId));
+            handleProtocol.areaSpellFx(payload, viewerClient);
+        });
+    };
+    trySend(casterId);
+    game.loopArea(ws, (target: AreaTarget) => {
+        if (!target.isNpc) trySend(target.id);
+    });
+    game.loopAreaPos(payload.map, { x: payload.x, y: payload.y }, (target: RuntimeCharacter) => trySend(target.id));
 }
 
 function attackSpell(ws: RuntimeClient) {

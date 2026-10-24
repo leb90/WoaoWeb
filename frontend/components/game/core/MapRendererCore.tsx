@@ -75,6 +75,10 @@ import { useSceneController } from "./useSceneController";
 import { useRemoteEntityController } from "./useRemoteEntityController";
 import { createEntityOverlays } from "../rendering/entityOverlays";
 import { createElementalAuras } from "../rendering/elementalAuras";
+import { WeatherAmbience } from "../../../lib/weatherAmbience";
+import { getSpellAreaOffsets } from "../../../lib/spellArea";
+import { TILE_SIZE } from "../../../lib/viewport";
+import type { AreaSpellFxPayload } from "../../../lib/aowProtocol";
 import {
     ELEMENTAL_SLOW_WALK_MULTIPLIER,
     isElementallySlowed,
@@ -766,6 +770,8 @@ export default function MapRenderer({
     const movementPressCountsRef = useRef<Map<number, number>>(new Map());
     const movementKeyPriorityRef = useRef<number[]>([]);
     const soundManagerRef = useRef<GameSoundManager | null>(null);
+    const weatherAmbienceRef = useRef<WeatherAmbience | null>(null);
+    const soundVolumeRef = useRef(soundVolume);
     const stepVariantRef = useRef<Map<number, 0 | 1>>(new Map());
     const lastStepSoundAtRef = useRef<Map<number, number>>(new Map());
     const runtimeTimingRef = useRef<RuntimeTimingConfig>(runtimeTiming);
@@ -834,7 +840,39 @@ export default function MapRenderer({
         }
 
         soundManagerRef.current?.setMasterVolume(soundVolume);
+        soundVolumeRef.current = soundVolume;
+        weatherAmbienceRef.current?.setMasterVolume(soundVolume);
     }, [soundVolume]);
+
+    // Sonido del clima: sigue al clima del mapa y al techo (bajo techo suena apagado), y un trueno por relámpago.
+    useEffect(() => {
+        if (typeof window === "undefined") {
+            return;
+        }
+        const ambience = new WeatherAmbience();
+        weatherAmbienceRef.current = ambience;
+        ambience.setMasterVolume(soundVolumeRef.current);
+        let lastEngine: Engine | null = null;
+        const sync = () => {
+            const engine = engineRef.current;
+            if (!engine) {
+                return;
+            }
+            lastEngine = engine;
+            engine.onLightning = () => ambience.thunder();
+            ambience.update(engine.environmentState?.weather, Boolean(engine.lastRoofVisibilityHidden));
+        };
+        sync();
+        const intervalId = window.setInterval(sync, 500);
+        return () => {
+            window.clearInterval(intervalId);
+            if (lastEngine) {
+                lastEngine.onLightning = null;
+            }
+            ambience.destroy();
+            weatherAmbienceRef.current = null;
+        };
+    }, []);
 
     useEffect(() => {
         setIsAdminUi((current) => {
@@ -1699,6 +1737,29 @@ export default function MapRenderer({
         [entityOverlays],
     );
 
+    // Hechizos de área: un efecto grande (3 baldosas de ancho o más, como la Ventisca) cae una vez en el centro;
+    // uno chico (la Llamarada) cae en cada baldosa de la cruz.
+    const renderAreaSpellFx = React.useCallback(
+        async (engine: Engine, payload: AreaSpellFxPayload) => {
+            const fxData = engine.fxsDB?.[String(payload.fxGrh)];
+            const graphic = fxData ? engine.graphicsDB?.[String(fxData.grh)] : undefined;
+            if (!graphic) {
+                return;
+            }
+            const firstFrame =
+                graphic.numFrames > 1 ? engine.graphicsDB?.[String(graphic.frames?.["1"])] : graphic;
+            const wide = Number(firstFrame?.width ?? 0) >= TILE_SIZE * 3;
+            const offsets = getSpellAreaOffsets(payload.aoe);
+            const tiles = wide || !offsets.length ? [{ dx: 0, dy: 0 }] : offsets;
+            await Promise.all(
+                tiles.map((tile) =>
+                    entityOverlays.renderTileFX(engine, payload.map, payload.x + tile.dx, payload.y + tile.dy, payload.fxGrh),
+                ),
+            );
+        },
+        [entityOverlays],
+    );
+
     const syncEntityFX = React.useCallback(
         (engine: Engine, entityId: number) =>
             entityOverlays.syncEntityFX(engine, entityId),
@@ -2001,6 +2062,7 @@ export default function MapRenderer({
                 onQuestProgressNotice,
                 onLevelUpNotice,
                 renderEntityFX,
+                renderAreaSpellFx,
                 setElementalState,
                 renderSpellProjectileVisual,
                 renderProjectileVisual,
@@ -2050,6 +2112,7 @@ export default function MapRenderer({
         removeObjectSprite,
         removeRemoteEntity,
         renderEntityFX,
+        renderAreaSpellFx,
         setElementalState,
         renderProjectileVisual,
         renderRemoteEntity,

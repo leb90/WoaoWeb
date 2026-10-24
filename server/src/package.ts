@@ -131,6 +131,7 @@ const clientPacketID = {
     aggroState: 96,
     bleedState: 97,
     elementalState: 98,
+    areaSpellFx: 99,
 } as const;
 
 const serverPacketID = {

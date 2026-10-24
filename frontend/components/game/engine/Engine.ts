@@ -651,6 +651,8 @@ export class Engine {
     lastRoofVisibilityPlayerX: number | null = null;
     lastRoofVisibilityPlayerY: number | null = null;
     lastRoofVisibilityHidden: boolean | null = null;
+    // Cada relámpago de la tormenta (rendering/weatherFx.ts): el ambiente de clima hace sonar un trueno.
+    onLightning: (() => void) | null = null;
 
     treeTransparencyDirty = true;
     lastTreeTransparencyX: number | null = null;

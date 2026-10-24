@@ -245,6 +245,17 @@ export async function handleIncomingUiPacket({
             return true;
         }
 
+        case "areaSpellFx": {
+            if (!engine) {
+                return true;
+            }
+            await ctx.renderAreaSpellFx?.(engine, packet.payload);
+            if (Number(packet.payload.soundId ?? 0) > 0) {
+                ctx.soundManagerRef.current?.play({ soundId: Number(packet.payload.soundId) });
+            }
+            return true;
+        }
+
         case "elementalState": {
             const state = ctx.setElementalState?.(packet.payload);
             if (state && engine?.user?.id === Number(packet.payload.id)) {

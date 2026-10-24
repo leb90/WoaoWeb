@@ -96,6 +96,7 @@ export const CLIENT_PACKET_ID = {
     aggroState: 96,
     bleedState: 97,
     elementalState: 98,
+    areaSpellFx: 99,
 } as const;
 
 export const CHARACTER_SWING_WEAPON = 1;
@@ -465,6 +466,8 @@ export type ShopProductPayload = {
 
 // Desangrado de la apuñalada (server/src/game.ts, startBleeding): ms que quedan, 0 = terminó.
 export type BleedStatePayload = { remainingMs: number };
+// Hechizo de área: centro de la cruz, forma (aoe), efecto y sonido.
+export type AreaSpellFxPayload = { map: number; x: number; y: number; aoe: number; fxGrh: number; soundId: number };
 
 // Criaturas que tienen de objetivo al jugador (server/src/aggroState.ts).
 export type AggroEntry = {
@@ -1433,6 +1436,7 @@ export type ParsedServerPacket =
     | { type: "aggroState"; payload: AggroStatePayload }
     | { type: "bleedState"; payload: BleedStatePayload }
     | { type: "elementalState"; payload: ElementalStatePayload }
+    | { type: "areaSpellFx"; payload: AreaSpellFxPayload }
     | { type: "castleState"; payload: CastleStatePayload }
     | { type: "factionWarState"; payload: FactionWarStatePayload }
     | { type: "rankedState"; payload: RankedStatePayload }
@@ -2658,6 +2662,19 @@ function parseServerPacketById(
                 return {
                     type: "bleedState",
                     payload: JSON.parse(rawPayload) as BleedStatePayload,
+                };
+            } catch {
+                return { type: "unknown", payload: { packetId } };
+            }
+        }
+
+        case CLIENT_PACKET_ID.areaSpellFx: {
+            const rawPayload = reader.getString();
+
+            try {
+                return {
+                    type: "areaSpellFx",
+                    payload: JSON.parse(rawPayload) as AreaSpellFxPayload,
                 };
             } catch {
                 return { type: "unknown", payload: { packetId } };

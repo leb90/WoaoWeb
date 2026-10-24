@@ -40,7 +40,7 @@ Este documento junta lo pedido, las decisiones que hubo que tomar donde el pedid
 | Reemplazo de Llamarada | Mago y druida aprenden **Lluvia Arcana** (84): mismo daño (50-56) y maná (900), magia común, efecto 122 (rayas mágicas que caen) | Pedido |
 | Quien ya aprendió un hechizo elemental | **[decisión]** Lo conserva en la lista pero no lo puede lanzar ("Solo el Chamán puede usar la magia elemental"). Las criaturas los siguen tirando como hoy | Exclusivos de verdad, sin tocar la base de datos |
 | Qué más aprende el chamán | **[decisión]** Solo lo elemental, sus hechizos nuevos y los clásicos pedidos: Curar efectos, Remover Parálisis, Invisibilidad y Resucitar. Nada de otra magia de ataque ni de curación | "Que solo use ataques elementales" |
-| Ventisca y Llamarada | De área: cruz de 5 baldosas centrada en el clic, que se pinta en verde mientras se apunta (campo `aoe`, como en el _Argentum viejo). El maná se cobra una vez si le pegó a alguien | Pedido. En los repos viejos la de área era "Llamarada de Área" (HECHIZO76); Ventisca y Llamarada eran de un objetivo |
+| Ventisca y Llamarada | De área: cruz de 5 baldosas centrada en el clic, que se pinta en verde mientras se apunta (campo `aoe`, como en el _Argentum viejo). El efecto cae en cada baldosa de la cruz, haya o no alguien, así se ve a quiénes alcanza. El maná se cobra aunque no pegue a nadie | Pedido |
 | Tormenta de fuego | Solo contra criaturas (como Onda de Luz) y gasta 120 de maná en vez de 250 | Pedido: "los que hacen poco daño" |
 | Rayo de Fuego | Además quema: 10 de daño elemental cada 3 s, con fuego sobre el que se quema, hasta que se cure o muera (como el veneno). En zona segura se apaga | Pedido |
 | Curar veneno | Pasa a llamarse **Curar efectos** y cura veneno y quemadura | Pedido |

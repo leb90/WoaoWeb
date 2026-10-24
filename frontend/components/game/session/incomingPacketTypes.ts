@@ -110,7 +110,7 @@ export type IncomingPacketHandlerContext = {
     onQuestProgressNotice?: ((notice: QuestProgressNoticePayload) => void) | undefined;
     onLevelUpNotice?: ((notice: LevelUpNoticePayload) => void) | undefined;
     renderEntityFX: (engine: any, id: number, fxGrh: number) => Promise<void>;
-    // Hechizo de área: el efecto sobre las baldosas de la cruz.
+    // Hechizo de área: el efecto sobre las baldosas del área.
     renderAreaSpellFx?: ((engine: any, payload: AreaSpellFxPayload) => Promise<void>) | undefined;
     // Efectos del chamán de un personaje: guarda el estado, dibuja sus auras y lo devuelve en tiempos absolutos.
     setElementalState?: ((payload: ElementalStatePayload) => ElementalEntityState | undefined) | undefined;

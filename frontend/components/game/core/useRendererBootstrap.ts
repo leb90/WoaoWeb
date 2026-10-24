@@ -742,7 +742,7 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                             event,
                             interaction,
                         );
-                    // De área: el centro es la baldosa clickeada, sin la ayuda de apuntado (si no, la cruz verde
+                    // De área: el centro es la baldosa clickeada, sin la ayuda de apuntado (si no, el área verde
                     // saltaría al personaje más cercano).
                     const clickedInsideMap =
                         interaction.targetTileX >= 1 &&

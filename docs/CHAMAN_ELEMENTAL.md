@@ -40,7 +40,7 @@ Este documento junta lo pedido, las decisiones que hubo que tomar donde el pedid
 | Reemplazo de Llamarada | Mago y druida aprenden **Lluvia Arcana** (84): mismo daño (50-56) y maná (900), magia común, efecto 122 (rayas mágicas que caen) | Pedido |
 | Quien ya aprendió un hechizo elemental | **[decisión]** Lo conserva en la lista pero no lo puede lanzar ("Solo el Chamán puede usar la magia elemental"). Las criaturas los siguen tirando como hoy | Exclusivos de verdad, sin tocar la base de datos |
 | Qué más aprende el chamán | **[decisión]** Solo lo elemental, sus hechizos nuevos y los clásicos pedidos: Curar efectos, Remover Parálisis, Invisibilidad y Resucitar. Nada de otra magia de ataque ni de curación | "Que solo use ataques elementales" |
-| Ventisca y Llamarada | De área: cruz de 5 baldosas centrada en el clic, que se pinta en verde mientras se apunta (campo `aoe`, como en el _Argentum viejo). El maná se cobra una vez si le pegó a alguien | Pedido. En los repos viejos la de área era "Llamarada de Área" (HECHIZO76); Ventisca y Llamarada eran de un objetivo |
+| Ventisca y Llamarada | De área: cuadrado de 3x3 baldosas centrado en el clic, que se pinta en verde mientras se apunta (campo `aoe` 2). Al principio era una cruz de 5, como en el _Argentum viejo, pero casi nunca había dos enemigos adentro. El efecto cae sobre las baldosas y el maná se cobra aunque no pegue a nadie | Pedido |
 | Tormenta de fuego | Solo contra criaturas (como Onda de Luz) y gasta 120 de maná en vez de 250 | Pedido: "los que hacen poco daño" |
 | Rayo de Fuego | Además quema: 10 de daño elemental cada 3 s, con fuego sobre el que se quema, hasta que se cure o muera (como el veneno). En zona segura se apaga | Pedido |
 | Curar veneno | Pasa a llamarse **Curar efectos** y cura veneno y quemadura | Pedido |
@@ -102,7 +102,7 @@ Los escudos y la evasión no tienen efecto al lanzar: el aura aparece enseguida,
 | Daño elemental, hechizos nuevos, tick de quemadura y piedras, paquete `elementalState` (98) | `server/src/game.ts` |
 | Bloqueos al atacar o lanzar, lentitud al caminar, solo el chamán lanza lo elemental | `server/src/protocol.ts` |
 | Escudos en todo golpe que entra; evasión contra hechizos | `server/src/racialPassives.ts` (`applyIncomingHit`, `shouldIgnoreHarmfulSpell`) |
-| Área en cruz centrada en el clic | `server/src/spellArea.ts`, `castAreaSpell` en `protocol.ts`; cliente `frontend/lib/spellArea.ts` y `rendering/spellAreaPreview.ts` |
+| Área centrada en el clic (cruz o cuadrado de 3x3) | `server/src/spellArea.ts`, `castAreaSpell` en `protocol.ts`; cliente `frontend/lib/spellArea.ts` y `rendering/spellAreaPreview.ts` |
 | Datos: hechizos, pergaminos, quién aprende qué, tiendas y piezas del set | `server/src/scripts/applyShamanData.ts` (se puede correr de nuevo) y `applyTierSetData.ts` |
 | Cliente: estado, auras, lentitud de los demás, carteles y barra | `frontend/lib/elementalState.ts`, `rendering/elementalAuras.ts`, `components/ElementalStatusBanner.tsx`, `components/BuffStatusSidebar.tsx` |
 

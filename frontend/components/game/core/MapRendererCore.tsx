@@ -1738,7 +1738,7 @@ export default function MapRenderer({
     );
 
     // Hechizos de área: un efecto grande (3 baldosas de ancho o más, como la Ventisca) cae una vez en el centro;
-    // uno chico (la Llamarada) cae en cada baldosa de la cruz.
+    // uno chico (la Llamarada) cae en cada baldosa del área.
     const renderAreaSpellFx = React.useCallback(
         async (engine: Engine, payload: AreaSpellFxPayload) => {
             const fxData = engine.fxsDB?.[String(payload.fxGrh)];

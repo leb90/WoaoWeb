@@ -185,7 +185,7 @@ const CRAFTING_RECIPE_OBJECT_TYPE = 46;
 const CLAN_RING_MAP_ID = 273;
 const MERCHANT_NPC_TYPE = 10;
 
-type MerchantTradeItem = { item: number; cant?: number };
+type MerchantTradeItem = { item: number; cant?: number; valor?: number };
 
 function hasTradeObjects(objs: unknown) {
     if (Array.isArray(objs)) {
@@ -12094,7 +12094,9 @@ function Game(this: GameApi) {
                     Number(user.factionTreachery ?? 0) > 0
                         ? 1 + require("./factions").FACTION_TREACHERY_PRICE_SURCHARGE
                         : 1;
-                const buyTotalCost = Math.floor(((objItem.valor * cantBuy) / 2) * treacheryPriceMultiplier);
+                // Una tienda puede tener precio propio (TradeItem.valor); si no, el del objeto.
+                const unitValue = Number(itemNpc.valor ?? 0) > 0 ? Number(itemNpc.valor) : objItem.valor;
+                const buyTotalCost = Math.floor(((unitValue * cantBuy) / 2) * treacheryPriceMultiplier);
 
                 if (buyTotalCost > user.gold) {
                     withUserClient(idUser, (userClient) => {
@@ -12137,7 +12139,7 @@ function Game(this: GameApi) {
                     details: {
                         npcId: Number(user.npcTrade ?? 0),
                         tradeSlot: Number(idPos),
-                        unitPrice: Math.floor((objItem.valor / 2) * treacheryPriceMultiplier),
+                        unitPrice: Math.floor((unitValue / 2) * treacheryPriceMultiplier),
                     },
                 });
                 await persistCharacterEconomyState(user);

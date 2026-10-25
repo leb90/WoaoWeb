@@ -1802,6 +1802,10 @@ function spawnNpcNextToAdmin(
     npc.isNpc = true;
     npc.idBody = datNpc.idBody;
     npc.idHead = datNpc.idHead;
+    npc.idWeapon = Number(datNpc.idWeapon ?? 0);
+    npc.idShield = Number(datNpc.idShield ?? 0);
+    npc.idHelmet = Number(datNpc.idHelmet ?? 0);
+    if (datNpc.etiqueta) npc.etiqueta = String(datNpc.etiqueta);
     npc.movement = persist ? (persistMovement ? datNpc.movement : 0) : datNpc.movement;
     npc.npcType = Number.parseInt(String(datNpc.npcType ?? 0), 10);
     npc.exp = datNpc.exp ?? 0;

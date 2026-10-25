@@ -780,6 +780,17 @@ export function createEntityOverlays(options: CreateEntityOverlaysOptions) {
         }
 
         for (const bubble of overlay.children) {
+            // Etiqueta de criatura (characterRenderer.ensureNpcLabel): sigue a su dueño.
+            const labelEntityId = (bubble as any).npcLabelEntityId;
+            if (typeof labelEntityId === "number") {
+                const owner = options.getEntityContainer(engine, labelEntityId);
+                if (owner) {
+                    bubble.x = Math.round(owner.x + Number((bubble as any).npcLabelOffsetX ?? 0));
+                    bubble.y = Math.round(owner.y + Number((bubble as any).npcLabelOffsetY ?? 0));
+                }
+                continue;
+            }
+
             const entityId = (bubble as any).dialogEntityId;
             if (typeof entityId !== "number") {
                 continue;

@@ -86,6 +86,11 @@ class LoadNpcs {
         tmpNPC.isNpc = true;
         tmpNPC.idBody = datNpc.idBody;
         tmpNPC.idHead = datNpc.idHead;
+        // Equipo que se ve puesto (los entrenadores de clase) y texto debajo del cuerpo.
+        tmpNPC.idWeapon = Number(datNpc.idWeapon ?? 0);
+        tmpNPC.idShield = Number(datNpc.idShield ?? 0);
+        tmpNPC.idHelmet = Number(datNpc.idHelmet ?? 0);
+        if (datNpc.etiqueta) tmpNPC.etiqueta = String(datNpc.etiqueta);
         tmpNPC.movement = Number.isInteger(Number(npc.movement)) ? Number(npc.movement) : datNpc.movement;
         tmpNPC.npcType = parseInt(datNpc.npcType);
         tmpNPC.hostile = Number(datNpc.hostile ?? 0);

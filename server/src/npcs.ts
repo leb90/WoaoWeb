@@ -2782,6 +2782,13 @@ function Npcs(this: NpcsApi) {
                 return;
             }
 
+            // En las mazmorras las criaturas no reaparecen (dungeons.ts).
+            if (require("./dungeons").shouldSkipRespawn(npc)) {
+                delete vars.npcs[idNpc];
+                delete vars.areaNpc[idNpc];
+                return;
+            }
+
             const respawnCooldownMs = getNpcRespawnCooldownMs(npc);
             const respawnEntry = getNpcRespawnEntry(npc);
 

@@ -35,8 +35,15 @@ class LoadNpcs {
 
             const npcsInMap = loadAllMapNpcPlacements();
 
+            const dungeons = require("./dungeons");
+
             npcsInMap.map((npc: any) => {
                 if (cooldownKeys.has(buildNpcRespawnKey(npc))) {
+                    return;
+                }
+
+                // Las criaturas de las mazmorras aparecen en cada corrida, no en el mapa base.
+                if (dungeons.isDungeonBaseMap(Number(npc.mapNum))) {
                     return;
                 }
 

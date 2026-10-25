@@ -1,0 +1,78 @@
+// Mazmorras (dungeons.ts, docs/MAZMORRAS.md): cuentas puras y datos de jsons/dungeons.json.
+//   npx tsx --test src/dungeons.test.ts
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import test from "node:test";
+
+const dungeons = require("./dungeons") as typeof import("./dungeons");
+const root = path.resolve(__dirname, "../..");
+const readJson = (relativePath: string) => JSON.parse(fs.readFileSync(path.join(root, relativePath), "utf8"));
+
+test("el mapa de una instancia vuelve a su mapa base y entra en 16 bits", () => {
+    for (const base of [510, 590, 599]) {
+        for (const slot of [0, 49]) {
+            const mapId = dungeons.instanceMapId(base, slot);
+            assert.equal(dungeons.baseMapOf(mapId), base);
+            assert.ok(mapId <= 65_535, `${mapId}`);
+        }
+    }
+    assert.equal(dungeons.baseMapOf(34), null);
+});
+
+test("la dificultad sube con cada jugador extra", () => {
+    const def = { escalado: { vidaPorJugador: 0.7, danoPorJugador: 0.15 } };
+    assert.deepEqual(dungeons.scaleFactors(def, 1), { vida: 1, dano: 1 });
+    const five = dungeons.scaleFactors(def, 5);
+    assert.ok(Math.abs(five.vida - 3.8) < 1e-9);
+    assert.ok(Math.abs(five.dano - 1.6) < 1e-9);
+});
+
+test("cada corrida usa el primer lugar libre en todos los mapas de la mazmorra", () => {
+    const taken = new Set([dungeons.instanceMapId(590, 0), dungeons.instanceMapId(591, 1)]);
+    // El 0 está ocupado en 590 y el 1 en 591: el primero libre en los dos es el 2.
+    assert.equal(dungeons.findFreeSlot([590, 591], (mapId) => taken.has(mapId)), 2);
+    assert.equal(dungeons.findFreeSlot([590], () => true), null);
+});
+
+test("afuera de una mazmorra no se bloquea el ataque entre jugadores", () => {
+    const attacker = { id: 1, map: 34, pos: { x: 50, y: 50 } } as never;
+    assert.equal(dungeons.getAttackDeniedReason(attacker, { isNpc: false, map: 34 }), null);
+    assert.equal(dungeons.getAttackDeniedReason(attacker, { isNpc: true, map: 34 }), null);
+});
+
+test("cada mazmorra tiene sus mapas, entrada, salida, regreso y piedra", () => {
+    const defs = readJson("server/jsons/dungeons.json") as Array<Record<string, any>>;
+    const npcs = readJson("server/jsons/npcs.json");
+    assert.ok(defs.length > 0);
+    for (const def of defs) {
+        for (const map of def.mapas) {
+            assert.ok(map >= 507 && map <= 599, `${def.id}: el mapa ${map} tiene que estar entre 507 y 599`);
+            for (const dir of ["server/mapas_source", "api/src/mapas_source"]) {
+                assert.ok(fs.existsSync(path.join(root, dir, `mapa_${map}`, "terrain.json")), `${dir}/mapa_${map}`);
+            }
+            assert.ok(fs.existsSync(path.join(root, "frontend/public/static/maps_local", `mapa_${map}.json`)), `cliente mapa_${map}`);
+        }
+        assert.ok(def.mapas.includes(def.entrada.map), `${def.id}: la entrada está en un mapa de la mazmorra`);
+        assert.ok(def.salidas.length > 0, `${def.id}: tiene salida`);
+        for (const exit of def.salidas) {
+            const objects = readJson(`server/mapas_source/mapa_${exit.map}/specials.json`).objects ?? {};
+            assert.equal(objects[`${exit.x},${exit.y}`]?.objIndex, 378, `${def.id}: hay un portal en la salida`);
+        }
+        assert.ok(!def.mapas.includes(def.regreso.map), `${def.id}: el regreso es afuera`);
+        assert.equal(npcs[def.piedraNpc]?.dungeonId, def.id, `${def.id}: la piedra ${def.piedraNpc} abre esta mazmorra`);
+        assert.equal(npcs[def.piedraNpc]?.attackable, 0);
+    }
+});
+
+test("las escaleras de una mazmorra solo llevan a otros mapas de la misma mazmorra", () => {
+    const defs = readJson("server/jsons/dungeons.json") as Array<Record<string, any>>;
+    for (const def of defs) {
+        for (const map of def.mapas) {
+            const exits = readJson(`server/mapas_source/mapa_${map}/specials.json`).exits ?? {};
+            for (const [coord, exit] of Object.entries<any>(exits)) {
+                assert.ok(def.mapas.includes(exit.map), `${def.id} mapa ${map} (${coord}) lleva a ${exit.map}`);
+            }
+        }
+    }
+});

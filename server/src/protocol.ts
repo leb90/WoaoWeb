@@ -57,6 +57,7 @@ const smelting = require("./smelting");
 const challengeManager = require("./challengeManager");
 const huntersGame = require("./huntersGame") as typeof import("./huntersGame");
 const pyramid = require("./pyramid") as typeof import("./pyramid");
+const dungeons = require("./dungeons") as typeof import("./dungeons");
 const LOGOUT_CANCELLED_MESSAGE = "[Servidor] La salida se canceló porque te moviste.";
 const MAX_PENDING_MOVE_QUEUE_LENGTH = 8;
 const REVIVE_CAST_MS = 10000;
@@ -2017,6 +2018,11 @@ function processUserMovement(ws: RuntimeClient, heading: number, moveId: number,
         return;
     }
 
+    // Mazmorras: el portal de salida y las escaleras entre los mapas de la misma corrida.
+    if (dungeons.handleStep(ws, user, posX, posY)) {
+        return;
+    }
+
     const tileExit = vars.mapa[user.map]?.[posY]?.[posX]?.tileExit;
     const rawExitDestination = getRawTileExitDestination(tileExit);
     const previousMap = user.map;
@@ -2546,6 +2552,10 @@ function eventClick(ws: RuntimeClient) {
             }
 
             if (selectedNpc && pyramid.handleNpcInteraction(ws, selectedId)) {
+                return;
+            }
+
+            if (selectedNpc && dungeons.handleNpcInteraction(ws, selectedNpc)) {
                 return;
             }
 
@@ -3314,7 +3324,7 @@ function position(ws: RuntimeClient) {
 }
 
 const UI_PANEL_COMMAND_COOLDOWN_MS = 200;
-const UI_PANEL_COMMANDS = new Set(["/transmog", "/transfigurar", "/transmogponer", "/transmogquitar", "/tienda", "/tiendacomprar"]);
+const UI_PANEL_COMMANDS = new Set(["/transmog", "/transfigurar", "/transmogponer", "/transmogquitar", "/tienda", "/tiendacomprar", "/mazmorra"]);
 
 function isUiPanelCommand(message: string): boolean {
     return UI_PANEL_COMMANDS.has(message.split(/\s+/, 1)[0]?.toLowerCase() ?? "");

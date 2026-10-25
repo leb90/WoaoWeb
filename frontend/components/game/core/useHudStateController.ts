@@ -192,6 +192,9 @@ export function useHudStateController({
                       ...(!hud.aggroState && previousHud?.aggroState
                           ? { aggroState: previousHud.aggroState }
                           : {}),
+                      ...(!hud.dungeonState && previousHud?.dungeonState
+                          ? { dungeonState: previousHud.dungeonState }
+                          : {}),
                       ...(hud.bleedUntil === undefined && previousHud?.bleedUntil
                           ? { bleedUntil: previousHud.bleedUntil }
                           : {}),

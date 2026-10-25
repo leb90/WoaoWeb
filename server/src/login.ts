@@ -735,7 +735,15 @@ function Login(this: LoginApi) {
                     personaje.map = 1;
                 }
 
-                if (mapInstanceManager.isInstanceMap(personaje.map)) {
+                // Mazmorras: vuelve a su corrida si sigue viva; si no, aparece junto a la piedra.
+                const dungeonLocation = require("./dungeons").resolveLoginLocation(personaje);
+                if (dungeonLocation) {
+                    personaje.map = dungeonLocation.map;
+                    personaje.posX = dungeonLocation.x;
+                    personaje.posY = dungeonLocation.y;
+                }
+
+                if (mapInstanceManager.isInstanceMap(personaje.map) && !require("./dungeons").isDungeonInstanceMap(personaje.map)) {
                     const instanceReady = mapInstanceManager.ensureInstance(personaje.map);
 
                     if (!instanceReady) {

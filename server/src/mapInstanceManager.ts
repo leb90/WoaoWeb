@@ -222,7 +222,8 @@ const mapInstanceManager = {
     onPlayerDisconnected(character: RuntimeCharacter | undefined) {
         const mapId = Number(character?.map ?? 0);
 
-        if (!this.isInstanceMap(mapId)) {
+        // Las corridas de mazmorra las maneja dungeons.ts: quien se desconecta puede volver.
+        if (!this.isInstanceMap(mapId) || require("./dungeons").isDungeonInstanceMap(mapId)) {
             return;
         }
 

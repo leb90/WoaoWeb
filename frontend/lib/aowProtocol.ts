@@ -97,6 +97,7 @@ export const CLIENT_PACKET_ID = {
     bleedState: 97,
     elementalState: 98,
     areaSpellFx: 99,
+    dungeonState: 100,
 } as const;
 
 export const CHARACTER_SWING_WEAPON = 1;
@@ -469,6 +470,28 @@ export type ShopProductPayload = {
 // Desangrado de la apuñalada (server/src/game.ts, startBleeding): ms que quedan, 0 = terminó.
 export type BleedStatePayload = { remainingMs: number };
 // Hechizo de área: centro de la cruz, forma (aoe), efecto y sonido.
+// Mazmorras (server/src/dungeons.ts): panel de la piedra de invocación (cuando se la toca), invocación pendiente
+// del líder y la mazmorra en la que está el jugador.
+export type DungeonStonePanel = {
+    dungeonId: string;
+    nombre: string;
+    descripcion: string;
+    nivelMinimo: number;
+    maxJugadores: number;
+    enParty: boolean;
+    esLider: boolean;
+    miembrosParty: number;
+    puedeSolo: boolean;
+    puedeGrupo: boolean;
+    motivo: string | null;
+};
+export type DungeonStatePayload = {
+    panelSeq: number;
+    panel: DungeonStonePanel | null;
+    invitacion: { dungeonId: string; nombre: string; de: string; expiraEnMs: number } | null;
+    enMazmorra: { dungeonId: string; nombre: string; jugadores: number; grupo: boolean } | null;
+};
+
 // tiles: dónde dibujar el efecto: la baldosa de cada objetivo alcanzado (vacía si no alcanzó a nadie).
 export type AreaSpellFxPayload = {
     map: number;
@@ -856,6 +879,7 @@ export interface PlayerHudState {
     transmogState?: TransmogStatePayload;
     shopState?: ShopStatePayload;
     aggroState?: AggroStatePayload;
+    dungeonState?: DungeonStatePayload;
     // Hasta cuándo dura el desangrado (Date.now() del cliente; 0 o ausente = no sangra).
     bleedUntil?: number;
     // Efectos del chamán sobre el propio personaje (escudos, evasión, silencios, lentitud, quemadura).
@@ -1448,6 +1472,7 @@ export type ParsedServerPacket =
     | { type: "bleedState"; payload: BleedStatePayload }
     | { type: "elementalState"; payload: ElementalStatePayload }
     | { type: "areaSpellFx"; payload: AreaSpellFxPayload }
+    | { type: "dungeonState"; payload: DungeonStatePayload }
     | { type: "castleState"; payload: CastleStatePayload }
     | { type: "factionWarState"; payload: FactionWarStatePayload }
     | { type: "rankedState"; payload: RankedStatePayload }
@@ -2676,6 +2701,19 @@ function parseServerPacketById(
                 return {
                     type: "bleedState",
                     payload: JSON.parse(rawPayload) as BleedStatePayload,
+                };
+            } catch {
+                return { type: "unknown", payload: { packetId } };
+            }
+        }
+
+        case CLIENT_PACKET_ID.dungeonState: {
+            const rawPayload = reader.getString();
+
+            try {
+                return {
+                    type: "dungeonState",
+                    payload: JSON.parse(rawPayload) as DungeonStatePayload,
                 };
             } catch {
                 return { type: "unknown", payload: { packetId } };

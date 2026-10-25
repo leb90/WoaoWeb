@@ -171,6 +171,13 @@ class LoadMaps {
             }
         }
 
+        // Mapas base de las mazmorras (jsons/dungeons.json); se juegan en instancias, nunca directo.
+        for (const mapId of require("./dungeons").getDungeonBaseMaps() as number[]) {
+            if (this.mapFilesExist(mapId)) {
+                arMapsToLoad.push(this.readMap(mapId));
+            }
+        }
+
         await Promise.all(arMapsToLoad);
 
         console.log("Mapas Cargados.");

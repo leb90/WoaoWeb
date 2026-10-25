@@ -1,6 +1,6 @@
 # Mazmorras (PvE instanciado)
 
-Fecha: 2026-10-25. Estado: **diseño; decisiones principales confirmadas** (rama `mazmorras-diseno`). La primera mazmorra está en [mazmorras/01-GRUTA_DEL_ABISAL.md](mazmorras/01-GRUTA_DEL_ABISAL.md).
+Fecha: 2026-10-25. Estado: **etapa 1 (motor) hecha**; faltan las mecánicas, la Gruta y el balance (sección 4). La primera mazmorra está en [mazmorras/01-GRUTA_DEL_ABISAL.md](mazmorras/01-GRUTA_DEL_ABISAL.md).
 
 Una serie de mazmorras al estilo Zelda para el PvE del juego: puzzle, exploración, llaves y un jefe. Cada una da un **ítem de mazmorra** que se usa en las siguientes.
 
@@ -70,12 +70,12 @@ El jefe escala igual. Si alguien entra después (invocado por el líder mientras
 
 ### 3.5 Recompensas y repetición
 - **[confirmado]** La recompensa del jefe se cobra **una vez por día por personaje**. Se puede repetir la mazmorra; sin esa recompensa, pero con las criaturas.
-- El **ítem de mazmorra** (en la 1, las Aletas) se gana una sola vez y queda para siempre en el personaje.
+- El **ítem de mazmorra** (en la 1, las Patas de rana) se gana una sola vez y queda para siempre en el personaje.
 
 ### 3.6 Ítems de mazmorra y el menú "Mazmorra"
 - Son una categoría aparte: no van al inventario común, no se tiran, no se venden ni se comercian.
 - En el panel de la derecha, arriba de la grilla del inventario, aparece una franja **Mazmorra** solo cuando estás en una:
-  - **Permanentes de la serie:** las Aletas (Mazmorra 1) y los que den las siguientes.
+  - **Permanentes de la serie:** las Patas de rana (Mazmorra 1) y los que den las siguientes.
   - **De la corrida** (se pierden al salir, como en Zelda): las llaves chicas (con contador), la llave del jefe, el mapa y la brújula.
 - **Solo se usan en mazmorras.** Afuera no hacen nada y la franja no se ve.
 
@@ -91,7 +91,7 @@ Todas por datos del mapa, para que las mazmorras siguientes se armen sin código
 | Pinchos / aplastadores | Baldosas que dañan al pisarlas o cada cierto tiempo. |
 | Placa | Se activa mientras alguien (o un bloque) está encima: abre una puerta o hace aparecer un cofre. |
 | Bloque empujable | Al caminar contra él se corre una baldosa si está libre. Sirve para dejar una placa apretada jugando solo. |
-| Agua profunda | No se puede pisar sin el ítem de mazmorra que deja nadar (las Aletas). Nadando no se ataca. |
+| Agua profunda | No se puede pisar sin el ítem de mazmorra que deja nadar (las Patas de rana): con ellas se nada bajo el mar. Nadando no se ataca. |
 | Escalera a túnel (warp) | Lleva a otra parte o a otro mapa de la mazmorra; una vez recorrida queda como atajo. |
 | Cofre de mazmorra | Mapa, brújula, llave, oro u objeto. Lo abre uno y vale para todo el grupo. |
 | Losa de piedra | Texto con una pista o lore al hacerle clic. |
@@ -99,15 +99,16 @@ Todas por datos del mapa, para que las mazmorras siguientes se armen sin código
 
 ## 4. Plan por etapas (un PR por etapa)
 
-1. **Motor de mazmorras.**
+1. **Motor de mazmorras. [hecho]** Ver la sección 6.
    - Definición por datos (`jsons/dungeons.json`) y piedra de invocación.
    - Entrar solo o con la party, instancia de todos los mapas, sin PvP.
-   - Expulsión, muerte, salida, escalado y bloqueo diario.
-   - Se prueba con un mapa de prueba chico.
+   - Expulsión, muerte, salida y escalado.
+   - Generador de mapas desde un plano en texto y una mazmorra de prueba de dos mapas.
+   - El bloqueo diario de la recompensa pasa a la etapa 3, junto con el cofre del jefe.
 2. **Mecánicas.** Las de la tabla 3.7, el menú "Mazmorra" y el mapa y la brújula en el minimapa.
 3. **Gruta del Abisal.**
    - Un generador de mapas desde un plano en texto, con gráficos de AO, así las salas se editan fácil.
-   - Los mapas 510-512, criaturas por sala, minijefe, jefe con fases, Aletas y recompensas.
+   - Los mapas 510-512, criaturas por sala, minijefe, jefe con fases, Patas de rana y recompensas.
 4. **Prueba y balance.** En vivo solo y en grupo de 5, ajuste de números y página de la wiki.
 
 ## 5. Decisiones
@@ -121,3 +122,64 @@ Todas por datos del mapa, para que las mazmorras siguientes se armen sin código
 | Escalado | Propuesta: vida + 70 % y daño + 15 % por jugador extra (se ajusta en la etapa 4) |
 | Piedra de la Mazmorra 1 | Propuesta: playa de Lindos |
 | Trofeo del jefe | Propuesta: "Escama del Abisal", un coleccionable de la serie como los instrumentos de Zelda, más un cofre con oro y un objeto |
+
+## 6. Etapa 1: el motor
+
+### Qué hace
+- **Piedra de invocación:** una criatura fija con `dungeonId` en su plantilla. Al tocarla (a 4 baldosas o menos) se abre su panel: descripción, nivel, "Entrar solo" y "Con mi grupo (n)".
+- **Solo:** crea la corrida y te deja en la entrada.
+- **Con grupo:**
+  - lo usa el líder de la party (hasta 5);
+  - entra él y a los demás les llega una invocación de 30 segundos para aceptar;
+  - aceptan desde donde estén, si siguen en la party, vivos y fuera de otra actividad (arena, Hunters, otra instancia).
+- **Corrida:** copia todos los mapas de la mazmorra con sus criaturas, en el mismo lugar libre (`30000 + mapa × 50 + lugar`, hasta 50 corridas a la vez por mazmorra). Las criaturas de una corrida **no reaparecen**, y en los mapas base no aparece ninguna.
+- **Dificultad:** se calcula al crear la corrida con los miembros conectados de la party: vida + 70 % y daño + 15 % por cada uno además del primero.
+- **Sin PvP:** adentro no se puede atacar a otro jugador, ni cuerpo a cuerpo ni con hechizos. Con la party ya lo frenaba el fuego amigo; esto cubre a los que quedan adentro sin party (por ejemplo, si se desconecta el líder y la party se disuelve).
+- **Salir:**
+  - por el portal de salida, o con "Salir" en el cartel de arriba (`/mazmorra salir`);
+  - un fantasma también puede salir;
+  - se aparece junto a la piedra (`regreso`).
+- **Expulsión:** salir de la party o que te echen te saca. Desconectarse no: el server te saca de la party al desconectarte, pero eso no cuenta.
+- **Reconexión:** si te desconectás adentro y volvés mientras la corrida sigue viva, aparecés donde estabas. Una corrida sin nadie conectado adentro se borra a los 15 minutos, y una de la que salieron todos, enseguida. Si la corrida ya no existe, aparecés junto a la piedra.
+- **Escaleras:** las salidas entre mapas de la mazmorra llevan al mapa de la misma corrida.
+
+### Cómo se arma una mazmorra
+1. Se agrega a `server/jsons/dungeons.json`:
+   - `id`, `nombre`, `descripcion`, `nivelMinimo` y `maxJugadores`;
+   - `regreso`: dónde aparecés al salir, junto a la piedra;
+   - `piedraNpc`: número libre para la plantilla de la piedra (`piedraCuerpo` cambia su cuerpo);
+   - `escalado` y, si no se tiene que abrir en producción, `soloDesarrollo: true`.
+2. Se dibujan los planos en `server/mazmorras/<id>/mapa_<N>.txt` (N entre 507 y 599). El formato está al principio de `server/src/scripts/buildDungeonMaps.ts`:
+   - `#` pared, `.` piso, `~` agua, `E` entrada, `S` portal de salida;
+   - `1`-`9` escaleras que se unen de a pares;
+   - letras para criaturas, con su número en `leyenda.json`.
+3. Se corre `pnpm --dir server exec tsx src/scripts/buildDungeonMaps.ts <id>`. El generador:
+   - escribe los mapas en el server, la API y el cliente (`static/maps_local` y el minimapa en `imgs_maps`);
+   - anota en `dungeons.json` la entrada, las salidas y los mapas;
+   - crea la plantilla de la piedra.
+4. Se reinicia el server de juego.
+
+Las paredes usan las texturas del mapa 116: la cara de la pared en el lado norte de cada sala y piedra oscura en el resto. La etapa 3 suma las paredes laterales para la Gruta.
+
+### Mazmorra de prueba
+- `prueba`, mapas 590 y 591, con `soloDesarrollo: true`: en producción la piedra dice que está en desarrollo.
+- Sus mapas están marcados "GM", así que no aparecen en la wiki.
+- La piedra (NPC 9720) no está puesta en ningún mapa. Para probar, un GM la invoca con `/invocarnpc 9720`.
+
+### Archivos
+- `server/src/dungeons.ts`: el motor.
+- Enganches en el server:
+  - `protocol.ts`: paso por el portal y las escaleras, clic en la piedra, `/mazmorra` como comando de panel;
+  - `commands.ts`: `/mazmorra`;
+  - `game.ts`: sin PvP y expulsión al salir de la party;
+  - `npcs.ts`: sin reaparecer;
+  - `loadNpcs.ts`: nada en los mapas base;
+  - `loadMaps.ts`: carga los mapas de mazmorra;
+  - `login.ts`: vuelta a la corrida;
+  - `mapInstanceManager.ts`: no borra las corridas al desconectarse;
+  - `handleProtocol.ts` y `package.ts`: paquete `dungeonState` (100).
+- Cliente:
+  - `aowProtocol.ts` lee el paquete;
+  - `components/DungeonOverlay.tsx` muestra el panel, la invocación y el cartel de adentro.
+- `server/src/dungeons.test.ts`: cuentas de instancias y escalado, lugares libres, datos de cada mazmorra (mapas en las tres copias, entrada, portal de salida, piedra) y escaleras que no salen de la mazmorra.
+

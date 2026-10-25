@@ -9191,6 +9191,8 @@ function Game(this: GameApi) {
 
         const previousPartyId = user.partyId;
         party.memberIds = party.memberIds.filter((memberId) => !isSameEntityId(memberId, idUser));
+        // Salir de la party en una mazmorra de grupo te deja afuera (dungeons.ts).
+        require("./dungeons").onLeftParty(idUser);
         user.partyId = null;
         user.partyLeaderId = null;
         updatePartyIndexForUser(user, previousPartyId);
@@ -9243,6 +9245,7 @@ function Game(this: GameApi) {
 
         const previousTargetPartyId = target.partyId;
         party.memberIds = party.memberIds.filter((memberId) => !isSameEntityId(memberId, targetId));
+        require("./dungeons").onLeftParty(targetId);
         target.partyId = null;
         target.partyLeaderId = null;
         updatePartyIndexForUser(target, previousTargetPartyId);
@@ -9908,7 +9911,10 @@ function Game(this: GameApi) {
             const isOffensiveSpell = idUser !== idUserAttacked && isOffensiveSpellData(datSpell);
             const factionWars = getFactionWars();
             const isSupportSpellCast = idUser !== idUserAttacked && isSupportSpell(datSpell);
-            const huntersDeniedReason = isOffensiveSpell ? getHuntersGame().getAttackDeniedReason(user, userAttacked) : null;
+            const huntersDeniedReason = isOffensiveSpell
+                ? (getHuntersGame().getAttackDeniedReason(user, userAttacked) ??
+                  require("./dungeons").getAttackDeniedReason(user, userAttacked))
+                : null;
             if (huntersDeniedReason) {
                 withUserClient(idUser, (userClient) => {
                     handleProtocol.console(huntersDeniedReason, "white", 0, 0, userClient);
@@ -10795,7 +10801,9 @@ function Game(this: GameApi) {
 
             const arenaCombat = isArenaCombat(user, userAttacked);
             const challengeCombatRelation = getChallengeManager().getCombatRelation(user, userAttacked);
-            const huntersDeniedReason = getHuntersGame().getAttackDeniedReason(user, userAttacked);
+            const huntersDeniedReason =
+                getHuntersGame().getAttackDeniedReason(user, userAttacked) ??
+                require("./dungeons").getAttackDeniedReason(user, userAttacked);
             if (huntersDeniedReason) {
                 withUserClient(idUser, (userClient) => {
                     handleProtocol.console(huntersDeniedReason, "white", 0, 0, userClient);

@@ -181,8 +181,25 @@ export function createDefaultBalanceData(): RuntimeBalanceData {
     return cloneDefaults();
 }
 
+// El chamán pega como el druida (docs/CHAMAN_ELEMENTAL.md): su daño mágico, el general y el de contra jugadores, es
+// siempre el del druida del perfil cargado. Los perfiles guardados en la base antes del chamán no tienen la clase 22 y
+// él quedaba con los valores del código; así, además, si se retoca al druida desde el panel, el chamán lo sigue.
+const DRUID_CLASS_ID = 7;
+const SHAMAN_CLASS_ID = 22;
+const SHAMAN_MIRRORS_DRUID = ["modDmgMagia", "modDmgPvpMagia"] as const;
+
+function mirrorShamanMagicDamage(data: RuntimeBalanceData): RuntimeBalanceData {
+    for (const key of SHAMAN_MIRRORS_DRUID) {
+        const druid = Number(data[key][DRUID_CLASS_ID]);
+        if (Number.isFinite(druid)) {
+            data[key][SHAMAN_CLASS_ID] = druid;
+        }
+    }
+    return data;
+}
+
 export function normalizeBalanceData(input: unknown): RuntimeBalanceData {
-    return {
+    return mirrorShamanMagicDamage({
         balanceRazas: normalizeNumericRecord(
             input && (input as RuntimeBalanceData).balanceRazas,
             DEFAULT_BALANCE_DATA.balanceRazas,
@@ -240,7 +257,7 @@ export function normalizeBalanceData(input: unknown): RuntimeBalanceData {
             input && (input as RuntimeBalanceData).modDmgPvpMagia,
             DEFAULT_BALANCE_DATA.modDmgPvpMagia,
         ),
-    };
+    });
 }
 
 export function applyBalanceDataToVars(targetVars: Record<string, unknown>, input: unknown): RuntimeBalanceData {

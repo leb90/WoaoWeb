@@ -3984,7 +3984,7 @@ const ARROW_SAVE_CHANCE_BY_OE: Record<number, number> = { 1: 33, 53: 50, 54: 75 
 
 // Ventisca, Llamarada (campo `aoe`): le pega a cada uno en la cruz de 5 baldosas alrededor del clic, menos a quien
 // la lanza. Cada objetivo pasa por las mismas reglas que un hechizo común (zona segura, facciones, castillos) y
-// el maná se cobra una sola vez si le pegó a alguien.
+// el maná se cobra una sola vez, le pegue o no a alguien.
 const AREA_SPELL_MAX_RANGE_X = 11;
 const AREA_SPELL_MAX_RANGE_Y = 9;
 
@@ -4021,16 +4021,8 @@ function castAreaSpell(
         { map: targetMap, x: center.x, y: center.y },
         idSpell,
     );
-    sendAreaSpellFxToViewers(ws, clientId, {
-        map: targetMap,
-        x: center.x,
-        y: center.y,
-        aoe: Number(datSpell.aoe),
-        fxGrh: Number(datSpell.fxGrh ?? 0),
-        soundId: Number(datSpell.wav ?? 0),
-    });
-
     const hitIds: EntityId[] = [];
+    const hitTiles: Array<{ x: number; y: number }> = [];
     for (const tile of spellArea.getAreaTiles(center.x, center.y, Number(datSpell.aoe))) {
         const resolved = resolveClickedTarget(user, targetMap, tile.x, tile.y);
         const target = resolved?.target as AreaTarget | undefined;
@@ -4048,6 +4040,7 @@ function castAreaSpell(
         if (result === 0) continue;
 
         hitIds.push(target.id);
+        hitTiles.push({ x: tile.x, y: tile.y });
         if (target.isNpc && typeof result === "number" && result > 0) {
             game.loopArea(ws, function (viewer: AreaTarget) {
                 if (viewer.isNpc) return;
@@ -4061,6 +4054,17 @@ function castAreaSpell(
         }
         respawn.muere(ws, target.id);
     }
+
+    // Un gráfico sobre cada objetivo alcanzado y ninguno en las baldosas vacías (si no alcanzó a nadie, solo suena).
+    sendAreaSpellFxToViewers(ws, clientId, {
+        map: targetMap,
+        x: center.x,
+        y: center.y,
+        aoe: Number(datSpell.aoe),
+        fxGrh: Number(datSpell.fxGrh ?? 0),
+        soundId: Number(datSpell.wav ?? 0),
+        tiles: hitTiles,
+    });
 
     // El hechizo se lanzó (se vio y sonó): cuesta el maná aunque no haya pegado a nadie.
     user.mana -= manaCost;
@@ -4078,7 +4082,11 @@ function castAreaSpell(
     }
 }
 
-function sendAreaSpellFxToViewers(ws: RuntimeClient, casterId: EntityId, payload: { map: number; x: number; y: number; aoe: number; fxGrh: number; soundId: number }) {
+function sendAreaSpellFxToViewers(
+    ws: RuntimeClient,
+    casterId: EntityId,
+    payload: { map: number; x: number; y: number; aoe: number; fxGrh: number; soundId: number; tiles: Array<{ x: number; y: number }> },
+) {
     const sent = new Set<string>();
     const trySend = (viewerId: EntityId | null | undefined) => {
         if (!viewerId || sent.has(String(viewerId))) return;

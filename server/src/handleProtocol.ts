@@ -1613,7 +1613,7 @@ const handleServer: HandleProtocolApi = {
         socket.send(client);
     },
 
-    // Hechizo de área (spellArea.ts): el efecto cae sobre las baldosas de la cruz, haya o no alguien, con un solo sonido.
+    // Hechizo de área (spellArea.ts): un gráfico sobre cada objetivo alcanzado, ninguno en baldosas vacías, y un solo sonido.
     areaSpellFx(payload, client) {
         pkg.setPackageID(pkg.clientPacketID.areaSpellFx);
         pkg.writeString(JSON.stringify(payload));

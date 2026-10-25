@@ -469,7 +469,16 @@ export type ShopProductPayload = {
 // Desangrado de la apuñalada (server/src/game.ts, startBleeding): ms que quedan, 0 = terminó.
 export type BleedStatePayload = { remainingMs: number };
 // Hechizo de área: centro de la cruz, forma (aoe), efecto y sonido.
-export type AreaSpellFxPayload = { map: number; x: number; y: number; aoe: number; fxGrh: number; soundId: number };
+// tiles: dónde dibujar el efecto: la baldosa de cada objetivo alcanzado (vacía si no alcanzó a nadie).
+export type AreaSpellFxPayload = {
+    map: number;
+    x: number;
+    y: number;
+    aoe: number;
+    fxGrh: number;
+    soundId: number;
+    tiles?: Array<{ x: number; y: number }>;
+};
 
 // Criaturas que tienen de objetivo al jugador (server/src/aggroState.ts).
 export type AggroEntry = {

@@ -50,6 +50,8 @@ Lo leímos sala por sala en el mapa del ticket:
 
 Una sala de 16 × 13 entra en una pantalla del juego, igual que en Zelda: se ve la sala entera y el combate de un grupo de 5 tiene lugar.
 
+**Gráficos:** el piso de baldosas verdes y las paredes de piedra labrada del mapa 116 ("Dungeon"), que tienen la misma paleta que la mazmorra de Zelda. Para el agua profunda se usa el agua de AO, y para las escaleras, los portales azules que ya usa ese mapa.
+
 ## 3. Salas
 
 Celda = (columna, fila) en la cuadrícula del mapa 510; la fila 0 es la de arriba.

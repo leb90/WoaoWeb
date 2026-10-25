@@ -154,3 +154,15 @@ test("el set Silvano completo hace fallar 3 de cada 10 parálisis", () => {
     }
 });
 
+test("el chamán toma el daño mágico del druida del perfil, aunque el perfil sea de antes del chamán", () => {
+    const { normalizeBalanceData } = require("./balanceData");
+    // Perfil guardado sin la clase 22 y con el druida retocado.
+    const legacy = normalizeBalanceData({ modDmgMagia: { 7: 1.01 }, modDmgPvpMagia: { 7: 1.2 } });
+    assert.equal(legacy.modDmgMagia[22], 1.01);
+    assert.equal(legacy.modDmgPvpMagia[22], 1.2);
+    // Aunque el perfil traiga otro valor para el chamán, manda el del druida.
+    const tuned = normalizeBalanceData({ modDmgMagia: { 7: 0.95, 22: 0.5 } });
+    assert.equal(tuned.modDmgMagia[22], 0.95);
+    // Lo físico no se copia: el chamán usa escudo y el druida no.
+    assert.notEqual(tuned.modEscudo[22], tuned.modEscudo[7]);
+});

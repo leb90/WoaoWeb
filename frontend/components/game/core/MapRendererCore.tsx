@@ -77,7 +77,6 @@ import { useRemoteEntityController } from "./useRemoteEntityController";
 import { createEntityOverlays } from "../rendering/entityOverlays";
 import { createElementalAuras } from "../rendering/elementalAuras";
 import { WeatherAmbience } from "../../../lib/weatherAmbience";
-import { getSpellAreaOffsets } from "../../../lib/spellArea";
 import type { AreaSpellFxPayload } from "../../../lib/aowProtocol";
 import {
     ELEMENTAL_SLOW_WALK_MULTIPLIER,
@@ -1737,16 +1736,13 @@ export default function MapRenderer({
         [entityOverlays],
     );
 
-    // Hechizos de área: un gráfico por cada baldosa del área, así se ve a quiénes alcanza (la Ventisca es hielo que
-    // cae y se rompe en cada baldosa; la Llamarada, una llama en cada una).
+    // Hechizos de área (Ventisca, Llamarada): un gráfico sobre cada objetivo alcanzado y ninguno en las baldosas vacías.
+    // Va en la baldosa y no pegado a la criatura, así no se corta si el golpe la mata.
     const renderAreaSpellFx = React.useCallback(
         async (engine: Engine, payload: AreaSpellFxPayload) => {
-            const offsets = getSpellAreaOffsets(payload.aoe);
-            const tiles = offsets.length ? offsets : [{ dx: 0, dy: 0 }];
+            const tiles = payload.tiles ?? [];
             await Promise.all(
-                tiles.map((tile) =>
-                    entityOverlays.renderTileFX(engine, payload.map, payload.x + tile.dx, payload.y + tile.dy, payload.fxGrh),
-                ),
+                tiles.map((tile) => entityOverlays.renderTileFX(engine, payload.map, tile.x, tile.y, payload.fxGrh)),
             );
         },
         [entityOverlays],

@@ -26,7 +26,7 @@ const TRAINER_CLASSES: Record<number, number> = {
     9709: 9,
     9710: 20,
 };
-const CITY_MAPS = [1, 34, 59, 63, 151, 170];
+const CITY_MAPS = [1, 34, 59, 62, 151, 170];
 const canUse = (itemId: number, classId: number) => !(objects[String(itemId)]?.clasesNoPermitidas ?? []).includes(classId);
 
 test("cada entrenador comercia, no se puede atacar y tiene su clase escrita", () => {
@@ -89,5 +89,16 @@ test("los 11 están en cada ciudad, igual en npcs.json y specials.json del serve
             for (const entry of trainers) assert.equal(specials[`${entry.x},${entry.y}`], entry.npcIndex, `mapa ${map}`);
         }
         assert.deepEqual(copies[0], copies[1], `mapa ${map}: server y api distintos`);
+    }
+});
+
+test("no hay entrenadores en otros mapas", () => {
+    for (const dir of ["server/mapas_source", "api/src/mapas_source"]) {
+        for (const entry of fs.readdirSync(path.join(root, dir))) {
+            const map = Number(/^mapa_(\d+)$/.exec(entry)?.[1] ?? 0);
+            if (!map || CITY_MAPS.includes(map) || !fs.existsSync(path.join(root, dir, entry, "npcs.json"))) continue;
+            const placements = readJson(`${dir}/${entry}/npcs.json`) as Array<{ npcIndex: number }>;
+            assert.ok(!placements.some((p) => TRAINER_CLASSES[p.npcIndex]), `${dir}/${entry}`);
+        }
     }
 });

@@ -22,8 +22,11 @@ function readJson(relativePath: string): Json {
     return JSON.parse(fs.readFileSync(path.join(root, relativePath), "utf8")) as Json;
 }
 
+// Respeta si el archivo terminaba con salto de línea (los de mapas no), así el diff muestra solo el cambio.
 function writeJson(relativePath: string, data: unknown) {
-    fs.writeFileSync(path.join(root, relativePath), `${JSON.stringify(data)}\n`, "utf8");
+    const fullPath = path.join(root, relativePath);
+    const newline = !fs.existsSync(fullPath) || fs.readFileSync(fullPath, "utf8").endsWith("\n");
+    fs.writeFileSync(fullPath, `${JSON.stringify(data)}${newline ? "\n" : ""}`, "utf8");
 }
 
 function updateJson(relativePath: string, update: (data: Json) => void) {
@@ -189,26 +192,57 @@ const TRAINERS: Trainer[] = [
     },
 ];
 
-// Centro de la plaza de cada ciudad, cerca de donde se llega, con el círculo entero libre: no tapa puertas, salidas
-// ni otras criaturas, no corta ningún camino y debajo de cada entrenador no hay árboles, cercas ni techos que tapen
-// su etiqueta (lo buscó un script que miró el terreno de cada mapa).
-// "giro": cuánto se gira el círculo, en dieciseisavos del paso entre dos entrenadores, para esquivar un cartel o
-// un estandarte sin cambiar la forma.
-const CITIES = [
-    { name: "Ullathorpe", map: 1, x: 53, y: 69, giro: 0 },
-    { name: "Nix", map: 34, x: 31, y: 54, giro: 10 },
-    { name: "Banderbill", map: 59, x: 44, y: 69, giro: 6 },
-    { name: "Lindos", map: 63, x: 57, y: 21, giro: 0 },
-    { name: "Arghal", map: 151, x: 30, y: 16, giro: 0 },
-    { name: "Caos", map: 170, x: 53, y: 83, giro: 1 },
+// Lugar de cada ciudad: lejos del tránsito (el camino más corto entre la llegada, las salidas, las puertas y las
+// criaturas fijas pasa a dos baldosas o más de cada entrenador), sin tapar puertas, salidas ni otras criaturas, sin
+// cortar ningún camino y sin que el mapa les tape el cuerpo. Lo buscó un script que miró el terreno de cada mapa y se
+// midió en el cliente (docs/ENTRENADORES_DE_CLASE.md).
+// Forma: "circulo" (radio 4; "giro" lo rota en dieciseisavos del paso entre dos entrenadores), "fila" contra una
+// pared o "herradura". "orient" es hacia dónde abren la fila y la herradura: la gente se para de ese lado.
+type Forma = "circulo" | "fila" | "herradura";
+type Orient = "norte" | "sur" | "este" | "oeste";
+const CITIES: Array<{ name: string; map: number; x: number; y: number; forma: Forma; giro?: number; orient?: Orient }> = [
+    { name: "Ullathorpe", map: 1, x: 24, y: 54, forma: "circulo", giro: 0 },
+    { name: "Nix", map: 34, x: 26, y: 70, forma: "circulo", giro: 4 },
+    // En Banderbill no entra un círculo fuera de las calles: van en fila contra la pared sur del bolsón del oeste.
+    { name: "Banderbill", map: 59, x: 23, y: 32, forma: "fila", orient: "norte" },
+    // Lindos es el mapa 62 (el 63 es la playa del muelle).
+    { name: "Lindos", map: 62, x: 54, y: 37, forma: "circulo", giro: 0 },
+    // Arghal es el mapa 151 (el 150 es el puerto).
+    { name: "Arghal", map: 151, x: 30, y: 16, forma: "circulo", giro: 0 },
+    // Caos es una cuadrícula de calles angostas sin plazas: van en fila sobre el muelle, contra la baranda del agua y
+    // mirando a la vereda de las tiendas, cerca de donde se llega.
+    { name: "Caos", map: 170, x: 23, y: 73, forma: "fila", orient: "norte" },
 ];
 const RING_RADIUS = 4;
+// Desde el centro, abriendo hacia el sur, de una punta a la otra.
+const FORMAS: Record<Exclude<Forma, "circulo">, Array<[number, number]>> = {
+    fila: [[-10, 0], [-8, 0], [-6, 0], [-4, 0], [-2, 0], [0, 0], [2, 0], [4, 0], [6, 0], [8, 0], [10, 0]],
+    herradura: [[-7, 1], [-7, -1], [-6, -3], [-4, -4], [-2, -4], [0, -4], [2, -4], [4, -4], [6, -3], [7, -1], [7, 1]],
+};
 
-function ringPositions(cx: number, cy: number, giro: number) {
-    const step = (2 * Math.PI) / TRAINERS.length;
-    return TRAINERS.map((_, index) => {
-        const angle = -Math.PI / 2 + (giro / 16) * step + index * step;
-        return { x: cx + Math.round(RING_RADIUS * Math.cos(angle)), y: cy + Math.round(RING_RADIUS * Math.sin(angle)) };
+function positionsFor(city: (typeof CITIES)[number]) {
+    if (city.forma === "circulo") {
+        const step = (2 * Math.PI) / TRAINERS.length;
+        return TRAINERS.map((_, index) => {
+            const angle = -Math.PI / 2 + ((city.giro ?? 0) / 16) * step + index * step;
+            return { x: city.x + Math.round(RING_RADIUS * Math.cos(angle)), y: city.y + Math.round(RING_RADIUS * Math.sin(angle)) };
+        });
+    }
+    const rotate = ([dx, dy]: [number, number]): [number, number] => {
+        switch (city.orient ?? "sur") {
+            case "norte":
+                return [dx, -dy];
+            case "este":
+                return [dy, dx];
+            case "oeste":
+                return [-dy, dx];
+            default:
+                return [dx, dy];
+        }
+    };
+    return FORMAS[city.forma].map((offset) => {
+        const [dx, dy] = rotate(offset);
+        return { x: city.x + dx, y: city.y + dy };
     });
 }
 
@@ -335,26 +369,41 @@ type Placement = { mapNum: number; x: number; y: number; npcIndex: number; movem
 const sortPlacements = (list: Placement[]) =>
     [...list].sort((a, b) => a.mapNum - b.mapNum || a.y - b.y || a.x - b.x || a.npcIndex - b.npcIndex);
 
-for (const city of CITIES) {
-    const ring = ringPositions(city.x, city.y, city.giro);
-    for (const sourceDir of mapSourceDirs) {
-        const mapDir = path.join(sourceDir, `mapa_${city.map}`);
-        const placementsPath = path.join(mapDir, "npcs.json");
-        const specialsPath = path.join(mapDir, "specials.json");
-        const current = (readJson(placementsPath) as unknown as Placement[]).filter((entry) => !trainerIds.has(entry.npcIndex));
+function writePlacements(sourceDir: string, map: number, update: (current: Placement[]) => Placement[]) {
+    const mapDir = path.join(sourceDir, `mapa_${map}`);
+    const placementsPath = path.join(mapDir, "npcs.json");
+    const specialsPath = path.join(mapDir, "specials.json");
+    const placements = sortPlacements(update(readJson(placementsPath) as unknown as Placement[]));
+    writeJson(placementsPath, placements);
+    updateJson(specialsPath, (specials) => {
+        specials.npcs = Object.fromEntries(placements.map((entry) => [`${entry.x},${entry.y}`, entry.npcIndex]));
+    });
+}
 
-        ring.forEach((position, index) => {
-            const taken = current.find((entry) => entry.x === position.x && entry.y === position.y);
-            if (taken) {
-                throw new Error(`${city.name} ${position.x},${position.y} ya tiene el NPC ${taken.npcIndex}.`);
-            }
-            current.push({ mapNum: city.map, x: position.x, y: position.y, npcIndex: TRAINERS[index].npcId, movement: 0 });
-        });
+for (const sourceDir of mapSourceDirs) {
+    // Saca a los entrenadores de los mapas donde ya no van (por ejemplo, si una ciudad cambia de mapa).
+    const cityMaps = new Set(CITIES.map((city) => city.map));
+    for (const entry of fs.readdirSync(path.join(root, sourceDir))) {
+        const map = Number(/^mapa_(\d+)$/.exec(entry)?.[1] ?? 0);
+        if (!map || cityMaps.has(map)) continue;
+        const placementsPath = path.join(sourceDir, entry, "npcs.json");
+        if (!fs.existsSync(path.join(root, placementsPath))) continue;
+        const current = readJson(placementsPath) as unknown as Placement[];
+        if (current.some((p) => trainerIds.has(p.npcIndex))) writePlacements(sourceDir, map, (list) => list.filter((p) => !trainerIds.has(p.npcIndex)));
+    }
 
-        const placements = sortPlacements(current);
-        writeJson(placementsPath, placements);
-        updateJson(specialsPath, (specials) => {
-            specials.npcs = Object.fromEntries(placements.map((entry) => [`${entry.x},${entry.y}`, entry.npcIndex]));
+    for (const city of CITIES) {
+        const spots = positionsFor(city);
+        writePlacements(sourceDir, city.map, (list) => {
+            const current = list.filter((entry) => !trainerIds.has(entry.npcIndex));
+            spots.forEach((position, index) => {
+                const taken = current.find((entry) => entry.x === position.x && entry.y === position.y);
+                if (taken) {
+                    throw new Error(`${city.name} ${position.x},${position.y} ya tiene el NPC ${taken.npcIndex}.`);
+                }
+                current.push({ mapNum: city.map, x: position.x, y: position.y, npcIndex: TRAINERS[index].npcId, movement: 0 });
+            });
+            return current;
         });
     }
 }

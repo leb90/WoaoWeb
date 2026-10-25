@@ -1,6 +1,6 @@
 # Mazmorras (PvE instanciado)
 
-Fecha: 2026-10-25. Estado: **diseño, a confirmar** (rama `mazmorras-diseno`). La primera mazmorra está en [mazmorras/01-GRUTA_DEL_ABISAL.md](mazmorras/01-GRUTA_DEL_ABISAL.md).
+Fecha: 2026-10-25. Estado: **diseño; decisiones principales confirmadas** (rama `mazmorras-diseno`). La primera mazmorra está en [mazmorras/01-GRUTA_DEL_ABISAL.md](mazmorras/01-GRUTA_DEL_ABISAL.md).
 
 Una serie de mazmorras al estilo Zelda para el PvE del juego: puzzle, exploración, llaves y un jefe. Cada una da un **ítem de mazmorra** que se usa en las siguientes.
 
@@ -36,7 +36,7 @@ Una serie de mazmorras al estilo Zelda para el PvE del juego: puzzle, exploraci�
 ### 3.1 Entrada por la piedra de invocación
 - Cada mazmorra tiene una piedra en el mundo (una criatura fija que no se ataca). Para la Mazmorra 1 se propone la playa de Lindos, por el tema del agua.
 - Al hacerle clic se abre un panel con la mazmorra, el nivel recomendado, si ya cobraste la recompensa de hoy y dos botones: **Entrar solo** y **Entrar con mi grupo**.
-- **Con grupo** (como la piedra de encuentro de WoW):
+- **Con grupo** (como la piedra de encuentro de WoW) **[confirmado: con la party actual, hasta 5]**:
   - el líder de la party la usa;
   - a cada miembro online le aparece "Leandro te invoca a la Gruta del Abisal" con 30 segundos para aceptar;
   - los que aceptan son invocados a la instancia desde donde estén, siempre que estén vivos y no en otra actividad (arena, Hunters, Blood Castle).
@@ -64,11 +64,12 @@ Se calcula al crear la instancia, con la cantidad de jugadores que entraron (n):
 El jefe escala igual. Si alguien entra después (invocado por el líder mientras la instancia vive), no se recalcula.
 
 ### 3.4 Muerte y salida
-- Si morís adentro, revivís en la entrada de la mazmorra a los 10 segundos, con media vida. La instancia sigue.
+- **[confirmado]** Si morís adentro quedás fantasma, como en el resto del juego, hasta que alguien te resucite (un clérigo del grupo, por ejemplo). La instancia sigue.
+- Un fantasma puede salir por el portal de la entrada, así nadie queda trabado si muere todo el grupo. Afuera se revive como siempre.
 - Para salir hay un portal en la entrada y otro después del jefe. También te saca salir de la party.
 
 ### 3.5 Recompensas y repetición
-- La recompensa del jefe se cobra **una vez por día por personaje**. Se puede repetir la mazmorra; sin esa recompensa, pero con las criaturas.
+- **[confirmado]** La recompensa del jefe se cobra **una vez por día por personaje**. Se puede repetir la mazmorra; sin esa recompensa, pero con las criaturas.
 - El **ítem de mazmorra** (en la 1, las Aletas) se gana una sola vez y queda para siempre en el personaje.
 
 ### 3.6 Ítems de mazmorra y el menú "Mazmorra"
@@ -109,14 +110,14 @@ Todas por datos del mapa, para que las mazmorras siguientes se armen sin código
    - Los mapas 510-512, criaturas por sala, minijefe, jefe con fases, Aletas y recompensas.
 4. **Prueba y balance.** En vivo solo y en grupo de 5, ajuste de números y página de la wiki.
 
-## 5. Decisiones a confirmar
+## 5. Decisiones
 
-| Tema | Propuesta |
+| Tema | Decisión |
 |---|---|
-| Cómo se arma el grupo | Con la party actual, invocada desde la piedra. Un buscador automático (cola) se puede sumar después |
-| Tamaño máximo del grupo | 5, como en WoW |
-| Escalado | Vida + 70 % y daño + 15 % por jugador extra |
-| Muerte adentro | Revivir en la entrada a los 10 s, con media vida |
-| Repetición | Recompensa del jefe una vez por día por personaje |
-| Piedra de la Mazmorra 1 | Playa de Lindos |
-| Trofeo del jefe | "Escama del Abisal", un coleccionable de la serie como los instrumentos de Zelda, más un cofre con oro y un objeto |
+| Cómo se arma el grupo | **Confirmado:** con la party actual, invocada desde la piedra |
+| Tamaño máximo del grupo | **Confirmado:** 5 |
+| Muerte adentro | **Confirmado:** fantasma como afuera, hasta que te resuciten; el fantasma puede salir por el portal |
+| Repetición | **Confirmado:** recompensa del jefe una vez por día por personaje |
+| Escalado | Propuesta: vida + 70 % y daño + 15 % por jugador extra (se ajusta en la etapa 4) |
+| Piedra de la Mazmorra 1 | Propuesta: playa de Lindos |
+| Trofeo del jefe | Propuesta: "Escama del Abisal", un coleccionable de la serie como los instrumentos de Zelda, más un cofre con oro y un objeto |

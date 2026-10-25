@@ -202,7 +202,8 @@ type Forma = "circulo" | "fila" | "herradura";
 type Orient = "norte" | "sur" | "este" | "oeste";
 const CITIES: Array<{ name: string; map: number; x: number; y: number; forma: Forma; giro?: number; orient?: Orient }> = [
     { name: "Ullathorpe", map: 1, x: 24, y: 54, forma: "circulo", giro: 0 },
-    { name: "Nix", map: 34, x: 26, y: 70, forma: "circulo", giro: 4 },
+    // Nix: la franja de pasto del sur, junto al mar, lejos de calles, puertas y otras criaturas.
+    { name: "Nix", map: 34, x: 50, y: 85, forma: "circulo", giro: 4 },
     // En Banderbill no entra un círculo fuera de las calles: van en fila contra la pared sur del bolsón del oeste.
     { name: "Banderbill", map: 59, x: 23, y: 32, forma: "fila", orient: "norte" },
     // Lindos es el mapa 62 (el 63 es la playa del muelle).

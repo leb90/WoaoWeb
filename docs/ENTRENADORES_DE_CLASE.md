@@ -29,7 +29,7 @@ Uno por clase jugable, en este orden (en el círculo, desde arriba y como las ag
 | Ciudad | Mapa | Forma | Centro | Dónde |
 |---|---|---|---|---|
 | Ullathorpe | 1 | círculo | (24,54) | el pasto junto al agua, al oeste |
-| Nix | 34 | círculo | (26,70) | el pasto junto al agua, al suroeste; la calle queda al costado |
+| Nix | 34 | círculo | (50,85) | el jardín del sur, junto al mar, lejos de calles, puertas y otras criaturas |
 | Banderbill | 59 | fila | (23,32) | contra la pared sur del bolsón del oeste, mirando al norte; la plaza queda libre |
 | Lindos | 62 | círculo | (54,37) | la playa al lado del sastre |
 | Arghal | 151 | círculo | (30,16) | el pasto junto al agua, al norte de las tiendas |

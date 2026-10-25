@@ -1,0 +1,60 @@
+▲ Next.js 16.3.6 (Turbopack)
+- Local:         http://127.0.0.1:3200
+- Network:       http://127.0.0.1:3200
+- Environments: .env
+✓ Ready in 15.3s
+✓ Running next.config.ts took 606ms
+Creating turbopack project {
+  dir: 'C:\\Programación\\Proyectos\\WoaoWeb\\developer',
+  testMode: true
+}
+
+○ Compiling /login ...
+ GET /login 200 in 15.6s (next.js: 13.5s, proxy.ts: 366ms, application-code: 1667ms)
+ GET /login 200 in 318ms (next.js: 28ms, proxy.ts: 19ms, application-code: 271ms)
+ POST /api/auth/login 200 in 1712ms (next.js: 607ms, proxy.ts: 23ms, application-code: 1082ms)
+ GET /indexer 200 in 2.3s (next.js: 1898ms, proxy.ts: 18ms, application-code: 414ms)
+ POST /api/indexer/analyze 200 in 1997ms (next.js: 811ms, proxy.ts: 38ms, application-code: 1147ms)
+ GET /indexations 200 in 1380ms (next.js: 965ms, proxy.ts: 21ms, application-code: 395ms)
+ GET /api/indexations?q=&layer=0&page=1&limit=80 200 in 878ms (next.js: 736ms, proxy.ts: 14ms, application-code: 128ms)
+ GET /api/indexer/jobs/e9dc51810b14c9ca 200 in 3.5s (next.js: 3.3s, proxy.ts: 29ms, application-code: 124ms)
+ GET /api/indexations/preview?grh=6000&ancho=4&alto=4&capa=0&max=760&v=1792954220224 200 in 651ms (next.js: 492ms, proxy.ts: 18ms, application-code: 141ms)
+ GET /login 200 in 168ms (next.js: 56ms, proxy.ts: 9ms, application-code: 103ms)
+ POST /api/auth/login 200 in 573ms (next.js: 19ms, proxy.ts: 9ms, application-code: 545ms)
+ GET /indexer 200 in 137ms (next.js: 15ms, proxy.ts: 9ms, application-code: 112ms)
+ POST /api/indexer/analyze 200 in 641ms (next.js: 7ms, proxy.ts: 40ms, application-code: 594ms)
+ GET /api/indexer/jobs/7b1401b69faf1ae2 200 in 125ms (next.js: 48ms, proxy.ts: 40ms, application-code: 37ms)
+ GET /indexations 200 in 125ms (next.js: 19ms, proxy.ts: 12ms, application-code: 95ms)
+ GET /api/indexations?q=&layer=0&page=1&limit=80 200 in 72ms (next.js: 9ms, proxy.ts: 9ms, application-code: 53ms)
+ GET /api/indexations/preview?grh=6000&ancho=4&alto=4&capa=0&max=760&v=1792954220224 200 in 90ms (next.js: 11ms, proxy.ts: 9ms, application-code: 70ms)
+ GET /login 200 in 116ms (next.js: 13ms, proxy.ts: 6ms, application-code: 98ms)
+ POST /api/auth/login 200 in 509ms (next.js: 10ms, proxy.ts: 11ms, application-code: 488ms)
+ GET /indexer 200 in 145ms (next.js: 9ms, proxy.ts: 7ms, application-code: 130ms)
+ POST /api/indexer/analyze 200 in 666ms (next.js: 16ms, proxy.ts: 41ms, application-code: 609ms)
+ GET /api/indexer/jobs/a51039c082813b7d 200 in 58ms (next.js: 29ms, proxy.ts: 9ms, application-code: 20ms)
+ GET /indexations 200 in 283ms (next.js: 34ms, proxy.ts: 62ms, application-code: 188ms)
+ GET /api/indexations?q=&layer=0&page=1&limit=80 200 in 89ms (next.js: 27ms, proxy.ts: 12ms, application-code: 50ms)
+ GET /api/indexations/preview?grh=6000&ancho=4&alto=4&capa=0&max=760&v=1792954220224 200 in 87ms (next.js: 15ms, proxy.ts: 9ms, application-code: 63ms)
+ GET /indexer 200 in 118ms (next.js: 9ms, proxy.ts: 8ms, application-code: 100ms)
+ POST /api/indexer/analyze 200 in 55ms (next.js: 6ms, proxy.ts: 14ms, application-code: 35ms)
+ GET /api/indexer/jobs/f3690182e3a38534 200 in 72ms (next.js: 34ms, proxy.ts: 16ms, application-code: 22ms)
+ GET /login 200 in 78ms (next.js: 9ms, proxy.ts: 5ms, application-code: 64ms)
+ POST /api/auth/login 200 in 543ms (next.js: 13ms, proxy.ts: 13ms, application-code: 517ms)
+ GET /indexer 200 in 154ms (next.js: 15ms, proxy.ts: 5ms, application-code: 134ms)
+ POST /api/indexer/analyze 200 in 657ms (next.js: 6ms, proxy.ts: 90ms, application-code: 560ms)
+ GET /api/indexer/jobs/dbfb48e765038819 200 in 107ms (next.js: 44ms, proxy.ts: 27ms, application-code: 36ms)
+ GET /indexations 200 in 460ms (next.js: 10ms, proxy.ts: 15ms, application-code: 435ms)
+ GET /api/indexations?q=&layer=0&page=1&limit=80 200 in 68ms (next.js: 9ms, proxy.ts: 13ms, application-code: 46ms)
+ GET /api/indexations/preview?grh=6000&ancho=4&alto=4&capa=0&max=760&v=1792954220224 200 in 78ms (next.js: 9ms, proxy.ts: 8ms, application-code: 61ms)
+ GET /indexer 200 in 141ms (next.js: 8ms, proxy.ts: 12ms, application-code: 120ms)
+ POST /api/indexer/analyze 200 in 58ms (next.js: 6ms, proxy.ts: 15ms, application-code: 38ms)
+ GET /api/indexer/jobs/1677e185cb39d5cb 200 in 56ms (next.js: 29ms, proxy.ts: 10ms, application-code: 17ms)
+ GET /login?next=%2Findexer 200 in 73ms (next.js: 8ms, proxy.ts: 4ms, application-code: 60ms)
+ GET /login?next=%2F 200 in 58ms (next.js: 6ms, proxy.ts: 11ms, application-code: 41ms)
+ POST /api/auth/login 200 in 297ms (next.js: 6ms, proxy.ts: 5ms, application-code: 286ms)
+ GET / 200 in 81ms (next.js: 40ms, proxy.ts: 2ms, application-code: 39ms)
+ GET / 200 in 94ms (next.js: 23ms, proxy.ts: 12ms, application-code: 59ms)
+ GET /dashboard 200 in 168ms (next.js: 65ms, proxy.ts: 6ms, application-code: 97ms)
+ GET /dashboard 200 in 71ms (next.js: 14ms, proxy.ts: 5ms, application-code: 52ms)
+ GET /api/dashboard 200 in 143ms (next.js: 83ms, proxy.ts: 5ms, application-code: 54ms)
+ GET /api/dashboard 200 in 46ms (next.js: 6ms, proxy.ts: 5ms, application-code: 35ms)

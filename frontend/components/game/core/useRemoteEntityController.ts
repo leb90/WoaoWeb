@@ -5,6 +5,7 @@ import type { CharacterSnapshot } from "../../../lib/aowProtocol";
 import {
     renderLocalPlayer,
     renderRemoteCharacter,
+    removeNpcLabelFromOverlay,
 } from "../rendering/characterRenderer";
 import type { TileBounds } from "../assets/scenePreload";
 import {
@@ -311,6 +312,8 @@ export function useRemoteEntityController(
             engine.remoteEntityRenderRequestIds.delete(id);
             options.activeCastBarsRef.current.delete(id);
             options.removeCastBarFromOverlay(engine, id);
+
+            removeNpcLabelFromOverlay(engine, id);
 
             const container = engine.remoteEntities.get(id);
             if (container) {

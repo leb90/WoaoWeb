@@ -589,8 +589,8 @@ export async function loadGraphicsDB(): Promise<GraphicsDB> {
 export async function loadObjectsDB(): Promise<ObjectsDB> {
     try {
         return await fetchJsonWithFallback<ObjectsDB>(
-            "/init/objs.json?v=3.9",
-            "/init/objs.json?v=3.9",
+            "/init/objs.json?v=3.10",
+            "/init/objs.json?v=3.10",
             "objects database",
         );
     } catch (error) {
@@ -846,8 +846,8 @@ export function getTileAt(
 export async function loadNPCsDB(): Promise<NPCsDB> {
     try {
         return await fetchJsonWithFallback<NPCsDB>(
-            "/init/npcs_optimized.json?v=3.0",
-            "/init/npcs_optimized.json?v=3.0",
+            "/init/npcs_optimized.json?v=3.1",
+            "/init/npcs_optimized.json?v=3.1",
             "NPCs database",
             { preferLocal: PREFER_LOCAL_NPCS },
         );

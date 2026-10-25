@@ -330,6 +330,8 @@ export interface CharacterSnapshot {
     spells?: SpellEntry[];
     isNpc?: boolean;
     questStatus?: number;
+    // Texto debajo del cuerpo de una criatura (la clase de un entrenador: "Mago", "Clérigo"...).
+    etiqueta?: string;
     tt?: number;
 }
 
@@ -1850,6 +1852,9 @@ function parseNpc(reader: PacketReader): CharacterSnapshot {
     }
     if (reader.canReadBytes(2)) {
         snapshot.isHostileNpc = reader.getByte() === 1;
+    }
+    if (reader.canReadBytes(3)) {
+        snapshot.etiqueta = reader.getString();
     }
     snapshot.tt = reader.canReadBytes(1) ? reader.getByte() : 0;
     return snapshot;

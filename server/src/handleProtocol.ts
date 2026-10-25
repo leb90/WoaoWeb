@@ -270,6 +270,7 @@ type ProtocolNpc = RuntimeNpc & {
     heading: number;
     color: string;
     clan: string;
+    etiqueta?: string;
     objs?: Record<string, TradeItem> | TradeItem[];
 };
 
@@ -593,6 +594,12 @@ function getNpcTradeObjects(npc: ProtocolNpc) {
 
 function getObject(idItem: number) {
     return vars.datObj[idItem] as DataObject;
+}
+
+// Precio de un ítem en la tienda de un NPC: el propio de esa tienda o el del objeto.
+function getMerchantItemPrice(entry: { valor?: number }, obj: DataObject): number {
+    const shopPrice = Number(entry.valor ?? 0);
+    return shopPrice > 0 ? shopPrice : Number(obj.valor ?? 0);
 }
 
 function getSpell(idSpell: number) {
@@ -971,6 +978,8 @@ function writeNpcPayload(npc: ProtocolNpc, viewerId?: EntityId) {
     pkg.writeByte(getNpcQuestStatusForViewer(npc, viewerId));
     // Hostil (ataca solo): el cliente lo usa para el color del contorno al pasar el mouse.
     pkg.writeByte(Number((npc as { hostile?: number }).hostile ?? 0) === 1 || Number(npc.movement ?? 0) === 3 ? 1 : 0);
+    // Texto que el cliente muestra debajo del cuerpo (la clase de un entrenador: "Mago"); vacío en el resto.
+    pkg.writeString(String(npc.etiqueta ?? ""));
 }
 
 function writeAreaItemSnapshot(item: AreaItemSnapshot) {
@@ -1883,7 +1892,7 @@ const handleServer: HandleProtocolApi = {
                     entry,
                 ): entry is {
                     indexObj: string;
-                    item: { item?: number; idItem?: number; cant: number; rarity?: number };
+                    item: { item?: number; idItem?: number; cant: number; rarity?: number; valor?: number };
                     idItem: number;
                 } => entry !== null,
             );
@@ -1899,7 +1908,7 @@ const handleServer: HandleProtocolApi = {
             pkg.writeShort(objItem.grhIndex);
             pkg.writeString(objItem.name);
             pkg.writeShort(item.cant);
-            pkg.writeInt(isBankTrade ? 0 : objItem.valor);
+            pkg.writeInt(isBankTrade ? 0 : getMerchantItemPrice(item, objItem));
             pkg.writeByte(itemValidUser(idUser, idItem));
             // Lo que vende un NPC no tiene rareza; lo del banco conserva la suya.
             const rarity = isBankTrade ? itemRarity.getItemRarity(idItem, item.rarity) : 0;

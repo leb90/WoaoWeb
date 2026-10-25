@@ -613,6 +613,61 @@ function ensureQuestMarker(
     setVisibilityIfChanged(marker, true);
 }
 
+// Texto dorado debajo del cuerpo de una criatura que lo tiene (los entrenadores de clase: "Mago", "Clérigo"...).
+// Va en la capa de los globos de chat, encima del mapa, para que no lo tapen cercas, árboles ni techos de las filas
+// de abajo; se reacomoda en cada cuadro (entityOverlays.updateActiveDialogBubblePositions) y se borra cuando la
+// criatura se va (removeNpcLabelFromOverlay).
+type NpcOverlayLabel = Text & { npcLabelEntityId?: number; npcLabelOffsetX?: number; npcLabelOffsetY?: number };
+
+function findNpcLabel(engine: Engine, entityId: number): NpcOverlayLabel | undefined {
+    return engine.dialogOverlayContainer?.children.find(
+        (child) => (child as NpcOverlayLabel).npcLabelEntityId === entityId,
+    ) as NpcOverlayLabel | undefined;
+}
+
+export function removeNpcLabelFromOverlay(engine: Engine, entityId: number): void {
+    const label = findNpcLabel(engine, entityId);
+    if (!label) return;
+    label.parent?.removeChild(label);
+    label.destroy();
+}
+
+function ensureNpcLabel(
+    engine: Engine,
+    container: CharacterDisplayContainer,
+    bodyMetrics: BodyRenderMetrics,
+    entity: Character,
+    hideBody: boolean,
+): void {
+    const overlay = engine.dialogOverlayContainer;
+    const text = entity.isNpc ? String(entity.etiqueta ?? "").trim() : "";
+
+    if (!overlay || !text || hideBody || entity.dead) {
+        removeNpcLabelFromOverlay(engine, entity.id);
+        return;
+    }
+
+    let label = findNpcLabel(engine, entity.id);
+    if (!label) {
+        label = new Text({
+            text,
+            style: createCharacterClanTextStyle(CLAN_TAG_HIGHLIGHT_COLOR),
+        }) as NpcOverlayLabel;
+        label.anchor.set(0.5, 0);
+        label.npcLabelEntityId = entity.id;
+        // Debajo de los globos de chat de la misma capa.
+        label.zIndex = -1;
+        overlay.addChild(label);
+    }
+    setTextIfChanged(label, text);
+    const position = getNameLabelPosition(bodyMetrics);
+    label.npcLabelOffsetX = position.x;
+    label.npcLabelOffsetY = position.y;
+    label.x = Math.round(container.x + position.x);
+    label.y = Math.round(container.y + position.y);
+    setVisibilityIfChanged(label, true);
+}
+
 function ensureAdminSummonedBotVitals(
     container: CharacterDisplayContainer,
     bodyMetrics: BodyRenderMetrics,
@@ -1443,13 +1498,15 @@ export async function renderRemoteCharacter(
         );
     }
 
+    ensureNpcLabel(engine, container, bodyMetrics, entity, hideBody);
+
     ensureCrowdControlBar(
         container,
         bodyMetrics,
         entity,
         {
             hideBody,
-            showNameplate: entity.isNpc ? undefined : true,
+            showNameplate: entity.isNpc ? Boolean(entity.etiqueta) : true,
             showClanLabel: entity.isNpc ? undefined : Boolean(clanLabelText),
         },
         deps.destroyDisplayObjectSafely,
@@ -1478,7 +1535,7 @@ export async function renderRemoteCharacter(
         entity,
         {
             hideBody,
-            showNameplate: entity.isNpc ? undefined : shouldShowRemoteName,
+            showNameplate: entity.isNpc ? Boolean(entity.etiqueta && !hideBody) : shouldShowRemoteName,
             showClanLabel: entity.isNpc
                 ? undefined
                 : Boolean(clanLabelText && shouldShowRemoteName),

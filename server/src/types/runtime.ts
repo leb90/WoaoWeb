@@ -176,6 +176,8 @@ export type MapObjectInfo = {
 export type TradeItem = {
     item: number;
     cant: number;
+    // Precio en esta tienda, si no es el del objeto (por ejemplo, un arco que se fabrica y vale 1).
+    valor?: number;
 };
 
 export type BankTab = "character" | "account" | "clan";
@@ -515,6 +517,8 @@ export type RuntimeNpc = {
     spawnMapNum?: number;
     spawnOrigin?: Position;
     nameCharacter?: string;
+    // Texto debajo del cuerpo en el cliente (los entrenadores de clase).
+    etiqueta?: string;
     map: number;
     pos: Position;
     heading?: number;

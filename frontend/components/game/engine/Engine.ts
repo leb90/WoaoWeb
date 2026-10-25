@@ -230,6 +230,8 @@ export interface Character {
     // Hasta cuándo un invisible parpadea por estar peleando contra jugadores (rendering/visibility.ts).
     pvpRevealUntil?: number;
     isHostileNpc?: boolean;
+    // Texto debajo del cuerpo de una criatura (los entrenadores de clase).
+    etiqueta?: string;
     isPartyMember?: boolean;
     isClanMember?: boolean;
     color?: string;
@@ -760,6 +762,7 @@ export class Engine {
             isPartyMember: snapshot.isPartyMember,
             isClanMember: snapshot.isClanMember,
             isHostileNpc: snapshot.isHostileNpc,
+            etiqueta: snapshot.etiqueta,
             color: snapshot.color,
             clan: snapshot.clan,
             zonaSegura: snapshot.zonaSegura,
@@ -858,7 +861,10 @@ export class Engine {
         }
         character.isPartyMember = snapshot.isPartyMember;
         character.isClanMember = snapshot.isClanMember;
-        if (snapshot.isNpc) character.isHostileNpc = snapshot.isHostileNpc;
+        if (snapshot.isNpc) {
+            character.isHostileNpc = snapshot.isHostileNpc;
+            character.etiqueta = snapshot.etiqueta;
+        }
         character.color = snapshot.color;
         character.clan = snapshot.clan;
         character.zonaSegura = snapshot.zonaSegura;
@@ -1801,6 +1807,14 @@ export class Engine {
 
     removeAllRemoteEntities(): void {
         this.healthBarEntityIds.clear();
+
+        // Etiquetas de criaturas en la capa de globos (characterRenderer.ensureNpcLabel).
+        for (const child of [...(this.dialogOverlayContainer?.children ?? [])]) {
+            if (typeof (child as { npcLabelEntityId?: number }).npcLabelEntityId === "number") {
+                child.parent?.removeChild(child);
+                child.destroy();
+            }
+        }
 
         for (const [id, container] of this.remoteEntities.entries()) {
             unregisterContainerCullEntries(this, container);

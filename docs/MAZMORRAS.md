@@ -211,6 +211,21 @@ Todas salen del plano: el generador las guarda en la clave `dungeon` de `special
 
 Las criaturas no pisan pozos, lava ni puertas (trigger 2): no salen de su sala, así que la sala que se cierra las encierra a todas. Los cofres abiertos quedan como cofre abierto.
 
+### Sonidos
+Al estilo de las mazmorras de Zelda, con sonidos libres (de dónde sale cada uno, en `docs/CREDITOS_SONIDOS.md`). Los escuchan los que tienen el lugar a la vista.
+
+| Sonido | Cuándo |
+|---|---|
+| Objeto (210) | Abrir un cofre con una llave, la llave del jefe, el mapa o la brújula |
+| Ítem de mazmorra (211) | Abrir el cofre principal (Patas de rana) |
+| Secreto (212) | Aparece un cofre oculto al vaciar una sala, o se resuelve el puzzle de las placas |
+| Puerta que se abre (213) | Con llave, con la llave del jefe, por las placas o al vaciar una sala cerrada |
+| Puertas que se cierran (214) | Se cierra una sala, por sus criaturas o por un cofre trampa |
+| Oro (215) | Abrir un cofre de oro |
+
+### Criaturas con vida propia
+Cuando no persiguen a nadie, las criaturas de mazmorra pasean en un sector de 3 × 3 alrededor de donde nacieron, con pausas de 1,5 a 4,5 segundos. Lo hacen siempre que algún jugador las tenga a la vista, aunque no las esté peleando (por ejemplo, un GM invisible). Si salen a perseguir a alguien y lo pierden, vuelven a su lugar. Como no pisan puertas, nunca salen de su sala.
+
 ### Menú "Mazmorra" y minimapa
 - **Franja "Mazmorra":** arriba de la grilla del inventario, solo adentro. Muestra las Patas de rana, las llaves chicas (con contador), la llave del jefe, el mapa y la brújula; lo que falta se ve apagado. Una llave que lleva otro del grupo se ve a media luz, con su nombre al pasar el mouse.
 - **Minimapa:**
@@ -239,7 +254,7 @@ Recorre todas las mecánicas en dos mapas:
 - Enganches en el server:
   - `protocol.ts`: pozos y agua al moverse, sala, lava y placas después del paso, clic en cofres, losas, puertas y bloques, y nada de ataques nadando;
   - `game.ts`: las criaturas no pisan el trigger 2, y la foto del área manda el bloqueo actual de puertas, cofres y bloques;
-  - `npcs.ts`: abrir la sala al morir la última criatura;
+  - `npcs.ts`: abrir la sala al morir la última criatura, y el paseo en 3 × 3 (`wanderRadius`) de las criaturas de mazmorra;
   - `login.ts`: el estado de la mazmorra al reconectar;
   - `socket.ts`: pasar las llaves del que se desconecta;
   - `woaoProgress.ts`: `dungeonItems`.

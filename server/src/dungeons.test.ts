@@ -167,3 +167,16 @@ test("una mazmorra en desarrollo: en producción solo entra un GM", () => {
     assert.equal(dungeons.developmentLockReason(def, { privileges: 0 }, false), null);
     assert.equal(dungeons.developmentLockReason({ ...def, soloDesarrollo: false }, { privileges: 0 }, true), null);
 });
+
+test("los sonidos de mazmorra están en el cliente y en los créditos", () => {
+    const credits = fs.readFileSync(path.join(root, "docs/CREDITOS_SONIDOS.md"), "utf8");
+    for (const [name, id] of Object.entries(dungeons.DUNGEON_SOUNDS)) {
+        assert.ok(fs.existsSync(path.join(root, "frontend/public/sounds", `${id}.wav`)), `${name}: falta sounds/${id}.wav`);
+        assert.ok(credits.includes(`| ${id} |`), `${name}: falta el ${id} en docs/CREDITOS_SONIDOS.md`);
+    }
+});
+
+test("afuera de una mazmorra las criaturas no usan el paseo de mazmorra", () => {
+    assert.equal(dungeons.isWatchedDungeonNpc({ map: 34, pos: { x: 50, y: 50 }, wanderRadius: 1 }), false);
+    assert.equal(dungeons.isWatchedDungeonNpc({ map: 34, pos: { x: 50, y: 50 } }), false);
+});

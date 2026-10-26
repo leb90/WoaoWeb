@@ -18,3 +18,18 @@ Se recortaron, se les hizo un fundido cruzado para que los bucles empalmen sin c
 | clima-trueno-3 | Trueno cercano con retumbo | "Thunder2", https://freesound.org/people/Yoyodaman234/sounds/267551/ | Yoyodaman234 | CC0 |
 | clima-trueno-4 | Trueno lejano | "Thunder 12", https://freesound.org/people/LukaCafuka/sounds/795412/ | LukaCafuka | CC0 |
 | clima-trueno-5 | Trueno lejano suave | "Distant Thunder Clap_Gentle", https://freesound.org/people/mikala_oidua/sounds/347562/ | mikala_oidua | CC0 |
+
+## Mazmorras (`frontend/public/sounds/210.wav` a `215.wav`)
+
+Sonidos al estilo de las mazmorras de Zelda, pero originales: ninguno copia melodías de Nintendo. Se pasaron a WAV mono de 44,1 kHz. Los jingles se suavizaron con un filtro de agudos para que no piquen, y al del secreto se le sumó un eco corto de mazmorra. Todos se igualaron en volumen: −16 LUFS los jingles, −17 y −18 las puertas y −19 el oro. Los usa `server/src/dungeons.ts` (`DUNGEON_SOUNDS`).
+
+| Número | Uso | Original | Autor | Licencia |
+|---|---|---|---|---|
+| 210 | Encontrar una llave, la llave del jefe, el mapa o la brújula | `sfx_sounds_powerup12.wav` de "The Essential Retro Video Game Sound Effects Collection [512 sounds]", https://opengameart.org/content/512-sound-effects-8-bit-style | Juhani Junkala (SubspaceAudio) | CC0 |
+| 211 | Encontrar el ítem de la mazmorra (Patas de rana) | `sfx_sounds_powerup16.wav`, del mismo paquete | Juhani Junkala (SubspaceAudio) | CC0 |
+| 212 | Secreto: aparece un cofre oculto o se resuelve un puzzle | `jingles_NES12.ogg` de "85 Short music jingles", https://opengameart.org/content/85-short-music-jingles | Kenney (kenney.nl) | CC0 |
+| 213 | Se abre una puerta | `rock_metal_slide_1.wav` de "Rock/Metal Slide", https://opengameart.org/node/107669 | Hansjörg Malthaner (Varkalandar), https://opengameart.org/users/varkalandar | [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/): **pide atribución** |
+| 214 | Se cierran las puertas de una sala (sala que se cierra o cofre trampa) | `rock_metal_slide_2.wav`, del mismo autor, acelerado ×1,5 | Hansjörg Malthaner (Varkalandar) | CC-BY 4.0: **pide atribución** |
+| 215 | Cofre de oro | `sfx_coin_cluster3.wav` de "The Essential Retro Video Game Sound Effects Collection" | Juhani Junkala (SubspaceAudio) | CC0 |
+
+Atribución que pide la licencia CC-BY de 213 y 214: "Rock/Metal Slide" de Hansjörg Malthaner (http://opengameart.org/users/varkalandar), CC-BY 4.0, modificado (recortado, normalizado y acelerado).

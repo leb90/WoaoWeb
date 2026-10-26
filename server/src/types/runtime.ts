@@ -537,6 +537,8 @@ export type RuntimeNpc = {
     leashReturnBlockedTicks?: number;
     // Paseo sin objetivo: zona donde nació y destino actual (npcs.ts, wanderNpc).
     wanderHome?: Position;
+    // Radio del paseo (las criaturas de mazmorra pasean en 3×3); sin él, el del juego.
+    wanderRadius?: number;
     wanderHomeMap?: number;
     wanderTarget?: Position | null;
     wanderPauseUntil?: number;

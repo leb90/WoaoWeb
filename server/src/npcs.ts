@@ -1423,11 +1423,16 @@ function canNpcWanderTo(npc: NpcCharacter, pos: Position, heading?: Direction) {
     return Boolean(tile && tile.map === npc.map && canNpcOccupyPosition(npc, pos, heading));
 }
 
+function getNpcWanderRadius(npc: NpcCharacter) {
+    return Number(npc.wanderRadius ?? NPC_WANDER_RADIUS_TILES);
+}
+
 function pickNpcWanderTarget(npc: NpcCharacter, home: Position): Position | null {
+    const radius = getNpcWanderRadius(npc);
     for (let attempt = 0; attempt < 10; attempt++) {
         const candidate = {
-            x: home.x + funct.randomIntFromInterval(-NPC_WANDER_RADIUS_TILES, NPC_WANDER_RADIUS_TILES),
-            y: home.y + funct.randomIntFromInterval(-NPC_WANDER_RADIUS_TILES, NPC_WANDER_RADIUS_TILES),
+            x: home.x + funct.randomIntFromInterval(-radius, radius),
+            y: home.y + funct.randomIntFromInterval(-radius, radius),
         };
         if ((candidate.x !== npc.pos.x || candidate.y !== npc.pos.y) && canNpcWanderTo(npc, candidate)) {
             return candidate;
@@ -1479,7 +1484,7 @@ function wanderNpc(npc: NpcCharacter, now: number) {
     for (const heading of getOrderedHeadings(npc.pos, destination, npc.heading)) {
         const offset = getDirectionOffset(heading);
         const candidate = { x: npc.pos.x + offset.x, y: npc.pos.y + offset.y };
-        const insideZone = getChebyshevDistance(candidate, home) <= NPC_WANDER_RADIUS_TILES;
+        const insideZone = getChebyshevDistance(candidate, home) <= getNpcWanderRadius(npc);
         const getsCloser = getChebyshevDistance(candidate, destination) < getChebyshevDistance(npc.pos, destination);
         const getsCloserToHome = getChebyshevDistance(candidate, home) < getChebyshevDistance(npc.pos, home);
         if ((insideZone || getsCloserToHome) && getsCloser && canNpcWanderTo(npc, candidate, heading)) {
@@ -2702,6 +2707,11 @@ function Npcs(this: NpcsApi) {
                     !getHostileNpcCurrentSummonTarget(npc) &&
                     !getRecentSummonAggressorTarget(npc)
                 ) {
+                    // Mazmorras: aunque nadie las persiga, si alguien las ve pasean por su lugar.
+                    if (require("./dungeons").isWatchedDungeonNpc(npc)) {
+                        npc.nextThinkAt = now + vars.timing.npcThinkMs;
+                        wanderNpc(npc, now);
+                    }
                     continue;
                 }
 

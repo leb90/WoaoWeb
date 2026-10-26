@@ -50,7 +50,19 @@ const LAVA_BURN_MS = 1_000;
 const LAVA_BURST_BURN_MS = 500;
 const LAVA_FX = 153; // la quemadura del chamán
 const LAVA_BURST_FX = 51; // hechizo cuyo efecto usa la erupción (Llamarada)
+// Sonidos de mazmorra, al estilo Zelda (frontend/public/sounds; de dónde sale cada uno, en docs/CREDITOS_SONIDOS.md).
+export const DUNGEON_SOUNDS = {
+    objeto: 210, // llave, llave del jefe, mapa o brújula
+    itemMazmorra: 211, // el ítem de la mazmorra
+    secreto: 212, // aparece un cofre oculto o se resuelve un puzzle
+    puertaAbre: 213,
+    puertasCierran: 214,
+    oro: 215,
+} as const;
 const CHEST_RANGE = 1;
+// Paseo de las criaturas: 1 baldosa alrededor de donde nacen (3×3).
+const WANDER_RADIUS = 1;
+const WATCHERS_TTL_MS = 500;
 const READ_RANGE = 2;
 const DOOR_RANGE = 2;
 const WATER_MESSAGE_MS = 2_000;
@@ -461,6 +473,13 @@ function scaleNpc(npc: any, factors: { vida: number; dano: number }) {
     npc.maxHit = Math.round(Number(npc.maxHit ?? 0) * factors.dano);
 }
 
+// Las criaturas de mazmorra pasean en 3×3 alrededor de donde nacen cuando no persiguen a nadie.
+function makeDungeonWanderer(npc: any) {
+    npc.wanderRadius = WANDER_RADIUS;
+    npc.wanderHome = { x: npc.pos.x, y: npc.pos.y };
+    npc.wanderHomeMap = npc.map;
+}
+
 function spawnRunNpcs(baseMap: number, instanceMap: number, factors: { vida: number; dano: number }) {
     const { loadMapNpcPlacements } = require("./mapNpcStorage");
     const LoadNpcs = require("./loadNpcs");
@@ -471,7 +490,32 @@ function spawnRunNpcs(baseMap: number, instanceMap: number, factors: { vida: num
     for (const npc of Object.values(vars.npcs ?? {}) as any[]) {
         if (!npc || npc.map !== instanceMap || Number(npc.attackable ?? 1) === 0) continue;
         scaleNpc(npc, factors);
+        makeDungeonWanderer(npc);
     }
+}
+
+// Jugadores conectados por mapa, recalculado como mucho cada medio segundo (lo consulta cada criatura).
+let watchersCache: { at: number; byMap: Map<number, Array<{ x: number; y: number }>> } = { at: 0, byMap: new Map() };
+
+// Una criatura de mazmorra sin nadie a quien perseguir pasea si algún jugador la tiene a la vista.
+export function isWatchedDungeonNpc(npc: { map?: number; pos?: { x: number; y: number }; wanderRadius?: number }): boolean {
+    if (!npc.pos || npc.wanderRadius === undefined || !isDungeonInstanceMap(npc.map)) return false;
+    const now = Date.now();
+    if (now - watchersCache.at > WATCHERS_TTL_MS) {
+        const byMap = new Map<number, Array<{ x: number; y: number }>>();
+        for (const user of Object.values(vars.personajes ?? {}) as Array<RuntimeCharacter & { connected?: boolean }>) {
+            if (!user?.pos || user.connected === false || !isDungeonInstanceMap(user.map)) continue;
+            const list = byMap.get(Number(user.map)) ?? [];
+            list.push({ x: user.pos.x, y: user.pos.y });
+            byMap.set(Number(user.map), list);
+        }
+        watchersCache = { at: now, byMap };
+    }
+    const rangeX = Number(vars.areaVisionRangeX ?? 13);
+    const rangeY = Number(vars.areaVisionRangeY ?? 10);
+    return (watchersCache.byMap.get(Number(npc.map)) ?? []).some(
+        (pos) => Math.abs(pos.x - npc.pos!.x) <= rangeX && Math.abs(pos.y - npc.pos!.y) <= rangeY,
+    );
 }
 
 function createRun(def: DungeonDef, group: boolean, playerCount: number): DungeonRun | null {
@@ -838,6 +882,17 @@ function setBlocked(mapId: number, x: number, y: number, blocked: boolean) {
     getGame().blockMap(mapId, { x, y }, blocked ? 1 : 0);
 }
 
+// Un sonido para todos los que ven ese lugar.
+function playSoundAt(mapId: number, pos: { x: number; y: number }, soundId: number) {
+    const handleProtocol = getHandleProtocol();
+    areaClients(mapId, pos, (client) => handleProtocol.playSound(0, soundId, client));
+}
+
+function roomCenter(ctx: MapContext, roomId: number) {
+    const room = ctx.index.rooms.get(roomId);
+    return room ? { x: Math.round((room.x1 + room.x2) / 2), y: Math.round((room.y1 + room.y2) / 2) } : null;
+}
+
 function isOccupied(mapId: number, x: number, y: number) {
     return Boolean(vars.mapData[mapId]?.[y]?.[x]?.id);
 }
@@ -884,6 +939,8 @@ function lockRoom(ctx: MapContext, roomId: number) {
     for (const barrier of ctx.index.mech.barriers) {
         if (barrier.tipo === "sala" && barrier.salas.includes(roomId)) setBarrier(ctx, barrier, false);
     }
+    const center = roomCenter(ctx, roomId);
+    if (center) playSoundAt(ctx.mapId, center, DUNGEON_SOUNDS.puertasCierran);
     tellRun(ctx.run, "¡Las puertas se cerraron! Derrotá a las criaturas de la sala para abrirlas.", "#FF6B3D");
 }
 
@@ -908,6 +965,9 @@ function clearRoom(ctx: MapContext, roomId: number) {
         setBlocked(ctx.mapId, chest.x, chest.y, true);
         revealed++;
     }
+    const center = roomCenter(ctx, roomId);
+    if (center && wasLocked) playSoundAt(ctx.mapId, center, DUNGEON_SOUNDS.puertaAbre);
+    if (center && revealed) playSoundAt(ctx.mapId, center, DUNGEON_SOUNDS.secreto);
     if (wasLocked) tellRun(ctx.run, "La sala quedó vacía: las puertas se abrieron.");
     if (revealed) tellRun(ctx.run, revealed === 1 ? "¡Apareció un cofre!" : `¡Aparecieron ${revealed} cofres!`);
     refreshRun(ctx.run);
@@ -964,8 +1024,13 @@ function updatePlates(ctx: MapContext) {
     if (!allPressed || ctx.state.platesSolved) return;
     ctx.state.platesSolved = true;
     for (const barrier of ctx.index.mech.barriers) {
-        if (barrier.tipo === "placa") setBarrier(ctx, barrier, true);
+        if (barrier.tipo !== "placa") continue;
+        setBarrier(ctx, barrier, true);
+        playSoundAt(ctx.mapId, barrier, DUNGEON_SOUNDS.puertaAbre);
     }
+    // El puzzle resuelto suena para los que están en la sala de las placas.
+    const firstPlate = ctx.index.plates.values().next().value;
+    if (firstPlate) playSoundAt(ctx.mapId, parseCoord(firstPlate), DUNGEON_SOUNDS.secreto);
     tellRun(ctx.run, "Se oye un mecanismo de piedra: una puerta se abrió.");
 }
 
@@ -1000,6 +1065,7 @@ function spawnTrap(ctx: MapContext, chest: Chest) {
         const npc = npcId ? vars.npcs?.[npcId] : undefined;
         if (!npc) continue;
         scaleNpc(npc, factors);
+        makeDungeonWanderer(npc);
         spawned++;
         npcs.loopArea(npc.id, (target: { id: EntityId; dead?: boolean }) => {
             if (!target.dead && !vars.areaNpc[npc.id].includes(target.id)) vars.areaNpc[npc.id].push(target.id);
@@ -1018,6 +1084,15 @@ function openChest(sessionId: EntityId, user: RuntimeCharacter, ctx: MapContext,
     setObject(ctx.mapId, chest.x, chest.y, OBJ.cofreAbierto);
     const name = String(user.nameCharacter ?? "Alguien");
     const run = ctx.run;
+    const chestSound: Record<string, number> = {
+        llave: DUNGEON_SOUNDS.objeto,
+        jefe: DUNGEON_SOUNDS.objeto,
+        mapa: DUNGEON_SOUNDS.objeto,
+        brujula: DUNGEON_SOUNDS.objeto,
+        oro: DUNGEON_SOUNDS.oro,
+        premio: DUNGEON_SOUNDS.itemMazmorra,
+    };
+    if (chestSound[chest.contenido]) playSoundAt(ctx.mapId, chest, chestSound[chest.contenido]);
     switch (chest.contenido) {
         case "llave": {
             const holder = characterKey(user);
@@ -1093,6 +1168,7 @@ function useBarrier(sessionId: EntityId, user: RuntimeCharacter, ctx: MapContext
             if (own > 1) run.keys.set(me, own - 1);
             else run.keys.delete(me);
             setBarrier(ctx, barrier, true);
+            playSoundAt(ctx.mapId, barrier, DUNGEON_SOUNDS.puertaAbre);
             tellRun(run, `${name} abrió una puerta con una llave chica.`);
             refreshRun(run);
             return;
@@ -1108,6 +1184,7 @@ function useBarrier(sessionId: EntityId, user: RuntimeCharacter, ctx: MapContext
             }
             run.bossKeyHolder = null;
             setBarrier(ctx, barrier, true);
+            playSoundAt(ctx.mapId, barrier, DUNGEON_SOUNDS.puertaAbre);
             tellRun(run, `${name} abrió la puerta del jefe.`, "#FFD24A");
             refreshRun(run);
             return;
@@ -1455,6 +1532,8 @@ module.exports = {
     isDungeonBaseMap,
     getAttackDeniedReason,
     developmentLockReason,
+    isWatchedDungeonNpc,
+    DUNGEON_SOUNDS,
     handleNpcInteraction,
     handleCommand,
     enter,

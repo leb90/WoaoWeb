@@ -30,18 +30,21 @@ Los nombres en castellano son traducciones nuestras; los del juego van entre par
 
 Cada ítem nuestro adapta uno del original, con nombre propio cuando hace falta (las Aletas son nuestras Patas de rana). Todos son ítems de mazmorra: quedan para siempre en el personaje y solo funcionan adentro.
 
-| Orden | Mazmorra nuestra | Adapta | Ítem | Estado |
+**El orden todavía no está definido.** Leandro pasa las mazmorras sin orden y el orden se decide cuando estén todas, según qué ítem pide cada una. La tabla muestra el orden provisorio y, en cada diseño, qué ítems de otras mazmorras usa.
+
+| Orden (provisorio) | Mazmorra nuestra | Adapta | Ítem | Estado |
 |---|---|---|---|---|
 | 1 | Gruta del Abisal | 4 · Túnel del Pez Abisal | Patas de rana (nadar) | Diseñada ([01-GRUTA_DEL_ABISAL.md](01-GRUTA_DEL_ABISAL.md)); el motor y las mecánicas ya están |
 | 2 | Cueva de la Cola | 1 · Cueva de la Cola | Pluma de Roc (saltar) | Hecha, en desarrollo hasta probarla en producción ([03-CUEVA_DE_LA_COLA.md](03-CUEVA_DE_LA_COLA.md)) |
 | 3 | (a definir) | 2 · Gruta de la Botella | Pulsera (levantar) | — |
 | 4 | Caverna de las Llaves | 3 · Cueva de las Llaves | Botas de Pegaso (correr) | Diseñada ([02-CAVERNA_DE_LAS_LLAVES.md](02-CAVERNA_DE_LAS_LLAVES.md)); pide la pluma |
-| 5 en adelante | — | 5 a 8 del original | Gancho, pulsera poderosa, escudo espejo, vara | — |
+| 5 en adelante | — | 5 a 7 del original | Gancho, pulsera poderosa, escudo espejo | — |
+| a definir (después de la Cueva) | Roca de la Tortuga | 8 · Roca Tortuga | Polvo de Fuego (fuego) | Diseño para confirmar ([04-ROCA_DE_LA_TORTUGA.md](04-ROCA_DE_LA_TORTUGA.md)); pide la pluma |
 
 - **Por qué la Gruta va primera:** ya estaba diseñada y con el motor hecho, y nadar no depende de los otros ítems. Del original en adelante se respeta el orden.
 - **Por qué la Caverna va después de la mazmorra de la pluma:** la pide adentro. Hasta que esa mazmorra exista, la Caverna queda en desarrollo: entra un GM, y la pluma se puede dar a mano para probar.
-- **Números de archivo y de mapas:** siguen el orden en que se diseña cada mazmorra, no el de juego. La Caverna es el archivo 02 y usa los mapas 520-522; la Cueva de la Cola, el 03 y los mapas 530-532.
-- **Trofeos:** en vez de instrumentos, cada jefe da un coleccionable de la serie (la Escama del Abisal, el Iris del Ojo, …).
+- **Números de archivo y de mapas:** siguen el orden en que se diseña cada mazmorra, no el de juego. La Caverna es el archivo 02 y usa los mapas 520-522; la Cueva de la Cola, el 03 y los mapas 530-532; la Roca de la Tortuga, el 04 y los mapas 540-542.
+- **Trofeos:** en vez de instrumentos, cada jefe da un coleccionable de la serie (la Escama del Abisal, el Iris del Ojo, el Aguijón del Ciempiés, …).
 
 ## Fuentes
 - [Game8: lista de mazmorras](https://game8.co/games/Zelda-Links-Awakening/archives/270111): ítem, jefe y llave para entrar de cada una.

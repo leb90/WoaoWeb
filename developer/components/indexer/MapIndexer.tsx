@@ -30,10 +30,10 @@ type CommitResult = {
 };
 
 const LAYERS = [
-  { id: 1, title: "Capa 1", description: "Pisos y terreno en grilla 32x32" },
-  { id: 2, title: "Capa 2", description: "Alfombras y decoracion bajo el personaje" },
-  { id: 3, title: "Capa 3", description: "Muros y objetos que tapan al personaje" },
-  { id: 4, title: "Capa 4", description: "Techos y cubiertas superiores" },
+  { id: 1, title: "Capa 1", description: "Pisos y terreno: stamp obligatorio en grilla 32x32" },
+  { id: 2, title: "Capa 2", description: "1 tile con el tamaño del recorte (no grilla 32x32)" },
+  { id: 3, title: "Capa 3", description: "1 tile con el tamaño del recorte (no grilla 32x32)" },
+  { id: 4, title: "Capa 4", description: "1 tile con el tamaño del recorte (no grilla 32x32)" },
 ] as const;
 
 function clamp(value: number, min: number, max: number): number {
@@ -45,15 +45,20 @@ function regionName(baseName: string, index: number): string {
 }
 
 function makeRegion(box: SourceBox, index: number, layer: number, baseName: string): IndexRegion {
+  const isFloor = layer === 1;
   return {
     ...box,
     clientId: `${Date.now()}-${index}-${Math.random().toString(16).slice(2)}`,
     nombre: regionName(baseName, index),
     capa: layer,
     bloquear: false,
-    ancho: Math.max(1, Math.ceil(box.width / 32)),
-    alto: Math.max(1, Math.ceil(box.height / 32)),
+    ancho: isFloor ? Math.max(1, Math.ceil(box.width / 32)) : 1,
+    alto: isFloor ? Math.max(1, Math.ceil(box.height / 32)) : 1,
   };
+}
+
+function regionGrhCount(region: Pick<IndexRegion, "capa" | "ancho" | "alto">): number {
+  return region.capa === 1 ? region.ancho * region.alto : 1;
 }
 
 function gridRegions(
@@ -95,7 +100,7 @@ export function MapIndexer() {
   const [result, setResult] = useState<CommitResult | null>(null);
 
   const selected = regions.find((region) => region.clientId === selectedId) ?? null;
-  const totalTiles = regions.reduce((sum, region) => sum + region.ancho * region.alto, 0);
+  const totalTiles = regions.reduce((sum, region) => sum + regionGrhCount(region), 0);
 
   function updateRegion(clientId: string, patch: Partial<IndexRegion>) {
     setRegions((current) => current.map((region) => {
@@ -105,8 +110,14 @@ export function MapIndexer() {
       next.y = clamp(Math.trunc(next.y), 0, Math.max(0, (analysis?.height ?? 1) - 1));
       next.width = clamp(Math.trunc(next.width), 1, (analysis?.width ?? 1) - next.x);
       next.height = clamp(Math.trunc(next.height), 1, (analysis?.height ?? 1) - next.y);
-      next.ancho = clamp(Math.max(Math.ceil(next.width / 32), Math.trunc(next.ancho)), 1, 64);
-      next.alto = clamp(Math.max(Math.ceil(next.height / 32), Math.trunc(next.alto)), 1, 64);
+      next.capa = clamp(Math.trunc(next.capa) || 1, 1, 4);
+      if (next.capa === 1) {
+        next.ancho = clamp(Math.max(Math.ceil(next.width / 32), Math.trunc(next.ancho) || 1), 1, 64);
+        next.alto = clamp(Math.max(Math.ceil(next.height / 32), Math.trunc(next.alto) || 1), 1, 64);
+      } else {
+        next.ancho = 1;
+        next.alto = 1;
+      }
       return next;
     }));
   }
@@ -288,7 +299,7 @@ export function MapIndexer() {
               </div>
             ) : (
               <div className="indexer-note">
-                La app separara automaticamente cada pieza visible. En el paso siguiente podes mover, redimensionar, eliminar o agregar selecciones.
+                Cada pieza se indexa como 1 solo tile con el tamaño en px del recorte. Solo la capa 1 usa grilla 32x32.
               </div>
             )}
           </section>
@@ -341,10 +352,18 @@ export function MapIndexer() {
                 <div className="field-grid two">
                   <NumberField label="X" value={selected.x} min={0} max={analysis.width - 1} onChange={(value) => updateRegion(selected.clientId, { x: value })} />
                   <NumberField label="Y" value={selected.y} min={0} max={analysis.height - 1} onChange={(value) => updateRegion(selected.clientId, { y: value })} />
-                  <NumberField label="Ancho px" value={selected.width} min={1} max={analysis.width - selected.x} onChange={(value) => updateRegion(selected.clientId, { width: value, ancho: Math.ceil(value / 32) })} />
-                  <NumberField label="Alto px" value={selected.height} min={1} max={analysis.height - selected.y} onChange={(value) => updateRegion(selected.clientId, { height: value, alto: Math.ceil(value / 32) })} />
-                  <NumberField label="Tiles W" value={selected.ancho} min={Math.ceil(selected.width / 32)} max={64} onChange={(value) => updateRegion(selected.clientId, { ancho: value })} />
-                  <NumberField label="Tiles H" value={selected.alto} min={Math.ceil(selected.height / 32)} max={64} onChange={(value) => updateRegion(selected.clientId, { alto: value })} />
+                  <NumberField label="Ancho px" value={selected.width} min={1} max={analysis.width - selected.x} onChange={(value) => updateRegion(selected.clientId, { width: value })} />
+                  <NumberField label="Alto px" value={selected.height} min={1} max={analysis.height - selected.y} onChange={(value) => updateRegion(selected.clientId, { height: value })} />
+                  {layer === 1 ? (
+                    <>
+                      <NumberField label="Tiles W" value={selected.ancho} min={Math.ceil(selected.width / 32)} max={64} onChange={(value) => updateRegion(selected.clientId, { ancho: value })} />
+                      <NumberField label="Tiles H" value={selected.alto} min={Math.ceil(selected.height / 32)} max={64} onChange={(value) => updateRegion(selected.clientId, { alto: value })} />
+                    </>
+                  ) : (
+                    <div className="indexer-note" style={{ gridColumn: "1 / -1" }}>
+                      Se publicara como 1 GRH de {selected.width}x{selected.height}px (1 tile).
+                    </div>
+                  )}
                 </div>
                 <RegionPreview imageUrl={analysis.imageUrl} region={selected} large />
                 <button type="button" className="indexer-button danger" onClick={removeSelected}>Eliminar seleccion</button>
@@ -381,7 +400,13 @@ export function MapIndexer() {
                   <RegionPreview imageUrl={analysis.imageUrl} region={region} />
                   <span className="review-row-copy">
                     <strong>{region.nombre}</strong>
-                    <small>#{index + 1} - {region.ancho}x{region.alto} tiles - Capa {region.capa}</small>
+                    <small>
+                      #{index + 1} -{" "}
+                      {region.capa === 1
+                        ? `${region.ancho}x${region.alto} tiles`
+                        : `1 tile · ${region.width}x${region.height}px`}{" "}
+                      - Capa {region.capa}
+                    </small>
                   </span>
                   <span className={`layer-badge layer-${region.capa}`}>C{region.capa}</span>
                 </button>
@@ -398,7 +423,18 @@ export function MapIndexer() {
                   {[1, 2, 3, 4].map((value) => <button key={value} type="button" className={selected.capa === value ? "selected" : ""} onClick={() => updateRegion(selected.clientId, { capa: value })}>{value}</button>)}
                 </div></div>
                 <label className="blocking-toggle"><input type="checkbox" checked={selected.bloquear} onChange={(event) => updateRegion(selected.clientId, { bloquear: event.target.checked })} /><span><strong>Bloquear tiles al colocar</strong><small>Marca la superficie completa como no transitable.</small></span></label>
-                <dl className="review-data"><div><dt>Recorte</dt><dd>{selected.width}x{selected.height}px</dd></div><div><dt>Stamp</dt><dd>{selected.ancho}x{selected.alto} tiles</dd></div><div><dt>GRHs</dt><dd>{selected.ancho * selected.alto}</dd></div></dl>
+                <dl className="review-data">
+                  <div><dt>Recorte</dt><dd>{selected.width}x{selected.height}px</dd></div>
+                  <div>
+                    <dt>{selected.capa === 1 ? "Stamp" : "Tile"}</dt>
+                    <dd>
+                      {selected.capa === 1
+                        ? `${selected.ancho}x${selected.alto} tiles`
+                        : `1 · ${selected.width}x${selected.height}px`}
+                    </dd>
+                  </div>
+                  <div><dt>GRHs</dt><dd>{regionGrhCount(selected)}</dd></div>
+                </dl>
               </>
             ) : null}
             {error ? <p className="indexer-error">{error}</p> : null}
@@ -440,8 +476,9 @@ function RegionPreview({ imageUrl, region, large = false }: { imageUrl: string; 
     if (!canvas) return;
     const image = new Image();
     image.onload = () => {
-      const width = region.ancho * 32;
-      const height = region.alto * 32;
+      const floorStamp = region.capa === 1;
+      const width = floorStamp ? region.ancho * 32 : region.width;
+      const height = floorStamp ? region.alto * 32 : region.height;
       canvas.width = width;
       canvas.height = height;
       const context = canvas.getContext("2d");
@@ -454,8 +491,8 @@ function RegionPreview({ imageUrl, region, large = false }: { imageUrl: string; 
         region.y,
         region.width,
         region.height,
-        Math.floor((width - region.width) / 2),
-        height - region.height,
+        floorStamp ? Math.floor((width - region.width) / 2) : 0,
+        floorStamp ? height - region.height : 0,
         region.width,
         region.height,
       );
@@ -632,7 +669,11 @@ function SelectionCanvas(props: {
     if (drag.handle?.includes("n")) top += dy;
     if (drag.handle?.includes("s")) bottom += dy;
     const box = normalized({ x: left, y: top, width: right - left, height: bottom - top });
-    props.onChange(drag.clientId, { ...box, ancho: Math.ceil(box.width / 32), alto: Math.ceil(box.height / 32) });
+    props.onChange(drag.clientId, {
+      ...box,
+      ancho: props.layer === 1 ? Math.ceil(box.width / 32) : 1,
+      alto: props.layer === 1 ? Math.ceil(box.height / 32) : 1,
+    });
   }
 
   function pointerUp(event: React.PointerEvent<HTMLCanvasElement>) {

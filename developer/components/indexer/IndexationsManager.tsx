@@ -81,7 +81,15 @@ export function IndexationsManager() {
   }
 
   function update(patch: Partial<Indexation>) {
-    setDraft((current) => current ? { ...current, ...patch } : current);
+    setDraft((current) => {
+      if (!current) return current;
+      const next = { ...current, ...patch };
+      if (next.capa !== 1) {
+        next.ancho = 1;
+        next.alto = 1;
+      }
+      return next;
+    });
     setMessage("");
   }
 
@@ -157,7 +165,7 @@ export function IndexationsManager() {
           {data?.items.map((item) => (
             <button key={item.ordinal} type="button" className={selectedOrdinal === item.ordinal ? "selected" : ""} onClick={() => select(item)}>
               <span className="indexation-name"><strong>{item.nombre}</strong><small>Ref {item.id} - GRH {item.grhIndice}{item.duplicateCount > 1 ? ` - ID repetido x${item.duplicateCount}` : ""}</small></span>
-              <span>{item.ancho} x {item.alto}</span>
+              <span>{item.capa === 1 ? `${item.ancho} x ${item.alto}` : "1 tile"}</span>
               <span className={`layer-badge layer-${item.capa || 1}`}>{item.capa ? `C${item.capa}` : "S/C"}</span>
             </button>
           ))}
@@ -170,12 +178,12 @@ export function IndexationsManager() {
       </section>
 
       <section className="indexer-panel indexation-preview-panel">
-        <div className="indexer-panel-title compact"><div><strong>Vista previa</strong><small>Composicion real de los GRHs del stamp</small></div></div>
+        <div className="indexer-panel-title compact"><div><strong>Vista previa</strong><small>{draft?.capa === 1 ? "Composicion del stamp 32x32" : "GRH unico a tamaño real"}</small></div></div>
         {draft ? <div className="indexation-preview-stage">
           {/* The image comes from the authenticated preview endpoint. */}
           <img key={previewUrl} src={previewUrl} alt={`Vista previa de ${draft.nombre}`} />
         </div> : <p className="empty-copy">Selecciona una indexacion.</p>}
-        {draft ? <div className="preview-meta"><span>{draft.ancho * 32} x {draft.alto * 32}px</span><span>{draft.ancho * draft.alto} GRHs</span><span>{draft.bloquear ? "Bloquea" : "No bloquea"}</span></div> : null}
+        {draft ? <div className="preview-meta"><span>{draft.capa === 1 ? `${draft.ancho * 32} x ${draft.alto * 32}px` : "Tamaño del GRH"}</span><span>{draft.capa === 1 ? `${draft.ancho * draft.alto} GRHs` : "1 GRH"}</span><span>{draft.bloquear ? "Bloquea" : "No bloquea"}</span></div> : null}
       </section>
 
       <aside className="indexer-panel indexation-editor">
@@ -184,10 +192,14 @@ export function IndexationsManager() {
           <div className="readonly-id"><span>Referencia</span><strong>#{draft.id}</strong>{draft.duplicateCount > 1 ? <small>Este ID aparece {draft.duplicateCount} veces; se edita esta entrada exacta.</small> : null}</div>
           <label className="indexer-field wide"><span>Nombre</span><input value={draft.nombre} onChange={(event) => update({ nombre: event.target.value })} /></label>
           <label className="indexer-field wide"><span>GRH inicial</span><input type="number" min={1} value={draft.grhIndice} onChange={(event) => update({ grhIndice: Math.max(1, Number(event.target.value)) })} /></label>
-          <div className="field-grid two">
-            <EditorNumber label="Ancho" value={draft.ancho} onChange={(value) => update({ ancho: value })} />
-            <EditorNumber label="Alto" value={draft.alto} onChange={(value) => update({ alto: value })} />
-          </div>
+          {draft.capa === 1 ? (
+            <div className="field-grid two">
+              <EditorNumber label="Ancho" value={draft.ancho} onChange={(value) => update({ ancho: value })} />
+              <EditorNumber label="Alto" value={draft.alto} onChange={(value) => update({ alto: value })} />
+            </div>
+          ) : (
+            <p className="empty-copy">Capa {draft.capa}: siempre 1 tile (el GRH conserva su tamaño en px).</p>
+          )}
           <div className="indexer-field"><span>Capa predeterminada</span><div className="layer-segments">
             {[1, 2, 3, 4].map((value) => <button key={value} type="button" className={draft.capa === value ? "selected" : ""} onClick={() => update({ capa: value })}>{value}</button>)}
           </div></div>

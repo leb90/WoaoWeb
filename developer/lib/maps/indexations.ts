@@ -78,15 +78,16 @@ export function loadIndexationRecords(): {
 function validated(input: IndexationInput): IndexationInput {
   const nombre = input.nombre.trim();
   const grhIndice = Math.trunc(Number(input.grhIndice));
-  const ancho = Math.trunc(Number(input.ancho));
-  const alto = Math.trunc(Number(input.alto));
   const capa = Math.trunc(Number(input.capa));
+  if (!Number.isInteger(capa) || capa < 1 || capa > 4) throw new Error("La capa debe estar entre 1 y 4.");
+  // Capas 2–4 siempre ocupan 1 tile; solo capa 1 usa stamps multi-tile 32x32.
+  const ancho = capa === 1 ? Math.trunc(Number(input.ancho)) : 1;
+  const alto = capa === 1 ? Math.trunc(Number(input.alto)) : 1;
   if (!nombre || nombre.length > 100) throw new Error("El nombre debe tener entre 1 y 100 caracteres.");
   if (!Number.isInteger(grhIndice) || grhIndice < 1) throw new Error("El GRH inicial no es valido.");
   if (!Number.isInteger(ancho) || ancho < 1 || ancho > 64) throw new Error("El ancho debe estar entre 1 y 64 tiles.");
   if (!Number.isInteger(alto) || alto < 1 || alto > 64) throw new Error("El alto debe estar entre 1 y 64 tiles.");
   if (ancho * alto > 4096) throw new Error("La indexacion no puede superar 4096 tiles.");
-  if (!Number.isInteger(capa) || capa < 1 || capa > 4) throw new Error("La capa debe estar entre 1 y 4.");
   return { nombre, grhIndice, ancho, alto, capa, bloquear: Boolean(input.bloquear) };
 }
 

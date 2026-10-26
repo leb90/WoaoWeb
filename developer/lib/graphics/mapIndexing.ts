@@ -231,19 +231,34 @@ function nextGraphicFile(): number {
   return max + 1;
 }
 
+/** Capa 1 = stamp en grilla 32x32. Capas 2–4 = un solo GRH con el tamaño del recorte. */
+function regionGrhCount(region: Pick<MapIndexRegion, "capa" | "ancho" | "alto">): number {
+  return region.capa === 1 ? region.ancho * region.alto : 1;
+}
+
 function normalizeRegion(region: MapIndexRegion, sourceWidth: number, sourceHeight: number): MapIndexRegion {
   const x = Math.max(0, Math.min(sourceWidth - 1, Math.trunc(Number(region.x))));
   const y = Math.max(0, Math.min(sourceHeight - 1, Math.trunc(Number(region.y))));
   const width = Math.max(1, Math.min(sourceWidth - x, Math.trunc(Number(region.width))));
   const height = Math.max(1, Math.min(sourceHeight - y, Math.trunc(Number(region.height))));
-  const minimumWidth = Math.ceil(width / 32);
-  const minimumHeight = Math.ceil(height / 32);
-  if (minimumWidth > 64 || minimumHeight > 64) {
-    throw new Error("Una region no puede superar 64x64 tiles. Dividila en selecciones mas chicas.");
-  }
-  const ancho = Math.max(minimumWidth, Math.min(64, Math.trunc(Number(region.ancho)) || minimumWidth));
-  const alto = Math.max(minimumHeight, Math.min(64, Math.trunc(Number(region.alto)) || minimumHeight));
   const capa = Math.min(4, Math.max(1, Math.trunc(Number(region.capa)) || 1));
+  let ancho: number;
+  let alto: number;
+  if (capa === 1) {
+    const minimumWidth = Math.ceil(width / 32);
+    const minimumHeight = Math.ceil(height / 32);
+    if (minimumWidth > 64 || minimumHeight > 64) {
+      throw new Error("Una region no puede superar 64x64 tiles. Dividila en selecciones mas chicas.");
+    }
+    ancho = Math.max(minimumWidth, Math.min(64, Math.trunc(Number(region.ancho)) || minimumWidth));
+    alto = Math.max(minimumHeight, Math.min(64, Math.trunc(Number(region.alto)) || minimumHeight));
+  } else {
+    if (width > 2048 || height > 2048) {
+      throw new Error("Una decoracion no puede superar 2048x2048 px. Dividila en selecciones mas chicas.");
+    }
+    ancho = 1;
+    alto = 1;
+  }
   const nombre = region.nombre.trim().slice(0, 100);
   if (!nombre) throw new Error("Todas las indexaciones necesitan un nombre.");
   return { ...region, x, y, width, height, ancho, alto, capa, nombre, bloquear: Boolean(region.bloquear) };
@@ -254,7 +269,9 @@ function packRegions(regions: MapIndexRegion[], firstGrh: number, firstReference
   atlasWidth: number;
   atlasHeight: number;
 } {
-  const widest = Math.max(...regions.map((region) => region.ancho * 32));
+  const widest = Math.max(
+    ...regions.map((region) => (region.capa === 1 ? region.ancho * 32 : region.width)),
+  );
   const atlasWidth = Math.max(widest, Math.min(2048, 1024));
   let x = 0;
   let y = 0;
@@ -262,8 +279,8 @@ function packRegions(regions: MapIndexRegion[], firstGrh: number, firstReference
   let nextGrh = firstGrh;
   const packed: PackedRegion[] = [];
   regions.forEach((region, index) => {
-    const pixelWidth = region.ancho * 32;
-    const pixelHeight = region.alto * 32;
+    const pixelWidth = region.capa === 1 ? region.ancho * 32 : region.width;
+    const pixelHeight = region.capa === 1 ? region.alto * 32 : region.height;
     if (x > 0 && x + pixelWidth > atlasWidth) {
       x = 0;
       y += rowHeight;
@@ -278,7 +295,7 @@ function packRegions(regions: MapIndexRegion[], firstGrh: number, firstReference
       grhIndice: nextGrh,
       referenceId: firstReference + index,
     });
-    nextGrh += region.ancho * region.alto;
+    nextGrh += regionGrhCount(region);
     x += pixelWidth;
     rowHeight = Math.max(rowHeight, pixelHeight);
   });
@@ -321,7 +338,7 @@ export async function commitMapIndexJob(jobId: string, rawRegions: MapIndexRegio
   const sourceWidth = metadata.width ?? 0;
   const sourceHeight = metadata.height ?? 0;
   const regions = rawRegions.map((region) => normalizeRegion(region, sourceWidth, sourceHeight));
-  const totalTiles = regions.reduce((sum, region) => sum + region.ancho * region.alto, 0);
+  const totalTiles = regions.reduce((sum, region) => sum + regionGrhCount(region), 0);
   if (totalTiles > MAX_TILES) throw new Error(`El lote supera el limite de ${MAX_TILES} tiles.`);
 
   const verbosePath = path.join(PATHS.frontendInit(), "graficos.json");
@@ -341,10 +358,12 @@ export async function commitMapIndexJob(jobId: string, rawRegions: MapIndexRegio
       .extract({ left: region.x, top: region.y, width: region.width, height: region.height })
       .png()
       .toBuffer();
+    const padX = region.capa === 1 ? Math.floor((region.pixelWidth - region.width) / 2) : 0;
+    const padY = region.capa === 1 ? region.pixelHeight - region.height : 0;
     composites.push({
       input: extracted,
-      left: region.atlasX + Math.floor((region.pixelWidth - region.width) / 2),
-      top: region.atlasY + region.pixelHeight - region.height,
+      left: region.atlasX + padX,
+      top: region.atlasY + padY,
     });
   }
   const atlas = await sharp({
@@ -357,24 +376,38 @@ export async function commitMapIndexJob(jobId: string, rawRegions: MapIndexRegio
   }).composite(composites).png({ compressionLevel: 9, adaptiveFiltering: true }).toBuffer();
 
   for (const region of packed) {
-    for (let tileY = 0; tileY < region.alto; tileY += 1) {
-      for (let tileX = 0; tileX < region.ancho; tileX += 1) {
-        const offset = tileY * region.ancho + tileX;
-        const grh = region.grhIndice + offset;
-        const sX = region.atlasX + tileX * 32;
-        const sY = region.atlasY + tileY * 32;
-        verbose[String(grh)] = {
-          numFrames: 1,
-          numFile: graphicFile,
-          sX,
-          sY,
-          width: 32,
-          height: 32,
-          frames: { "1": grh },
-        };
-        optimized[String(grh)] = [graphicFile, sX, sY, 32, 32];
+    if (region.capa === 1) {
+      for (let tileY = 0; tileY < region.alto; tileY += 1) {
+        for (let tileX = 0; tileX < region.ancho; tileX += 1) {
+          const offset = tileY * region.ancho + tileX;
+          const grh = region.grhIndice + offset;
+          const sX = region.atlasX + tileX * 32;
+          const sY = region.atlasY + tileY * 32;
+          verbose[String(grh)] = {
+            numFrames: 1,
+            numFile: graphicFile,
+            sX,
+            sY,
+            width: 32,
+            height: 32,
+            frames: { "1": grh },
+          };
+          optimized[String(grh)] = [graphicFile, sX, sY, 32, 32];
+        }
       }
+      continue;
     }
+    const grh = region.grhIndice;
+    verbose[String(grh)] = {
+      numFrames: 1,
+      numFile: graphicFile,
+      sX: region.atlasX,
+      sY: region.atlasY,
+      width: region.pixelWidth,
+      height: region.pixelHeight,
+      frames: { "1": grh },
+    };
+    optimized[String(grh)] = [graphicFile, region.atlasX, region.atlasY, region.pixelWidth, region.pixelHeight];
   }
 
   const indexValues: Array<IndexationInput & { id: number }> = packed.map((region) => ({
@@ -443,12 +476,11 @@ export async function renderIndexationPreview(opts: {
   capa: number;
   maxSize?: number;
 }): Promise<Buffer> {
-  const ancho = Math.min(64, Math.max(1, Math.trunc(opts.ancho)));
-  const alto = Math.min(64, Math.max(1, Math.trunc(opts.alto)));
+  const capa = Math.min(4, Math.max(1, Math.trunc(opts.capa) || 1));
+  const ancho = capa === 1 ? Math.min(64, Math.max(1, Math.trunc(opts.ancho))) : 1;
+  const alto = capa === 1 ? Math.min(64, Math.max(1, Math.trunc(opts.alto))) : 1;
   if (ancho * alto > MAX_TILES) throw new Error("La preview supera el limite permitido.");
-  const width = ancho * 32;
-  const height = alto * 32;
-  const target = Buffer.alloc(width * height * 4);
+
   const textures = new Map<number, Promise<RawTexture>>();
   const getTexture = (numFile: number) => {
     let pending = textures.get(numFile);
@@ -460,17 +492,47 @@ export async function renderIndexationPreview(opts: {
     return pending;
   };
 
+  // Capas 2–4: un solo GRH con su tamaño real (no grilla 32x32).
+  if (capa !== 1) {
+    const graphic = resolveGrh(opts.grhIndice);
+    if (!graphic) throw new Error("No se encontro el GRH de la indexacion.");
+    const texture = await getTexture(graphic.numFile);
+    const width = Math.max(1, graphic.width);
+    const height = Math.max(1, graphic.height);
+    const target = Buffer.alloc(width * height * 4);
+    for (let sourceY = 0; sourceY < graphic.height; sourceY += 1) {
+      const textureY = graphic.sY + sourceY;
+      if (textureY < 0 || textureY >= texture.height) continue;
+      for (let sourceX = 0; sourceX < graphic.width; sourceX += 1) {
+        const textureX = graphic.sX + sourceX;
+        if (textureX < 0 || textureX >= texture.width) continue;
+        blendPixel(
+          target,
+          (sourceY * width + sourceX) * 4,
+          texture.data,
+          (textureY * texture.width + textureX) * 4,
+        );
+      }
+    }
+    let preview = sharp(target, { raw: { width, height, channels: 4 } });
+    const maxSize = Math.min(1200, Math.max(64, opts.maxSize ?? 900));
+    if (width > maxSize || height > maxSize) {
+      preview = preview.resize({ width: maxSize, height: maxSize, fit: "inside", kernel: "nearest" });
+    }
+    return preview.png().toBuffer();
+  }
+
+  const width = ancho * 32;
+  const height = alto * 32;
+  const target = Buffer.alloc(width * height * 4);
+
   for (let tileY = 0; tileY < alto; tileY += 1) {
     for (let tileX = 0; tileX < ancho; tileX += 1) {
       const graphic = resolveGrh(opts.grhIndice + tileY * ancho + tileX);
       if (!graphic) continue;
       const texture = await getTexture(graphic.numFile);
-      let drawX = tileX * 32;
-      let drawY = tileY * 32;
-      if (opts.capa >= 3) {
-        drawX += 16 - Math.floor(graphic.width / 2);
-        drawY += 32 - graphic.height;
-      }
+      const drawX = tileX * 32;
+      const drawY = tileY * 32;
       for (let sourceY = 0; sourceY < graphic.height; sourceY += 1) {
         const targetY = drawY + sourceY;
         const textureY = graphic.sY + sourceY;

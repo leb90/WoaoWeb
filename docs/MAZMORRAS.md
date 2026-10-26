@@ -476,3 +476,46 @@ La prueba en vivo es `pw/run-herramientas.mjs`.
 - `server/src/scripts/buildDungeonMaps.ts`: los símbolos y objetos nuevos.
 - Cliente: `engine/dungeonTools.ts`, `DungeonBackpack.tsx` (la casilla de la Vara pasa a ser el Polvo de Fuego), `aowProtocol.ts` y los gráficos nuevos en los dos índices de gráficos (con la versión subida en `gameLoader.ts`).
 
+## 12. Los básicos: Bombas y Arco (todas las mazmorras)
+
+Pedido de Leandro: en Zelda las bombas y el arco se compran (no los da ninguna mazmorra), así que acá los tiene **todo el mundo desde la primera mazmorra**, antes de conseguir el primer ítem. Son ítems de mazmorra como los demás, pero no hace falta conseguirlos:
+- aparecen en la Mochila como "Básicos";
+- se ponen en Z o X;
+- solo funcionan adentro de las mazmorras.
+
+Para no cambiarle las teclas a quien ya tiene ítems, van al final de la lista: las teclas sin elegir siguen siendo los dos primeros ítems de la serie. Un personaje sin ninguno arranca con Z = Bombas y X = Arco.
+
+| Ítem | Qué hace | Números |
+|---|---|---|
+| **Bombas** (`bomba`) | Pone una bomba adelante (o a los pies, si adelante no hay piso libre). La mecha titila cada vez más rápido y a los 2 s explota en 3 × 3 baldosas: lastima a las criaturas y abre las **paredes rajadas**. Una por jugador a la vez; no lastima a los jugadores | Daño: 30 + 4 por nivel (±10 %) |
+| **Arco** (`flecha`) | Una flecha en línea recta hasta 8 baldosas, sin gastar flechas. Se clava en la primera criatura o en lo que tape el paso. Se dibuja con la flecha de los arqueros (paquete `createProjectile`) | 35 ms por baldosa, 0,6 s entre tiros. Daño: 15 + 2,5 por nivel |
+
+| La bomba sobre la pared rajada, la explosión y el arco abierto |
+|---|
+| ![Bomba](mazmorras/bombas/bomba.png) |
+
+| Los básicos en la Mochila, con Z y X |
+|---|
+| ![Mochila](mazmorras/bombas/mochila.png) |
+
+### La pared rajada (`@` en el plano)
+Es una puerta más (tipo `bomba`):
+- **Cerrada:** en una pared horizontal se ve como un arco tapiado con una grieta; en una vertical, como un montón de rocas.
+- **Al clic:** avisa que "con una bomba se rompe".
+- **Al explotar una bomba al lado:** se abre (queda el arco abierto, o nada), suena el secreto y avisa al grupo.
+- **En el minimapa:** se ve como pared, para no delatar el pasaje.
+
+En la Roca de la Tortuga, además, las Serpientes Gemelas se tragan las bombas y la estatua-ojo se baja con una flecha, como en el original (se arman con la mazmorra).
+
+### Para probarlos
+En el mapa 591 de la mazmorra de prueba, la sala de las antorchas tiene una pared rajada horizontal hacia la de abajo, y esa, una vertical hacia la de la lava. La prueba en vivo es `pw/run-bombas.mjs`.
+
+### Archivos
+- `server/src/dungeonTools.ts`: `bomb` y `arrow`.
+- `server/src/dungeons.ts`: los básicos en `DEFAULT_DUNGEON_ITEMS`, la puerta `bomba` y `bombBlast`.
+- `server/src/scripts/buildDungeonMaps.ts`: el símbolo `@` y los objetos 1858 y 1859 (gráficos 38230 y 38231).
+- Cliente:
+  - `engine/dungeonTools.ts`: la bomba y la explosión, con planillas sueltas en `public/sprites/bomba.png` y `explosion.png`;
+  - `DungeonBackpack.tsx`: la fila de básicos.
+- Sonidos 226-228. Los créditos de gráficos y sonidos están en [CREDITOS_GRAFICOS.md](CREDITOS_GRAFICOS.md) y [CREDITOS_SONIDOS.md](CREDITOS_SONIDOS.md).
+

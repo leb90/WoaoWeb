@@ -51,6 +51,8 @@ const OBJ = {
     poste: 1855,
     antorchaApagada: 1856,
     antorchaEncendida: 1857,
+    paredBombeable: 1858,
+    rocas: 1859,
 } as const;
 // Portal azul (escaleras que se ven como portal: el atajo de la Cueva de la Cola).
 const PORTAL_OBJ = 378;
@@ -135,7 +137,7 @@ export type DungeonDef = {
 type Barrier = {
     x: number;
     y: number;
-    tipo: "llave" | "jefe" | "sala" | "placa" | "tiempo" | "unica";
+    tipo: "llave" | "jefe" | "sala" | "placa" | "tiempo" | "unica" | "bomba";
     horizontal: boolean;
     salas: number[];
     // Puertas de un solo sentido: hacia dónde se pasa.
@@ -399,6 +401,7 @@ function playersInside(run: DungeonRun): RuntimeCharacter[] {
 }
 
 function hasDungeonItem(characterId: string, itemId: string): boolean {
+    if (DEFAULT_DUNGEON_ITEMS.includes(itemId)) return true;
     const progress = getProgressStore().getProgress({ _id: characterId }) as { dungeonItems?: string[] };
     return Boolean(progress.dungeonItems?.includes(itemId));
 }
@@ -1012,6 +1015,10 @@ export function handleCommand(sessionId: EntityId, text: string) {
             return require("./dungeonTools").hookshot(sessionId);
         case "pulsera":
             return require("./dungeonTools").bracelet(sessionId);
+        case "bomba":
+            return require("./dungeonTools").bomb(sessionId);
+        case "flecha":
+            return require("./dungeonTools").arrow(sessionId);
         case "item": {
             const [, itemId = "", flag = ""] = text.trim().split(/\s+/);
             return grantItemCommand(sessionId, itemId.toLowerCase(), flag.toLowerCase() === "quitar");
@@ -1204,9 +1211,12 @@ function setBarrier(ctx: MapContext, barrier: Barrier, open: boolean) {
     ctx.state.pendingClose.delete(key);
     if (open) ctx.state.openBarriers.add(key);
     else ctx.state.openBarriers.delete(key);
-    // El bloque con cerradura se ve como la puerta de piedra y, abierto, desaparece.
-    const closedObject = barrier.bloque ? OBJ.puerta : OBJ.barrera;
-    const objIndex = barrier.horizontal && !barrier.bloque ? (open ? OBJ.puertaAbierta : OBJ.puerta) : open ? 0 : closedObject;
+    // El bloque con cerradura se ve como la puerta de piedra y, abierto, desaparece. La pared que se vuela con una
+    // bomba es un arco tapiado (en una pared horizontal) o un montón de rocas (en una vertical).
+    const bombWall = barrier.tipo === "bomba";
+    const closedObject = bombWall ? (barrier.horizontal ? OBJ.paredBombeable : OBJ.rocas) : barrier.bloque ? OBJ.puerta : OBJ.barrera;
+    const objIndex =
+        barrier.horizontal && !barrier.bloque ? (open ? OBJ.puertaAbierta : bombWall ? OBJ.paredBombeable : OBJ.puerta) : open ? 0 : closedObject;
     setObject(ctx.mapId, barrier.x, barrier.y, objIndex);
     setBlocked(ctx.mapId, barrier.x, barrier.y, !open);
 }
@@ -1526,6 +1536,8 @@ function useBarrier(sessionId: EntityId, user: RuntimeCharacter, ctx: MapContext
     const me = characterKey(user);
     const run = ctx.run;
     switch (barrier.tipo) {
+        case "bomba":
+            return tell(sessionId, "La pared está rajada: con una bomba se rompe.", "white");
         case "llave": {
             const own = me ? (run.keys.get(me) ?? 0) : 0;
             if (!me || own <= 0) {
@@ -1987,6 +1999,27 @@ export function liftAt(mapId: number, x: number, y: number): { tipo: LiftableKin
     return { tipo: liftable.tipo, objIndex: liftable.tipo === "piedra" ? OBJ.piedra : OBJ.vasija };
 }
 
+// Una bomba explota en (x, y): se abren las paredes rajadas de las 3 × 3 baldosas. Devuelve cuántas se abrieron.
+export function bombBlast(mapId: number, x: number, y: number): number {
+    const ctx = contextOf(mapId);
+    if (!ctx) return 0;
+    let opened = 0;
+    for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+            const key = coordKey(x + dx, y + dy);
+            const barrier = ctx.index.barriers.get(key);
+            if (!barrier || barrier.tipo !== "bomba" || ctx.state.openBarriers.has(key)) continue;
+            setBarrier(ctx, barrier, true);
+            opened++;
+        }
+    }
+    if (opened) {
+        playSoundAt(mapId, { x, y }, DUNGEON_SOUNDS.secreto);
+        tellRun(ctx.run, "¡La pared se vino abajo: hay un pasaje!");
+    }
+    return opened;
+}
+
 // Si los ítems que se tiran pueden lastimar a esta criatura (las trampas y lo invulnerable, no).
 export function canToolHitNpc(npc: { id?: EntityId; map?: number; hp?: number; attackable?: number | boolean; dormant?: boolean } | undefined): boolean {
     if (!npc || Number(npc.hp ?? 0) <= 0 || !npc.attackable) return false;
@@ -2326,7 +2359,12 @@ function claimBossReward(run: DungeonRun) {
 }
 
 // Ítems de mazmorra que conoce el juego, para la franja y el comando de GM.
-const DUNGEON_ITEMS: Record<string, { nombre: string; accion: "carrera" | "salto" | "fuego" | "gancho" | "pulsera" | null }> = {
+// Las bombas y el arco los tiene todo el mundo desde la primera mazmorra (en Zelda se compran: no los da ninguna).
+const DEFAULT_DUNGEON_ITEMS = ["bombas", "arco"];
+
+const DUNGEON_ITEMS: Record<string, { nombre: string; accion: "carrera" | "salto" | "fuego" | "gancho" | "pulsera" | "bomba" | "flecha" | null }> = {
+    bombas: { nombre: "Bombas", accion: "bomba" },
+    arco: { nombre: "Arco", accion: "flecha" },
     patas_de_rana: { nombre: "Patas de rana", accion: null },
     pluma: { nombre: "Pluma de Roc", accion: "salto" },
     botas_de_pegaso: { nombre: "Botas de Pegaso", accion: "carrera" },
@@ -2338,7 +2376,9 @@ const DUNGEON_ITEMS: Record<string, { nombre: string; accion: "carrera" | "salto
 
 function ownedDungeonItems(characterId: string) {
     const progress = getProgressStore().getProgress({ _id: characterId }) as { dungeonItems?: string[] };
-    return (progress.dungeonItems ?? [])
+    // Los básicos van al final: las teclas por defecto son las dos primeras, y a quien ya tiene la Pluma o las Botas
+    // no le cambian.
+    return [...new Set([...(progress.dungeonItems ?? []), ...DEFAULT_DUNGEON_ITEMS])]
         .filter((id) => DUNGEON_ITEMS[id])
         .map((id) => ({ id, nombre: DUNGEON_ITEMS[id].nombre, accion: DUNGEON_ITEMS[id].accion }));
 }
@@ -2541,5 +2581,6 @@ module.exports = {
     meltIce,
     liftAt,
     canToolHitNpc,
+    bombBlast,
     _resetForTests,
 };

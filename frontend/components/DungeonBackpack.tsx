@@ -6,6 +6,8 @@ import {
     Anchor,
     Backpack,
     BicepsFlexed,
+    Bomb,
+    BowArrow,
     Compass,
     Dumbbell,
     Feather,
@@ -57,7 +59,51 @@ const SERIES_TROPHIES: Array<{ id: string | null; nombre: string }> = [
     { id: null, nombre: "Octava mazmorra" },
 ];
 
-const itemInfo = (id: string | null | undefined) => SERIES_ITEMS.find((item) => item.id === id) ?? null;
+// Los básicos: los tiene todo el mundo desde la primera mazmorra, antes del primer ítem (en Zelda se compran).
+const BASIC_ITEMS: typeof SERIES_ITEMS = [
+    { id: "bombas", nombre: "Bombas", icon: Bomb, tone: "text-stone-200", uso: "Poner una bomba: explota a los 2 s, lastima a las criaturas y abre las paredes rajadas", mazmorra: "Desde la primera mazmorra" },
+    { id: "arco", nombre: "Arco", icon: BowArrow, tone: "text-amber-100", uso: "Tirar una flecha en línea recta, sin gastar flechas", mazmorra: "Desde la primera mazmorra" },
+];
+
+const itemInfo = (id: string | null | undefined) => [...BASIC_ITEMS, ...SERIES_ITEMS].find((item) => item.id === id) ?? null;
+
+// Una casilla de la Mochila: el ítem (o un hueco si todavía no se tiene) y la letra de su tecla.
+function ItemSlot({
+    item,
+    has,
+    selected,
+    keyLabel,
+    onSelect,
+}: {
+    item: (typeof SERIES_ITEMS)[number];
+    has: boolean;
+    selected: boolean;
+    keyLabel: string | null;
+    onSelect: (id: string) => void;
+}) {
+    const Icon = item.icon;
+    return (
+        <button
+            type="button"
+            data-testid={`dungeon-backpack-item-${item.id}`}
+            data-owned={has ? "1" : "0"}
+            disabled={!has}
+            title={has ? `${item.nombre}: ${item.uso}` : `Todavía no: lo da ${item.mazmorra}`}
+            onClick={() => onSelect(item.id)}
+            className={`relative flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border text-[9px] ${
+                selected
+                    ? "border-amber-200 bg-[#3a2516]"
+                    : has
+                      ? "cursor-pointer border-amber-300/35 bg-[#2a1b12] hover:border-amber-200/70"
+                      : "border-[#2c2018] bg-[#0d0907] opacity-40"
+            }`}
+        >
+            <Icon className={`h-6 w-6 ${has ? item.tone : "text-stone-600"}`} />
+            <span className={has ? "text-stone-200" : "text-stone-600"}>{has ? item.nombre : "?"}</span>
+            {keyLabel ? <KeyBadge label={keyLabel} /> : null}
+        </button>
+    );
+}
 
 function KeyBadge({ label }: { label: string }) {
     return (
@@ -264,34 +310,16 @@ function BackpackModal({
             <div className="grid gap-4 p-4 sm:grid-cols-[1fr_1fr]">
                 <section>
                     <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-300/80">Objetos</h3>
+                    <p className="mb-1 text-[10px] uppercase tracking-[0.18em] text-stone-500">Básicos</p>
+                    <div className="mb-3 grid grid-cols-4 gap-2">
+                        {BASIC_ITEMS.map((item) => (
+                            <ItemSlot key={item.id} item={item} has={isOwned(item.id)} selected={selected === item.id} keyLabel={keyOf(item.id)} onSelect={setSelected} />
+                        ))}
+                    </div>
                     <div className="grid grid-cols-4 gap-2">
-                        {SERIES_ITEMS.map((item) => {
-                            const has = isOwned(item.id);
-                            const Icon = item.icon;
-                            const key = keyOf(item.id);
-                            return (
-                                <button
-                                    key={item.id}
-                                    type="button"
-                                    data-testid={`dungeon-backpack-item-${item.id}`}
-                                    data-owned={has ? "1" : "0"}
-                                    disabled={!has}
-                                    title={has ? `${item.nombre}: ${item.uso}` : `Todavía no: lo da ${item.mazmorra}`}
-                                    onClick={() => setSelected(item.id)}
-                                    className={`relative flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border text-[9px] ${
-                                        selected === item.id
-                                            ? "border-amber-200 bg-[#3a2516]"
-                                            : has
-                                              ? "cursor-pointer border-amber-300/35 bg-[#2a1b12] hover:border-amber-200/70"
-                                              : "border-[#2c2018] bg-[#0d0907] opacity-40"
-                                    }`}
-                                >
-                                    <Icon className={`h-6 w-6 ${has ? item.tone : "text-stone-600"}`} />
-                                    <span className={has ? "text-stone-200" : "text-stone-600"}>{has ? item.nombre : "?"}</span>
-                                    {key ? <KeyBadge label={key} /> : null}
-                                </button>
-                            );
-                        })}
+                        {SERIES_ITEMS.map((item) => (
+                            <ItemSlot key={item.id} item={item} has={isOwned(item.id)} selected={selected === item.id} keyLabel={keyOf(item.id)} onSelect={setSelected} />
+                        ))}
                     </div>
                     <div className="mt-3 min-h-[64px] rounded-xl border border-[#3a2a1e] bg-black/25 p-3 text-sm">
                         {selectedInfo ? (

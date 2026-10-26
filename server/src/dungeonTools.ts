@@ -1,6 +1,7 @@
 // Ítems de mazmorra que se tiran o se usan con las manos (docs/mazmorras/04-ROCA_DE_LA_TORTUGA.md, secciones 6 y
 // 6.2): el Polvo de Fuego (una llamarada que vuela), el Gancho (una cadena que engancha y arrastra, o aturde) y la
-// Pulsera (levantar, llevar y tirar vasijas y piedras). Solo funcionan adentro de una mazmorra.
+// Pulsera (levantar, llevar y tirar vasijas y piedras). Además, los básicos que tiene todo el mundo desde la primera
+// mazmorra: las Bombas (explotan a los 2 s y abren paredes rajadas) y el Arco. Solo funcionan adentro de una mazmorra.
 //
 // Como la Carrera y el salto (dungeonMotion.ts), el server decide todo de una vez y se lo manda a los que miran en el
 // mismo paquete (dungeonMotion), con tipos nuevos: el cliente anima la llamarada, la cadena y lo que se lleva y se
@@ -14,6 +15,8 @@ const vars = require("./vars");
 export const FIRE_ITEM = "polvo_de_fuego";
 export const HOOK_ITEM = "gancho";
 export const BRACELET_ITEM = "pulsera";
+export const BOMB_ITEM = "bombas";
+export const BOW_ITEM = "arco";
 
 const FIRE_RANGE = 6;
 const FIRE_STEP_MS = 45;
@@ -26,12 +29,21 @@ const HOOK_STUN_MS = 1_500;
 const THROW_RANGE = 4;
 const THROW_STEP_MS = 70;
 const LIFT_COOLDOWN_MS = 350;
+const BOMB_FUSE_MS = 2_000;
+const ARROW_RANGE = 8;
+const ARROW_STEP_MS = 35;
+const ARROW_COOLDOWN_MS = 600;
+// La flecha común de los arqueros (objeto 480).
+const ARROW_GRH = 752;
 
 export const TOOL_SOUNDS = {
     fuego: 222,
     gancho: 223,
     romper: 224,
     levantar: 225,
+    explosion: 226,
+    bomba: 227,
+    flecha: 228,
 } as const;
 
 // Lo que engancha el Gancho (como en Zelda: cofres, bloques, vasijas, estatuas y antorchas).
@@ -44,6 +56,8 @@ type ToolUser = RuntimeCharacter & {
     nextFireAt?: number;
     nextHookAt?: number;
     nextLiftAt?: number;
+    bombUntil?: number;
+    nextArrowAt?: number;
     heading?: number;
     dead?: boolean;
     level?: number;
@@ -292,6 +306,82 @@ function playSoundAt(mapId: number, pos: Pos, soundId: number) {
     });
 }
 
+// --- Bombas ---
+
+// Pone una bomba adelante (o a sus pies, si adelante no hay piso libre). Una por jugador a la vez: a los 2 s explota
+// en las 3 × 3 baldosas de alrededor, lastima a las criaturas y abre las paredes rajadas. No lastima a los jugadores.
+export function bomb(sessionId: EntityId) {
+    const user = vars.personajes?.[sessionId] as ToolUser | undefined;
+    if (!user || !getMotion().canAct(sessionId, user, BOMB_ITEM, "las Bombas")) return;
+    const now = Date.now();
+    if (now < Number(user.bombUntil ?? 0)) return tell(sessionId, "Ya pusiste una bomba.");
+    user.bombUntil = now + BOMB_FUSE_MS;
+    const mapId = Number(user.map);
+    const heading = Number(user.heading ?? vars.direcciones.down);
+    const dir = getMotion().headingOffset(heading);
+    const front = { x: user.pos.x + dir.x, y: user.pos.y + dir.y };
+    const at = isFreeFloor(mapId, front) ? front : { x: user.pos.x, y: user.pos.y };
+    playSoundAt(mapId, at, TOOL_SOUNDS.bomba);
+    broadcast(user, { id: Number(user.id), tipo: "bomba", heading, ms: BOMB_FUSE_MS, to: at });
+    setTimeout(() => explode(user, mapId, at), BOMB_FUSE_MS);
+}
+
+function isFreeFloor(mapId: number, tile: Pos) {
+    if (!inBounds(tile)) return false;
+    const dungeons = getDungeons();
+    if (vars.mapa[mapId]?.[tile.y]?.[tile.x]?.blocked || vars.mapData[mapId]?.[tile.y]?.[tile.x]?.id) return false;
+    return !dungeons.isHazard(mapId, tile.x, tile.y) && !getGame().hayAgua(mapId, tile);
+}
+
+function explode(user: ToolUser, mapId: number, at: Pos) {
+    playSoundAt(mapId, at, TOOL_SOUNDS.explosion);
+    getDungeons().bombBlast(mapId, at.x, at.y);
+    const hit = new Set<string>();
+    for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+            const npcId = vars.mapData[mapId]?.[at.y + dy]?.[at.x + dx]?.id;
+            if (!npcId || !vars.npcs?.[npcId] || hit.has(String(npcId))) continue;
+            hit.add(String(npcId));
+            damageNpc(user, npcId, toolDamage(user, 30, 4));
+        }
+    }
+}
+
+// --- Arco ---
+
+// Una flecha en línea recta hasta 8 baldosas, sin gastar flechas: se clava en la primera criatura o en lo que tape
+// el paso. Se dibuja con el mismo proyectil que las flechas de los arqueros.
+export function arrow(sessionId: EntityId) {
+    const user = vars.personajes?.[sessionId] as ToolUser | undefined;
+    if (!user || !getMotion().canAct(sessionId, user, BOW_ITEM, "el Arco")) return;
+    const now = Date.now();
+    if (now < Number(user.nextArrowAt ?? 0)) return;
+    user.nextArrowAt = now + ARROW_COOLDOWN_MS;
+    const mapId = Number(user.map);
+    const heading = Number(user.heading ?? vars.direcciones.down);
+    const dir = getMotion().headingOffset(heading);
+    const line = traceLine(mapId, user.pos, dir, ARROW_RANGE, false);
+    const to = line.npcId || line.target ? line.end! : (line.end ?? { x: user.pos.x + dir.x, y: user.pos.y + dir.y });
+    const distance = Math.max(1, Math.abs(to.x - user.pos.x) + Math.abs(to.y - user.pos.y));
+    playSound(user, TOOL_SOUNDS.flecha);
+    const handleProtocol = getHandleProtocol();
+    const start = { map: mapId, x: user.pos.x, y: user.pos.y };
+    const end = { map: mapId, x: to.x, y: to.y };
+    const sent = new Set<string>();
+    const send = (id: EntityId) => {
+        const client = vars.clients?.[id] as RuntimeClient | undefined;
+        if (!client || sent.has(String(id))) return;
+        sent.add(String(id));
+        handleProtocol.createProjectile(start, end, ARROW_GRH, client);
+    };
+    send(user.id);
+    getGame().loopAreaPos(mapId, user.pos, (target: { id: EntityId }) => send(target.id));
+    if (line.npcId) {
+        const npcId = line.npcId;
+        setTimeout(() => damageNpc(user, npcId, toolDamage(user, 15, 2.5)), distance * ARROW_STEP_MS);
+    }
+}
+
 // Suelta lo que lleva (se rompe a sus pies): al salir de la mazmorra, al morir o al cambiar de mapa.
 export function dropCarry(user: RuntimeCharacter | undefined) {
     const carrier = user as ToolUser | undefined;
@@ -312,11 +402,15 @@ module.exports = {
     FIRE_ITEM,
     HOOK_ITEM,
     BRACELET_ITEM,
+    BOMB_ITEM,
+    BOW_ITEM,
     TOOL_SOUNDS,
     traceLine,
     fire,
     hookshot,
     bracelet,
+    bomb,
+    arrow,
     dropCarry,
     checkCarry,
 };

@@ -77,7 +77,7 @@ test("las escaleras de una mazmorra solo llevan a otros mapas de la misma mazmor
     }
 });
 
-const DUNGEON_OBJECT_IDS = { cofre: 1832, puerta: 1834, puertaAbierta: 1835, barrera: 1840, cofreJefe: 1849 };
+const DUNGEON_OBJECT_IDS = { cofre: 1832, puerta: 1834, puertaAbierta: 1835, barrera: 1840, cofreJefe: 1849, paredBombeable: 1858, rocas: 1859 };
 
 test("los objetos de mazmorra existen y no se levantan", () => {
     const objs = readJson("server/jsons/objs.json");
@@ -104,8 +104,13 @@ test("las mecánicas de cada mapa están bien armadas y la mazmorra se puede res
                 const at = `${def.id} ${map} (${barrier.x},${barrier.y})`;
                 assert.ok(barrier.salas.length > 0 && barrier.salas.every((id: number) => roomIds.has(id)), `${at}: la puerta da a una sala`);
                 const objIndex = objects[`${barrier.x},${barrier.y}`]?.objIndex;
-                // Las de sala y las de un solo sentido arrancan abiertas; el bloque con cerradura se ve como la puerta.
-                const expected = barrier.bloque
+                // Las de sala y las de un solo sentido arrancan abiertas; el bloque con cerradura se ve como la puerta, y la
+                // pared que se vuela con una bomba, como un arco tapiado o un montón de rocas.
+                const expected = barrier.tipo === "bomba"
+                    ? barrier.horizontal
+                        ? DUNGEON_OBJECT_IDS.paredBombeable
+                        : DUNGEON_OBJECT_IDS.rocas
+                    : barrier.bloque
                     ? DUNGEON_OBJECT_IDS.puerta
                     : barrier.tipo === "sala" || barrier.tipo === "unica"
                         ? barrier.horizontal
@@ -267,4 +272,11 @@ test("la mazmorra de prueba trae lo que tocan el Polvo de Fuego, el Gancho y la 
     const [hx, hy] = mech.hookPosts[0].split(",").map(Number);
     const lavaInRow = (mech.lava as string[]).map((key) => key.split(",").map(Number)).filter(([, y]) => y === hy).map(([x]) => x);
     assert.ok(lavaInRow.length >= 3 && Math.max(...lavaInRow) < hx && hx - Math.min(...lavaInRow) + 1 <= 7);
+});
+
+test("las bombas y el arco los tiene todo el mundo desde la primera mazmorra", () => {
+    const nuevo = { id: 1, _id: "personaje-sin-items", map: 34, pos: { x: 50, y: 50 } } as never;
+    assert.equal(dungeons.characterHasDungeonItem(nuevo, "bombas"), true);
+    assert.equal(dungeons.characterHasDungeonItem(nuevo, "arco"), true);
+    assert.equal(dungeons.characterHasDungeonItem(nuevo, "pluma"), false);
 });

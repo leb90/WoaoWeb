@@ -2,7 +2,7 @@
 
 Fecha: 2026-10-26. Estado: **diseño aprobado** (nombres, cuerpos, gráficos y construcción por etapas). Leandro pidió que el Gancho y la Pulsera se hagan como en el original, para que queden listos para las mazmorras que los dan, y un sprite nuevo para la Cabeza de la Tortuga. El sistema (instancias, grupo, ítems de mazmorra, mecánicas) está en [../MAZMORRAS.md](../MAZMORRAS.md); el patrón de la serie, en [00-PATRON_LINKS_AWAKENING.md](00-PATRON_LINKS_AWAKENING.md).
 
-**Lugar en la serie: a definir.** Leandro pasa las mazmorras sin orden y el orden se decide al final, según qué ítem pide cada una. Usa la **Pluma de Roc** (Cueva de la Cola) y, como en el original, el **Gancho** y la **Pulsera**, que en Link's Awakening dan otras mazmorras. Esos dos se hacen ahora y quedan listos para cuando se diseñen sus mazmorras; mientras tanto, un GM los da con `/mazmorra item` para probar, como se hizo con la Pluma en la Caverna. Las Botas solo abren atajos. En el original es la octava, la última antes del final.
+**Lugar en la serie: a definir.** Leandro pasa las mazmorras sin orden y el orden se decide al final, según qué ítem pide cada una. Usa la **Pluma de Roc** (Cueva de la Cola) y, como en el original, el **Gancho** y la **Pulsera**, que en Link's Awakening dan otras mazmorras. Esos dos se hacen ahora y quedan listos para cuando se diseñen sus mazmorras; mientras tanto, un GM los da con `/mazmorra item` para probar, como se hizo con la Pluma en la Caverna. Las bombas y el arco los tiene todo el mundo desde la primera mazmorra (sección 6.3). En el original es la octava, la última antes del final.
 
 Adaptación de la **Roca Tortuga** (*Turtle Rock*), el nivel 8 de *Link's Awakening*, que da la **Vara de Fuego**. Acá el ítem es el **Polvo de Fuego**. No se copia baldosa por baldosa; se respeta la estructura jugable:
 - **Es la más grande y laberíntica de la serie:** 45 salas, 6 pasajes y un tramo afuera.
@@ -93,13 +93,13 @@ Celdas (columna, fila) desde arriba a la izquierda, de 0 a 7. El número de sect
 | Cuchillas | (6,4) | 7 | **Escalera H** (pasaje G ↔ H); al norte, puerta de un solo sentido | Esqueleto | Cuchillas en las 4 esquinas |
 | Babosas | (6,3) | 7 | Búho ("a los que tienen la llave, atacalos desde arriba"); al vaciarla se abre el norte | 4 babosas escondidas | — |
 | Momias | (6,2) | 3 | **K3** al vaciarla | 2 momias | Piso que se desmorona |
-| Serpientes | (5,2) | 3 | **Revancha: Serpientes Gemelas** en el piso bajo: desde abajo no reciben daño. Desde la **cornisa alta** (se llega por Afuera) sí. Al vencerlas, cofre con la **K6** | Minijefe | Cornisa |
+| Serpientes | (5,2) | 3 | **Revancha: Serpientes Gemelas** en el piso bajo: solo mueren tragando bombas, como en el original, y desde abajo no se las alcanza. Hay que ponérselas desde la **cornisa alta** (se llega por Afuera), 3 a cada una. Al vencerlas, cofre con la **K6** | Minijefe | Cornisa |
 | Lava | (4,2) | 3 | Puerta **L3** al oeste | 4 babosas | Lava |
 | Poción | (4,1) | 9 | Cofre con **pociones** en una cornisa rodeada de lava: se llega con el Gancho, enganchándose al cofre | — | Lava |
 | Pasillo G | (4,0) | 3 | **Escalera G** (pasaje G ↔ H) | — | — |
 | Anillo de lava | (3,2) | 11 | Anillo de piso alrededor de lava. En la plataforma del medio, la **puerta del jefe** (N) y la **escalera D**, que solo se alcanzan desde el pasaje C ↔ D | — | Lava |
 | Salida afuera | (2,2) | 3 | Salida al **Afuera** (arriba); cofre de **200 de oro** en una cornisa con baranda, con el Gancho desde la Escalera B; al vaciarla se abre el oeste | Vire, 2 serpientes | Se cierra |
-| Estatua-ojo | (2,3) | 8 | Búho ("si la estatua se ve rara, pegale"). Pegarle a la estatua-ojo da la **K4** | — | 2 chispas |
+| Estatua-ojo | (2,3) | 8 | Búho ("si la estatua se ve rara, tirale una flecha"). Una flecha a la estatua-ojo da la **K4**, como en el original | — | 2 chispas |
 | Bloques | (1,3) | 3 | Empujando bloques aparece un cofre con la **K5** | — | Ojo de piedra, pozos |
 
 **Salas oscuras** (fase D): se ve poco hasta encender sus antorchas, cosa que solo se puede con el Polvo. Antes se cruzan a oscuras.
@@ -212,7 +212,7 @@ En el original hay seis minijefes, cinco de ellos revanchas de las mazmorras ant
 | **Cíclope** | Hinox (mazmorra 2) | Cíclope | Cíclope (582) | Embiste y empuja; guardián fuerte |
 | **Ogro del Rodillo** | Rolling Bones (mazmorra 1) | Ogro del Rodillo | Ogro (577), el de la Cueva | Igual que en la Cueva: el rodillo se salta |
 | **Golem de la Bola** | Smasher (mazmorra 6) | Golem de la Bola | Golem de Hierro (579) | Tira su bola de hierro, que queda un rato en el piso. Como en el original, se la levanta con la Pulsera y se le tira de vuelta: cada bolazo le saca mucha vida |
-| **Serpientes Gemelas** | Serpientes Dodongo (mazmorra 3) | Serpientes | Serpiente (504), las de la Caverna | Como en la Caverna (hay que bajarlas juntas), pero solo reciben daño de los que están en la cornisa alta. En el original se les tiran bombas desde arriba |
+| **Serpientes Gemelas** | Serpientes Dodongo (mazmorra 3) | Serpientes | Serpiente (504), las de la Caverna | Como en el original: solo mueren tragando bombas (3 cada una), que se les ponen desde la cornisa alta. Como en la Caverna, hay que bajarlas juntas |
 | **Tortuga Espinosa** | Cue Ball (mazmorra 4) | Tortuga Espinosa | Tortuga gigante (539) | Como en la Gruta: da vueltas al anillo y embiste; aturdida al chocar, se le pega |
 | **Gigante Púgil** | Blaino (propio) | Gigante Púgil | Gigante (586) | Ver abajo |
 
@@ -264,22 +264,6 @@ Adapta la Vara de Fuego (*Magic Rod*) del original. Es un ítem de mazmorra como
 - **Uso real:** sin el Polvo no se consiguen la K7 ni la llave del jefe, y no se llega al jefe ni se lo vence.
 - **Para las otras mazmorras:** sirve para antorchas, hielo y telarañas que tapan pasos.
 
-### 6.2 Los otros ítems que usa: Gancho y Pulsera
-
-En el original esta mazmorra pide el Gancho (mazmorra 5) y la Pulsera (mazmorra 2). Se hacen ahora, como ítems de mazmorra de la serie, y quedan listos para cuando se diseñen esas mazmorras. Van en sus casillas de la Mochila y en las teclas Z o X, y solo funcionan adentro.
-
-- **Gancho** (*Hookshot*):
-  - **Qué hace:** tira una cadena hacia adonde mirás, hasta 7 baldosas.
-  - **Si engancha algo firme** (cofre, bloque, vasija, estatua o gárgola), te arrastra hasta al lado. Pasás por encima de pozos y lava, y en el aire no te lastiman.
-  - **Si pega en una criatura,** la aturde un momento y le saca un poco de vida.
-  - **Si no encuentra nada,** vuelve.
-  - **Acá:** el cofre de la Poción, el de 200 de oro de la Salida afuera, el bloque de la Oscura del medio y la gárgola del pasaje G ↔ H. Y el oro de Pozos y chispas, si no se salta.
-- **Pulsera** (*Power Bracelet*):
-  - **Levantar:** levanta lo que tenés adelante (vasijas, piedras chicas, la bola del Golem) y lo llevás sobre la cabeza. Mientras lo llevás podés caminar, pero no atacar.
-  - **Tirar:** apretando otra vez lo tirás hacia adonde mirás, hasta 4 baldosas. Se rompe al caer y lastima a la criatura que toque.
-  - **Debajo puede haber algo:** un botón, una escalera o un objeto.
-  - **Acá:** los botones bajo vasijas del Búho del botón y de Vasijas, las vasijas que tapan la escalera L, las de Recarga y la bola del Golem de la Bola.
-
 ### 6.1 Cómo se pelea la Cabeza Ardiente (Hot Head)
 
 Lo sacamos del código del original (`05_hot_head.asm`). La sala de Hot Head tiene una laguna de lava de 7 × 5 en una sala de 10 × 8; la de AO es más grande, para hasta 5 jugadores.
@@ -300,17 +284,43 @@ Lo sacamos del código del original (`05_hot_head.asm`). La sala de Hot Head tie
   - En la fase 2: más chico.
 - **Pista del búho de la Guarida:** "Apagala en el aire con el Polvo y pegale mientras es carbón."
 
+### 6.2 Los otros ítems que usa: Gancho y Pulsera
+
+En el original esta mazmorra pide el Gancho (mazmorra 5) y la Pulsera (mazmorra 2). Se hacen ahora, como ítems de mazmorra de la serie, y quedan listos para cuando se diseñen esas mazmorras. Van en sus casillas de la Mochila y en las teclas Z o X, y solo funcionan adentro.
+
+- **Gancho** (*Hookshot*):
+  - **Qué hace:** tira una cadena hacia adonde mirás, hasta 7 baldosas.
+  - **Si engancha algo firme** (cofre, bloque, vasija, estatua o gárgola), te arrastra hasta al lado. Pasás por encima de pozos y lava, y en el aire no te lastiman.
+  - **Si pega en una criatura,** la aturde un momento y le saca un poco de vida.
+  - **Si no encuentra nada,** vuelve.
+  - **Acá:** el cofre de la Poción, el de 200 de oro de la Salida afuera, el bloque de la Oscura del medio y la gárgola del pasaje G ↔ H. Y el oro de Pozos y chispas, si no se salta.
+- **Pulsera** (*Power Bracelet*):
+  - **Levantar:** levanta lo que tenés adelante (vasijas, piedras chicas, la bola del Golem) y lo llevás sobre la cabeza. Mientras lo llevás podés caminar, pero no atacar.
+  - **Tirar:** apretando otra vez lo tirás hacia adonde mirás, hasta 4 baldosas. Se rompe al caer y lastima a la criatura que toque.
+  - **Debajo puede haber algo:** un botón, una escalera o un objeto.
+  - **Acá:** los botones bajo vasijas del Búho del botón y de Vasijas, las vasijas que tapan la escalera L, las de Recarga y la bola del Golem de la Bola.
+
+### 6.3 Los básicos: Bombas y Arco
+
+En Zelda se compran: no los da ninguna mazmorra. Acá los tiene todo el mundo desde la primera mazmorra, antes de conseguir el primer ítem (pedido de Leandro). Van en la Mochila como "básicos" y se ponen en Z o X como los demás. Están hechos y explicados en [../MAZMORRAS.md](../MAZMORRAS.md), sección 12.
+- **Bombas:** se pone una adelante y explota a los 2 s en 3 × 3 baldosas. Lastima a las criaturas y abre las **paredes rajadas** (las paredes bombeables del original, símbolo `@`). Una por jugador a la vez.
+- **Arco:** una flecha en línea recta, sin gastar flechas.
+- **Acá:**
+  - las paredes bombeables vuelven a ser como en el original;
+  - las **Serpientes Gemelas** se tragan las bombas;
+  - la **estatua-ojo** se baja con una flecha.
+
 ## 7. Qué cambia respecto del original
 
-El Gancho y la Pulsera se usan como en el original (se hacen ahora, sección 6.2). Lo que no es un ítem de mazmorra en Zelda (las bombas y el arco se compran, y la canción es del mundo de afuera) se reemplaza sin cambiar el rol de cada sala:
+El Gancho y la Pulsera se usan como en el original (sección 6.2), y las bombas y el arco son los básicos que tiene todo el mundo (sección 6.3). Solo se reemplaza lo que es del mundo de afuera, sin cambiar el rol de cada sala:
 
 | En el original | Para qué | Acá |
 |---|---|---|
 | Canción del Alma de la Rana | Despertar la cabeza de la entrada | Despierta sola al llegar |
-| Bombas | Paredes bombeables y las Serpientes Dodongo | Las paredes que hacen falta pasan a ser puertas. Las que son atajo pasan a ser **paredes rajadas**, que se rompen con la Carrera (Botas) y son opcionales. Las Serpientes se vencen desde la cornisa |
+| Bombas | Paredes bombeables y las Serpientes Dodongo | **Igual que en el original** (sección 6.3): las paredes rajadas se vuelan y las Serpientes se las tragan |
 | Gancho | El oro de la Salida afuera, la medicina, un bloque de la sala oscura y un pasaje | **Igual que en el original** (sección 6.2) |
 | Pulsera | Vasijas sobre botones y la bola de Smasher | **Igual que en el original** (sección 6.2) |
-| Arco | La estatua-ojo | Cualquier golpe o hechizo |
+| Arco | La estatua-ojo | **Igual que en el original**: una flecha |
 | Polvo mágico | Encender las salas oscuras antes de tener la vara | Se cruzan a oscuras; con el Polvo se iluminan |
 | Pico de piedra | Que hablen los búhos | Igual: sin el pico, los búhos no dicen nada |
 
@@ -339,9 +349,9 @@ Faltan:
 | Burbujas de lava | Saltan de la lava en puntos fijos |
 | Remolino | Arrastra hacia el centro, salvo al que está en el aire; el centro lleva a la Entrada |
 | Vasijas | Se levantan con la Pulsera; abajo puede haber un botón |
-| Estatua-ojo | Golpearla suelta una llave |
+| Estatua-ojo | Una flecha suelta una llave |
 | Pico de piedra y búhos | Ítem de la corrida, como el mapa; sin él los búhos no hablan. Va en la Mochila |
-| Daño solo desde la cornisa | Las Serpientes Gemelas solo reciben daño de los que están en la cornisa alta |
+| Serpientes que tragan bombas | Las Serpientes Gemelas solo mueren con bombas (3 cada una) |
 | Golpes de frente bloqueados y gancho a la Entrada | El Gigante Púgil |
 | Imitadores | Criaturas que se mueven al revés que el jugador más cercano |
 | Cabeza de la Tortuga, Tortuga Espinosa y Cabeza Ardiente | Movimiento propio de cada una (sección 5 y 6.1) |

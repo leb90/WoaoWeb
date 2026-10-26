@@ -41,3 +41,14 @@ Objetos de mazmorra 1852-1857 (gráficos 38215-38229, archivos `frontend/public/
 | `320259.png`, `320260.png` | Antorcha apagada y encendida (9 cuadros) | "[LPC] Animated Torch", https://opengameart.org/content/lpc-animated-torch; la apagada es el primer cuadro sin la llama | William.Thompsonj | CC-BY 3.0+ / OGA-BY 3.0 |
 
 Hecho con gráficos del propio juego: **`320257.png`, el bloque de hielo**, es el bloque de piedra (grh 8623) pasado a celeste y aclarado, con un par de brillos.
+
+## Bombas y pared rajada
+
+| Archivo | Uso en el juego | Original | Autor | Licencia |
+|---|---|---|---|---|
+| `sprites/bomba.png` | La bomba con la mecha encendida (3 cuadros, al doble de tamaño) | "16-bit animated bomb", https://opengameart.org/content/16-bit-animated-bomb | victordelima | CC0 |
+| `sprites/explosion.png` | La explosión de la bomba (12 cuadros de 96 × 96, sin cambios) | "Pixel Explosion (12 Frames)", https://opengameart.org/content/pixel-explosion-12-frames | JROB774 | [CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| `graphics/320262.png` | Rocas sueltas: la pared rajada en una pared vertical | Escombros de "[LPC] Jungle Ruins", https://opengameart.org/content/lpc-jungle-ruins | bluecarrot16 | CC-BY 3.0+ / OGA-BY 3.0+ |
+
+Hecho con gráficos del propio juego: **`graphics/320261.png`, la pared rajada en una pared horizontal**, es la puerta de piedra (grh 9193) con la abertura rellena de piedra y una grieta.
+

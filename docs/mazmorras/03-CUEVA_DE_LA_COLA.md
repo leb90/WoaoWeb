@@ -1,6 +1,6 @@
 # Cueva de la Cola
 
-Fecha: 2026-10-26. Estado: **en construcción**. Leandro aprobó todo lo propuesto (nombres, trofeo, caracola y gráficos). El sistema (instancias, grupo, ítems de mazmorra, mecánicas) está en [../MAZMORRAS.md](../MAZMORRAS.md). La mazmorra anterior de la serie es [01-GRUTA_DEL_ABISAL.md](01-GRUTA_DEL_ABISAL.md); la siguiente que ya existe es [02-CAVERNA_DE_LAS_LLAVES.md](02-CAVERNA_DE_LAS_LLAVES.md).
+Fecha: 2026-10-26. Estado: **hecha, en desarrollo** hasta probarla en producción (cómo quedó: [../MAZMORRAS.md](../MAZMORRAS.md), sección 9). Leandro aprobó todo lo propuesto (nombres, trofeo, caracola y gráficos). El sistema (instancias, grupo, ítems de mazmorra, mecánicas) está en [../MAZMORRAS.md](../MAZMORRAS.md). La mazmorra anterior de la serie es [01-GRUTA_DEL_ABISAL.md](01-GRUTA_DEL_ABISAL.md); la siguiente que ya existe es [02-CAVERNA_DE_LAS_LLAVES.md](02-CAVERNA_DE_LAS_LLAVES.md).
 
 **Lugar en la serie:** es la segunda, y la que da la **Pluma de Roc** (ver [00-PATRON_LINKS_AWAKENING.md](00-PATRON_LINKS_AWAKENING.md)). La Caverna de las Llaves pide la pluma para entrar, así que con esta mazmorra la Caverna se puede abrir para todos.
 
@@ -78,11 +78,11 @@ La Gran sala son las cuatro celdas de (1,1) a (3,2) sin paredes entre sí, como 
 ### Mapa 531 (Galerías)
 | Sala | Sector | Contenido | Criaturas | Trampas |
 |---|---|---|---|---|
-| Túnel de los duendes | 4 | **Escalera A** al oeste → **escalera B** al este, unas 60 × 9. Sin pluma se pasa por cornisas; con la pluma, un atajo saltando | Duendes (goblins) | Pozos, cuchillas que corren por el túnel |
+| Túnel de los duendes | 4 | **Escalera A** al oeste → **escalera B** al este, unas 60 × 9. Sin pluma se pasa por cornisas; con la pluma, un atajo saltando | Duendes | Pozos |
 | Sala B | 4 | Llegada de la escalera B | — | — |
 | Pasillo de la pluma | 4 | Pasillo largo de 1 a 2 baldosas | Murciélagos | Pasillo angosto |
 | Cámara de la pluma | 4 | Cofre de la **Pluma de Roc** sobre una plataforma entre pozos | 2 escarabajos de púas | Pozos |
-| Galería baja | 11 | **D**: adonde se cae desde la Guarida, al oeste. **Escalera C** al este, que sube a la Antesala. Cofre de **50 de oro** de consuelo | Esqueletos | Cuchillas |
+| Galería baja | 11 | **D**: adonde se cae desde la Guarida, al oeste. **Escalera C** al este, que sube a la Antesala. Cofre de **50 de oro** de consuelo | Esqueletos | — |
 
 ### Mapa 532 (Guarida del Ciempiés)
 | Sala | Sector | Contenido |
@@ -167,7 +167,7 @@ Las llaves chicas abren cualquier cerradura; el orden de la tabla es el natural.
 | Pozos para saltar | Cornisa, Isla, Foso, atajo del Túnel | Lo que abre la pluma |
 | Criaturas que empujan | Escarabajos del foso, Botón, Cornisa, Ciempiés | El riesgo de caer, como los escarabajos del original |
 | Chispas | Chispa, Pasarela | Tiempo: pasar entre vuelta y vuelta |
-| Cuchillas | Cuchilla, Túnel, Antesala, Galería baja | Se disparan al quedar en su fila o columna; un bloque las frena |
+| Cuchillas | Cuchilla, Antesala | Se disparan al quedar en su fila o columna; un bloque las frena. Van donde se puede salir de su fila: en un pasillo serían inevitables |
 | Salas que se cierran | Brújula, Mapa, Escarabajos de púas, Losa, Rodillo | Combate obligatorio |
 | Placas y bloques | Botón, Pasarela, Cuchilla | Puzzle que da llave o abre paso |
 | Rodillo de púas | Rodillo | Solo se esquiva saltando |

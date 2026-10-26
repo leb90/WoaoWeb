@@ -1778,6 +1778,13 @@ function updateUserAreaAfterMovement(ws: RuntimeClient, user: RuntimeCharacter, 
 
             handleProtocol.renderItem(item.objIndex, tileMap, pos, ws);
         }
+
+        // Mazmorras: puertas, cofres y bloques que cambiaron en la corrida. El cliente carga el mapa base (con las
+        // puertas cerradas), así que lo que entra a la vista caminando también tiene que llegar con su bloqueo.
+        if (tileMap === user.map) {
+            const dungeonBlocked = dungeons.getDynamicBlocked(tileMap, x, y);
+            if (dungeonBlocked !== null) handleProtocol.blockMap(tileMap, pos, dungeonBlocked, ws);
+        }
     };
 
     const leaveTile = (tileMap: number, x: number, y: number) => {

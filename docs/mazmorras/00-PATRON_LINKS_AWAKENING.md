@@ -33,7 +33,7 @@ Cada ítem nuestro adapta uno del original, con nombre propio cuando hace falta 
 | Orden | Mazmorra nuestra | Adapta | Ítem | Estado |
 |---|---|---|---|---|
 | 1 | Gruta del Abisal | 4 · Túnel del Pez Abisal | Patas de rana (nadar) | Diseñada ([01-GRUTA_DEL_ABISAL.md](01-GRUTA_DEL_ABISAL.md)); el motor y las mecánicas ya están |
-| 2 | Cueva de la Cola | 1 · Cueva de la Cola | Pluma de Roc (saltar) | Diseñada ([03-CUEVA_DE_LA_COLA.md](03-CUEVA_DE_LA_COLA.md)); el salto ya está programado desde la Caverna |
+| 2 | Cueva de la Cola | 1 · Cueva de la Cola | Pluma de Roc (saltar) | Hecha, en desarrollo hasta probarla en producción ([03-CUEVA_DE_LA_COLA.md](03-CUEVA_DE_LA_COLA.md)) |
 | 3 | (a definir) | 2 · Gruta de la Botella | Pulsera (levantar) | — |
 | 4 | Caverna de las Llaves | 3 · Cueva de las Llaves | Botas de Pegaso (correr) | Diseñada ([02-CAVERNA_DE_LAS_LLAVES.md](02-CAVERNA_DE_LAS_LLAVES.md)); pide la pluma |
 | 5 en adelante | — | 5 a 8 del original | Gancho, pulsera poderosa, escudo espejo, vara | — |

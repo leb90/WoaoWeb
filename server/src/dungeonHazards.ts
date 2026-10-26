@@ -13,13 +13,13 @@ export {};
 
 const vars = require("./vars");
 
-const SPARK_STEP_MS = 200;
+const SPARK_STEP_MS = 260;
 const SPARK_DAMAGE = 0.1;
 const BLADE_RANGE = 7;
 const BLADE_CHARGE_STEP_MS = 55;
 const BLADE_RETURN_STEP_MS = 220;
-const BLADE_REST_MS = 400;
-const BLADE_DAMAGE = 0.12;
+const BLADE_REST_MS = 800;
+const BLADE_DAMAGE = 0.1;
 const ROLLER_STEP_MS = 170;
 const ROLLER_PAUSE_MS = 1_500;
 const ROLLER_DAMAGE = 0.15;

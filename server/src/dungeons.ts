@@ -35,6 +35,15 @@ const OBJ = {
     placaApretada: 1838,
     losa: 1839,
     barrera: 1840,
+    cristal: 1841,
+    pisoRajado: 1842,
+    hueco: 1843,
+    runaTiempo: 1844,
+    runaTiempoEncendida: 1845,
+    paredRajada: 1846,
+    losaAplastador: 1847,
+    aplastador: 1848,
+    cofreJefe: 1849,
 } as const;
 // Patas de rana: con ellas se nada por el agua profunda de las mazmorras.
 export const SWIM_ITEM = "patas_de_rana";
@@ -58,6 +67,12 @@ export const DUNGEON_SOUNDS = {
     puertaAbre: 213,
     puertasCierran: 214,
     oro: 215,
+    cristal: 216, // la Carrera rompe un bloque de cristal
+    derrumbe: 217, // se cae un piso que se desmorona
+    golpe: 218, // la Carrera se estrella contra una pared
+    carrera: 219, // arranca la Carrera
+    salto: 220, // salto con la pluma
+    aplastador: 221, // bajan los aplastadores
 } as const;
 const CHEST_RANGE = 1;
 // Paseo de las criaturas: 1 baldosa alrededor de donde nacen (3×3).
@@ -66,6 +81,20 @@ const WATCHERS_TTL_MS = 500;
 const READ_RANGE = 2;
 const DOOR_RANGE = 2;
 const WATER_MESSAGE_MS = 2_000;
+// Piso que se desmorona: se cae un instante después de pisarlo caminando (un paso tarda 200 ms; corriendo, 55) y
+// vuelve a los 5 s.
+const CRUMBLE_DELAY_MS = 150;
+const CRUMBLE_RESTORE_MS = 5_000;
+// Placa con tiempo: abre las puertas con tiempo del mapa por 3 s.
+const TIMED_DOOR_MS = 3_000;
+// Aplastadores: bajan 0,6 s de cada 2 s y sacan el 15 % de la vida al que agarran.
+const CRUSHER_CYCLE_MS = 2_000;
+const CRUSHER_DOWN_MS = 600;
+const CRUSHER_DAMAGE = 0.15;
+// Estatuas que despiertan: a esta distancia de un jugador.
+const WAKE_RADIUS = 2;
+// Jefe que flota (Ojo Viscoso): cae aturdido este tiempo cuando alguien se estrella contra una pared rajada.
+const BOSS_STUN_MS = 6_000;
 
 export type DungeonDef = {
     id: string;
@@ -81,10 +110,23 @@ export type DungeonDef = {
     escalado?: { vidaPorJugador?: number; danoPorJugador?: number };
     // Ítem de mazmorra del cofre principal (R): queda para siempre en el personaje.
     itemMazmorra?: { id: string; nombre: string };
+    // Ítems de mazmorras anteriores que hacen falta para entrar (la Caverna pide la Pluma).
+    requiere?: Array<{ id: string; nombre: string }>;
+    // Cofre del jefe (Y): trofeo de la serie y oro, una vez por día por personaje.
+    trofeo?: { id: string; nombre: string };
+    oroJefe?: number;
 };
 
 // --- Mecánicas: datos fijos de cada mapa base ---
-type Barrier = { x: number; y: number; tipo: "llave" | "jefe" | "sala" | "placa"; horizontal: boolean; salas: number[] };
+type Barrier = {
+    x: number;
+    y: number;
+    tipo: "llave" | "jefe" | "sala" | "placa" | "tiempo" | "unica";
+    horizontal: boolean;
+    salas: number[];
+    // Puertas de un solo sentido: hacia dónde se pasa.
+    dir?: "norte" | "sur" | "este" | "oeste";
+};
 type Chest = { x: number; y: number; contenido: string; oculto: boolean; sala: number };
 type MapMechanics = {
     rooms: Array<{ id: number; x1: number; y1: number; x2: number; y2: number; cierra: boolean }>;
@@ -98,7 +140,14 @@ type MapMechanics = {
     chests: Chest[];
     slabs: Array<{ x: number; y: number; texto: string }>;
     oro: number;
+    oroGrande?: number;
     trampa: number[];
+    // Mecánicas de la Caverna de las Llaves (pueden faltar en mapas viejos).
+    crystals?: string[];
+    fragile?: string[];
+    timedPlates?: string[];
+    crackedWalls?: string[];
+    crushers?: string[];
 };
 
 type MapIndex = {
@@ -111,7 +160,12 @@ type MapIndex = {
     chests: Map<string, Chest>;
     slabs: Map<string, MapMechanics["slabs"][number]>;
     barriers: Map<string, Barrier>;
-    // Baldosas cuyo bloqueo cambia durante la corrida (puertas, cofres y bloques): van en la foto del área.
+    crystals: Set<string>;
+    fragile: Set<string>;
+    timedPlates: Set<string>;
+    crackedWalls: Set<string>;
+    crushers: Set<string>;
+    // Baldosas cuyo bloqueo cambia durante la corrida (puertas, cofres, bloques y cristales): van en la foto del área.
     dynamic: Set<string>;
 };
 
@@ -128,6 +182,12 @@ type MapState = {
     platesSolved: boolean;
     // Puertas que se tienen que cerrar pero tenían a alguien encima: se cierran apenas queden libres.
     pendingClose: Set<string>;
+    brokenCrystals: Set<string>;
+    // Piso que se desmorona: cuándo se cae cada baldosa pisada y cuándo vuelve cada una caída.
+    crumbling: Map<string, number>;
+    collapsed: Map<string, number>;
+    // Hasta cuándo están abiertas las puertas con tiempo (0: cerradas).
+    timedUntil: number;
 };
 
 type DungeonRun = {
@@ -159,6 +219,11 @@ type DungeonRun = {
     nextBurnAt: Map<string, number>;
     hazardTimer: ReturnType<typeof setInterval> | null;
     lavaActive: boolean;
+    crusherDown: boolean;
+    // Criaturas en pareja: por grupo, las que siguen vivas (si muere una y la otra sigue viva, la revive).
+    pairs: Map<string, Set<string>>;
+    // Jefe que flota hasta que lo bajan con la Carrera.
+    floatingBoss: { npcId: string; stunnedUntil: number; split: boolean } | null;
 };
 
 type Invite = { runId: string; from: string; expiresAt: number; timer: ReturnType<typeof setTimeout> };
@@ -348,6 +413,8 @@ function buildState(user: RuntimeCharacter, panel: Record<string, unknown> | nul
                       mapa: insideRun.hasMap,
                       brujula: insideRun.hasCompass,
                       patas: hasDungeonItem(key, SWIM_ITEM),
+                      // Inventario de mazmorra: los ítems que tiene, y cuáles se usan (la Carrera y el salto).
+                      items: ownedDungeonItems(key),
                       minimapa: buildMinimap(insideRun, baseMapOf(Number(user.map)) ?? 0),
                   }
                 : null,
@@ -417,6 +484,9 @@ function entryDeniedReason(user: RuntimeCharacter, def: DungeonDef): string | nu
     if (Number(user.level ?? 0) < Number(def.nivelMinimo ?? 1)) return `Necesitás nivel ${def.nivelMinimo} para entrar a ${def.nombre}.`;
     if ((user as { huntersGame?: unknown }).huntersGame || Number(user.map) >= 1000) return "No podés entrar a una mazmorra desde acá.";
     if (runOfUser(user)) return "Ya estás en una mazmorra.";
+    const key = characterKey(user);
+    const missing = (def.requiere ?? []).find((item) => !key || !hasDungeonItem(key, item.id));
+    if (missing) return `Para ${def.nombre} hace falta ${missing.nombre}.`;
     return null;
 }
 
@@ -544,6 +614,9 @@ function createRun(def: DungeonDef, group: boolean, playerCount: number): Dungeo
         nextBurnAt: new Map(),
         hazardTimer: null,
         lavaActive: false,
+        crusherDown: false,
+        pairs: new Map(),
+        floatingBoss: null,
     };
     for (const baseMap of def.mapas) {
         if (!vars.mapa[baseMap] || !vars.mapData[baseMap]) {
@@ -556,6 +629,9 @@ function createRun(def: DungeonDef, group: boolean, playerCount: number): Dungeo
         run.maps[baseMap] = mapId;
         runByInstanceMap.set(mapId, run.id);
         spawnRunNpcs(baseMap, mapId, factors);
+        for (const npc of Object.values(vars.npcs ?? {}) as any[]) {
+            if (npc?.map === mapId) registerSpecialNpc(run, npc);
+        }
         const index = mechanicsOf(baseMap);
         if (index) run.mapState[baseMap] = createMapState(index);
     }
@@ -783,6 +859,14 @@ export function handleCommand(sessionId: EntityId, text: string) {
             if (!runOfUser(user)) return tell(sessionId, "No estás en una mazmorra.", "white");
             return leaveRun(sessionId, "Saliste de la mazmorra.");
         }
+        case "carrera":
+            return require("./dungeonMotion").startDash(sessionId);
+        case "salto":
+            return require("./dungeonMotion").jump(sessionId);
+        case "item": {
+            const [, itemId = "", flag = ""] = text.trim().split(/\s+/);
+            return grantItemCommand(sessionId, itemId.toLowerCase(), flag.toLowerCase() === "quitar");
+        }
         default:
             return tell(sessionId, "Uso: /mazmorra entrar solo | entrar grupo | aceptar | rechazar | salir", "white");
     }
@@ -818,7 +902,12 @@ function mechanicsOf(baseMap: number): MapIndex | null {
                     chests,
                     slabs: new Map(mech.slabs.map((slab) => [coordKey(slab.x, slab.y), slab])),
                     barriers,
-                    dynamic: new Set([...barriers.keys(), ...chests.keys(), ...mech.blocks]),
+                    crystals: new Set(mech.crystals ?? []),
+                    fragile: new Set(mech.fragile ?? []),
+                    timedPlates: new Set(mech.timedPlates ?? []),
+                    crackedWalls: new Set(mech.crackedWalls ?? []),
+                    crushers: new Set(mech.crushers ?? []),
+                    dynamic: new Set([...barriers.keys(), ...chests.keys(), ...mech.blocks, ...(mech.crystals ?? [])]),
                 };
             }
         } catch {
@@ -835,12 +924,18 @@ function createMapState(index: MapIndex): MapState {
         visited: new Set(),
         openedChests: new Set(),
         revealedChests: new Set(),
-        // Las puertas de sala arrancan abiertas; el resto, cerradas.
-        openBarriers: new Set(index.mech.barriers.filter((barrier) => barrier.tipo === "sala").map((barrier) => coordKey(barrier.x, barrier.y))),
+        // Las puertas de sala y las de un solo sentido arrancan abiertas; el resto, cerradas.
+        openBarriers: new Set(
+            index.mech.barriers.filter((barrier) => barrier.tipo === "sala" || barrier.tipo === "unica").map((barrier) => coordKey(barrier.x, barrier.y)),
+        ),
         blocks: new Set(index.mech.blocks),
         blockTrail: new Set(),
         platesSolved: index.mech.plates.length === 0,
         pendingClose: new Set(),
+        brokenCrystals: new Set(),
+        crumbling: new Map(),
+        collapsed: new Map(),
+        timedUntil: 0,
     };
 }
 
@@ -880,6 +975,11 @@ function setObject(mapId: number, x: number, y: number, objIndex: number) {
 function setBlocked(mapId: number, x: number, y: number, blocked: boolean) {
     if (!vars.mapa[mapId]?.[y]?.[x]) return;
     getGame().blockMap(mapId, { x, y }, blocked ? 1 : 0);
+}
+
+// Un sonido de mazmorra (DUNGEON_SOUNDS) para los que ven ese lugar; lo usa dungeonMotion.ts.
+export function playDungeonSound(mapId: number, pos: { x: number; y: number }, sound: keyof typeof DUNGEON_SOUNDS) {
+    playSoundAt(mapId, pos, DUNGEON_SOUNDS[sound]);
 }
 
 // Un sonido para todos los que ven ese lugar.
@@ -1066,6 +1166,7 @@ function spawnTrap(ctx: MapContext, chest: Chest) {
         if (!npc) continue;
         scaleNpc(npc, factors);
         makeDungeonWanderer(npc);
+        registerSpecialNpc(ctx.run, npc);
         spawned++;
         npcs.loopArea(npc.id, (target: { id: EntityId; dead?: boolean }) => {
             if (!target.dead && !vars.areaNpc[npc.id].includes(target.id)) vars.areaNpc[npc.id].push(target.id);
@@ -1090,7 +1191,9 @@ function openChest(sessionId: EntityId, user: RuntimeCharacter, ctx: MapContext,
         mapa: DUNGEON_SOUNDS.objeto,
         brujula: DUNGEON_SOUNDS.objeto,
         oro: DUNGEON_SOUNDS.oro,
+        oroGrande: DUNGEON_SOUNDS.oro,
         premio: DUNGEON_SOUNDS.itemMazmorra,
+        trofeo: DUNGEON_SOUNDS.itemMazmorra,
     };
     if (chestSound[chest.contenido]) playSoundAt(ctx.mapId, chest, chestSound[chest.contenido]);
     switch (chest.contenido) {
@@ -1112,8 +1215,9 @@ function openChest(sessionId: EntityId, user: RuntimeCharacter, ctx: MapContext,
             run.hasCompass = true;
             tellRun(run, `${name} encontró la brújula: marca los cofres y la puerta del jefe.`);
             break;
-        case "oro": {
-            const gold = Math.max(0, Math.round(ctx.index.mech.oro));
+        case "oro":
+        case "oroGrande": {
+            const gold = Math.max(0, Math.round(chest.contenido === "oroGrande" ? Number(ctx.index.mech.oroGrande ?? 0) : ctx.index.mech.oro));
             const owner = user as RuntimeCharacter & { gold?: number };
             owner.gold = Number(owner.gold ?? 0) + gold;
             const client = vars.clients?.[sessionId] as RuntimeClient | undefined;
@@ -1133,6 +1237,9 @@ function openChest(sessionId: EntityId, user: RuntimeCharacter, ctx: MapContext,
             tellRun(run, `¡${name} encontró ${item.nombre}! Quedan para siempre en cada uno del grupo.`, "#FFD24A");
             break;
         }
+        case "trofeo":
+            claimBossReward(run);
+            break;
         case "trampa": {
             const spawned = spawnTrap(ctx, chest);
             tellRun(run, spawned ? "¡Era una trampa!" : "El cofre estaba vacío.", spawned ? "#FF6B3D" : "white");
@@ -1192,6 +1299,10 @@ function useBarrier(sessionId: EntityId, user: RuntimeCharacter, ctx: MapContext
             return tell(sessionId, "La puerta está sellada mientras queden criaturas en la sala.", "white");
         case "placa":
             return tell(sessionId, "La puerta no tiene cerradura: algo en la sala tiene que abrirla.", "white");
+        case "tiempo":
+            return tell(sessionId, "La reja no tiene cerradura: una runa la abre por unos segundos.", "white");
+        case "unica":
+            return tell(sessionId, "Esta puerta solo se pasa desde el otro lado.", "white");
     }
 }
 
@@ -1307,23 +1418,16 @@ export function afterStep(ws: RuntimeClient, user: RuntimeCharacter) {
         ctx.run.nextBurnAt.set(key, now + LAVA_BURST_BURN_MS);
         hurt(user, LAVA_BURST_DAMAGE, "La erupción te quema:", LAVA_FX);
     }
+    crumbleLater(ctx, tileKey);
+    if (ctx.index.timedPlates.has(tileKey)) pressTimedPlate(ctx, tileKey);
     updatePlates(ctx);
 }
 
 // Caer a un pozo: daño y vuelta a la entrada de la sala. Devuelve true si el paso terminó ahí.
 function stepIntoPit(ws: RuntimeClient, user: RuntimeCharacter, ctx: MapContext, x: number, y: number): boolean {
-    if (!ctx.index.pits.has(coordKey(x, y)) || (user as { dead?: boolean }).dead) return false;
-    const key = characterKey(user);
-    const room = key ? ctx.run.playerRoom.get(key) : undefined;
-    const back = room && room.base === ctx.base ? room.entry : { x: user.pos.x, y: user.pos.y };
-    const game = getGame();
-    hurt(user, PIT_DAMAGE, "Caíste a un pozo:");
-    if ((user as { dead?: boolean }).dead) {
-        game.telep(ws, ctx.mapId, user.pos.x, user.pos.y, "dungeon.pozo");
-        return true;
-    }
-    const landing = game.getFreeSpace(ws, ctx.mapId, back.x, back.y, "dungeon.pozo") ?? back;
-    game.telep(ws, ctx.mapId, landing.x, landing.y, "dungeon.pozo");
+    const key = coordKey(x, y);
+    if ((!ctx.index.pits.has(key) && !ctx.state.collapsed.has(key)) || (user as { dead?: boolean }).dead) return false;
+    fallIntoPit(ws, user, ctx);
     return true;
 }
 
@@ -1390,7 +1494,16 @@ function tickRun(run: DungeonRun) {
             if (!barrier || !stillLocked) ctx.state.pendingClose.delete(key);
             else setBarrier(ctx, barrier, false);
         }
+        if (ctx.state.timedUntil && now >= ctx.state.timedUntil) closeTimedDoors(ctx);
+        for (const [key, restoreAt] of [...ctx.state.collapsed]) {
+            if (now < restoreAt || isOccupied(ctx.mapId, parseCoord(key).x, parseCoord(key).y)) continue;
+            ctx.state.collapsed.delete(key);
+            const { x, y } = parseCoord(key);
+            setObject(ctx.mapId, x, y, OBJ.pisoRajado);
+        }
     }
+    updateCrushers(run, now);
+    updateFloatingBoss(run, now);
     for (const user of playersInside(run)) {
         const key = characterKey(user);
         const ctx = contextOf(Number(user.map));
@@ -1405,6 +1518,401 @@ function tickRun(run: DungeonRun) {
             hurt(user, LAVA_BURST_DAMAGE, "La erupción te quema:", LAVA_FX);
         }
     }
+}
+
+// --- Caverna de las Llaves: el piso para la Carrera y el salto, cristales, piso que se desmorona, placas con
+// tiempo, aplastadores, puertas de un solo sentido, estatuas que despiertan, criaturas en pareja y el jefe que flota ---
+
+export function characterHasDungeonItem(user: RuntimeCharacter | undefined, itemId: string): boolean {
+    const key = characterKey(user);
+    return Boolean(key && hasDungeonItem(key, itemId));
+}
+
+const inBounds = (x: number, y: number) => x >= 1 && y >= 1 && x <= 100 && y <= 100;
+
+// Pozos, lava, aplastadores y piso caído: lo que se salta con la pluma (y frena la Carrera).
+export function isHazard(mapId: number, x: number, y: number): boolean {
+    const ctx = contextOf(mapId);
+    if (!ctx) return false;
+    const key = coordKey(x, y);
+    return (
+        ctx.index.pits.has(key) ||
+        ctx.index.lava.has(key) ||
+        ctx.index.lavaPeriodica.has(key) ||
+        ctx.index.crushers.has(key) ||
+        ctx.state.collapsed.has(key)
+    );
+}
+
+// Se pasa por encima saltando todo lo que no está bloqueado: pozos, lava, agua, criaturas o piso.
+export function isJumpable(mapId: number, x: number, y: number): boolean {
+    return inBounds(x, y) && Boolean(vars.mapa[mapId]?.[y]?.[x]) && !vars.mapa[mapId][y][x].blocked;
+}
+
+export function isSafeLanding(mapId: number, x: number, y: number, ignoreId?: EntityId): boolean {
+    if (!isJumpable(mapId, x, y) || isHazard(mapId, x, y) || getGame().hayAgua(mapId, { x, y })) return false;
+    const occupant = vars.mapData[mapId]?.[y]?.[x]?.id;
+    return !occupant || String(occupant) === String(ignoreId ?? "");
+}
+
+// Lo que la Carrera no frena: los cristales se rompen al pasar. Las paredes rajadas tiemblan al chocarlas.
+export function getDashObstacle(mapId: number, x: number, y: number): "cristal" | "pared" | null {
+    const ctx = contextOf(mapId);
+    if (!ctx) return null;
+    const key = coordKey(x, y);
+    if (ctx.index.crystals.has(key) && !ctx.state.brokenCrystals.has(key)) return "cristal";
+    if (ctx.index.crackedWalls.has(key)) return "pared";
+    return null;
+}
+
+export function breakCrystal(mapId: number, x: number, y: number) {
+    const ctx = contextOf(mapId);
+    const key = coordKey(x, y);
+    if (!ctx || !ctx.index.crystals.has(key) || ctx.state.brokenCrystals.has(key)) return;
+    ctx.state.brokenCrystals.add(key);
+    setObject(mapId, x, y, 0);
+    setBlocked(mapId, x, y, false);
+    playSoundAt(mapId, { x, y }, DUNGEON_SOUNDS.cristal);
+}
+
+// La Carrera se estrella contra una pared rajada: tiembla, y si en el mapa flota un jefe, se cae aturdido.
+export function onDashImpact(ws: RuntimeClient, user: RuntimeCharacter, x: number, y: number) {
+    const ctx = contextOf(Number(user.map));
+    if (!ctx) return;
+    playSoundAt(ctx.mapId, { x, y }, DUNGEON_SOUNDS.golpe);
+    const boss = ctx.run.floatingBoss;
+    const npc = boss ? vars.npcs?.[boss.npcId] : undefined;
+    if (!boss || !npc || npc.map !== ctx.mapId || boss.split) return;
+    boss.stunnedUntil = Date.now() + BOSS_STUN_MS;
+    npc.paralizado = true;
+    tellRun(ctx.run, `¡${npc.nameCharacter} cayó con el temblor! Es el momento de pegarle.`, "#FFD24A");
+    void ws;
+}
+
+// El jefe que flota no recibe daño hasta que lo bajan. Una estatua dormida se despierta al primer golpe.
+export function getNpcInvulnerableReason(npc: { id?: EntityId; map?: number; dormant?: boolean; nameCharacter?: string } | undefined): string | null {
+    if (!npc || !isDungeonInstanceMap(npc.map)) return null;
+    if (npc.dormant) npc.dormant = false;
+    const boss = runOfMap(Number(npc.map))?.floatingBoss;
+    if (boss && boss.npcId === String(npc.id) && Date.now() >= boss.stunnedUntil) {
+        return `${npc.nameCharacter ?? "El jefe"} flota fuera de tu alcance: hacelo caer.`;
+    }
+    return null;
+}
+
+// Puertas de un solo sentido: se entra y se sale de la baldosa de la puerta solo en su dirección.
+const DIR_OFFSET = { norte: { x: 0, y: -1 }, sur: { x: 0, y: 1 }, este: { x: 1, y: 0 }, oeste: { x: -1, y: 0 } } as const;
+
+export function canPassOneWay(mapId: number, from: { x: number; y: number }, to: { x: number; y: number }): boolean {
+    const ctx = contextOf(mapId);
+    if (!ctx) return true;
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    for (const tile of [to, from]) {
+        const barrier = ctx.index.barriers.get(coordKey(tile.x, tile.y));
+        if (barrier?.tipo !== "unica" || !barrier.dir) continue;
+        const allowed = DIR_OFFSET[barrier.dir];
+        if (allowed.x !== dx || allowed.y !== dy) return false;
+    }
+    return true;
+}
+
+export function getOneWayDeniedReason(user: RuntimeCharacter, x: number, y: number): string | null {
+    if (!isDungeonInstanceMap(user.map)) return null;
+    return canPassOneWay(Number(user.map), user.pos, { x, y }) ? null : "Esta puerta solo se pasa desde el otro lado.";
+}
+
+// Al caer a un pozo (o a un piso que se cayó): daño y vuelta a la entrada de la sala.
+function fallIntoPit(ws: RuntimeClient, user: RuntimeCharacter, ctx: MapContext) {
+    const key = characterKey(user);
+    const room = key ? ctx.run.playerRoom.get(key) : undefined;
+    const back = room && room.base === ctx.base ? room.entry : { x: user.pos.x, y: user.pos.y };
+    const game = getGame();
+    hurt(user, PIT_DAMAGE, "Caíste a un pozo:");
+    if ((user as { dead?: boolean }).dead) {
+        game.telep(ws, ctx.mapId, user.pos.x, user.pos.y, "dungeon.pozo");
+        return;
+    }
+    const landing = game.getFreeSpace(ws, ctx.mapId, back.x, back.y, "dungeon.pozo") ?? back;
+    game.telep(ws, ctx.mapId, landing.x, landing.y, "dungeon.pozo");
+}
+
+// Piso que se desmorona: se cae un instante después de pisarlo (corriendo o saltando se pasa antes).
+function crumbleLater(ctx: MapContext, key: string) {
+    if (!ctx.index.fragile.has(key) || ctx.state.collapsed.has(key) || ctx.state.crumbling.has(key)) return;
+    ctx.state.crumbling.set(key, Date.now() + CRUMBLE_DELAY_MS);
+    setTimeout(() => {
+        if (!runs.has(ctx.run.id)) return;
+        ctx.state.crumbling.delete(key);
+        ctx.state.collapsed.set(key, Date.now() + CRUMBLE_RESTORE_MS);
+        const { x, y } = parseCoord(key);
+        setObject(ctx.mapId, x, y, OBJ.hueco);
+        playSoundAt(ctx.mapId, { x, y }, DUNGEON_SOUNDS.derrumbe);
+        const user = playerAt(ctx.mapId, x, y) as (RuntimeCharacter & { dungeonMotion?: { tipo: string; until: number } | null }) | null;
+        const airborne = user?.dungeonMotion && user.dungeonMotion.until > Date.now();
+        const client = user ? (vars.clients?.[user.id] as RuntimeClient | undefined) : undefined;
+        if (user && client && !airborne && !(user as { dead?: boolean }).dead) fallIntoPit(client, user, ctx);
+    }, CRUMBLE_DELAY_MS);
+}
+
+// Placa con tiempo: abre las puertas con tiempo del mapa por unos segundos.
+function pressTimedPlate(ctx: MapContext, key: string) {
+    const { x, y } = parseCoord(key);
+    const wasClosed = ctx.state.timedUntil === 0;
+    ctx.state.timedUntil = Date.now() + TIMED_DOOR_MS;
+    setObject(ctx.mapId, x, y, OBJ.runaTiempoEncendida);
+    if (!wasClosed) return;
+    for (const barrier of ctx.index.mech.barriers) {
+        if (barrier.tipo !== "tiempo") continue;
+        setBarrier(ctx, barrier, true);
+        playSoundAt(ctx.mapId, barrier, DUNGEON_SOUNDS.puertaAbre);
+    }
+    tellRun(ctx.run, "La runa se encendió: una reja se abrió por unos segundos.");
+}
+
+function closeTimedDoors(ctx: MapContext) {
+    let pending = false;
+    for (const barrier of ctx.index.mech.barriers) {
+        const key = coordKey(barrier.x, barrier.y);
+        if (barrier.tipo !== "tiempo" || !ctx.state.openBarriers.has(key)) continue;
+        if (isOccupied(ctx.mapId, barrier.x, barrier.y)) {
+            pending = true;
+            continue;
+        }
+        setBarrier(ctx, barrier, false);
+        playSoundAt(ctx.mapId, barrier, DUNGEON_SOUNDS.puertasCierran);
+    }
+    if (pending) return;
+    ctx.state.timedUntil = 0;
+    for (const key of ctx.index.timedPlates) {
+        const { x, y } = parseCoord(key);
+        setObject(ctx.mapId, x, y, OBJ.runaTiempo);
+    }
+}
+
+// Aplastadores: bajan a la vez en toda la corrida.
+function updateCrushers(run: DungeonRun, now: number) {
+    const down = (now - run.createdAt) % CRUSHER_CYCLE_MS < CRUSHER_DOWN_MS;
+    if (down === run.crusherDown) return;
+    run.crusherDown = down;
+    for (const mapId of Object.values(run.maps)) {
+        const ctx = contextOf(mapId);
+        if (!ctx || !ctx.index.crushers.size) continue;
+        const watched = playersInside(run).some((user) => Number(user.map) === mapId);
+        if (!watched) continue;
+        for (const key of ctx.index.crushers) {
+            const { x, y } = parseCoord(key);
+            setObject(mapId, x, y, down ? OBJ.aplastador : OBJ.losaAplastador);
+            if (!down) continue;
+            const user = playerAt(mapId, x, y);
+            if (user) hurt(user, CRUSHER_DAMAGE, "Te agarró un aplastador:");
+        }
+        if (down) {
+            const first = parseCoord(ctx.index.crushers.values().next().value!);
+            playSoundAt(mapId, first, DUNGEON_SOUNDS.aplastador);
+        }
+    }
+}
+
+// --- Criaturas especiales (las marca su plantilla en npcs.json) ---
+// despierta: quieta hasta que alguien se acerca. pareja: grupo; si muere una y otra sigue viva, la revive a los
+// revivirMs. flota: el jefe que flota hasta que lo bajan con la Carrera; al llegar a la mitad de la vida se divide
+// en `divide.cantidad` criaturas `divide.npc`.
+type SpecialTemplate = {
+    despierta?: number;
+    pareja?: string;
+    revivirMs?: number;
+    flota?: boolean;
+    divide?: { npc: number; cantidad: number };
+};
+
+function templateOf(npc: { templateNpcIndex?: number } | undefined): SpecialTemplate {
+    return (npc ? vars.datNpc?.[Number(npc.templateNpcIndex ?? 0)] : undefined) ?? {};
+}
+
+function registerSpecialNpc(run: DungeonRun, npc: any) {
+    const template = templateOf(npc);
+    if (template.despierta) npc.dormant = true;
+    if (template.pareja) {
+        const group = run.pairs.get(template.pareja) ?? new Set<string>();
+        group.add(String(npc.id));
+        run.pairs.set(template.pareja, group);
+        npc.pairGroup = template.pareja;
+    }
+    if (template.flota) run.floatingBoss = { npcId: String(npc.id), stunnedUntil: 0, split: false };
+}
+
+// Una criatura nueva cerca de (x, y), en la misma sala, con el escalado del grupo; la ven los que están cerca.
+function spawnDungeonNpc(ctx: MapContext, npcIndex: number, near: { x: number; y: number }, roomId: number | undefined): any | null {
+    const def = getDefinition(ctx.run.dungeonId);
+    const LoadNpcs = require("./loadNpcs");
+    const npcs = require("./npcs");
+    const factors = def ? scaleFactors(def, ctx.run.playerCount) : { vida: 1, dano: 1 };
+    const spots = [[0, 0], [0, 1], [1, 0], [-1, 0], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1], [0, 2], [2, 0], [-2, 0], [0, -2]];
+    const spot = spots.find(([dx, dy]) => {
+        const x = near.x + dx;
+        const y = near.y + dy;
+        return (
+            (roomId === undefined || ctx.index.mech.roomOf[coordKey(x, y)] === roomId) &&
+            !isOccupied(ctx.mapId, x, y) &&
+            !vars.mapa[ctx.mapId]?.[y]?.[x]?.blocked &&
+            !isHazard(ctx.mapId, x, y)
+        );
+    });
+    if (!spot) return null;
+    const x = near.x + spot[0];
+    const y = near.y + spot[1];
+    new LoadNpcs().createNpcInMap({ mapNum: ctx.mapId, x, y, npcIndex }, true, false, true);
+    const npcId = vars.mapData[ctx.mapId]?.[y]?.[x]?.id;
+    const npc = npcId ? vars.npcs?.[npcId] : undefined;
+    if (!npc) return null;
+    scaleNpc(npc, factors);
+    makeDungeonWanderer(npc);
+    registerSpecialNpc(ctx.run, npc);
+    npcs.loopArea(npc.id, (target: { id: EntityId; dead?: boolean }) => {
+        if (!target.dead && !vars.areaNpc[npc.id].includes(target.id)) vars.areaNpc[npc.id].push(target.id);
+        const client = vars.clients?.[target.id] as RuntimeClient | undefined;
+        if (!client) return;
+        getHandleProtocol().sendNpc(npc);
+        require("./socket").send(client);
+    });
+    return npc;
+}
+
+// Saca una criatura sin que cuente como muerta (el jefe que se divide).
+function despawnNpc(npc: any) {
+    const handleProtocol = getHandleProtocol();
+    require("./npcs").loopArea(npc.id, (target: { id: EntityId }) => {
+        const client = vars.clients?.[target.id] as RuntimeClient | undefined;
+        if (client) handleProtocol.deleteCharacter(npc.id, client);
+    });
+    if (String(vars.mapData[npc.map]?.[npc.pos.y]?.[npc.pos.x]?.id) === String(npc.id)) vars.mapData[npc.map][npc.pos.y][npc.pos.x].id = 0;
+    delete vars.npcs[npc.id];
+    delete vars.areaNpc[npc.id];
+}
+
+function updateFloatingBoss(run: DungeonRun, now: number) {
+    const boss = run.floatingBoss;
+    if (!boss || boss.split) return;
+    const npc = vars.npcs?.[boss.npcId];
+    if (!npc) {
+        run.floatingBoss = null;
+        return;
+    }
+    if (boss.stunnedUntil && now >= boss.stunnedUntil) {
+        boss.stunnedUntil = 0;
+        npc.paralizado = false;
+        tellRun(run, `${npc.nameCharacter} vuelve a flotar.`);
+    }
+    const template = templateOf(npc);
+    if (!template.divide || Number(npc.hp ?? 0) > Number(npc.maxHp ?? 0) / 2) return;
+    const ctx = contextOf(Number(npc.map));
+    if (!ctx) return;
+    boss.split = true;
+    const at = { x: npc.pos.x, y: npc.pos.y };
+    const roomId = ctx.index.mech.roomOf[coordKey(at.x, at.y)];
+    despawnNpc(npc);
+    for (let i = 0; i < template.divide.cantidad; i++) spawnDungeonNpc(ctx, template.divide.npc, at, roomId);
+    run.floatingBoss = null;
+    playSoundAt(ctx.mapId, at, DUNGEON_SOUNDS.secreto);
+    tellRun(run, `¡${npc.nameCharacter} se partió en ${template.divide.cantidad}! Bajalos juntos: el que queda revive al otro.`, "#FF6B3D");
+}
+
+// Muere una criatura en pareja: si queda otra viva, a los revivirMs la revive (salvo que caigan todas antes).
+function onPairDied(ctx: MapContext, npc: any) {
+    const group = npc.pairGroup ? ctx.run.pairs.get(npc.pairGroup) : undefined;
+    if (!group) return;
+    group.delete(String(npc.id));
+    if (group.size === 0) return;
+    const template = templateOf(npc);
+    const delay = Number(template.revivirMs ?? 15_000);
+    for (const id of group) {
+        const partner = vars.npcs?.[id];
+        if (partner) partner.enraged = true;
+    }
+    tellRun(ctx.run, `¡Cuidado! Si no cae su pareja, ${npc.nameCharacter} vuelve en ${Math.round(delay / 1000)} s.`, "#FF6B3D");
+    const npcIndex = Number(npc.templateNpcIndex ?? 0);
+    const spawnAt = { x: Number(npc.spawnOrigin?.x ?? npc.pos.x), y: Number(npc.spawnOrigin?.y ?? npc.pos.y) };
+    const roomId = ctx.index.mech.roomOf[coordKey(npc.pos.x, npc.pos.y)];
+    setTimeout(() => {
+        if (!runs.has(ctx.run.id)) return;
+        const alive = ctx.run.pairs.get(npc.pairGroup);
+        if (!alive || alive.size === 0) return;
+        const revived = spawnDungeonNpc(ctx, npcIndex, spawnAt, roomId);
+        if (revived) tellRun(ctx.run, `¡${revived.nameCharacter} volvió!`, "#FF6B3D");
+    }, delay);
+}
+
+// Despierta a una estatua si hay un jugador cerca. Devuelve true si está despierta.
+export function wakeIfPlayerNear(npc: any): boolean {
+    if (!npc?.dormant) return true;
+    if (!isWatchedDungeonNpc(npc)) return false;
+    const near = (watchersCache.byMap.get(Number(npc.map)) ?? []).some(
+        (pos) => Math.max(Math.abs(pos.x - npc.pos.x), Math.abs(pos.y - npc.pos.y)) <= WAKE_RADIUS,
+    );
+    if (!near) return false;
+    npc.dormant = false;
+    playSoundAt(Number(npc.map), npc.pos, DUNGEON_SOUNDS.puertasCierran);
+    return true;
+}
+
+// Cofre del jefe: el trofeo de la serie y el oro, una vez por día por personaje.
+function claimBossReward(run: DungeonRun) {
+    const def = getDefinition(run.dungeonId);
+    const progressStore = getProgressStore();
+    const today = new Date().toISOString().slice(0, 10);
+    const gold = Math.max(0, Number(def?.oroJefe ?? 0));
+    for (const user of playersInside(run)) {
+        const key = characterKey(user);
+        if (!key) continue;
+        const progress = progressStore.getProgress({ _id: key }) as { dungeonRewards?: Record<string, string>; trofeos?: string[] };
+        progress.dungeonRewards ??= {};
+        if (progress.dungeonRewards[run.dungeonId] === today) {
+            tell(user.id, "Ya cobraste la recompensa de esta mazmorra hoy: vuelve mañana.", "white");
+            continue;
+        }
+        progress.dungeonRewards[run.dungeonId] = today;
+        if (def?.trofeo) progress.trofeos = [...new Set([...(progress.trofeos ?? []), def.trofeo.id])];
+        progressStore.saveProgress({ _id: key });
+        if (gold) {
+            const owner = user as RuntimeCharacter & { gold?: number };
+            owner.gold = Number(owner.gold ?? 0) + gold;
+            const client = vars.clients?.[user.id] as RuntimeClient | undefined;
+            if (client) getHandleProtocol().actGold(owner.gold, client);
+        }
+        tell(user.id, `${def?.trofeo ? `Ganaste ${def.trofeo.nombre}` : "Ganaste la recompensa"}${gold ? ` y ${gold} monedas de oro` : ""}.`, "#FFD24A");
+    }
+}
+
+// Ítems de mazmorra que conoce el juego, para la franja y el comando de GM.
+const DUNGEON_ITEMS: Record<string, { nombre: string; accion: "carrera" | "salto" | null }> = {
+    patas_de_rana: { nombre: "Patas de rana", accion: null },
+    pluma: { nombre: "Pluma de Roc", accion: "salto" },
+    botas_de_pegaso: { nombre: "Botas de Pegaso", accion: "carrera" },
+};
+
+function ownedDungeonItems(characterId: string) {
+    const progress = getProgressStore().getProgress({ _id: characterId }) as { dungeonItems?: string[] };
+    return (progress.dungeonItems ?? [])
+        .filter((id) => DUNGEON_ITEMS[id])
+        .map((id) => ({ id, nombre: DUNGEON_ITEMS[id].nombre, accion: DUNGEON_ITEMS[id].accion }));
+}
+
+// /mazmorra item <id> [quitar]: para que un GM pruebe con los ítems de mazmorra.
+function grantItemCommand(sessionId: EntityId, itemId: string, remove: boolean) {
+    const user = vars.personajes?.[sessionId] as (RuntimeCharacter & { privileges?: number }) | undefined;
+    const key = characterKey(user);
+    if (!user || !key || Number(user.privileges ?? 0) !== 1) return tell(sessionId, "Solo un GM puede darse ítems de mazmorra.", "white");
+    if (!DUNGEON_ITEMS[itemId]) return tell(sessionId, `Ítems: ${Object.keys(DUNGEON_ITEMS).join(", ")}.`, "white");
+    const progressStore = getProgressStore();
+    const progress = progressStore.getProgress({ _id: key }) as { dungeonItems?: string[] };
+    const items = new Set(progress.dungeonItems ?? []);
+    if (remove) items.delete(itemId);
+    else items.add(itemId);
+    progress.dungeonItems = [...items];
+    progressStore.saveProgress({ _id: key });
+    tell(sessionId, `${remove ? "Sacaste" : "Te diste"} ${DUNGEON_ITEMS[itemId].nombre}.`, "white");
+    sendState(sessionId);
 }
 
 // --- Enganches con el resto del server ---
@@ -1483,6 +1991,8 @@ export function onNpcDied(npc: { id?: EntityId; map?: number }): boolean {
     if (!isDungeonInstanceMap(npc.map)) return false;
     const ctx = contextOf(Number(npc.map));
     if (!ctx) return true;
+    onPairDied(ctx, npc);
+    if (ctx.run.floatingBoss?.npcId === String(npc.id)) ctx.run.floatingBoss = null;
     for (const [roomId, roomState] of ctx.state.rooms) {
         if (roomState.locked && roomCreatures(ctx, roomId, npc.id).length === 0) clearRoom(ctx, roomId);
     }
@@ -1533,6 +2043,18 @@ module.exports = {
     getAttackDeniedReason,
     developmentLockReason,
     isWatchedDungeonNpc,
+    playDungeonSound,
+    characterHasDungeonItem,
+    isHazard,
+    isJumpable,
+    isSafeLanding,
+    getDashObstacle,
+    breakCrystal,
+    onDashImpact,
+    getNpcInvulnerableReason,
+    canPassOneWay,
+    getOneWayDeniedReason,
+    wakeIfPlayerNear,
     DUNGEON_SOUNDS,
     handleNpcInteraction,
     handleCommand,

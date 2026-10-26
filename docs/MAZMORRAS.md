@@ -113,7 +113,7 @@ Todas por datos del mapa, para que las mazmorras siguientes se armen sin código
    - Un generador de mapas desde un plano en texto, con gráficos de AO, así las salas se editan fácil.
    - Los mapas 510-512, criaturas por sala, minijefe, jefe con fases, Patas de rana y recompensas.
 4. **Prueba y balance.** En vivo solo y en grupo de 5, ajuste de números y página de la wiki.
-5. **Caverna de las Llaves** (cuarta de la serie; el orden está en [mazmorras/00-PATRON_LINKS_AWAKENING.md](mazmorras/00-PATRON_LINKS_AWAKENING.md)). Diseño en [mazmorras/02-CAVERNA_DE_LAS_LLAVES.md](mazmorras/02-CAVERNA_DE_LAS_LLAVES.md).
+5. **Caverna de las Llaves. [hecha, en desarrollo hasta que exista la mazmorra de la pluma]** Ver la sección 8. (Cuarta de la serie; el orden está en [mazmorras/00-PATRON_LINKS_AWAKENING.md](mazmorras/00-PATRON_LINKS_AWAKENING.md)). Diseño en [mazmorras/02-CAVERNA_DE_LAS_LLAVES.md](mazmorras/02-CAVERNA_DE_LAS_LLAVES.md).
    - Primero, los ítems y las mecánicas nuevas:
      - la Carrera (Botas de Pegaso) y el salto (Pluma, que va a dar la mazmorra anterior);
      - cristales, piso que se desmorona, placa con tiempo, paredes resquebrajadas, aplastadores, puertas de un solo sentido y estatuas que despiertan.
@@ -268,3 +268,64 @@ Recorre todas las mecánicas en dos mapas:
   - `DungeonOverlay.tsx`: la losa, la franja y la niebla del minimapa;
   - `InventoryFloatingPanel.tsx`: dónde van la franja y la niebla.
 - `server/src/dungeons.test.ts` suma los objetos de mazmorra y que las mecánicas de cada mapa estén bien armadas: puertas con su objeto, cofres ocultos solo en salas que se cierran, llaves suficientes, llave del jefe si hay puerta del jefe y criaturas que no pisan pozos, lava ni puertas. También el traspaso de llaves al que sigue adentro.
+
+## 8. Caverna de las Llaves: la Carrera, el salto y las mecánicas nuevas
+
+El diseño está en [mazmorras/02-CAVERNA_DE_LAS_LLAVES.md](mazmorras/02-CAVERNA_DE_LAS_LLAVES.md). Es la cuarta de la serie y pide la Pluma, que va a dar la mazmorra anterior. Mientras tanto, está marcada `soloDesarrollo` (en producción entra un GM), y un GM se puede dar la Pluma con `/mazmorra item pluma`.
+
+### La Carrera y el salto
+Los dos son ítems del inventario de mazmorra y solo funcionan adentro. Se usan con su tecla (configurable en las teclas del juego) o con un clic en la franja, también en el celular.
+
+| | Carrera (Botas de Pegaso) | Salto (Pluma de Roc) |
+|---|---|---|
+| Tecla | Shift izquierdo | F |
+| Qué hace | Medio segundo de carga, pataleando en el lugar con polvo, y corre en línea recta hasta 8 baldosas (55 ms cada una), con una estela del personaje | Salta en arco, con la sombra en el piso: cae 2 baldosas adelante (por encima de 1 de pozo, lava, pinchos o piso que se desmorona) |
+| Al chocar | Con una criatura: le pega un golpe y medio y la empuja. Con cristales: los rompe y sigue. Con una pared rajada: tiembla (en la arena, el jefe cae). Con otra cosa: frena con un sacudón | — |
+| Juntos | Corriendo, al llegar al borde de un pozo de hasta 2 baldosas salta solo (salto largo, cae 3 adelante) | |
+| Espera | 1,5 s | 1 s |
+
+Mientras corre o salta no camina ni ataca. El server decide el movimiento entero y se lo manda de una vez a los que miran (paquete `dungeonMotion`, 101); cada cliente lo anima, y el server mueve al personaje baldosa por baldosa como en un paso normal (`protocol.moveUserByServer`). Está basado en el Dash Attack del guerrero de `_Argentum` y `_React-Argentum`, con la carga previa y la estela de Zelda.
+
+### Símbolos nuevos del plano
+| Símbolo | Qué es |
+|---|---|
+| `*` | Bloque de cristal: lo rompe la Carrera |
+| `:` | Piso que se desmorona: se cae 150 ms después de pisarlo (caminando, un paso tarda 200) y vuelve a los 5 s. Se cruza corriendo o saltando |
+| `P` / `Q` | Runa con tiempo y su reja: la runa abre las rejas del mapa por 3 s |
+| `W` | Pared rajada |
+| `Z` | Aplastador: baja 0,6 s de cada 2 y saca el 15 % de la vida |
+| `<` `>` `{` `}` | Puerta de un solo sentido, hacia el oeste, el este, el norte y el sur |
+| `G` | Cofre de oro grande (`oroGrande` en `leyenda.json`) |
+| `Y` | Cofre del jefe: el trofeo de la serie y el oro, una vez por día por personaje, para todos los que están adentro |
+
+Las criaturas no pisan el piso que se desmorona, los aplastadores ni las puertas.
+
+### Criaturas especiales
+Se arman en `leyenda.json` ("plantillas"), sobre una criatura de AO, con marcas que lee `dungeons.ts`:
+- `despierta`: quieta hasta que un jugador se acerca a esa distancia (las estatuas); también despierta al primer golpe.
+- `pareja` y `revivirMs`: si muere una del grupo y otra sigue viva, la revive a ese tiempo; la que queda se enfurece (piensa más rápido). Hay que bajarlas juntas.
+- `flota` y `divide`: el jefe que flota no recibe daño hasta que alguien se estrella corriendo contra una pared rajada (cae aturdido 6 s). A la mitad de la vida se parte en `divide.cantidad` criaturas `divide.npc`.
+
+En la Caverna: Estatua guardiana (9730), Serpiente Gemela (9731), Ojo Viscoso (9732) y Ojo Menor (9733).
+
+### Sonidos nuevos
+Cristal (216), derrumbe (217), golpe (218), Carrera (219), salto (220) y aplastador (221). Están en `docs/CREDITOS_SONIDOS.md`.
+
+### Para probarla
+1. Con un GM: `/invocarnpc 9721` (la piedra de la Caverna) y `/mazmorra item pluma`. Para probar sin recorrer, también `/mazmorra item botas_de_pegaso`.
+2. Entrar por la piedra. El regreso es Nix (mapa 34, en 50,52).
+
+### Archivos
+- `server/src/dungeonMotion.ts`: la Carrera y el salto.
+- `server/src/dungeons.ts`: las mecánicas nuevas, las criaturas especiales, el cofre del jefe, el inventario de mazmorra en el estado y `/mazmorra carrera | salto | item`.
+- `server/src/protocol.ts`: `moveUserByServer`, y en el paso normal, las puertas de un solo sentido y el freno mientras corre o salta; los ataques y hechizos también se frenan.
+- `server/src/game.ts`: el jefe que flota no recibe daño. `server/src/npcs.ts`: las estatuas dormidas y las criaturas enfurecidas.
+- `server/src/scripts/buildDungeonMaps.ts`: los símbolos y objetos nuevos (1841-1849) y las plantillas propias.
+- `server/mazmorras/caverna/`: los planos de los mapas 520-522 y la leyenda.
+- Cliente:
+  - `components/game/engine/dungeonMotion.ts`: las animaciones (carga, estela, polvo, arco, sombra y sacudón);
+  - `Engine.ts`: dónde se dibujan y el freno al caminar;
+  - `useMovementSync.ts`: la posición del server se aplica al terminar el movimiento;
+  - `useKeyboardGameplay.ts` y `lib/hotkeys.ts`: las teclas;
+  - `DungeonOverlay.tsx`: la franja con el inventario de mazmorra.
+

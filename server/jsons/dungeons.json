@@ -35,5 +35,60 @@
             "id": "patas_de_rana",
             "nombre": "Patas de rana"
         }
+    },
+    {
+        "id": "caverna",
+        "nombre": "Caverna de las Llaves",
+        "descripcion": "Una caverna de mil cerraduras, guardada por un ojo que flota en la oscuridad. Hace falta la Pluma de Roc.",
+        "nivelMinimo": 20,
+        "maxJugadores": 5,
+        "soloDesarrollo": true,
+        "piedraNpc": 9721,
+        "mapas": [
+            520,
+            521,
+            522
+        ],
+        "entrada": {
+            "map": 520,
+            "x": 24,
+            "y": 88
+        },
+        "salidas": [
+            {
+                "map": 520,
+                "x": 20,
+                "y": 91
+            },
+            {
+                "map": 522,
+                "x": 53,
+                "y": 32
+            }
+        ],
+        "regreso": {
+            "map": 34,
+            "x": 50,
+            "y": 52
+        },
+        "escalado": {
+            "vidaPorJugador": 0.7,
+            "danoPorJugador": 0.15
+        },
+        "requiere": [
+            {
+                "id": "pluma",
+                "nombre": "la Pluma de Roc"
+            }
+        ],
+        "itemMazmorra": {
+            "id": "botas_de_pegaso",
+            "nombre": "Botas de Pegaso"
+        },
+        "trofeo": {
+            "id": "iris_del_ojo",
+            "nombre": "el Iris del Ojo"
+        },
+        "oroJefe": 1000
     }
 ]

@@ -132,11 +132,14 @@ type DungeonRun = {
     playerCount: number;
     createdAt: number;
     emptySince: number | null;
-    // Del grupo: llaves chicas, llave del jefe, mapa y brújula.
-    keys: number;
-    bossKey: boolean;
+    // Llaves chicas y llave del jefe: cada una la lleva el que abrió el cofre, se gasta al abrir la puerta y, si
+    // el que la lleva se va, pasa a otro del grupo. Mapa y brújula valen para todo el grupo. Nada sale de la corrida.
+    keys: Map<string, number>;
+    bossKeyHolder: string | null;
     hasMap: boolean;
     hasCompass: boolean;
+    // Nombre de cada personaje de la corrida (para los avisos de las llaves aunque esté desconectado).
+    names: Map<string, string>;
     mapState: Record<number, MapState>;
     // Sala en la que está cada jugador y por dónde entró (para volver ahí al caer a un pozo).
     playerRoom: Map<string, { base: number; room: number; entry: { x: number; y: number } }>;
@@ -320,8 +323,16 @@ function buildState(user: RuntimeCharacter, panel: Record<string, unknown> | nul
                       nombre: insideDef.nombre,
                       jugadores: playersInside(insideRun).length,
                       grupo: insideRun.group,
-                      llaves: insideRun.keys,
-                      llaveJefe: insideRun.bossKey,
+                      llaves: insideRun.keys.get(key) ?? 0,
+                      llaveJefe: insideRun.bossKeyHolder === key,
+                      // Las que lleva otro del grupo.
+                      llavesDeOtros: [...insideRun.keys]
+                          .filter(([holder, count]) => holder !== key && count > 0)
+                          .map(([holder, count]) => ({ nombre: insideRun.names.get(holder) ?? "otro del grupo", cantidad: count })),
+                      llaveJefeDe:
+                          insideRun.bossKeyHolder && insideRun.bossKeyHolder !== key
+                              ? (insideRun.names.get(insideRun.bossKeyHolder) ?? "otro del grupo")
+                              : null,
                       mapa: insideRun.hasMap,
                       brujula: insideRun.hasCompass,
                       patas: hasDungeonItem(key, SWIM_ITEM),
@@ -467,8 +478,9 @@ function createRun(def: DungeonDef, group: boolean, playerCount: number): Dungeo
         playerCount,
         createdAt: Date.now(),
         emptySince: null,
-        keys: 0,
-        bossKey: false,
+        keys: new Map(),
+        bossKeyHolder: null,
+        names: new Map(),
         hasMap: false,
         hasCompass: false,
         mapState: {},
@@ -534,6 +546,7 @@ function teleportInto(sessionId: EntityId, run: DungeonRun, def: DungeonDef) {
     const landing = game.getFreeSpace(client, mapId, def.entrada.x, def.entrada.y, "dungeon.entrada") ?? def.entrada;
     run.members.add(key);
     run.inside.add(key);
+    run.names.set(key, String(user.nameCharacter ?? "Alguien"));
     runByCharacter.set(key, run.id);
     game.forceDismount(sessionId);
     game.telep(client, mapId, landing.x, landing.y, "dungeon.entrada");
@@ -553,6 +566,7 @@ export function leaveRun(sessionId: EntityId, reason: string) {
     run.members.delete(key);
     run.inside.delete(key);
     runByCharacter.delete(key);
+    passKeysOf(run, key, "salió de la mazmorra");
     if (client && def && isDungeonInstanceMap(user.map)) {
         const game = getGame();
         const landing = game.getFreeSpace(client, def.regreso.map, def.regreso.x, def.regreso.y, "dungeon.salida") ?? def.regreso;
@@ -566,6 +580,43 @@ export function leaveRun(sessionId: EntityId, reason: string) {
         for (const other of playersInside(run)) sendState(other.id);
     }
     return true;
+}
+
+// Las llaves del que se va pasan al primero de los que siguen adentro. Devuelve qué pasó, o null si no llevaba
+// ninguna. Sin nadie que las reciba, se pierden (la corrida se termina igual).
+export function handOverKeys(
+    holdings: { keys: Map<string, number>; bossKeyHolder: string | null },
+    leaving: string,
+    heirs: string[],
+): { heir: string | null; keys: number; bossKey: boolean } | null {
+    const keys = holdings.keys.get(leaving) ?? 0;
+    const bossKey = holdings.bossKeyHolder === leaving;
+    if (!keys && !bossKey) return null;
+    const heir = heirs.find((id) => id !== leaving) ?? null;
+    holdings.keys.delete(leaving);
+    if (heir && keys) holdings.keys.set(heir, (holdings.keys.get(heir) ?? 0) + keys);
+    if (bossKey) holdings.bossKeyHolder = heir;
+    return { heir, keys, bossKey };
+}
+
+function passKeysOf(run: DungeonRun, characterId: string, reason: string, excludeSessionId?: EntityId) {
+    // Primero a los conectados; si no hay, a uno que esté adentro desconectado.
+    const online = playersInside(run)
+        .filter((user) => String(user.id) !== String(excludeSessionId ?? ""))
+        .map((user) => characterKey(user))
+        .filter((id): id is string => Boolean(id) && run.inside.has(id!));
+    const heirs = [...online, ...[...run.inside].filter((id) => !online.includes(id))];
+    const result = handOverKeys(run, characterId, heirs);
+    if (!result) return;
+    const from = run.names.get(characterId) ?? "Alguien";
+    const what = [result.keys ? (result.keys === 1 ? "la llave chica" : `${result.keys} llaves chicas`) : "", result.bossKey ? "la llave del jefe" : ""]
+        .filter(Boolean)
+        .join(" y ");
+    const plural = result.keys + (result.bossKey ? 1 : 0) > 1;
+    if (result.heir) {
+        tellRun(run, `${from} ${reason}: ${what} ${plural ? "pasaron" : "pasó"} a ${run.names.get(result.heir) ?? "otro del grupo"}.`);
+    }
+    refreshRun(run);
 }
 
 // --- Comandos (/mazmorra) ---
@@ -956,12 +1007,14 @@ function openChest(sessionId: EntityId, user: RuntimeCharacter, ctx: MapContext,
     const name = String(user.nameCharacter ?? "Alguien");
     const run = ctx.run;
     switch (chest.contenido) {
-        case "llave":
-            run.keys++;
+        case "llave": {
+            const holder = characterKey(user);
+            if (holder) run.keys.set(holder, (run.keys.get(holder) ?? 0) + 1);
             tellRun(run, `${name} encontró una llave chica.`);
             break;
+        }
         case "jefe":
-            run.bossKey = true;
+            run.bossKeyHolder = characterKey(user);
             tellRun(run, `${name} encontró la llave del jefe.`, "#FFD24A");
             break;
         case "mapa":
@@ -1010,18 +1063,41 @@ function openChest(sessionId: EntityId, user: RuntimeCharacter, ctx: MapContext,
 function useBarrier(sessionId: EntityId, user: RuntimeCharacter, ctx: MapContext, barrier: Barrier) {
     if (ctx.state.openBarriers.has(coordKey(barrier.x, barrier.y))) return;
     const name = String(user.nameCharacter ?? "Alguien");
+    const me = characterKey(user);
+    const run = ctx.run;
     switch (barrier.tipo) {
-        case "llave":
-            if (ctx.run.keys <= 0) return tell(sessionId, "La puerta está cerrada con llave: necesitás una llave chica.", "white");
-            ctx.run.keys--;
+        case "llave": {
+            const own = me ? (run.keys.get(me) ?? 0) : 0;
+            if (!me || own <= 0) {
+                const holders = [...run.keys].filter(([, count]) => count > 0).map(([holder]) => run.names.get(holder) ?? "otro del grupo");
+                return tell(
+                    sessionId,
+                    holders.length
+                        ? `La puerta está cerrada con llave: la llave chica la tiene ${holders.join(" y ")}.`
+                        : "La puerta está cerrada con llave: necesitás una llave chica.",
+                    "white",
+                );
+            }
+            if (own > 1) run.keys.set(me, own - 1);
+            else run.keys.delete(me);
             setBarrier(ctx, barrier, true);
-            tellRun(ctx.run, `${name} abrió una puerta con una llave chica.`);
-            refreshRun(ctx.run);
+            tellRun(run, `${name} abrió una puerta con una llave chica.`);
+            refreshRun(run);
             return;
+        }
         case "jefe":
-            if (!ctx.run.bossKey) return tell(sessionId, "Es la puerta del jefe: necesitás la llave del jefe.", "white");
+            if (!me || run.bossKeyHolder !== me) {
+                const holder = run.bossKeyHolder ? (run.names.get(run.bossKeyHolder) ?? "otro del grupo") : null;
+                return tell(
+                    sessionId,
+                    holder ? `Es la puerta del jefe: la llave la tiene ${holder}.` : "Es la puerta del jefe: necesitás la llave del jefe.",
+                    "white",
+                );
+            }
+            run.bossKeyHolder = null;
             setBarrier(ctx, barrier, true);
-            tellRun(ctx.run, `${name} abrió la puerta del jefe.`, "#FFD24A");
+            tellRun(run, `${name} abrió la puerta del jefe.`, "#FFD24A");
+            refreshRun(run);
             return;
         case "sala":
             return tell(sessionId, "La puerta está sellada mientras queden criaturas en la sala.", "white");
@@ -1271,6 +1347,13 @@ export function handleStep(ws: RuntimeClient, user: RuntimeCharacter, x: number,
     return true;
 }
 
+// Al desconectarse adentro sigue en la corrida, pero sus llaves pasan a otro para que el grupo pueda seguir.
+export function onDisconnect(user: RuntimeCharacter | undefined) {
+    const run = runOfUser(user);
+    const key = characterKey(user);
+    if (user && run && key && run.inside.has(key)) passKeysOf(run, key, "se desconectó", user.id);
+}
+
 // Al entrar al juego adentro de una corrida: el cartel, la franja de la mazmorra y el minimapa.
 export function sendLoginState(sessionId: EntityId) {
     const user = vars.personajes?.[sessionId] as RuntimeCharacter | undefined;
@@ -1375,7 +1458,9 @@ module.exports = {
     onLeftParty,
     resolveLoginLocation,
     sendLoginState,
+    onDisconnect,
     onNpcDied,
+    handOverKeys,
     SWIM_ITEM,
     _resetForTests,
 };

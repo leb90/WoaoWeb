@@ -130,6 +130,9 @@ test("las mecánicas de cada mapa están bien armadas y la mazmorra se puede res
             for (const key of [...mech.pits, ...mech.lava, ...mech.lavaPeriodica]) {
                 assert.equal(specials.triggers?.[key], 2, `${def.id} ${map} (${key}): las criaturas no pisan pozos ni lava`);
             }
+            for (const barrier of mech.barriers) {
+                assert.equal(specials.triggers?.[`${barrier.x},${barrier.y}`], 2, `${def.id} ${map} (${barrier.x},${barrier.y}): las criaturas no salen de su sala`);
+            }
             for (const slab of mech.slabs) assert.ok(slab.texto, `${def.id} ${map}: la losa tiene texto`);
         }
         assert.ok(counts.llaves >= counts.puertasConLlave, `${def.id}: alcanzan las llaves chicas`);
@@ -143,4 +146,16 @@ test("afuera de una mazmorra no se nada ni cambia ningún bloqueo", () => {
     assert.equal(dungeons.getSwimBlockReason(user), null);
     assert.equal(dungeons.getDynamicBlocked(34, 50, 50), null);
     assert.equal(dungeons.getWaterStepDeniedReason(user, false), null);
+});
+
+test("las llaves del que se va pasan al primero que sigue adentro", () => {
+    const holdings = { keys: new Map([["a", 2], ["b", 1]]), bossKeyHolder: "a" as string | null };
+    assert.deepEqual(dungeons.handOverKeys(holdings, "a", ["a", "c", "b"]), { heir: "c", keys: 2, bossKey: true });
+    assert.deepEqual([...holdings.keys], [["b", 1], ["c", 2]]);
+    assert.equal(holdings.bossKeyHolder, "c");
+    // Sin llaves no pasa nada.
+    assert.equal(dungeons.handOverKeys(holdings, "d", ["c"]), null);
+    // Sin nadie que las reciba, se pierden.
+    assert.deepEqual(dungeons.handOverKeys(holdings, "b", []), { heir: null, keys: 1, bossKey: false });
+    assert.deepEqual([...holdings.keys], [["c", 2]]);
 });

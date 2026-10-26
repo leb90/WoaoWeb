@@ -494,9 +494,12 @@ export type DungeonStatePayload = {
         nombre: string;
         jugadores: number;
         grupo: boolean;
-        // Del grupo: llaves chicas, llave del jefe, mapa y brújula. patas: el jugador tiene las Patas de rana.
+        // Llaves chicas y llave del jefe que lleva el jugador (se gastan al abrir), y las que lleva otro del grupo.
         llaves: number;
         llaveJefe: boolean;
+        llavesDeOtros: Array<{ nombre: string; cantidad: number }>;
+        llaveJefeDe: string | null;
+        // Del grupo: mapa y brújula. patas: el jugador tiene las Patas de rana (quedan para siempre).
         mapa: boolean;
         brujula: boolean;
         patas: boolean;

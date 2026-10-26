@@ -201,12 +201,31 @@ export default function DungeonOverlay({ state, onSendCommand }: DungeonOverlayP
 
 type InsideState = NonNullable<DungeonStatePayload["enMazmorra"]>;
 
-// Franja de la mazmorra, arriba del inventario: el ítem de la mazmorra y lo que encontró el grupo.
+// Franja de la mazmorra, arriba del inventario. Las Patas de rana quedan para siempre; las llaves, el mapa y la
+// brújula son de la corrida y no salen de la mazmorra. Las llaves que lleva otro del grupo se ven a media luz.
 export function DungeonItemsStrip({ inside }: { inside: InsideState }) {
+    const othersKeys = inside.llavesDeOtros ?? [];
     const slots = [
         { id: "patas", label: "Patas de rana: nadás por el agua profunda", short: "Patas", icon: Footprints, owned: inside.patas, tone: "text-sky-300" },
-        { id: "llaves", label: `Llaves chicas: ${inside.llaves}`, short: "Llaves", icon: Key, owned: inside.llaves > 0, tone: "text-amber-200", count: inside.llaves },
-        { id: "jefe", label: "Llave del jefe", short: "Jefe", icon: KeyRound, owned: inside.llaveJefe, tone: "text-rose-300" },
+        {
+            id: "llaves",
+            label: `Llaves chicas: ${inside.llaves}. Se gastan al abrir una puerta.`,
+            short: "Llaves",
+            icon: Key,
+            owned: inside.llaves > 0,
+            tone: "text-amber-200",
+            count: inside.llaves,
+            heldBy: othersKeys.length ? `La tiene ${othersKeys.map((entry) => entry.cantidad > 1 ? `${entry.nombre} (${entry.cantidad})` : entry.nombre).join(" y ")}` : null,
+        },
+        {
+            id: "jefe",
+            label: "Llave del jefe: abre la puerta del jefe",
+            short: "Jefe",
+            icon: KeyRound,
+            owned: inside.llaveJefe,
+            tone: "text-rose-300",
+            heldBy: inside.llaveJefeDe ? `La tiene ${inside.llaveJefeDe}` : null,
+        },
         { id: "mapa", label: "Mapa: muestra todas las salas", short: "Mapa", icon: MapIcon, owned: inside.mapa, tone: "text-emerald-200" },
         { id: "brujula", label: "Brújula: marca los cofres y la puerta del jefe", short: "Brújula", icon: Compass, owned: inside.brujula, tone: "text-violet-200" },
     ];
@@ -214,18 +233,23 @@ export function DungeonItemsStrip({ inside }: { inside: InsideState }) {
         <div data-testid="dungeon-strip" className="border border-[#4a3424] bg-[#120c09] px-1.5 py-1">
             <p className="px-0.5 pb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-300/70">Mazmorra</p>
             <div className="grid grid-cols-5 gap-1">
-                {slots.map(({ id, label, short, icon: Icon, owned, tone, count }) => (
+                {slots.map(({ id, label, short, icon: Icon, owned, tone, count, heldBy }) => (
                     <div
                         key={id}
                         data-testid={`dungeon-strip-${id}`}
                         data-owned={owned ? "1" : "0"}
-                        title={owned ? label : `${short}: todavía no`}
+                        data-held-by={!owned && heldBy ? heldBy : undefined}
+                        title={owned ? label : (heldBy ?? `${short}: todavía no`)}
                         className={`relative flex h-11 flex-col items-center justify-center gap-0.5 border text-[9px] ${
-                            owned ? "border-amber-300/35 bg-[#2a1b12]" : "border-[#2c2018] bg-[#0d0907] opacity-45"
+                            owned
+                                ? "border-amber-300/35 bg-[#2a1b12]"
+                                : heldBy
+                                  ? "border-dashed border-amber-300/30 bg-[#170f0a] opacity-75"
+                                  : "border-[#2c2018] bg-[#0d0907] opacity-45"
                         }`}
                     >
-                        <Icon className={`h-4 w-4 ${owned ? tone : "text-stone-500"}`} />
-                        <span className={owned ? "text-stone-200" : "text-stone-500"}>{short}</span>
+                        <Icon className={`h-4 w-4 ${owned ? tone : heldBy ? `${tone} opacity-60` : "text-stone-500"}`} />
+                        <span className={owned ? "text-stone-200" : heldBy ? "text-stone-400" : "text-stone-500"}>{short}</span>
                         {count && count > 1 ? (
                             <span className="absolute right-0.5 top-0.5 rounded bg-black/70 px-1 text-[9px] font-bold leading-tight text-amber-100">{count}</span>
                         ) : null}

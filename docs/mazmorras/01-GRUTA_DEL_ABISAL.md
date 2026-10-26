@@ -144,6 +144,12 @@ Además hay dos puertas de un solo sentido que acortan la vuelta (Patas de rana 
   - **Menos de 33 %:** más rápido, embiste.
   - **Recompensa:** la Escama del Abisal (trofeo de la serie) y un cofre con oro y un objeto, una vez por día por personaje.
 
+Cómo se ven, en la mazmorra de prueba (todavía con las criaturas de AO de las que toman el cuerpo; las plantillas con nombre, vida y fases propias van en la etapa 3):
+
+| Jefe: El Abisal (cuerpo del Leviatán) | Minijefe: Tortuga Espinosa (cuerpo de la Tortuga gigante) |
+|---|---|
+| ![El Abisal](jefes/el-abisal.png) | ![Tortuga Espinosa](jefes/tortuga-espinosa.png) |
+
 ### Trampas
 | Tipo | Dónde | Rol (igual que en Zelda) |
 |---|---|---|

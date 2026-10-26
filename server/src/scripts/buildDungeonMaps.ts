@@ -35,7 +35,8 @@ const WATER_GRH = 1505; // bloque de 4×4 de agua (waterTiles.ts)
 const PORTAL_OBJ = 378; // Teleport (portal azul, no se puede levantar)
 const STAIRS_OBJ = 1198; // Escalera Grande
 const LAVA_GRHS = [9487, 9488, 9489, 9490, 9491, 9492, 9493, 9494, 9495]; // piso de lava del mapa 162
-// Trigger que las criaturas no pisan (POSINVALIDA del AO original): pozos y lava.
+// Trigger que las criaturas no pisan (POSINVALIDA del AO original): pozos, lava y puertas, así ninguna sale de su
+// sala (como en Zelda) y la sala que se cierra las encierra a todas.
 const NO_NPC_TRIGGER = 2;
 // Objetos de mazmorra (tipo 0, no se levantan): se crean o actualizan en objs.json al correr el generador.
 export const DUNGEON_OBJECTS = {
@@ -251,6 +252,7 @@ function buildTile(plan: Plan, x: number, y: number): Tile {
         const open = c === "+";
         tile.object = horizontal ? (open ? DUNGEON_OBJECTS.puertaAbierta.id : DUNGEON_OBJECTS.puerta.id) : open ? undefined : DUNGEON_OBJECTS.barrera.id;
         tile.blocked = !open;
+        tile.trigger = NO_NPC_TRIGGER;
     }
     if (c === "_") tile.object = DUNGEON_OBJECTS.placa.id;
     if (c === "B") {

@@ -1,8 +1,8 @@
 # Roca de la Tortuga
 
-Fecha: 2026-10-26. Estado: **diseño, para confirmar**. El sistema (instancias, grupo, ítems de mazmorra, mecánicas) está en [../MAZMORRAS.md](../MAZMORRAS.md); el patrón de la serie, en [00-PATRON_LINKS_AWAKENING.md](00-PATRON_LINKS_AWAKENING.md).
+Fecha: 2026-10-26. Estado: **diseño aprobado** (nombres, cuerpos, gráficos y construcción por etapas). Leandro pidió que el Gancho y la Pulsera se hagan como en el original, para que queden listos para las mazmorras que los dan, y un sprite nuevo para la Cabeza de la Tortuga. El sistema (instancias, grupo, ítems de mazmorra, mecánicas) está en [../MAZMORRAS.md](../MAZMORRAS.md); el patrón de la serie, en [00-PATRON_LINKS_AWAKENING.md](00-PATRON_LINKS_AWAKENING.md).
 
-**Lugar en la serie: a definir.** Leandro pasa las mazmorras sin orden y el orden se decide al final, según qué ítem pide cada una. Esta usa mucho la **Pluma de Roc** (Cueva de la Cola), así que tiene que ir después de la Cueva. Las Botas solo abren atajos. En el original es la octava, la última antes del final.
+**Lugar en la serie: a definir.** Leandro pasa las mazmorras sin orden y el orden se decide al final, según qué ítem pide cada una. Usa la **Pluma de Roc** (Cueva de la Cola) y, como en el original, el **Gancho** y la **Pulsera**, que en Link's Awakening dan otras mazmorras. Esos dos se hacen ahora y quedan listos para cuando se diseñen sus mazmorras; mientras tanto, un GM los da con `/mazmorra item` para probar, como se hizo con la Pluma en la Caverna. Las Botas solo abren atajos. En el original es la octava, la última antes del final.
 
 Adaptación de la **Roca Tortuga** (*Turtle Rock*), el nivel 8 de *Link's Awakening*, que da la **Vara de Fuego**. Acá el ítem es el **Polvo de Fuego**. No se copia baldosa por baldosa; se respeta la estructura jugable:
 - **Es la más grande y laberíntica de la serie:** 45 salas, 6 pasajes y un tramo afuera.
@@ -59,7 +59,7 @@ Celdas (columna, fila) desde arriba a la izquierda, de 0 a 7. El número de sect
 | Serpientes y ojo | (2,6) | 1 | Al vaciarla se abre el norte | 3 serpientes | Ojo de piedra sobre lava; se cierra |
 | Cíclope | (2,5) | 6 | **Revancha: Cíclope** (el Hinox); al vencerlo se abre el oeste | Minijefe | Se cierra al entrar |
 | Roca rodante | (1,5) | 6 | Primera **roca rodante**: abre el camino al sur; si tapa todos los pozos, cofre de **50 de oro** | — | Pozos |
-| Pozos y chispas | (1,6) | 9 | Cofre de **200 de oro** al este, saltando | 2 chispas | Pozos |
+| Pozos y chispas | (1,6) | 9 | Cofre de **200 de oro** al este, saltando o con el Gancho | 2 chispas | Pozos |
 | Ogro del Rodillo | (0,6) | 6 | **Revancha: Ogro del Rodillo**; abre norte y sur | Minijefe | Se cierra; rodillo de púas |
 | Brújula | (0,7) | 9 | **Brújula** en una plataforma con baranda | 3 babosas escondidas | **Remolino**: te tira hacia él y, si llegás al centro, te deja en la Entrada (atajo) |
 | Vire y chispa | (0,5) | 6 | **K1** al vaciarla | Vire | Chispa, pozos |
@@ -71,19 +71,19 @@ Celdas (columna, fila) desde arriba a la izquierda, de 0 a 7. El número de sect
 | Laguna central | (4,5) | 2 | Roca rodante sobre una laguna de lava: con ella se arma el camino al norte. **Escalera A** (pasaje A ↔ B) | — | Lava |
 | Bloque cerrado | (4,4) | 2 | Bloque con cerradura **L1** al este | — | — |
 | Hélices | (3,4) | 2 | **Escalera K** (pasaje K ↔ L); antorchas encendidas | 3 hélices | — |
-| Recarga | (2,4) | 6 | Vasijas con pociones | — | Lava |
+| Recarga | (2,4) | 6 | Vasijas con pociones (se levantan con la Pulsera) | — | Lava |
 
 **Sureste** (fase B)
 | Sala | Celda | Sector | Contenido | Criaturas | Trampas |
 |---|---|---|---|---|---|
-| Pico de piedra | (7,7) | 8 | **Pico de piedra**; **escalera L**; al vaciarla se abre el norte | 4 serpientes | Pozos, vasijas |
-| Golem de la Bola | (7,6) | 7 | **Revancha: Golem de la Bola** (el Smasher); abre norte, oeste y sur | Minijefe | Se cierra |
-| Búho del botón | (7,5) | 8 | Búho (pista de la roca rodante). Te encierra: el botón está bajo una vasija. **Escalera J** | 2 babosas | Ojo de piedra, pozos |
+| Pico de piedra | (7,7) | 8 | **Pico de piedra**; la **escalera L** está tapada por vasijas (Pulsera); al vaciarla se abre el norte | 4 serpientes | Pozos |
+| Golem de la Bola | (7,6) | 7 | **Revancha: Golem de la Bola** (el Smasher): se le tira su propia bola con la Pulsera; abre norte, oeste y sur | Minijefe | Se cierra |
+| Búho del botón | (7,5) | 8 | Búho (pista de la roca rodante). Te encierra: el botón está bajo una vasija, que se levanta con la Pulsera. **Escalera J** | 2 babosas | Ojo de piedra, pozos |
 | Roca del pozo | (6,6) | 7 | Roca rodante sobre un pozo en diagonal: tapar todos da la **K2** | 2 babosas | Pozos |
 | Cristal | (6,5) | 7 | **Cristal**: al golpearlo suben o bajan los bloques naranjas de toda la mazmorra | — | — |
 | Escalera C | (5,5) | 11 | **Escalera C** (pasaje C ↔ D, al final) | — | — |
 | Cofre trampa | (5,6) | 7 | Cofre del que sale una babosa | — | Lava |
-| Vasijas | (4,6) | 7 | Un botón bajo una vasija abre el este y el sur | Hada | 2 chispas |
+| Vasijas | (4,6) | 7 | Un botón bajo una vasija (Pulsera) abre el este y el sur | Hada | 2 chispas |
 | Imitadores | (4,7) | 7 | Al vencer a los imitadores aparece la **escalera I** (pasaje I ↔ J: atajo al Búho) | 2 imitadores | 2 braseros que escupen fuego |
 
 **Este y norte** (fase C)
@@ -95,10 +95,10 @@ Celdas (columna, fila) desde arriba a la izquierda, de 0 a 7. El número de sect
 | Momias | (6,2) | 3 | **K3** al vaciarla | 2 momias | Piso que se desmorona |
 | Serpientes | (5,2) | 3 | **Revancha: Serpientes Gemelas** en el piso bajo: desde abajo no reciben daño. Desde la **cornisa alta** (se llega por Afuera) sí. Al vencerlas, cofre con la **K6** | Minijefe | Cornisa |
 | Lava | (4,2) | 3 | Puerta **L3** al oeste | 4 babosas | Lava |
-| Poción | (4,1) | 9 | Cofre con **pociones** en una cornisa rodeada de lava, saltando | — | Lava |
+| Poción | (4,1) | 9 | Cofre con **pociones** en una cornisa rodeada de lava: se llega con el Gancho, enganchándose al cofre | — | Lava |
 | Pasillo G | (4,0) | 3 | **Escalera G** (pasaje G ↔ H) | — | — |
 | Anillo de lava | (3,2) | 11 | Anillo de piso alrededor de lava. En la plataforma del medio, la **puerta del jefe** (N) y la **escalera D**, que solo se alcanzan desde el pasaje C ↔ D | — | Lava |
-| Salida afuera | (2,2) | 3 | Salida al **Afuera** (arriba); cofre de **200 de oro** en una cornisa, saltando desde el oeste; al vaciarla se abre el oeste | Vire, 2 serpientes | Se cierra |
+| Salida afuera | (2,2) | 3 | Salida al **Afuera** (arriba); cofre de **200 de oro** en una cornisa con baranda, con el Gancho desde la Escalera B; al vaciarla se abre el oeste | Vire, 2 serpientes | Se cierra |
 | Estatua-ojo | (2,3) | 8 | Búho ("si la estatua se ve rara, pegale"). Pegarle a la estatua-ojo da la **K4** | — | 2 chispas |
 | Bloques | (1,3) | 3 | Empujando bloques aparece un cofre con la **K5** | — | Ojo de piedra, pozos |
 
@@ -107,7 +107,7 @@ Celdas (columna, fila) desde arriba a la izquierda, de 0 a 7. El número de sect
 |---|---|---|---|---|---|
 | Oscura este | (5,3) | 5 | Puerta **L4** al oeste; una columna de pozos que se salta | 2 babosas | 2 chispas, pozos |
 | Oscura del medio | (4,3) | 5 | **Escalera E** (pasaje E ↔ F) tapada por el bloque **L6**; la puerta al oeste se cierra | Serpiente | — |
-| Oscura oeste | (3,3) | 5 | Bloque **L5**: abre el paso a la parte de arriba de la Oscura del medio, donde está L6 | 2 serpientes, hélice | Pozos |
+| Oscura oeste | (3,3) | 5 | Bloque **L5**: abre el paso a la parte de arriba de la Oscura del medio. Ahí, con el Gancho, se cruza enganchándose a un bloque hasta L6 | 2 serpientes, hélice | Pozos |
 | Antorchas | (1,4) | 5 | Dos antorchas apagadas: encendidas con el Polvo, cofre con la **K7** | 2 serpientes | Oscura |
 
 **Norte, el ítem y el final** (fases D a F)
@@ -126,7 +126,7 @@ Celdas (columna, fila) desde arriba a la izquierda, de 0 a 7. El número de sect
 | A ↔ B | Laguna central ↔ Escalera B | Bloques de **hielo**; criaturas chicas | Polvo y pluma |
 | C ↔ D | Escalera C ↔ plataforma del Anillo de lava | Mucho **hielo** | Polvo y pluma |
 | E ↔ F | Oscura del medio ↔ Sala del Polvo | Lava, islas y burbujas de lava | Pluma |
-| G ↔ H | Pasillo G ↔ Cuchillas | Lava, burbujas, 2 criaturas | Pluma |
+| G ↔ H | Pasillo G ↔ Cuchillas | Lava, burbujas, 2 criaturas y una gárgola para el Gancho | Gancho y pluma |
 | I ↔ J | Imitadores ↔ Búho del botón | Pinchos, una chispa, 2 criaturas | Pluma |
 | K ↔ L | Hélices ↔ Pico de piedra | Pilares sobre lava, 5 burbujas | Pluma |
 | Afuera | Salida afuera → cornisa de las Serpientes | Sendero por la ladera, **caracola secreta** y un mini gusano | — |
@@ -208,10 +208,10 @@ En el original hay seis minijefes, cinco de ellos revanchas de las mazmorras ant
 
 | Minijefe | Original | Sala | Cuerpo | Cómo se pelea |
 |---|---|---|---|---|
-| **Cabeza de la Tortuga** | La cabeza de la entrada | Entrada | Tortuga gigante (539) dibujada grande, o un sprite nuevo | Sale de la pared norte, se mueve de costado y estira el cuello para embestir. Abre la mazmorra |
+| **Cabeza de la Tortuga** | La cabeza de la entrada | Entrada | Sprite nuevo: SwordTortoise (abajo) | Sale de la pared norte, se mueve de costado y estira el cuello para embestir. Abre la mazmorra |
 | **Cíclope** | Hinox (mazmorra 2) | Cíclope | Cíclope (582) | Embiste y empuja; guardián fuerte |
 | **Ogro del Rodillo** | Rolling Bones (mazmorra 1) | Ogro del Rodillo | Ogro (577), el de la Cueva | Igual que en la Cueva: el rodillo se salta |
-| **Golem de la Bola** | Smasher (mazmorra 6) | Golem de la Bola | Golem de Hierro (579) | Tira su bola de hierro. Sin la Pulsera no se la puede agarrar: la bola rebota por la sala y queda un rato en el piso, y ahí el golem está expuesto |
+| **Golem de la Bola** | Smasher (mazmorra 6) | Golem de la Bola | Golem de Hierro (579) | Tira su bola de hierro, que queda un rato en el piso. Como en el original, se la levanta con la Pulsera y se le tira de vuelta: cada bolazo le saca mucha vida |
 | **Serpientes Gemelas** | Serpientes Dodongo (mazmorra 3) | Serpientes | Serpiente (504), las de la Caverna | Como en la Caverna (hay que bajarlas juntas), pero solo reciben daño de los que están en la cornisa alta. En el original se les tiran bombas desde arriba |
 | **Tortuga Espinosa** | Cue Ball (mazmorra 4) | Tortuga Espinosa | Tortuga gigante (539) | Como en la Gruta: da vueltas al anillo y embiste; aturdida al chocar, se le pega |
 | **Gigante Púgil** | Blaino (propio) | Gigante Púgil | Gigante (586) | Ver abajo |
@@ -222,6 +222,9 @@ En el original hay seis minijefes, cinco de ellos revanchas de las mazmorras ant
   - **Defensa:** bloquea todo lo que le llega **de frente**, golpes y hechizos. Hay que pegarle de costado o por la espalda; en grupo, rodearlo.
   - **Al vencerlo:** se abre el paso al Polvo y aparece el portal-atajo.
 - **Jefe: Cabeza Ardiente** (Hot Head), en la Guarida (542), con el cuerpo del Genio Infernal (748), que ya es una bola de fuego. Cómo se pelea, en la sección 6.1.
+- **Cabeza de la Tortuga:** la Tortuga gigante de AO es chica para una cabeza que sale de la roca. Se indexa la [SwordTortoise](https://opengameart.org/content/swordtortoise) de SCaydi (CC-BY 4.0: solo pide el crédito): una tortuga con púas vista de frente. Es un solo cuadro; el movimiento (de costado, el cuello que se estira, el temblor al recibir daño) lo hace el código, como con el Ciempiés.
+
+![Cabeza de la Tortuga: SwordTortoise](jefes/cabeza-de-la-tortuga-propuesta.png)
 
 ### Trampas
 | Tipo | Dónde | Rol (igual que en Zelda) |
@@ -261,6 +264,22 @@ Adapta la Vara de Fuego (*Magic Rod*) del original. Es un ítem de mazmorra como
 - **Uso real:** sin el Polvo no se consiguen la K7 ni la llave del jefe, y no se llega al jefe ni se lo vence.
 - **Para las otras mazmorras:** sirve para antorchas, hielo y telarañas que tapan pasos.
 
+### 6.2 Los otros ítems que usa: Gancho y Pulsera
+
+En el original esta mazmorra pide el Gancho (mazmorra 5) y la Pulsera (mazmorra 2). Se hacen ahora, como ítems de mazmorra de la serie, y quedan listos para cuando se diseñen esas mazmorras. Van en sus casillas de la Mochila y en las teclas Z o X, y solo funcionan adentro.
+
+- **Gancho** (*Hookshot*):
+  - **Qué hace:** tira una cadena hacia adonde mirás, hasta 7 baldosas.
+  - **Si engancha algo firme** (cofre, bloque, vasija, estatua o gárgola), te arrastra hasta al lado. Pasás por encima de pozos y lava, y en el aire no te lastiman.
+  - **Si pega en una criatura,** la aturde un momento y le saca un poco de vida.
+  - **Si no encuentra nada,** vuelve.
+  - **Acá:** el cofre de la Poción, el de 200 de oro de la Salida afuera, el bloque de la Oscura del medio y la gárgola del pasaje G ↔ H. Y el oro de Pozos y chispas, si no se salta.
+- **Pulsera** (*Power Bracelet*):
+  - **Levantar:** levanta lo que tenés adelante (vasijas, piedras chicas, la bola del Golem) y lo llevás sobre la cabeza. Mientras lo llevás podés caminar, pero no atacar.
+  - **Tirar:** apretando otra vez lo tirás hacia adonde mirás, hasta 4 baldosas. Se rompe al caer y lastima a la criatura que toque.
+  - **Debajo puede haber algo:** un botón, una escalera o un objeto.
+  - **Acá:** los botones bajo vasijas del Búho del botón y de Vasijas, las vasijas que tapan la escalera L, las de Recarga y la bola del Golem de la Bola.
+
 ### 6.1 Cómo se pelea la Cabeza Ardiente (Hot Head)
 
 Lo sacamos del código del original (`05_hot_head.asm`). La sala de Hot Head tiene una laguna de lava de 7 × 5 en una sala de 10 × 8; la de AO es más grande, para hasta 5 jugadores.
@@ -283,14 +302,14 @@ Lo sacamos del código del original (`05_hot_head.asm`). La sala de Hot Head tie
 
 ## 7. Qué cambia respecto del original
 
-El original pide ítems que en nuestra serie no existen. Se reemplazan sin cambiar el rol de cada sala:
+El Gancho y la Pulsera se usan como en el original (se hacen ahora, sección 6.2). Lo que no es un ítem de mazmorra en Zelda (las bombas y el arco se compran, y la canción es del mundo de afuera) se reemplaza sin cambiar el rol de cada sala:
 
 | En el original | Para qué | Acá |
 |---|---|---|
 | Canción del Alma de la Rana | Despertar la cabeza de la entrada | Despierta sola al llegar |
 | Bombas | Paredes bombeables y las Serpientes Dodongo | Las paredes que hacen falta pasan a ser puertas. Las que son atajo pasan a ser **paredes rajadas**, que se rompen con la Carrera (Botas) y son opcionales. Las Serpientes se vencen desde la cornisa |
-| Gancho | El oro de la Salida afuera, la medicina, un bloque de la sala oscura y un pasaje | Saltos con la pluma |
-| Pulsera | Vasijas sobre botones y la bola de Smasher | Las vasijas se rompen a golpes; el Golem de la Bola, como está arriba |
+| Gancho | El oro de la Salida afuera, la medicina, un bloque de la sala oscura y un pasaje | **Igual que en el original** (sección 6.2) |
+| Pulsera | Vasijas sobre botones y la bola de Smasher | **Igual que en el original** (sección 6.2) |
 | Arco | La estatua-ojo | Cualquier golpe o hechizo |
 | Polvo mágico | Encender las salas oscuras antes de tener la vara | Se cruzan a oscuras; con el Polvo se iluminan |
 | Pico de piedra | Que hablen los búhos | Igual: sin el pico, los búhos no dicen nada |
@@ -309,6 +328,8 @@ Faltan:
 | Mecánica | Para qué |
 |---|---|
 | Polvo de Fuego | El ítem: la llamarada, con su efecto que vuela (sección 6) |
+| Gancho | Cadena que engancha y arrastra, o aturde (sección 6.2) |
+| Pulsera | Levantar, llevar y tirar vasijas, piedras y la bola del Golem (sección 6.2) |
 | Antorchas | Apagadas y encendidas; al encender todas las de una sala aparece un cofre |
 | Salas oscuras | Se ve poco hasta encender las antorchas de la sala |
 | Bloques de hielo | Tapan el paso hasta derretirlos con el Polvo |
@@ -317,7 +338,7 @@ Faltan:
 | Ojo de piedra y braseros | Disparan fuego por su fila o columna: el ojo, al verte; el brasero, cada tanto |
 | Burbujas de lava | Saltan de la lava en puntos fijos |
 | Remolino | Arrastra hacia el centro, salvo al que está en el aire; el centro lleva a la Entrada |
-| Vasijas | Se rompen a golpes o con el Polvo; abajo puede haber un botón |
+| Vasijas | Se levantan con la Pulsera; abajo puede haber un botón |
 | Estatua-ojo | Golpearla suelta una llave |
 | Pico de piedra y búhos | Ítem de la corrida, como el mapa; sin él los búhos no hablan. Va en la Mochila |
 | Daño solo desde la cornisa | Las Serpientes Gemelas solo reciben daño de los que están en la cornisa alta |
@@ -343,36 +364,40 @@ Faltan:
 
 ## 10. Cómo se construye
 
-Es la mazmorra más grande. Para que cada parte se pueda probar y mergear sola, se arma en tres PR después de este:
-1. **Polvo de Fuego y mecánicas de recorrido:**
-   - el ítem;
-   - antorchas y salas oscuras, hielo, roca rodante, cristal, ojo de piedra y braseros, burbujas, remolino, vasijas, estatua-ojo, pico y búhos;
-   - una sala de prueba en la mazmorra de prueba.
-2. **Mapas 540-542, criaturas, revanchas y música:**
+Es la mazmorra más grande. Para que cada parte se pueda probar y mergear sola, se arma en cuatro PR después de este:
+1. **Los tres ítems:**
+   - Polvo de Fuego, Gancho y Pulsera, con sus efectos (la llamarada, la cadena, lo que se lleva y se tira);
+   - lo que tocan: antorchas, hielo, vasijas y postes para el Gancho;
+   - probados en la mazmorra de prueba.
+2. **Mecánicas de recorrido:** salas oscuras, roca rodante, cristal y bloques naranjas, ojo de piedra y braseros, burbujas, remolino, estatua-ojo, pico y búhos, y el daño desde la cornisa.
+3. **Mapas 540-542, criaturas, revanchas y música:**
    - el recorrido completo hasta la puerta del jefe;
    - las revanchas, con los minijefes de la Cueva y de la Caverna;
    - tres temas y uno de combate. Candidatos libres en OpenGameArt: *Lava Area Theme*, *Tower of Lava*, *Shrine to the Smoldering Volcano* y, para el combate, *Lava Dungeon Battle*.
-3. **Jefes:** Cabeza de la Tortuga, Gigante Púgil, Tortuga Espinosa y Cabeza Ardiente. La prueba completa en vivo va acá.
+4. **Jefes:** Cabeza de la Tortuga (sprite nuevo), Gigante Púgil, Golem de la Bola, Tortuga Espinosa y Cabeza Ardiente. La prueba completa en vivo va acá.
 
 **Números:**
 - Mapas 540-542.
 - Piedra de invocación: NPC 9723. Por ahora la invoca un GM, y el lugar fijo se define después, como las otras.
 - Plantillas de criaturas: desde 9744.
-- Va como `soloDesarrollo` y pide la pluma.
+- Va como `soloDesarrollo` y pide la pluma, el gancho y la pulsera.
 
-## 11. Para confirmar
+## 11. Decisiones
 
-| Tema | Propuesta |
+Aprobado por Leandro (2026-10-26):
+
+| Tema | Decisión |
 |---|---|
 | Nombre de la mazmorra | Roca de la Tortuga |
 | Ítem | Polvo de Fuego, en la casilla de la Vara mágica de la Mochila |
+| Otros ítems | El Gancho y la Pulsera se hacen ahora, como en el original, y quedan listos para sus mazmorras |
 | Jefe | Cabeza Ardiente, con el cuerpo del Genio Infernal |
 | Minijefe propio | Gigante Púgil, con el cuerpo del Gigante |
 | Revanchas | Cíclope, Ogro del Rodillo, Golem de la Bola, Serpientes Gemelas y Tortuga Espinosa |
-| Cabeza de la Tortuga | Tortuga gigante dibujada grande, o buscar un sprite nuevo |
+| Cabeza de la Tortuga | Sprite nuevo: SwordTortoise |
 | Trofeo | Corazón de Magma |
 | Gráficos | Roca volcánica, paredes de roca oscura y lava |
-| Dependencias | Pide la pluma (va después de la Cueva). Las Botas solo abren atajos |
+| Orden en la serie | A definir cuando estén todas; esta pide la pluma, el gancho y la pulsera |
 
 ## Fuentes
 - El mapa del pedido (VinnyVideo, 2008), con la leyenda de llaves, warps y objetos.
@@ -384,3 +409,4 @@ Es la mazmorra más grande. Para que cada parte se pueda probar y mergear sola, 
 - [VGMaps: mapa de Revned](https://www.vgmaps.com/Atlas/GB-GBC/LegendOfZelda-Link'sAwakeningDX-TurtleRock.png).
 - [Zelda's Palace: recorrido](https://www.zeldaspalace.com/linksawakening/soluce.php?p=17) y [Gamer Guides: Turtle Rock](https://gamerguides.com/the-legend-of-zelda-links-awakening/guide/walkthrough/thunder-drum/turtle-rock).
 - [Zelda Wiki: Hot Head](https://zeldawiki.wiki/wiki/Hot_Head) y [Blaino](https://zeldawiki.wiki/wiki/Blaino).
+- [OpenGameArt: SwordTortoise](https://opengameart.org/content/swordtortoise) de SCaydi (CC-BY 4.0): la Cabeza de la Tortuga.

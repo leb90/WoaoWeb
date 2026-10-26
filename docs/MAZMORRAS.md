@@ -121,9 +121,9 @@ Todas por datos del mapa, para que las mazmorras siguientes se armen sin código
 6. **Cueva de la Cola. [hecha, en desarrollo hasta probarla en producción]** Ver la sección 9. Segunda de la serie: da la Pluma de Roc, que pide la Caverna. Diseño en [mazmorras/03-CUEVA_DE_LA_COLA.md](mazmorras/03-CUEVA_DE_LA_COLA.md).
    - Primero, las mecánicas nuevas: chispas, cuchillas, empujón, rodillo de púas, escalera y portal que aparecen, pozos con destino, cola débil, bloque con cerradura y placa que hace aparecer un cofre.
    - Después, los mapas 530-532, el jefe con su sprite nuevo, el minijefe y las recompensas. Con esto, la Caverna puede salir de desarrollo.
-7. **Roca de la Tortuga. [diseño para confirmar]** Adapta la Roca Tortuga (nivel 8 de Link's Awakening) y da el **Polvo de Fuego**. Diseño en [mazmorras/04-ROCA_DE_LA_TORTUGA.md](mazmorras/04-ROCA_DE_LA_TORTUGA.md). El orden de la serie se define al final; esta pide la pluma.
+7. **Roca de la Tortuga. [diseñada]** Adapta la Roca Tortuga (nivel 8 de Link's Awakening) y da el **Polvo de Fuego**. Diseño en [mazmorras/04-ROCA_DE_LA_TORTUGA.md](mazmorras/04-ROCA_DE_LA_TORTUGA.md). El orden de la serie se define al final; esta pide la pluma, el gancho y la pulsera.
    - Es la más grande: la grilla de 8 × 8 salas en un mapa (540), los 6 pasajes y el Afuera (541) y la Guarida de la Cabeza Ardiente (542).
-   - Se construye en tres PR: el Polvo y las mecánicas de recorrido; los mapas, las criaturas, las revanchas y la música; y los jefes.
+   - Se construye en cuatro PR: los tres ítems (Polvo de Fuego, Gancho y Pulsera); las mecánicas de recorrido; los mapas, las criaturas, las revanchas y la música; y los jefes.
 
 ## 5. Decisiones
 

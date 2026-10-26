@@ -39,7 +39,7 @@ Cada ítem nuestro adapta uno del original, con nombre propio cuando hace falta 
 | 3 | (a definir) | 2 · Gruta de la Botella | Pulsera (levantar) | — |
 | 4 | Caverna de las Llaves | 3 · Cueva de las Llaves | Botas de Pegaso (correr) | Diseñada ([02-CAVERNA_DE_LAS_LLAVES.md](02-CAVERNA_DE_LAS_LLAVES.md)); pide la pluma |
 | 5 en adelante | — | 5 a 7 del original | Gancho, pulsera poderosa, escudo espejo | — |
-| a definir (después de la Cueva) | Roca de la Tortuga | 8 · Roca Tortuga | Polvo de Fuego (fuego) | Diseño para confirmar ([04-ROCA_DE_LA_TORTUGA.md](04-ROCA_DE_LA_TORTUGA.md)); pide la pluma |
+| a definir (después de la Cueva) | Roca de la Tortuga | 8 · Roca Tortuga | Polvo de Fuego (fuego) | Diseñada ([04-ROCA_DE_LA_TORTUGA.md](04-ROCA_DE_LA_TORTUGA.md)); pide la pluma, el gancho y la pulsera, que se hacen con ella |
 
 - **Por qué la Gruta va primera:** ya estaba diseñada y con el motor hecho, y nadar no depende de los otros ítems. Del original en adelante se respeta el orden.
 - **Por qué la Caverna va después de la mazmorra de la pluma:** la pide adentro. Hasta que esa mazmorra exista, la Caverna queda en desarrollo: entra un GM, y la pluma se puede dar a mano para probar.

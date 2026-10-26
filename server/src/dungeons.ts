@@ -44,10 +44,15 @@ const OBJ = {
     losaAplastador: 1847,
     aplastador: 1848,
     cofreJefe: 1849,
+    rodillo: 1851,
 } as const;
+// Portal azul (escaleras que se ven como portal: el atajo de la Cueva de la Cola).
+const PORTAL_OBJ = 378;
 // Patas de rana: con ellas se nada por el agua profunda de las mazmorras.
 export const SWIM_ITEM = "patas_de_rana";
 const HAZARD_TICK_MS = 250;
+// Las trampas con movimiento propio y el Ciempiés (dungeonHazards.ts y dungeonBoss.ts) se mueven más seguido.
+const FAST_TICK_MS = 50;
 // La lava periódica erupciona 1 de cada 3 segundos.
 const LAVA_CYCLE_MS = 3_000;
 const LAVA_ACTIVE_MS = 1_000;
@@ -126,7 +131,11 @@ type Barrier = {
     salas: number[];
     // Puertas de un solo sentido: hacia dónde se pasa.
     dir?: "norte" | "sur" | "este" | "oeste";
+    // Bloque con cerradura (&): una puerta con llave que se ve como un bloque.
+    bloque?: boolean;
 };
+// Escaleras y portales que aparecen al vaciar una sala (la propia o la de la otra punta).
+type HiddenExit = { x: number; y: number; revela: { map: number; sala: number } };
 type Chest = { x: number; y: number; contenido: string; oculto: boolean; sala: number };
 type MapMechanics = {
     rooms: Array<{ id: number; x1: number; y1: number; x2: number; y2: number; cierra: boolean }>;
@@ -148,6 +157,9 @@ type MapMechanics = {
     timedPlates?: string[];
     crackedWalls?: string[];
     crushers?: string[];
+    // Cueva de la Cola: escaleras ocultas y adónde lleva caer a un pozo de este mapa (si no, a la entrada de la sala).
+    hiddenExits?: HiddenExit[];
+    caida?: { map: number; x: number; y: number } | null;
 };
 
 type MapIndex = {
@@ -165,6 +177,8 @@ type MapIndex = {
     timedPlates: Set<string>;
     crackedWalls: Set<string>;
     crushers: Set<string>;
+    // Placas de cada sala: cada sala se resuelve sola.
+    platesByRoom: Map<number, string[]>;
     // Baldosas cuyo bloqueo cambia durante la corrida (puertas, cofres, bloques y cristales): van en la foto del área.
     dynamic: Set<string>;
 };
@@ -180,6 +194,8 @@ type MapState = {
     // Por donde pasaron los bloques (su bloqueo puede haber quedado viejo en algún cliente).
     blockTrail: Set<string>;
     platesSolved: boolean;
+    // Salas cuyas placas ya se apretaron todas juntas.
+    solvedPlateRooms: Set<number>;
     // Puertas que se tienen que cerrar pero tenían a alguien encima: se cierran apenas queden libres.
     pendingClose: Set<string>;
     brokenCrystals: Set<string>;
@@ -224,6 +240,9 @@ type DungeonRun = {
     pairs: Map<string, Set<string>>;
     // Jefe que flota hasta que lo bajan con la Carrera.
     floatingBoss: { npcId: string; stunnedUntil: number; split: boolean } | null;
+    // Escaleras ocultas de la corrida ("mapa:x,y"), con lo que se les sacó hasta que aparezcan.
+    hiddenExits: Map<string, { mapId: number; x: number; y: number; exit: unknown; objIndex: number; revela: { map: number; sala: number } }>;
+    fastTimer: ReturnType<typeof setInterval> | null;
 };
 
 type Invite = { runId: string; from: string; expiresAt: number; timer: ReturnType<typeof setTimeout> };
@@ -617,6 +636,8 @@ function createRun(def: DungeonDef, group: boolean, playerCount: number): Dungeo
         crusherDown: false,
         pairs: new Map(),
         floatingBoss: null,
+        hiddenExits: new Map(),
+        fastTimer: null,
     };
     for (const baseMap of def.mapas) {
         if (!vars.mapa[baseMap] || !vars.mapData[baseMap]) {
@@ -629,15 +650,21 @@ function createRun(def: DungeonDef, group: boolean, playerCount: number): Dungeo
         run.maps[baseMap] = mapId;
         runByInstanceMap.set(mapId, run.id);
         spawnRunNpcs(baseMap, mapId, factors);
+        const index = mechanicsOf(baseMap);
+        if (index) run.mapState[baseMap] = createMapState(index);
+        if (index) hideExits(run, mapId, index);
+    }
+    runs.set(run.id, run);
+    // Las criaturas especiales se registran con la corrida armada: el rodillo y el Ciempiés buscan su sala.
+    for (const mapId of Object.values(run.maps)) {
         for (const npc of Object.values(vars.npcs ?? {}) as any[]) {
             if (npc?.map === mapId) registerSpecialNpc(run, npc);
         }
-        const index = mechanicsOf(baseMap);
-        if (index) run.mapState[baseMap] = createMapState(index);
     }
-    runs.set(run.id, run);
     run.hazardTimer = setInterval(() => tickRun(run), HAZARD_TICK_MS);
     run.hazardTimer.unref?.();
+    run.fastTimer = setInterval(() => fastTickRun(run), FAST_TICK_MS);
+    run.fastTimer.unref?.();
     ensureSweep();
     return run;
 }
@@ -645,7 +672,11 @@ function createRun(def: DungeonDef, group: boolean, playerCount: number): Dungeo
 function destroyRun(run: DungeonRun) {
     if (run.hazardTimer) clearInterval(run.hazardTimer);
     run.hazardTimer = null;
+    if (run.fastTimer) clearInterval(run.fastTimer);
+    run.fastTimer = null;
     for (const mapId of Object.values(run.maps)) {
+        require("./dungeonHazards").forgetMap(mapId);
+        require("./dungeonBoss").forgetMap(mapId);
         for (const npcId of Object.keys(vars.npcs ?? {})) {
             if (vars.npcs[npcId]?.map === mapId) {
                 delete vars.npcs[npcId];
@@ -907,6 +938,7 @@ function mechanicsOf(baseMap: number): MapIndex | null {
                     timedPlates: new Set(mech.timedPlates ?? []),
                     crackedWalls: new Set(mech.crackedWalls ?? []),
                     crushers: new Set(mech.crushers ?? []),
+                    platesByRoom: groupPlatesByRoom(mech),
                     dynamic: new Set([...barriers.keys(), ...chests.keys(), ...mech.blocks, ...(mech.crystals ?? [])]),
                 };
             }
@@ -916,6 +948,16 @@ function mechanicsOf(baseMap: number): MapIndex | null {
         mechanicsCache.set(baseMap, index);
     }
     return mechanicsCache.get(baseMap) ?? null;
+}
+
+function groupPlatesByRoom(mech: MapMechanics): Map<number, string[]> {
+    const byRoom = new Map<number, string[]>();
+    for (const key of mech.plates) {
+        const room = mech.roomOf[key];
+        if (room === undefined) continue;
+        byRoom.set(room, [...(byRoom.get(room) ?? []), key]);
+    }
+    return byRoom;
 }
 
 function createMapState(index: MapIndex): MapState {
@@ -931,6 +973,7 @@ function createMapState(index: MapIndex): MapState {
         blocks: new Set(index.mech.blocks),
         blockTrail: new Set(),
         platesSolved: index.mech.plates.length === 0,
+        solvedPlateRooms: new Set(),
         pendingClose: new Set(),
         brokenCrystals: new Set(),
         crumbling: new Map(),
@@ -1013,7 +1056,9 @@ function setBarrier(ctx: MapContext, barrier: Barrier, open: boolean) {
     ctx.state.pendingClose.delete(key);
     if (open) ctx.state.openBarriers.add(key);
     else ctx.state.openBarriers.delete(key);
-    const objIndex = barrier.horizontal ? (open ? OBJ.puertaAbierta : OBJ.puerta) : open ? 0 : OBJ.barrera;
+    // El bloque con cerradura se ve como la puerta de piedra y, abierto, desaparece.
+    const closedObject = barrier.bloque ? OBJ.puerta : OBJ.barrera;
+    const objIndex = barrier.horizontal && !barrier.bloque ? (open ? OBJ.puertaAbierta : OBJ.puerta) : open ? 0 : closedObject;
     setObject(ctx.mapId, barrier.x, barrier.y, objIndex);
     setBlocked(ctx.mapId, barrier.x, barrier.y, !open);
 }
@@ -1056,21 +1101,50 @@ function clearRoom(ctx: MapContext, roomId: number) {
         if (barrier.salas.some((id) => ctx.state.rooms.get(id)?.locked)) continue;
         setBarrier(ctx, barrier, true);
     }
-    let revealed = 0;
-    for (const chest of ctx.index.mech.chests) {
-        const key = coordKey(chest.x, chest.y);
-        if (chest.sala !== roomId || !chest.oculto || ctx.state.revealedChests.has(key)) continue;
-        ctx.state.revealedChests.add(key);
-        setObject(ctx.mapId, chest.x, chest.y, OBJ.cofre);
-        setBlocked(ctx.mapId, chest.x, chest.y, true);
-        revealed++;
-    }
+    const revealed = revealChests(ctx, roomId);
+    const exits = revealExits(ctx.run, ctx.base, roomId);
     const center = roomCenter(ctx, roomId);
     if (center && wasLocked) playSoundAt(ctx.mapId, center, DUNGEON_SOUNDS.puertaAbre);
     if (center && revealed) playSoundAt(ctx.mapId, center, DUNGEON_SOUNDS.secreto);
     if (wasLocked) tellRun(ctx.run, "La sala quedó vacía: las puertas se abrieron.");
     if (revealed) tellRun(ctx.run, revealed === 1 ? "¡Apareció un cofre!" : `¡Aparecieron ${revealed} cofres!`);
+    if (center && exits && !revealed) playSoundAt(ctx.mapId, center, DUNGEON_SOUNDS.secreto);
+    if (exits) tellRun(ctx.run, exits.portal ? "¡Se abrió un portal!" : "¡Apareció una escalera!");
     refreshRun(ctx.run);
+}
+
+// --- Escaleras y portales que aparecen al vaciar una sala ---
+
+// Al crear la corrida se les saca la salida y el objeto; vuelven cuando se vacía la sala que las revela.
+function hideExits(run: DungeonRun, mapId: number, index: MapIndex) {
+    for (const hidden of index.mech.hiddenExits ?? []) {
+        const tile = vars.mapa[mapId]?.[hidden.y]?.[hidden.x];
+        if (!tile?.tileExit) continue;
+        run.hiddenExits.set(`${mapId}:${coordKey(hidden.x, hidden.y)}`, {
+            mapId,
+            x: hidden.x,
+            y: hidden.y,
+            exit: tile.tileExit,
+            objIndex: Number(tile.objInfo?.objIndex ?? 0),
+            revela: hidden.revela,
+        });
+        delete tile.tileExit;
+        delete tile.objInfo;
+    }
+}
+
+function revealExits(run: DungeonRun, base: number, room: number): { portal: boolean } | null {
+    let found: { portal: boolean } | null = null;
+    for (const [key, hidden] of [...run.hiddenExits]) {
+        if (hidden.revela.map !== base || hidden.revela.sala !== room) continue;
+        run.hiddenExits.delete(key);
+        const tile = vars.mapa[hidden.mapId]?.[hidden.y]?.[hidden.x];
+        if (!tile) continue;
+        tile.tileExit = hidden.exit;
+        if (hidden.objIndex) setObject(hidden.mapId, hidden.x, hidden.y, hidden.objIndex);
+        found = { portal: hidden.objIndex === PORTAL_OBJ };
+    }
+    return found;
 }
 
 function onRoomEnter(ctx: MapContext, roomId: number) {
@@ -1109,29 +1183,55 @@ function hurt(user: RuntimeCharacter, fraction: number, message: string, fx = 0)
 }
 
 // Placas: apretadas con un jugador o un bloque encima. Con todas apretadas se abren las puertas "=" del mapa.
+// Placas: cada sala se resuelve sola, cuando todas sus placas están apretadas a la vez (por jugadores o bloques). Abre
+// las rejas (=) de esa sala y hace aparecer sus cofres ocultos.
 function updatePlates(ctx: MapContext) {
-    if (!ctx.index.plates.size) return;
-    let allPressed = true;
-    for (const key of ctx.index.plates) {
-        const { x, y } = parseCoord(key);
-        const hasBlock = ctx.state.blocks.has(key);
-        const pressed = hasBlock || Boolean(playerAt(ctx.mapId, x, y));
-        if (!pressed) allPressed = false;
-        if (hasBlock) continue;
-        const wanted = pressed || ctx.state.platesSolved ? OBJ.placaApretada : OBJ.placa;
-        if (vars.mapa[ctx.mapId]?.[y]?.[x]?.objInfo?.objIndex !== wanted) setObject(ctx.mapId, x, y, wanted);
+    for (const [room, plates] of ctx.index.platesByRoom) {
+        const solved = ctx.state.solvedPlateRooms.has(room);
+        let allPressed = true;
+        for (const key of plates) {
+            const { x, y } = parseCoord(key);
+            const hasBlock = ctx.state.blocks.has(key);
+            const pressed = hasBlock || Boolean(playerAt(ctx.mapId, x, y));
+            if (!pressed) allPressed = false;
+            if (hasBlock) continue;
+            const wanted = pressed || solved ? OBJ.placaApretada : OBJ.placa;
+            if (vars.mapa[ctx.mapId]?.[y]?.[x]?.objInfo?.objIndex !== wanted) setObject(ctx.mapId, x, y, wanted);
+        }
+        if (allPressed && !solved) solvePlates(ctx, room, plates);
     }
-    if (!allPressed || ctx.state.platesSolved) return;
-    ctx.state.platesSolved = true;
+}
+
+function solvePlates(ctx: MapContext, room: number, plates: string[]) {
+    ctx.state.solvedPlateRooms.add(room);
+    ctx.state.platesSolved = ctx.state.solvedPlateRooms.size === ctx.index.platesByRoom.size;
+    let opened = 0;
     for (const barrier of ctx.index.mech.barriers) {
-        if (barrier.tipo !== "placa") continue;
+        if (barrier.tipo !== "placa" || !barrier.salas.includes(room)) continue;
         setBarrier(ctx, barrier, true);
         playSoundAt(ctx.mapId, barrier, DUNGEON_SOUNDS.puertaAbre);
+        opened++;
     }
+    const revealed = revealChests(ctx, room);
     // El puzzle resuelto suena para los que están en la sala de las placas.
-    const firstPlate = ctx.index.plates.values().next().value;
-    if (firstPlate) playSoundAt(ctx.mapId, parseCoord(firstPlate), DUNGEON_SOUNDS.secreto);
-    tellRun(ctx.run, "Se oye un mecanismo de piedra: una puerta se abrió.");
+    playSoundAt(ctx.mapId, parseCoord(plates[0]), DUNGEON_SOUNDS.secreto);
+    if (opened) tellRun(ctx.run, "Se oye un mecanismo de piedra: una puerta se abrió.");
+    if (revealed) tellRun(ctx.run, revealed === 1 ? "¡Apareció un cofre!" : `¡Aparecieron ${revealed} cofres!`);
+    if (revealed) refreshRun(ctx.run);
+}
+
+// Los cofres ocultos de una sala aparecen (al vaciarla o al resolver sus placas). Devuelve cuántos.
+function revealChests(ctx: MapContext, room: number): number {
+    let revealed = 0;
+    for (const chest of ctx.index.mech.chests) {
+        const key = coordKey(chest.x, chest.y);
+        if (chest.sala !== room || !chest.oculto || ctx.state.revealedChests.has(key)) continue;
+        ctx.state.revealedChests.add(key);
+        setObject(ctx.mapId, chest.x, chest.y, OBJ.cofre);
+        setBlocked(ctx.mapId, chest.x, chest.y, true);
+        revealed++;
+    }
+    return revealed;
 }
 
 function isChestVisible(ctx: MapContext, chest: Chest) {
@@ -1194,6 +1294,7 @@ function openChest(sessionId: EntityId, user: RuntimeCharacter, ctx: MapContext,
         oroGrande: DUNGEON_SOUNDS.oro,
         premio: DUNGEON_SOUNDS.itemMazmorra,
         trofeo: DUNGEON_SOUNDS.itemMazmorra,
+        caracola: DUNGEON_SOUNDS.secreto,
     };
     if (chestSound[chest.contenido]) playSoundAt(ctx.mapId, chest, chestSound[chest.contenido]);
     switch (chest.contenido) {
@@ -1240,6 +1341,17 @@ function openChest(sessionId: EntityId, user: RuntimeCharacter, ctx: MapContext,
         case "trofeo":
             claimBossReward(run);
             break;
+        // Caracola secreta: un coleccionable de la serie, una por mazmorra, para cada uno del grupo.
+        case "caracola": {
+            const progressStore = getProgressStore();
+            for (const characterId of run.inside) {
+                const progress = progressStore.getProgress({ _id: characterId }) as { caracolas?: string[] };
+                progress.caracolas = [...new Set([...(progress.caracolas ?? []), run.dungeonId])];
+                progressStore.saveProgress({ _id: characterId });
+            }
+            tellRun(run, `¡${name} encontró la Caracola secreta! Queda en cada uno del grupo.`, "#FFD24A");
+            break;
+        }
         case "trampa": {
             const spawned = spawnTrap(ctx, chest);
             tellRun(run, spawned ? "¡Era una trampa!" : "El cofre estaba vacío.", spawned ? "#FF6B3D" : "white");
@@ -1520,6 +1632,56 @@ function tickRun(run: DungeonRun) {
     }
 }
 
+// Cada 50 ms: las trampas con movimiento propio y el Ciempiés, en los mapas donde hay alguien.
+function fastTickRun(run: DungeonRun) {
+    if (!runs.has(run.id)) return;
+    const now = Date.now();
+    const watched = new Set(playersInside(run).map((user) => Number(user.map)));
+    for (const mapId of Object.values(run.maps)) {
+        if (!watched.has(mapId)) continue;
+        require("./dungeonHazards").tick(mapId, now);
+        require("./dungeonBoss").tick(mapId, now);
+    }
+}
+
+// --- Ayudas para dungeonHazards.ts y dungeonBoss.ts ---
+
+export function roomAt(mapId: number, x: number, y: number): number | undefined {
+    const ctx = contextOf(mapId);
+    return ctx ? ctx.index.mech.roomOf[coordKey(x, y)] : undefined;
+}
+
+export function roomBounds(mapId: number, roomId: number) {
+    const room = contextOf(mapId)?.index.rooms.get(roomId);
+    return room ? { x1: room.x1, y1: room.y1, x2: room.x2, y2: room.y2 } : null;
+}
+
+export function isRoomLocked(mapId: number, roomId: number): boolean {
+    return Boolean(contextOf(mapId)?.state.rooms.get(roomId)?.locked);
+}
+
+export function hurtPlayer(user: RuntimeCharacter, fraction: number, message: string) {
+    hurt(user, fraction, message);
+}
+
+export function setDungeonObject(mapId: number, x: number, y: number, objIndex: number) {
+    setObject(mapId, x, y, objIndex);
+}
+
+// La vida de una criatura para los que la ven (el Ciempiés se cura).
+export function broadcastNpcVitals(npc: any) {
+    const handleProtocol = getHandleProtocol();
+    areaClients(Number(npc.map), npc.pos, (client) =>
+        handleProtocol.entityVitalsDelta(npc.id, Number(npc.hp ?? 0), Number(npc.maxHp ?? 0), 0, 0, client),
+    );
+}
+
+// Después de un empujón: si quedó sobre un pozo, cae.
+export function fallIfHazard(ws: RuntimeClient, user: RuntimeCharacter) {
+    const ctx = contextOf(Number(user.map));
+    if (ctx) stepIntoPit(ws, user, ctx, user.pos.x, user.pos.y);
+}
+
 // --- Caverna de las Llaves: el piso para la Carrera y el salto, cristales, piso que se desmorona, placas con
 // tiempo, aplastadores, puertas de un solo sentido, estatuas que despiertan, criaturas en pareja y el jefe que flota ---
 
@@ -1633,8 +1795,37 @@ function fallIntoPit(ws: RuntimeClient, user: RuntimeCharacter, ctx: MapContext)
         game.telep(ws, ctx.mapId, user.pos.x, user.pos.y, "dungeon.pozo");
         return;
     }
+    // Los pozos de la Guarida llevan al piso de abajo (y si se caen todos, el jefe se cura).
+    const caida = ctx.index.mech.caida;
+    const target = caida ? ctx.run.maps[caida.map] : undefined;
+    if (caida && target) {
+        const roomId = ctx.index.mech.roomOf[coordKey(user.pos.x, user.pos.y)];
+        const landing = game.getFreeSpace(ws, target, caida.x, caida.y, "dungeon.pozo") ?? caida;
+        game.telep(ws, target, landing.x, landing.y, "dungeon.pozo");
+        tell(user.id, "Caíste al piso de abajo.");
+        sendState(user.id);
+        require("./dungeonBoss").onPlayerFell(ctx.mapId);
+        if (roomId !== undefined) releaseEmptyRoom(ctx, roomId);
+        return;
+    }
     const landing = game.getFreeSpace(ws, ctx.mapId, back.x, back.y, "dungeon.pozo") ?? back;
     game.telep(ws, ctx.mapId, landing.x, landing.y, "dungeon.pozo");
+}
+
+// Una sala cerrada que quedó sin jugadores (se cayeron todos) se abre, para poder volver; se cierra otra vez al entrar.
+function releaseEmptyRoom(ctx: MapContext, roomId: number) {
+    const roomState = ctx.state.rooms.get(roomId);
+    if (!roomState?.locked) return;
+    const someoneInside = playersInside(ctx.run).some(
+        (user) => Number(user.map) === ctx.mapId && ctx.index.mech.roomOf[coordKey(user.pos.x, user.pos.y)] === roomId && !(user as { dead?: boolean }).dead,
+    );
+    if (someoneInside) return;
+    roomState.locked = false;
+    for (const barrier of ctx.index.mech.barriers) {
+        if (barrier.tipo !== "sala" || !barrier.salas.includes(roomId)) continue;
+        if (barrier.salas.some((id) => ctx.state.rooms.get(id)?.locked)) continue;
+        setBarrier(ctx, barrier, true);
+    }
 }
 
 // Piso que se desmorona: se cae un instante después de pisarlo (corriendo o saltando se pasa antes).
@@ -1731,6 +1922,7 @@ function templateOf(npc: { templateNpcIndex?: number } | undefined): SpecialTemp
 }
 
 function registerSpecialNpc(run: DungeonRun, npc: any) {
+    if (require("./dungeonHazards").register(npc) || require("./dungeonBoss").register(npc)) return;
     const template = templateOf(npc);
     if (template.despierta) npc.dormant = true;
     if (template.pareja) {
@@ -1997,6 +2189,8 @@ export function onNpcDied(npc: { id?: EntityId; map?: number; templateNpcIndex?:
     const ctx = contextOf(Number(npc.map));
     if (!ctx) return true;
     onPairDied(ctx, npc);
+    require("./dungeonHazards").onNpcDied(npc);
+    require("./dungeonBoss").onNpcDied(npc);
     const boss = ctx.run.floatingBoss;
     if (boss?.npcId === String(npc.id)) {
         ctx.run.floatingBoss = null;
@@ -2086,5 +2280,13 @@ module.exports = {
     onNpcDied,
     handOverKeys,
     SWIM_ITEM,
+    DUNGEON_OBJ: OBJ,
+    roomAt,
+    roomBounds,
+    isRoomLocked,
+    hurtPlayer,
+    setDungeonObject,
+    broadcastNpcVitals,
+    fallIfHazard,
     _resetForTests,
 };

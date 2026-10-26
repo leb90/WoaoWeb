@@ -90,5 +90,54 @@
             "nombre": "el Iris del Ojo"
         },
         "oroJefe": 1000
+    },
+    {
+        "id": "cueva",
+        "nombre": "Cueva de la Cola",
+        "descripcion": "Una cueva de túneles y pozos. Al fondo, algo enorme da vueltas sin parar. Dicen que guarda una pluma que te deja saltar.",
+        "nivelMinimo": 15,
+        "maxJugadores": 5,
+        "soloDesarrollo": true,
+        "piedraNpc": 9722,
+        "mapas": [
+            530,
+            531,
+            532
+        ],
+        "entrada": {
+            "map": 530,
+            "x": 43,
+            "y": 57
+        },
+        "salidas": [
+            {
+                "map": 530,
+                "x": 38,
+                "y": 59
+            },
+            {
+                "map": 532,
+                "x": 50,
+                "y": 27
+            }
+        ],
+        "regreso": {
+            "map": 34,
+            "x": 50,
+            "y": 52
+        },
+        "escalado": {
+            "vidaPorJugador": 0.7,
+            "danoPorJugador": 0.15
+        },
+        "itemMazmorra": {
+            "id": "pluma",
+            "nombre": "la Pluma de Roc"
+        },
+        "trofeo": {
+            "id": "aguijon_del_ciempies",
+            "nombre": "el Aguijón del Ciempiés"
+        },
+        "oroJefe": 600
     }
 ]

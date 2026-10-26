@@ -104,9 +104,10 @@ test("las mecánicas de cada mapa están bien armadas y la mazmorra se puede res
                 const at = `${def.id} ${map} (${barrier.x},${barrier.y})`;
                 assert.ok(barrier.salas.length > 0 && barrier.salas.every((id: number) => roomIds.has(id)), `${at}: la puerta da a una sala`);
                 const objIndex = objects[`${barrier.x},${barrier.y}`]?.objIndex;
-                // Las de sala y las de un solo sentido arrancan abiertas.
-                const expected =
-                    barrier.tipo === "sala" || barrier.tipo === "unica"
+                // Las de sala y las de un solo sentido arrancan abiertas; el bloque con cerradura se ve como la puerta.
+                const expected = barrier.bloque
+                    ? DUNGEON_OBJECT_IDS.puerta
+                    : barrier.tipo === "sala" || barrier.tipo === "unica"
                         ? barrier.horizontal
                             ? DUNGEON_OBJECT_IDS.puertaAbierta
                             : undefined
@@ -121,7 +122,9 @@ test("las mecánicas de cada mapa están bien armadas y la mazmorra se puede res
             for (const chest of mech.chests) {
                 const at = `${def.id} ${map} cofre (${chest.x},${chest.y})`;
                 assert.ok(roomIds.has(chest.sala), `${at}: está en una sala`);
-                assert.equal(chest.oculto, closingRooms.has(chest.sala), `${at}: oculto solo en salas que se cierran`);
+                // Los cofres aparecen al vaciar una sala que se cierra o al apretar las placas de su sala.
+                const plateRooms = new Set(mech.plates.map((key: string) => mech.roomOf[key]));
+                assert.equal(chest.oculto, closingRooms.has(chest.sala) || plateRooms.has(chest.sala), `${at}: oculto solo en salas que se cierran o con placas`);
                 const chestObject = chest.contenido === "trofeo" ? DUNGEON_OBJECT_IDS.cofreJefe : DUNGEON_OBJECT_IDS.cofre;
                 assert.equal(objects[`${chest.x},${chest.y}`]?.objIndex, chest.oculto ? undefined : chestObject, `${at}: objeto`);
                 if (chest.contenido === "llave") counts.llaves++;

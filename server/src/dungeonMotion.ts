@@ -24,8 +24,9 @@ const JUMP_COOLDOWN_MS = 1_000;
 // Saltando se pasa por encima de 1 baldosa (cae 2 adelante); corriendo, de 2 (cae 3 adelante).
 const JUMP_GAP = 1;
 const LONG_JUMP_GAP = 2;
+const PUSH_STEP_MS = 70;
 
-type Motion = { tipo: "carga" | "carrera" | "salto"; until: number };
+type Motion = { tipo: "carga" | "carrera" | "salto" | "empujon"; until: number };
 type MotionUser = RuntimeCharacter & {
     dungeonMotion?: Motion | null;
     nextDashAt?: number;
@@ -86,11 +87,18 @@ export function isMoving(user: RuntimeCharacter | undefined): boolean {
     return Boolean(motion && motion.until > Date.now());
 }
 
-// Mientras carga, corre o salta no se ataca ni se lanzan hechizos.
+// En el aire (saltando con la Pluma): el rodillo y el Ciempiés pasan por abajo.
+export function isAirborne(user: RuntimeCharacter | undefined): boolean {
+    const motion = (user as MotionUser | undefined)?.dungeonMotion;
+    return Boolean(motion && motion.tipo === "salto" && motion.until > Date.now());
+}
+
+// Mientras carga, corre, salta o lo empujan no se ataca ni se lanzan hechizos.
 export function getMotionBlockReason(user: RuntimeCharacter | undefined): string | null {
     const motion = (user as MotionUser | undefined)?.dungeonMotion;
     if (!motion || motion.until <= Date.now()) return null;
-    return motion.tipo === "salto" ? "No podés atacar en el aire." : "No podés atacar mientras corrés.";
+    if (motion.tipo === "salto") return "No podés atacar en el aire.";
+    return motion.tipo === "empujon" ? "No podés atacar mientras te empujan." : "No podés atacar mientras corrés.";
 }
 
 function canAct(sessionId: EntityId, user: MotionUser, itemId: string, itemName: string): boolean {
@@ -274,12 +282,56 @@ function hitNpc(ws: RuntimeClient, user: RuntimeCharacter, npcId: EntityId, head
     }
     if (dmg) require("./respawn").muere(ws, npcId);
     const pushed = vars.npcs?.[npcId];
-    if (!pushed || Number(pushed.hp ?? 0) <= 0) return;
+    // Las criaturas con movimiento propio (chispas, cuchillas, el rodillo y el Ciempiés) no se dejan correr.
+    if (!pushed || Number(pushed.hp ?? 0) <= 0 || pushed.customMotion) return;
     const dir = headingOffset(heading);
     const to = { x: pushed.pos.x + dir.x, y: pushed.pos.y + dir.y };
     if (game.legalPosNpc(to.x, to.y, pushed.map, Boolean(pushed.aguaValida), Boolean(pushed.tierraInvalida))) {
         require("./npcs").moveNpcByPos(npcId, to);
     }
+}
+
+// --- Empujón ---
+
+// Un golpe que empuja (escarabajos, chispas, cuchillas, el rodillo y el Ciempiés): corre al personaje hasta `tiles`
+// baldosas hacia `dir`, sin girarlo. Frena en paredes, en lo bloqueado y en lo ocupado; si pasa por un pozo, cae.
+export function push(user: RuntimeCharacter, dir: Pos, tiles: number) {
+    const mover = user as MotionUser;
+    const ws = vars.clients?.[user.id] as RuntimeClient | undefined;
+    if (!ws || mover.dead || isMoving(mover) || (!dir.x && !dir.y)) return;
+    const dungeons = getDungeons();
+    const game = getGame();
+    const mapId = Number(user.map);
+    const path: Pos[] = [];
+    let current = { x: user.pos.x, y: user.pos.y };
+    for (let i = 0; i < tiles; i++) {
+        const next = { x: current.x + dir.x, y: current.y + dir.y };
+        if (next.x < 1 || next.y < 1 || next.x > 100 || next.y > 100) break;
+        if (!dungeons.canPassOneWay(mapId, current, next)) break;
+        const occupantId = vars.mapData[mapId]?.[next.y]?.[next.x]?.id;
+        if (occupantId && String(occupantId) !== String(user.id)) break;
+        if (vars.mapa[mapId]?.[next.y]?.[next.x]?.blocked || game.hayAgua(mapId, next)) break;
+        path.push(next);
+        current = next;
+        if (dungeons.isHazard(mapId, next.x, next.y)) break;
+    }
+    if (!path.length) return;
+    const heading = Number(mover.heading ?? vars.direcciones.down);
+    mover.dungeonMotion = { tipo: "empujon", until: Date.now() + path.length * PUSH_STEP_MS + 50 };
+    broadcast(user, { id: Number(user.id), tipo: "empujon", heading, ms: PUSH_STEP_MS, path });
+    const protocol = getProtocol();
+    path.forEach((tile, index) => {
+        setTimeout(() => {
+            const pushed = vars.personajes?.[user.id] as MotionUser | undefined;
+            if (!pushed || pushed.map !== mapId) return;
+            protocol.moveUserByServer(ws, tile.x, tile.y, heading);
+            if (index < path.length - 1) return;
+            pushed.dungeonMotion = null;
+            protocol.syncOwnPosition(ws);
+            dungeons.afterStep(ws, pushed);
+            dungeons.fallIfHazard(ws, pushed);
+        }, (index + 1) * PUSH_STEP_MS);
+    });
 }
 
 // --- Salto ---
@@ -325,7 +377,9 @@ module.exports = {
     JUMP_ITEM,
     headingOffset,
     isMoving,
+    isAirborne,
     getMotionBlockReason,
+    push,
     findLanding,
     planDash,
     startDash,

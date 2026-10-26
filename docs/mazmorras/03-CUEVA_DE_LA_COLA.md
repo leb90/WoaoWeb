@@ -40,7 +40,7 @@ Lo leímos sala por sala en el mapa del pedido (7 × 6 salas de Game Boy), con l
 |---|---|---|
 | **530** | Cueva de la Cola | Todas las salas del original menos la columna de la pluma: una cuadrícula de 6 × 5 salas de 16 × 12 baldosas (91 × 59), con roca en las celdas vacías. |
 | **531** | Galerías | Lo que en Zelda es de costado (los dos pasajes) y la columna de la pluma: el Túnel de los duendes (A → B), la Sala B, el Pasillo y la Cámara de la pluma, y la Galería baja (D → C). |
-| **532** | Guarida del Ciempiés | La plataforma del jefe (unas 26 × 20) rodeada de pozos, la sala del trofeo y el portal de salida. Va aparte por el combate de hasta 5 jugadores y porque sus pozos llevan a otro mapa. |
+| **532** | Guarida del Ciempiés | La plataforma del jefe (20 × 15) rodeada de pozos, la sala del trofeo y el portal de salida. Va aparte por el combate de hasta 5 jugadores y porque sus pozos llevan a otro mapa. |
 
 Una sala de 16 × 12 entra en una pantalla del juego, igual que en Zelda. Los pasajes de costado no se pueden hacer en AO, así que pasan a ser túneles vistos desde arriba: las plataformas son cornisas entre pozos.
 
@@ -87,7 +87,7 @@ La Gran sala son las cuatro celdas de (1,1) a (3,2) sin paredes entre sí, como 
 ### Mapa 532 (Guarida del Ciempiés)
 | Sala | Sector | Contenido |
 |---|---|---|
-| Guarida | 11 | Plataforma de unas 26 × 20 rodeada de pozos de 2 baldosas. **Jefe: Ciempiés Colosal**. Caer en los pozos lleva a la Galería baja (D) |
+| Guarida | 11 | Plataforma de 20 × 15 rodeada de pozos de 2 baldosas. **Jefe: Ciempiés Colosal**. Caer en los pozos lleva a la Galería baja (D) |
 | Sala del trofeo | 11 | Cofre del jefe (trofeo y oro, una vez por día) y portal de salida |
 
 ## 4. Recorrido
@@ -198,13 +198,15 @@ En AO las criaturas caminan de baldosa en baldosa en 4 direcciones; Moldorm no. 
 
 | En el original | En AO |
 |---|---|
-| 16 direcciones (de a 22,5°), velocidad constante: 1 píxel por cuadro | Igual: posición con decimales, unas 3 baldosas por segundo |
-| Cada 6 cuadros (0,1 s) gira una dirección para un lado | Cada 0,1 s gira 22,5°: da vueltas en círculos de 1 a 2 baldosas |
+| 16 direcciones (de a 22,5°), velocidad constante: 1 píxel por cuadro | Igual: posición con decimales, 3,5 baldosas por segundo |
+| Cada 6 cuadros (0,1 s) gira una dirección para un lado | Cada 0,15 s gira 22,5°: da vueltas en círculos de unas 2,5 baldosas de ancho |
 | Cada 16 a 47 cuadros (0,3 a 0,8 s) sortea si gira a la izquierda o a la derecha | Igual: zigzaguea y a veces encadena una vuelta entera |
 | Al chocar con una pared sale hacia el lado contrario y puede cambiar el sentido de giro | Igual, en el borde de la plataforma: no se cae a los pozos |
 | La cabeza guarda su posición de cada cuadro; los 3 segmentos y la cola se dibujan donde estuvo la cabeza 12, 24, 36 y 46 cuadros antes | Igual: el server guarda el rastro y el cliente dibuja cada parte en su punto, girada |
 | Después de un golpe, y con poca vida, avanza dos veces por cuadro | El doble de velocidad por 3 s después de cada golpe, y para siempre por debajo del 25 % |
 | Solo la cola es vulnerable | La cola es la criatura de AO; el resto empuja |
+
+**Por qué un poco distinto:** la sala de Moldorm es de 10 × 8 baldosas y él la recorre entera; la arena de AO es más grande (es para hasta 5 jugadores). Simulado en 30 s, con los números del original en una plataforma de 26 × 20 recorre un 10 % y casi no llega a los bordes. Con una plataforma de 20 × 15, un poco más de velocidad y el giro cada 0,15 s, recorre un 30 % y llega varias veces a los pozos, que es donde está el peligro.
 
 El server simula el movimiento cada 50 ms y manda a los que miran la posición de la cabeza, el ángulo y la velocidad unas 10 veces por segundo. El cliente interpola y arma el cuerpo con su propio rastro, igual que el original. La cola se mueve de baldosa en baldosa siguiendo el rastro, para que se le pueda pegar y apuntar como a cualquier criatura.
 

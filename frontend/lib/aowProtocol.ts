@@ -99,6 +99,7 @@ export const CLIENT_PACKET_ID = {
     areaSpellFx: 99,
     dungeonState: 100,
     dungeonMotion: 101,
+    dungeonBoss: 102,
 } as const;
 
 export const CHARACTER_SWING_WEAPON = 1;
@@ -514,13 +515,24 @@ export type DungeonStatePayload = {
 // La Carrera y el salto de las mazmorras (server/src/dungeonMotion.ts): el movimiento entero, para animarlo.
 export type DungeonMotionPayload = {
     id: number;
-    tipo: "carga" | "carrera" | "salto";
+    tipo: "carga" | "carrera" | "salto" | "empujon";
     heading?: number;
     ms: number;
     path?: Array<{ x: number; y: number }>;
     golpe?: "pared" | "criatura" | "obstaculo" | null;
     salto?: { to: { x: number; y: number }; ms: number } | null;
     to?: { x: number; y: number };
+};
+// El Ciempiés de la Cueva de la Cola (server/src/dungeonBoss.ts): la cabeza (en baldosas, con decimales), la
+// dirección (0-15, de a 22,5°), la velocidad (baldosas por segundo) y a qué distancia van las partes; fin al morir.
+export type DungeonBossPayload = {
+    id: number;
+    x?: number;
+    y?: number;
+    a?: number;
+    v?: number;
+    s?: number[];
+    fin?: boolean;
 };
 // Salas visitadas (con el mapa, todas) y, con la brújula, los cofres y la puerta del jefe.
 export type DungeonMinimapState = {
@@ -1512,6 +1524,7 @@ export type ParsedServerPacket =
     | { type: "areaSpellFx"; payload: AreaSpellFxPayload }
     | { type: "dungeonState"; payload: DungeonStatePayload }
     | { type: "dungeonMotion"; payload: DungeonMotionPayload }
+    | { type: "dungeonBoss"; payload: DungeonBossPayload }
     | { type: "castleState"; payload: CastleStatePayload }
     | { type: "factionWarState"; payload: FactionWarStatePayload }
     | { type: "rankedState"; payload: RankedStatePayload }
@@ -2765,6 +2778,18 @@ function parseServerPacketById(
                 return {
                     type: "dungeonMotion",
                     payload: JSON.parse(rawPayload) as DungeonMotionPayload,
+                };
+            } catch {
+                return { type: "unknown", payload: { packetId } };
+            }
+        }
+        case CLIENT_PACKET_ID.dungeonBoss: {
+            const rawPayload = reader.getString();
+
+            try {
+                return {
+                    type: "dungeonBoss",
+                    payload: JSON.parse(rawPayload) as DungeonBossPayload,
                 };
             } catch {
                 return { type: "unknown", payload: { packetId } };

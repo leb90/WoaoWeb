@@ -134,6 +134,7 @@ const clientPacketID = {
     areaSpellFx: 99,
     dungeonState: 100,
     dungeonMotion: 101,
+    dungeonBoss: 102,
 } as const;
 
 const serverPacketID = {

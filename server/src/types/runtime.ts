@@ -539,6 +539,8 @@ export type RuntimeNpc = {
     wanderHome?: Position;
     // Radio del paseo (las criaturas de mazmorra pasean en 3×3); sin él, el del juego.
     wanderRadius?: number;
+    // Mazmorras: la mueve dungeonHazards.ts o dungeonBoss.ts, no la IA (chispas, cuchillas, rodillo, Ciempiés).
+    customMotion?: boolean;
     wanderHomeMap?: number;
     wanderTarget?: Position | null;
     wanderPauseUntil?: number;

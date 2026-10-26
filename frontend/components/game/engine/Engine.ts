@@ -44,6 +44,7 @@ import {
     updateDungeonParticles,
     type DungeonParticle,
 } from "./dungeonMotion";
+import { updateDungeonBosses } from "./dungeonBoss";
 import {
     CHARACTER_SWING_SHIELD,
     CHARACTER_SWING_WEAPON,
@@ -2232,6 +2233,7 @@ export class Engine {
         this.showNextFrame(now);
         this.updateRemoteEntityMovement(now);
         updateDungeonParticles(this, now);
+        updateDungeonBosses(this, now);
     }
 
     updateRemoteEntityMovement(now: number): void {

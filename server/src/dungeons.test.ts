@@ -185,3 +185,44 @@ test("afuera de una mazmorra las criaturas no usan el paseo de mazmorra", () => 
     assert.equal(dungeons.isWatchedDungeonNpc({ map: 34, pos: { x: 50, y: 50 }, wanderRadius: 1 }), false);
     assert.equal(dungeons.isWatchedDungeonNpc({ map: 34, pos: { x: 50, y: 50 } }), false);
 });
+
+test("el cuerpo del Ciempiés sigue el rastro de la cabeza", () => {
+    const { pointBehind } = require("./dungeonBoss") as typeof import("./dungeonBoss");
+    // Rastro en L: de (0,0) a (4,0) y de ahí a (4,3); la cabeza es el último punto.
+    const trail = [
+        { x: 0, y: 0 },
+        { x: 4, y: 0 },
+        { x: 4, y: 3 },
+    ];
+    assert.deepEqual(pointBehind(trail, 0), { x: 4, y: 3 });
+    assert.deepEqual(pointBehind(trail, 1), { x: 4, y: 2 });
+    // Pasando la esquina sigue por el tramo anterior.
+    assert.deepEqual(pointBehind(trail, 4), { x: 3, y: 0 });
+    // Más atrás que el rastro: el punto más viejo.
+    assert.deepEqual(pointBehind(trail, 50), { x: 0, y: 0 });
+});
+
+test("en la Cueva de la Cola aparecen la escalera A, el portal y la K2, y los pozos de la Guarida llevan abajo", () => {
+    const mech = (map: number) => readJson(`server/mapas_source/mapa_${map}/specials.json`).dungeon;
+    const exits = (map: number) => readJson(`server/mapas_source/mapa_${map}/specials.json`).exits as Record<string, { map: number }>;
+    const cueva = mech(530);
+    const closing = new Set(cueva.rooms.filter((room: { cierra: boolean }) => room.cierra).map((room: { id: number }) => room.id));
+    // La escalera A (530 → 531) y el portal de la Entrada (530 → 530): las dos puntas, reveladas por una sala que se cierra.
+    const hidden530 = cueva.hiddenExits as Array<{ x: number; y: number; revela: { map: number; sala: number } }>;
+    const toGalleries = Object.entries(exits(530)).filter(([, exit]) => exit.map === 531).map(([key]) => key);
+    assert.ok(hidden530.some((h) => toGalleries.includes(`${h.x},${h.y}`)), "la escalera A está oculta");
+    assert.equal(hidden530.filter((h) => exits(530)[`${h.x},${h.y}`]?.map === 530).length, 2, "las dos puntas del portal");
+    for (const hidden of hidden530) assert.ok(closing.has(hidden.revela.sala), "las revela una sala que se cierra");
+    assert.equal(mech(531).hiddenExits.length, 1, "la otra punta de la escalera A");
+    // La K2 del Botón aparece con su placa.
+    const plateRooms = new Set(cueva.plates.map((key: string) => cueva.roomOf[key]));
+    assert.ok(cueva.chests.some((chest: { contenido: string; oculto: boolean; sala: number }) => chest.contenido === "llave" && chest.oculto && plateRooms.has(chest.sala)));
+    // El bloque con cerradura de la Cornisa.
+    assert.ok(cueva.barriers.some((barrier: { tipo: string; bloque?: boolean }) => barrier.tipo === "llave" && barrier.bloque));
+    // Caer de la Guarida lleva a la D de las Galerías.
+    const caida = mech(532).caida;
+    assert.equal(caida.map, 531);
+    const galleries = readJson("server/mapas_source/mapa_531/terrain.json");
+    const tile = galleries.palette[String(galleries.rows[caida.y - 1][caida.x - 1])];
+    assert.ok(tile && !tile.blocked, "la D es piso");
+});

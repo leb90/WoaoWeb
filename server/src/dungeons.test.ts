@@ -122,9 +122,12 @@ test("las mecánicas de cada mapa están bien armadas y la mazmorra se puede res
             for (const chest of mech.chests) {
                 const at = `${def.id} ${map} cofre (${chest.x},${chest.y})`;
                 assert.ok(roomIds.has(chest.sala), `${at}: está en una sala`);
-                // Los cofres aparecen al vaciar una sala que se cierra o al apretar las placas de su sala.
+                // Los cofres aparecen al vaciar una sala que se cierra, al apretar las placas de su sala o al encender sus
+                // antorchas.
                 const plateRooms = new Set(mech.plates.map((key: string) => mech.roomOf[key]));
-                assert.equal(chest.oculto, closingRooms.has(chest.sala) || plateRooms.has(chest.sala), `${at}: oculto solo en salas que se cierran o con placas`);
+                const torchRooms = new Set((mech.torches ?? []).filter((torch: { encendida: boolean }) => !torch.encendida).map((torch: { sala: number }) => torch.sala));
+                const hides = closingRooms.has(chest.sala) || plateRooms.has(chest.sala) || torchRooms.has(chest.sala);
+                assert.equal(chest.oculto, hides, `${at}: oculto solo en salas que se cierran, con placas o con antorchas apagadas`);
                 const chestObject = chest.contenido === "trofeo" ? DUNGEON_OBJECT_IDS.cofreJefe : DUNGEON_OBJECT_IDS.cofre;
                 assert.equal(objects[`${chest.x},${chest.y}`]?.objIndex, chest.oculto ? undefined : chestObject, `${at}: objeto`);
                 if (chest.contenido === "llave") counts.llaves++;
@@ -225,4 +228,43 @@ test("en la Cueva de la Cola aparecen la escalera A, el portal y la K2, y los po
     const galleries = readJson("server/mapas_source/mapa_531/terrain.json");
     const tile = galleries.palette[String(galleries.rows[caida.y - 1][caida.x - 1])];
     assert.ok(tile && !tile.blocked, "la D es piso");
+});
+
+test("la mazmorra de prueba trae lo que tocan el Polvo de Fuego, el Gancho y la Pulsera", () => {
+    const specials = readJson("server/mapas_source/mapa_591/specials.json");
+    const mech = specials.dungeon;
+    const terrain = readJson("server/mapas_source/mapa_591/terrain.json");
+    const blocked = (key: string) => {
+        const [x, y] = key.split(",").map(Number);
+        return Boolean(terrain.palette[String(terrain.rows[y - 1][x - 1])]?.blocked);
+    };
+    const objectAt = (key: string) => specials.objects?.[key]?.objIndex;
+    const OBJ = (dungeons as unknown as { DUNGEON_OBJ: Record<string, number> }).DUNGEON_OBJ;
+    // Antorchas apagadas que tapan el paso y un cofre que aparece al encenderlas.
+    const torches = mech.torches as Array<{ x: number; y: number; encendida: boolean; sala: number }>;
+    assert.equal(torches.filter((torch) => !torch.encendida).length, 2);
+    for (const torch of torches) {
+        assert.equal(objectAt(`${torch.x},${torch.y}`), torch.encendida ? OBJ.antorchaEncendida : OBJ.antorchaApagada);
+        assert.ok(blocked(`${torch.x},${torch.y}`), "la antorcha tapa el paso");
+    }
+    assert.ok(mech.chests.some((chest: { oculto: boolean; sala: number }) => chest.oculto && chest.sala === torches[0].sala), "cofre de las antorchas");
+    // Hielo, vasijas (una sobre la placa que abre una puerta), una piedra y la estatua del Gancho.
+    for (const key of mech.ice) {
+        assert.equal(objectAt(key), OBJ.hielo);
+        assert.ok(blocked(key));
+    }
+    const liftables = mech.liftables as Array<{ x: number; y: number; tipo: string; placa: boolean }>;
+    assert.deepEqual(liftables.map((item) => item.tipo).sort(), ["piedra", "vasija", "vasija"]);
+    for (const item of liftables) {
+        const key = `${item.x},${item.y}`;
+        assert.equal(objectAt(key), item.tipo === "piedra" ? OBJ.piedra : OBJ.vasija);
+        assert.ok(blocked(key));
+        assert.equal(mech.plates.includes(key), item.placa, "la vasija con placa la tapa");
+    }
+    assert.ok(mech.barriers.some((barrier: { tipo: string }) => barrier.tipo === "placa"), "la placa abre una puerta");
+    for (const key of mech.hookPosts) assert.equal(objectAt(key), OBJ.poste);
+    // La estatua está pasando la lava, a 7 baldosas como mucho de la orilla.
+    const [hx, hy] = mech.hookPosts[0].split(",").map(Number);
+    const lavaInRow = (mech.lava as string[]).map((key) => key.split(",").map(Number)).filter(([, y]) => y === hy).map(([x]) => x);
+    assert.ok(lavaInRow.length >= 3 && Math.max(...lavaInRow) < hx && hx - Math.min(...lavaInRow) + 1 <= 7);
 });

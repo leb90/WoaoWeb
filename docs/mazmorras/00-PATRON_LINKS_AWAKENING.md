@@ -33,14 +33,14 @@ Cada ítem nuestro adapta uno del original, con nombre propio cuando hace falta 
 | Orden | Mazmorra nuestra | Adapta | Ítem | Estado |
 |---|---|---|---|---|
 | 1 | Gruta del Abisal | 4 · Túnel del Pez Abisal | Patas de rana (nadar) | Diseñada ([01-GRUTA_DEL_ABISAL.md](01-GRUTA_DEL_ABISAL.md)); el motor y las mecánicas ya están |
-| 2 | (a definir) | 1 · Cueva de la Cola | Pluma (saltar) | Falta el plano: el salto ya queda listo con la Caverna |
+| 2 | Cueva de la Cola | 1 · Cueva de la Cola | Pluma de Roc (saltar) | Diseñada ([03-CUEVA_DE_LA_COLA.md](03-CUEVA_DE_LA_COLA.md)); el salto ya está programado desde la Caverna |
 | 3 | (a definir) | 2 · Gruta de la Botella | Pulsera (levantar) | — |
 | 4 | Caverna de las Llaves | 3 · Cueva de las Llaves | Botas de Pegaso (correr) | Diseñada ([02-CAVERNA_DE_LAS_LLAVES.md](02-CAVERNA_DE_LAS_LLAVES.md)); pide la pluma |
 | 5 en adelante | — | 5 a 8 del original | Gancho, pulsera poderosa, escudo espejo, vara | — |
 
 - **Por qué la Gruta va primera:** ya estaba diseñada y con el motor hecho, y nadar no depende de los otros ítems. Del original en adelante se respeta el orden.
 - **Por qué la Caverna va después de la mazmorra de la pluma:** la pide adentro. Hasta que esa mazmorra exista, la Caverna queda en desarrollo: entra un GM, y la pluma se puede dar a mano para probar.
-- **Números de archivo y de mapas:** siguen el orden en que se diseña cada mazmorra, no el de juego. La Caverna es el archivo 02 y usa los mapas 520-522.
+- **Números de archivo y de mapas:** siguen el orden en que se diseña cada mazmorra, no el de juego. La Caverna es el archivo 02 y usa los mapas 520-522; la Cueva de la Cola, el 03 y los mapas 530-532.
 - **Trofeos:** en vez de instrumentos, cada jefe da un coleccionable de la serie (la Escama del Abisal, el Iris del Ojo, …).
 
 ## Fuentes

@@ -118,6 +118,9 @@ Todas por datos del mapa, para que las mazmorras siguientes se armen sin código
      - la Carrera (Botas de Pegaso) y el salto (Pluma, que va a dar la mazmorra anterior);
      - cristales, piso que se desmorona, placa con tiempo, paredes resquebrajadas, aplastadores, puertas de un solo sentido y estatuas que despiertan.
    - Después, los mapas 520-522, el minijefe, el jefe y las recompensas.
+6. **Cueva de la Cola. [diseño]** Segunda de la serie: da la Pluma de Roc, que pide la Caverna. Diseño en [mazmorras/03-CUEVA_DE_LA_COLA.md](mazmorras/03-CUEVA_DE_LA_COLA.md).
+   - Primero, las mecánicas nuevas: chispas, cuchillas, empujón, rodillo de púas, escalera y portal que aparecen, pozos con destino, cola débil, bloque con cerradura y placa que hace aparecer un cofre.
+   - Después, los mapas 530-532, el jefe con su sprite nuevo, el minijefe y las recompensas. Con esto, la Caverna puede salir de desarrollo.
 
 ## 5. Decisiones
 

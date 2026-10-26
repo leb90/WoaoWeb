@@ -304,7 +304,7 @@ Las criaturas no pisan el piso que se desmorona, los aplastadores ni las puertas
 Se arman en `leyenda.json` ("plantillas"), sobre una criatura de AO, con marcas que lee `dungeons.ts`:
 - `despierta`: quieta hasta que un jugador se acerca a esa distancia (las estatuas); también despierta al primer golpe.
 - `pareja` y `revivirMs`: si muere una del grupo y otra sigue viva, la revive a ese tiempo; la que queda se enfurece (piensa más rápido). Hay que bajarlas juntas.
-- `flota` y `divide`: el jefe que flota no recibe daño hasta que alguien se estrella corriendo contra una pared rajada (cae aturdido 6 s). A la mitad de la vida se parte en `divide.cantidad` criaturas `divide.npc`.
+- `flota` y `divide`: el jefe que flota no recibe daño (ni de hechizos de área) hasta que alguien se estrella corriendo contra una pared rajada (cae aturdido 6 s). A la mitad de la vida se parte en `divide.cantidad` criaturas `divide.npc`. Si un golpe lo baja de más de la mitad a cero, igual se parte.
 
 En la Caverna: Estatua guardiana (9730), Serpiente Gemela (9731), Ojo Viscoso (9732) y Ojo Menor (9733).
 
@@ -315,11 +315,17 @@ Cristal (216), derrumbe (217), golpe (218), Carrera (219), salto (220) y aplasta
 1. Con un GM: `/invocarnpc 9721` (la piedra de la Caverna) y `/mazmorra item pluma`. Para probar sin recorrer, también `/mazmorra item botas_de_pegaso`.
 2. Entrar por la piedra. El regreso es Nix (mapa 34, en 50,52).
 
+La prueba en vivo de punta a punta recorre la Caverna entera con un personaje común que tiene la Pluma (51 controles, de la entrada al portal de salida).
+
+| La Carrera | El Ojo partido en dos | El cofre del jefe |
+|---|---|---|
+| ![La Carrera](mazmorras/caverna/carrera.png) | ![El Ojo partido](mazmorras/caverna/ojo-partido.png) | ![El cofre del jefe](mazmorras/caverna/cofre-del-jefe.png) |
+
 ### Archivos
 - `server/src/dungeonMotion.ts`: la Carrera y el salto.
 - `server/src/dungeons.ts`: las mecánicas nuevas, las criaturas especiales, el cofre del jefe, el inventario de mazmorra en el estado y `/mazmorra carrera | salto | item`.
 - `server/src/protocol.ts`: `moveUserByServer`, y en el paso normal, las puertas de un solo sentido y el freno mientras corre o salta; los ataques y hechizos también se frenan.
-- `server/src/game.ts`: el jefe que flota no recibe daño. `server/src/npcs.ts`: las estatuas dormidas y las criaturas enfurecidas.
+- `server/src/game.ts`: el jefe que flota no recibe daño, tampoco de los hechizos de área. `server/src/npcs.ts`: las estatuas dormidas y las criaturas enfurecidas.
 - `server/src/scripts/buildDungeonMaps.ts`: los símbolos y objetos nuevos (1841-1849) y las plantillas propias.
 - `server/mazmorras/caverna/`: los planos de los mapas 520-522 y la leyenda.
 - Cliente:

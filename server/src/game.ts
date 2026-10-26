@@ -3242,7 +3242,8 @@ function isAreaNpcImmune(npc: GameNpc): boolean {
             npc.summonedByUserId ||
             Number(npc.raid ?? 0) > 0 ||
             Number(npc.hp ?? 0) <= 0 ||
-            require("./npcPowers").hasSpecialPower(npc, 2),
+            require("./npcPowers").hasSpecialPower(npc, 2) ||
+            require("./dungeons").getNpcInvulnerableReason(npc) !== null,
     );
 }
 
@@ -9684,7 +9685,7 @@ function Game(this: GameApi) {
 
             if (isHostileSpell) {
                 const castleDeniedMessage =
-                    require("./clanCastles").getCastleAttackDeniedMessage(user, npc) ??
+                    require("./clanCastles").getCastleAttackDeniedMessage(user, npc) ||
                     require("./dungeons").getNpcInvulnerableReason(npc);
                 if (castleDeniedMessage) {
                     withUserClient(idUser, (userClient) => {
@@ -10622,7 +10623,7 @@ function Game(this: GameApi) {
             }
 
             const castleDeniedMessage =
-                    require("./clanCastles").getCastleAttackDeniedMessage(user, npc) ??
+                    require("./clanCastles").getCastleAttackDeniedMessage(user, npc) ||
                     require("./dungeons").getNpcInvulnerableReason(npc);
             if (castleDeniedMessage) {
                 withUserClient(idUser, (userClient) => {

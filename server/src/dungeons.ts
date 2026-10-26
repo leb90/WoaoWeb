@@ -1809,13 +1809,18 @@ function updateFloatingBoss(run: DungeonRun, now: number) {
     const ctx = contextOf(Number(npc.map));
     if (!ctx) return;
     boss.split = true;
+    despawnNpc(npc);
+    splitFloatingBoss(ctx, npc, template.divide);
+}
+
+// Se parte donde estaba. También al morir: un golpe enorme lo puede bajar de más de la mitad a cero de una.
+function splitFloatingBoss(ctx: MapContext, npc: any, divide: { npc: number; cantidad: number }) {
     const at = { x: npc.pos.x, y: npc.pos.y };
     const roomId = ctx.index.mech.roomOf[coordKey(at.x, at.y)];
-    despawnNpc(npc);
-    for (let i = 0; i < template.divide.cantidad; i++) spawnDungeonNpc(ctx, template.divide.npc, at, roomId);
-    run.floatingBoss = null;
+    for (let i = 0; i < divide.cantidad; i++) spawnDungeonNpc(ctx, divide.npc, at, roomId);
+    ctx.run.floatingBoss = null;
     playSoundAt(ctx.mapId, at, DUNGEON_SOUNDS.secreto);
-    tellRun(run, `¡${npc.nameCharacter} se partió en ${template.divide.cantidad}! Bajalos juntos: el que queda revive al otro.`, "#FF6B3D");
+    tellRun(ctx.run, `¡${npc.nameCharacter} se partió en ${divide.cantidad}! Bajalos juntos: el que queda revive al otro.`, "#FF6B3D");
 }
 
 // Muere una criatura en pareja: si queda otra viva, a los revivirMs la revive (salvo que caigan todas antes).
@@ -1987,12 +1992,17 @@ export function resolveLoginLocation(character: { _id?: unknown; map?: number; p
 
 // Muere una criatura: en las mazmorras no reaparece, y si era la última de una sala cerrada, la sala se abre.
 // Devuelve true si la criatura era de una mazmorra.
-export function onNpcDied(npc: { id?: EntityId; map?: number }): boolean {
+export function onNpcDied(npc: { id?: EntityId; map?: number; templateNpcIndex?: number }): boolean {
     if (!isDungeonInstanceMap(npc.map)) return false;
     const ctx = contextOf(Number(npc.map));
     if (!ctx) return true;
     onPairDied(ctx, npc);
-    if (ctx.run.floatingBoss?.npcId === String(npc.id)) ctx.run.floatingBoss = null;
+    const boss = ctx.run.floatingBoss;
+    if (boss?.npcId === String(npc.id)) {
+        ctx.run.floatingBoss = null;
+        const divide = templateOf(npc).divide;
+        if (divide && !boss.split) splitFloatingBoss(ctx, npc, divide);
+    }
     for (const [roomId, roomState] of ctx.state.rooms) {
         if (roomState.locked && roomCreatures(ctx, roomId, npc.id).length === 0) clearRoom(ctx, roomId);
     }

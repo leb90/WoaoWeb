@@ -79,7 +79,8 @@ import EquipmentPanel, { getInventoryItemEquipmentKind } from "./EquipmentPanel"
 import { formatItemNameWithRarity, getRarityName, getRarityTextColor, getRaritySlotClasses } from "../lib/itemRarity";
 import { getEquippedItemAction } from "../lib/equipmentKinds";
 import DonationShopModal from "./transmog/DonationShopModal";
-import DungeonOverlay, { DungeonItemsStrip, DungeonMinimapFog } from "./DungeonOverlay";
+import DungeonOverlay, { DungeonMinimapFog } from "./DungeonOverlay";
+import { DungeonBar, DungeonMusicPlayer } from "./DungeonBackpack";
 import SkillsModal from "./SkillsModal";
 import type { SkillsState } from "../lib/aowProtocol";
 import { DAY_PHASE, SEASON, WEATHER, type EnvironmentState } from "../lib/aowProtocol";
@@ -367,15 +368,15 @@ const HOTKEY_SECTIONS: HotkeySection[] = [
         title: "Mazmorras",
         items: [
             {
-                action: "dungeonDash",
-                label: "Carrera",
-                description: "Corre en línea recta con las Botas de Pegaso (solo en mazmorras).",
+                action: "dungeonItem1",
+                label: "Objeto 1",
+                description: "Usa el ítem de mazmorra que elegiste para esta tecla en la Mochila (solo en mazmorras).",
                 slots: 1,
             },
             {
-                action: "dungeonJump",
-                label: "Saltar",
-                description: "Salta con la Pluma (solo en mazmorras).",
+                action: "dungeonItem2",
+                label: "Objeto 2",
+                description: "Usa el ítem de mazmorra que elegiste para esta tecla en la Mochila (solo en mazmorras).",
                 slots: 1,
             },
         ],
@@ -3417,9 +3418,14 @@ export default function InventoryFloatingPanel({
                             {activeTab === "inventory" ? (
                                 <div className="mt-2 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                                     {hud?.dungeonState?.enMazmorra ? (
-                                        <DungeonItemsStrip
+                                        <DungeonBar
                                             inside={hud.dungeonState.enMazmorra}
-                                            onUseItem={(accion) => onSendCommand?.(`/mazmorra ${accion}`)}
+                                            keyLabels={[
+                                                formatHotkeyBinding(hotkeySettings.dungeonItem1 ?? []) || "—",
+                                                formatHotkeyBinding(hotkeySettings.dungeonItem2 ?? []) || "—",
+                                            ]}
+                                            playerPos={hud.map ? { map: hud.map, x: hud.pos.x, y: hud.pos.y } : undefined}
+                                            onSendCommand={onSendCommand}
                                         />
                                     ) : null}
                                     <div className="bg-[#120c09] p-1">
@@ -4929,6 +4935,7 @@ export default function InventoryFloatingPanel({
                       portalTarget ?? document.body,
                   )
                 : null}
+            <DungeonMusicPlayer inside={hud?.dungeonState?.enMazmorra} volume={soundVolume} />
 
             {isShopOpen && typeof document !== "undefined"
                 ? createPortal(

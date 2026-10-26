@@ -2702,6 +2702,12 @@ function Npcs(this: NpcsApi) {
                     continue;
                 }
 
+                // Mazmorras: las chispas, las cuchillas, el rodillo y el Ciempiés tienen movimiento propio
+                // (dungeonHazards.ts y dungeonBoss.ts).
+                if (npc.customMotion) {
+                    continue;
+                }
+
                 // Mazmorras: las estatuas quedan quietas hasta que alguien se acerca.
                 if (npc.dormant && !require("./dungeons").wakeIfPlayerNear(npc)) {
                     npc.nextThinkAt = now + vars.timing.npcThinkMs;
@@ -3214,6 +3220,9 @@ function Npcs(this: NpcsApi) {
                             });
                             break;
                     }
+
+                    // Mazmorras: los escarabajos empujan (dungeonHazards.ts).
+                    if (user.hp > 0) require("./dungeonHazards").onNpcMeleeHit(npc, user);
 
                     if (user.hp <= 0) {
                         this.deleteUserToAllNpcs(idUser);

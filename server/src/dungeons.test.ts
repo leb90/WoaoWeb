@@ -104,9 +104,10 @@ test("las mecánicas de cada mapa están bien armadas y la mazmorra se puede res
                 const at = `${def.id} ${map} (${barrier.x},${barrier.y})`;
                 assert.ok(barrier.salas.length > 0 && barrier.salas.every((id: number) => roomIds.has(id)), `${at}: la puerta da a una sala`);
                 const objIndex = objects[`${barrier.x},${barrier.y}`]?.objIndex;
-                // Las de sala y las de un solo sentido arrancan abiertas.
-                const expected =
-                    barrier.tipo === "sala" || barrier.tipo === "unica"
+                // Las de sala y las de un solo sentido arrancan abiertas; el bloque con cerradura se ve como la puerta.
+                const expected = barrier.bloque
+                    ? DUNGEON_OBJECT_IDS.puerta
+                    : barrier.tipo === "sala" || barrier.tipo === "unica"
                         ? barrier.horizontal
                             ? DUNGEON_OBJECT_IDS.puertaAbierta
                             : undefined
@@ -121,7 +122,9 @@ test("las mecánicas de cada mapa están bien armadas y la mazmorra se puede res
             for (const chest of mech.chests) {
                 const at = `${def.id} ${map} cofre (${chest.x},${chest.y})`;
                 assert.ok(roomIds.has(chest.sala), `${at}: está en una sala`);
-                assert.equal(chest.oculto, closingRooms.has(chest.sala), `${at}: oculto solo en salas que se cierran`);
+                // Los cofres aparecen al vaciar una sala que se cierra o al apretar las placas de su sala.
+                const plateRooms = new Set(mech.plates.map((key: string) => mech.roomOf[key]));
+                assert.equal(chest.oculto, closingRooms.has(chest.sala) || plateRooms.has(chest.sala), `${at}: oculto solo en salas que se cierran o con placas`);
                 const chestObject = chest.contenido === "trofeo" ? DUNGEON_OBJECT_IDS.cofreJefe : DUNGEON_OBJECT_IDS.cofre;
                 assert.equal(objects[`${chest.x},${chest.y}`]?.objIndex, chest.oculto ? undefined : chestObject, `${at}: objeto`);
                 if (chest.contenido === "llave") counts.llaves++;
@@ -181,4 +184,45 @@ test("los sonidos de mazmorra están en el cliente y en los créditos", () => {
 test("afuera de una mazmorra las criaturas no usan el paseo de mazmorra", () => {
     assert.equal(dungeons.isWatchedDungeonNpc({ map: 34, pos: { x: 50, y: 50 }, wanderRadius: 1 }), false);
     assert.equal(dungeons.isWatchedDungeonNpc({ map: 34, pos: { x: 50, y: 50 } }), false);
+});
+
+test("el cuerpo del Ciempiés sigue el rastro de la cabeza", () => {
+    const { pointBehind } = require("./dungeonBoss") as typeof import("./dungeonBoss");
+    // Rastro en L: de (0,0) a (4,0) y de ahí a (4,3); la cabeza es el último punto.
+    const trail = [
+        { x: 0, y: 0 },
+        { x: 4, y: 0 },
+        { x: 4, y: 3 },
+    ];
+    assert.deepEqual(pointBehind(trail, 0), { x: 4, y: 3 });
+    assert.deepEqual(pointBehind(trail, 1), { x: 4, y: 2 });
+    // Pasando la esquina sigue por el tramo anterior.
+    assert.deepEqual(pointBehind(trail, 4), { x: 3, y: 0 });
+    // Más atrás que el rastro: el punto más viejo.
+    assert.deepEqual(pointBehind(trail, 50), { x: 0, y: 0 });
+});
+
+test("en la Cueva de la Cola aparecen la escalera A, el portal y la K2, y los pozos de la Guarida llevan abajo", () => {
+    const mech = (map: number) => readJson(`server/mapas_source/mapa_${map}/specials.json`).dungeon;
+    const exits = (map: number) => readJson(`server/mapas_source/mapa_${map}/specials.json`).exits as Record<string, { map: number }>;
+    const cueva = mech(530);
+    const closing = new Set(cueva.rooms.filter((room: { cierra: boolean }) => room.cierra).map((room: { id: number }) => room.id));
+    // La escalera A (530 → 531) y el portal de la Entrada (530 → 530): las dos puntas, reveladas por una sala que se cierra.
+    const hidden530 = cueva.hiddenExits as Array<{ x: number; y: number; revela: { map: number; sala: number } }>;
+    const toGalleries = Object.entries(exits(530)).filter(([, exit]) => exit.map === 531).map(([key]) => key);
+    assert.ok(hidden530.some((h) => toGalleries.includes(`${h.x},${h.y}`)), "la escalera A está oculta");
+    assert.equal(hidden530.filter((h) => exits(530)[`${h.x},${h.y}`]?.map === 530).length, 2, "las dos puntas del portal");
+    for (const hidden of hidden530) assert.ok(closing.has(hidden.revela.sala), "las revela una sala que se cierra");
+    assert.equal(mech(531).hiddenExits.length, 1, "la otra punta de la escalera A");
+    // La K2 del Botón aparece con su placa.
+    const plateRooms = new Set(cueva.plates.map((key: string) => cueva.roomOf[key]));
+    assert.ok(cueva.chests.some((chest: { contenido: string; oculto: boolean; sala: number }) => chest.contenido === "llave" && chest.oculto && plateRooms.has(chest.sala)));
+    // El bloque con cerradura de la Cornisa.
+    assert.ok(cueva.barriers.some((barrier: { tipo: string; bloque?: boolean }) => barrier.tipo === "llave" && barrier.bloque));
+    // Caer de la Guarida lleva a la D de las Galerías.
+    const caida = mech(532).caida;
+    assert.equal(caida.map, 531);
+    const galleries = readJson("server/mapas_source/mapa_531/terrain.json");
+    const tile = galleries.palette[String(galleries.rows[caida.y - 1][caida.x - 1])];
+    assert.ok(tile && !tile.blocked, "la D es piso");
 });

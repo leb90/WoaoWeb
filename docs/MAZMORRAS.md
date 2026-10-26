@@ -118,6 +118,9 @@ Todas por datos del mapa, para que las mazmorras siguientes se armen sin código
      - la Carrera (Botas de Pegaso) y el salto (Pluma, que va a dar la mazmorra anterior);
      - cristales, piso que se desmorona, placa con tiempo, paredes resquebrajadas, aplastadores, puertas de un solo sentido y estatuas que despiertan.
    - Después, los mapas 520-522, el minijefe, el jefe y las recompensas.
+6. **Cueva de la Cola. [hecha, en desarrollo hasta probarla en producción]** Ver la sección 9. Segunda de la serie: da la Pluma de Roc, que pide la Caverna. Diseño en [mazmorras/03-CUEVA_DE_LA_COLA.md](mazmorras/03-CUEVA_DE_LA_COLA.md).
+   - Primero, las mecánicas nuevas: chispas, cuchillas, empujón, rodillo de púas, escalera y portal que aparecen, pozos con destino, cola débil, bloque con cerradura y placa que hace aparecer un cofre.
+   - Después, los mapas 530-532, el jefe con su sprite nuevo, el minijefe y las recompensas. Con esto, la Caverna puede salir de desarrollo.
 
 ## 5. Decisiones
 
@@ -278,7 +281,7 @@ Los dos son ítems del inventario de mazmorra y solo funcionan adentro. Se usan 
 
 | | Carrera (Botas de Pegaso) | Salto (Pluma de Roc) |
 |---|---|---|
-| Tecla | Shift izquierdo | F |
+| Tecla | La de objeto que se le asigne en la Mochila (Z o X; ver la sección 10) | La de objeto que se le asigne en la Mochila |
 | Qué hace | Medio segundo de carga, pataleando en el lugar con polvo, y corre en línea recta hasta 8 baldosas (55 ms cada una), con una estela del personaje | Salta en arco, con la sombra en el piso: cae 2 baldosas adelante (por encima de 1 de pozo, lava, pinchos o piso que se desmorona) |
 | Al chocar | Con una criatura: le pega un golpe y medio y la empuja. Con cristales: los rompe y sigue. Con una pared rajada: tiembla (en la arena, el jefe cae). Con otra cosa: frena con un sacudón | — |
 | Juntos | Corriendo, al llegar al borde de un pozo de hasta 2 baldosas salta solo (salto largo, cae 3 adelante) | |
@@ -335,3 +338,90 @@ La prueba en vivo de punta a punta recorre la Caverna entera con un personaje co
   - `useKeyboardGameplay.ts` y `lib/hotkeys.ts`: las teclas;
   - `DungeonOverlay.tsx`: la franja con el inventario de mazmorra.
 
+
+## 9. Cueva de la Cola: el Ciempiés, las trampas que se mueven y lo que aparece
+
+El diseño está en [mazmorras/03-CUEVA_DE_LA_COLA.md](mazmorras/03-CUEVA_DE_LA_COLA.md). Es la segunda de la serie y da la Pluma de Roc. Está marcada `soloDesarrollo` hasta probarla en producción; después se abre para todos y, con ella, la Caverna.
+
+### El Ciempiés Colosal (como Moldorm)
+Sale del código del original (sección 6.1 del diseño). El server lo simula cada 50 ms en `dungeonBoss.ts`:
+- **Movimiento:** la cabeza va en 16 direcciones a 3,5 baldosas por segundo y gira 22,5° cada 0,15 s. El sentido de giro se sortea cada 0,3 a 0,8 s, y en el borde de la plataforma rebota.
+- **Velocidad:** después de cada golpe, y por debajo del 25 % de la vida, avanza al doble.
+- **Cuerpo:** sigue el rastro de la cabeza.
+- **La cola:** es la criatura de AO, con nombre y barra de vida, y es lo único que recibe daño. La cabeza y los segmentos queman (10 %) y empujan 2 baldosas, salvo a los que están en el aire.
+- **Los pozos:** caer lleva a la Galería baja. Si se caen todos, el ciempiés se cura y la arena se abre, para volver a entrar.
+
+Los que lo ven reciben la cabeza unas 10 veces por segundo (paquete `dungeonBoss`, 102). El cliente (`engine/dungeonBoss.ts`) interpola y dibuja la cabeza, dos segmentos y la cola del LPC Centipede, cada parte girada sobre el rastro. El sprite y su crédito están en `docs/CREDITOS_GRAFICOS.md`.
+
+### Trampas que se mueven (`dungeonHazards.ts`)
+| Trampa | Qué hace |
+|---|---|
+| Chispa | No se mata. Da vueltas alrededor del pilar o del cofre que tiene al lado (260 ms por baldosa); al tocar quema el 10 %, sin empujar (empujando por su anillo te volvía a alcanzar en cadena), y al mismo jugador no lo vuelve a quemar hasta 1,5 s después |
+| Cuchilla | Quieta hasta que alguien queda en su fila o columna (hasta 7 baldosas, sin paredes ni bloques en el medio). Sale disparada, quema el 10 % y empuja, y vuelve despacio. Un bloque empujado le corta el recorrido. Van donde se puede salir de su fila: en un pasillo serían inevitables |
+| Rodillo | El del Ogro del Rodillo: una columna de púas que cruza la sala de punta a punta mientras la sala está cerrada; al llegar, el ogro salta al otro lado. Quema el 15 % y empuja, salvo al que está en el aire |
+| Empujón | `empuja` en la plantilla: el golpe de la criatura corre al jugador esas baldosas, y lo puede tirar a un pozo (los escarabajos) |
+
+El empujón usa `dungeonMotion.push`: el server mueve al jugador como en la Carrera y el cliente lo anima deslizándose sin girar.
+
+### Lo nuevo del motor
+- **Placas por sala:** cada sala se resuelve sola. Abre sus rejas `=` y hace aparecer sus cofres; los cofres de una sala con placas arrancan ocultos.
+- **Escaleras y portales que aparecen:** los de una sala que se cierra (y su otra punta, aunque esté en otro mapa) aparecen al vaciarla. En `leyenda.json`, `portales` dice qué escaleras se ven como portal.
+- **Pozos con destino:** el plano dice `caida: <mapa>` y la `D` de ese mapa es adonde se cae.
+- **Otros símbolos:** el bloque con cerradura (`&`) y el piso que las criaturas no pisan (`,`).
+- **Caracola secreta (`C`):** un coleccionable por mazmorra, para cada uno del grupo (`progress.caracolas`).
+- **Gráficos por mazmorra:** `graficos` (piso y pared) en `leyenda.json`.
+- **Puertas al caminar:** las puertas que se abrieron llegan con su bloqueo también cuando entran a la vista caminando (`protocol.ts`, al cruzar de mapa el cliente carga el mapa base con todo cerrado).
+
+En la Cueva: Escarabajo (9734), Babosa (9735), Chispa (9736), Cuchilla (9737), Escarabajo de púas (9738), Mini gusano (9739), Fuego del palo (9740), Duende de la cueva (9741), Ogro del Rodillo (9742) y Ciempiés Colosal (9743). La piedra es el NPC 9722.
+
+### Para probarla
+1. Con un GM: `/invocarnpc 9722` (la piedra de la Cueva) y entrar por la piedra. No hace falta ningún ítem.
+2. En local, `/devcurar` deja la vida y el maná al máximo (no funciona en producción).
+
+La prueba en vivo de punta a punta recorre la Cueva entera con un personaje común que entra sin nada: 53 controles, de la entrada al portal de salida, pasando por la Pluma, el rodillo, la caída y el Ciempiés.
+
+| El Ciempiés | El rodillo del Ogro | La Cámara de la pluma |
+|---|---|---|
+| ![El Ciempiés](mazmorras/cueva/ciempies.png) | ![El rodillo](mazmorras/cueva/rodillo.png) | ![La Pluma](mazmorras/cueva/pluma.png) |
+
+### Archivos
+- `server/src/dungeonBoss.ts`: el Ciempiés.
+- `server/src/dungeonHazards.ts`: chispas, cuchillas, rodillo y empujón.
+- `server/src/dungeonMotion.ts`: `push` (el empujón) e `isAirborne` (en el aire).
+- `server/src/dungeons.ts`: placas por sala, escaleras que aparecen, pozos con destino, bloque con cerradura, Caracola, la sala que se abre si quedó vacía, el tic de 50 ms y las ayudas para los módulos nuevos.
+- `server/src/scripts/buildDungeonMaps.ts`: los símbolos y opciones nuevos.
+- `server/mazmorras/cueva/`: los planos de los mapas 530-532 y la leyenda.
+- Cliente: `engine/dungeonBoss.ts` (el Ciempiés), `engine/dungeonMotion.ts` (el empujón), `public/sprites/ciempies.png`.
+
+## 10. La Mochila, las teclas de objeto, el mapa grande y la música (todas las mazmorras)
+
+Pedido de Leandro: que el inventario no se deforme con cada ítem nuevo, al estilo del menú de Link's Awakening, y música propia en cada mazmorra. El inventario clásico (la grilla de objetos) no cambia.
+
+### La barra y la Mochila (`components/DungeonBackpack.tsx`)
+Adentro de una mazmorra, arriba del inventario, hay una barra con:
+- las dos **teclas de objeto** (la A y la B de Zelda; por defecto Z y X), con la letra encima del ítem;
+- las llaves chicas, la llave del jefe, la brújula y el botón del mapa;
+- el botón de la **Mochila**.
+
+| La barra (Z y X arriba del inventario) | La Mochila | El mapa grande |
+|---|---|---|
+| ![La barra](mazmorras/mochila/barra.png) | ![La Mochila](mazmorras/mochila/mochila.png) | ![El mapa](mazmorras/mochila/mapa.png) |
+
+La Mochila muestra:
+- las dos teclas y qué ítem tiene cada una;
+- los 8 ítems de la serie: los que tiene, con su letra si está en una tecla, y huecos para los que faltan;
+- lo de la mazmorra actual: llaves, llave del jefe, mapa y brújula;
+- la colección: caracolas secretas y los 8 trofeos.
+
+Para poner un ítem en una tecla, se lo elige en la Mochila; si ya estaba en la otra, se cambian. Se guarda en el personaje (`progress.dungeonButtons`, comando `/mazmorra boton <1|2> <ítem|ninguno>`). Las teclas se cambian en la configuración de teclas, como el resto (`dungeonItem1` y `dungeonItem2`, que reemplazan a las viejas de la Carrera y el salto). Los ítems de mazmorra quedan para siempre, pero solo se usan adentro: afuera las teclas no hacen nada y el server lo vuelve a validar.
+
+### El mapa grande
+Se abre desde la barra, aunque no se tenga el mapa (como en Link's Awakening):
+- **Sin el mapa:** se ven las salas recorridas.
+- **Con el mapa:** también las demás, a media luz.
+- **Con la brújula:** los cofres y la puerta del jefe.
+
+Hay una pestaña por piso, y el jugador parpadea donde está. La brújula además suena al entrar a una sala con una llave sin agarrar.
+
+### La música (`lib/dungeonMusic.ts`)
+Cada mazmorra tiene en `jsons/dungeons.json` ("musica") tres temas que suenan uno detrás del otro y vuelven a empezar, y uno de combate. El combate suena mientras el jugador está en una sala cerrada con un jefe o un minijefe vivo (`jefe` y `minijefe` en las plantillas). Al terminar, sigue con el próximo tema. No tiene un botón propio para silenciarla: sigue al volumen general del juego. Los archivos están en `frontend/public/music/mazmorras/<mazmorra>/` y los créditos, en `docs/CREDITOS_SONIDOS.md`.

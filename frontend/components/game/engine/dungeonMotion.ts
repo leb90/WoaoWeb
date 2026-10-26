@@ -8,7 +8,8 @@ import type { Character, Engine } from "./Engine";
 // - carga: el personaje patalea en el lugar (las piernas al doble) y levanta polvo;
 // - carrera: corre en línea recta, con una estela del personaje que se desvanece y polvo en cada baldosa;
 // - salto: arco con la sombra en el piso; al caer, polvo;
-// - choque: un sacudón corto.
+// - choque: un sacudón corto;
+// - empujón (escarabajos, chispas, cuchillas, el rodillo y el Ciempiés): se desliza sin girar y se sacude.
 
 const TILE = 32;
 const JUMP_BASE_HEIGHT = 22;
@@ -106,6 +107,22 @@ function stepDash(engine: Engine, id: number, tile: { x: number; y: number }, he
     else engine.moveCharByPos(id, tile.x, tile.y, { heading, durationMs: ms });
 }
 
+// Un paso del empujón: se desliza hacia la baldosa sin dejar de mirar adonde miraba.
+function stepPush(engine: Engine, id: number, tile: { x: number; y: number }, ms: number) {
+    const entity = engine.personajes[id];
+    if (!entity) return;
+    const dx = tile.x - entity.pos.x;
+    const dy = tile.y - entity.pos.y;
+    spawnDust(engine, id, 1);
+    entity.pos.x = tile.x;
+    entity.pos.y = tile.y;
+    entity.pixelX = tile.x;
+    entity.pixelY = tile.y;
+    if (Math.abs(dx) + Math.abs(dy) === 1) engine.startCharacterMovement(entity, dx, dy, { durationMs: ms });
+    else engine.snapCharacter(id, tile.x, tile.y);
+    if (engine.user?.id === id) engine.onPlayerPositionChange?.({ x: tile.x, y: tile.y });
+}
+
 function startJump(engine: Engine, id: number, to: { x: number; y: number }, ms: number) {
     const entity = engine.personajes[id] as DungeonMotionCharacter | undefined;
     if (!entity) return;
@@ -173,6 +190,16 @@ export function playDungeonMotion(engine: Engine, payload: DungeonMotionPayload)
             if (payload.salto) startJump(engine, entity.id, payload.salto.to, payload.salto.ms);
             else if (payload.golpe) bump(engine, entity.id);
         }, dashMs);
+        if (isSelf) window.setTimeout(() => engine.resumeMovementInput(), total + 140);
+        return;
+    }
+
+    if (payload.tipo === "empujon") {
+        const path = payload.path ?? [];
+        const total = path.length * payload.ms;
+        if (isSelf) engine.dungeonMotionUntil = now + total + 120;
+        path.forEach((tile, index) => window.setTimeout(() => stepPush(engine, entity.id, tile, payload.ms), index * payload.ms));
+        window.setTimeout(() => bump(engine, entity.id), total);
         if (isSelf) window.setTimeout(() => engine.resumeMovementInput(), total + 140);
         return;
     }

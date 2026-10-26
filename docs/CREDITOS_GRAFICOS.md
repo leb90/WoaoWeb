@@ -20,3 +20,11 @@ Hechos con gráficos del propio juego (sin terceros):
 
 - **146, Martillo de luz celestial:** el ícono de la Maza (grh 28120) pintado de dorado y el anillo de luz de la planilla 3096.
 - **151, anillo de piedras del Escudo de energía, y la piedra que vuela:** la roca del efecto 80.
+
+## Cueva de la Cola: el Ciempiés Colosal
+
+El jefe de la Cueva de la Cola se dibuja con la planilla original sin cambios (`frontend/public/sprites/ciempies.png`). El cliente recorta de los cuadros que miran hacia arriba la cabeza, dos segmentos y la cola, y los gira sobre el rastro de la cabeza (`frontend/components/game/engine/dungeonBoss.ts`). Ver [docs/mazmorras/03-CUEVA_DE_LA_COLA.md](mazmorras/03-CUEVA_DE_LA_COLA.md).
+
+| Archivo | Uso en el juego | Original | Autor | Licencia |
+|---|---|---|---|---|
+| `sprites/ciempies.png` | Ciempiés Colosal (jefe) | "[LPC] Centipede", https://opengameart.org/content/lpc-centipede | FiveBrosStopMosYT (con agradecimiento a bluecarrot16, bzt y Ragnar Random) | [OGA-BY 3.0](https://static.opengameart.org/OGA-BY-3.0.txt) (también CC-BY-SA 3.0 y 4.0) |

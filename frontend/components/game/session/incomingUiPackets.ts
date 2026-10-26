@@ -1,3 +1,4 @@
+import { handleDungeonBoss } from "../engine/dungeonBoss";
 import { playDungeonMotion } from "../engine/dungeonMotion";
 import type { IncomingPacketHandlerArgs } from "./incomingPacketTypes";
 
@@ -275,6 +276,12 @@ export async function handleIncomingUiPacket({
         case "dungeonMotion":
             if (engine) {
                 playDungeonMotion(engine, packet.payload);
+            }
+            return true;
+
+        case "dungeonBoss":
+            if (engine) {
+                handleDungeonBoss(engine, packet.payload);
             }
             return true;
 

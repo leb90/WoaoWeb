@@ -19,16 +19,24 @@
 //   _  placa (se aprieta con un jugador o un bloque encima)          B  bloque que se empuja con un clic
 //   ?  losa de piedra (texto en "losas" de leyenda.json, en orden de lectura)
 //   cofres: K llave chica, N llave del jefe, M mapa, X brújula, $ oro, G oro grande, R ítem de la mazmorra, T trampa,
-//           Y cofre del jefe (trofeo y oro, una vez por día)
+//           Y cofre del jefe (trofeo y oro, una vez por día), C caracola secreta (una por mazmorra)
 // Caverna de las Llaves (la Carrera y el salto, dungeonMotion.ts):
 //   *  bloque de cristal (lo rompe la Carrera)      :  piso que se desmorona (se cruza corriendo o saltando)
 //   P  runa con tiempo (abre las puertas Q por unos segundos)      Q  reja que abre la runa con tiempo
 //   W  pared rajada (tiembla con la Carrera; en la arena del jefe, lo baja)      Z  aplastador
 //   < > { }  puerta de un solo sentido hacia el oeste, el este, el norte y el sur
+// Cueva de la Cola:
+//   &  bloque con cerradura (se abre con una llave chica y desaparece)
+//   ,  piso que las criaturas no pisan (los puentes de la arena del Ciempiés)
+//   D  adonde se cae desde los pozos de otro mapa (el plano de ese mapa dice "caida: <este mapa>")
+// Lo que aparece: los cofres de una sala que se cierra (!) o que tiene placas aparecen al vaciarla o al apretar las
+// placas; las escaleras de una sala que se cierra (y la otra punta) aparecen al vaciarla.
 // Las puertas van en pasos de una baldosa: en una pared horizontal se ven como un arco de piedra; en una vertical,
 // como un cristal que tapa el paso.
 // leyenda.json puede traer "plantillas": criaturas propias de la mazmorra, armadas sobre una de AO ("base") con sus
-// cambios (nombre, cuerpo, vida y las marcas de dungeons.ts: despierta, pareja, revivirMs, flota, divide).
+// cambios (nombre, cuerpo, vida y las marcas de dungeons.ts: despierta, pareja, revivirMs, flota, divide; de
+// dungeonHazards.ts: chispa, cuchilla, rodillo, empuja; de dungeonBoss.ts: ciempies). También "graficos" (piso y pared
+// propios, bloques de 4 × 4) y "portales" (escaleras que se ven como portal, por número).
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
@@ -36,8 +44,8 @@ import { execFileSync } from "node:child_process";
 
 const ROOT = path.resolve(__dirname, "../../..");
 const SIZE = 100;
-const FLOOR_GRH = 9428; // bloque de 4×4 del piso verde del mapa 116
-const WALL_FACE_GRH = 9412; // bloque de 4×4 de la cara de las paredes
+const DEFAULT_FLOOR_GRH = 9428; // bloque de 4×4 del piso verde del mapa 116
+const DEFAULT_WALL_FACE_GRH = 9412; // bloque de 4×4 de la cara de las paredes
 const VOID_GRH = 1; // negro
 const WATER_GRH = 1505; // bloque de 4×4 de agua (waterTiles.ts)
 const PORTAL_OBJ = 378; // Teleport (portal azul, no se puede levantar)
@@ -66,6 +74,7 @@ export const DUNGEON_OBJECTS = {
     losaAplastador: { id: 1847, name: "Losa del aplastador", grh: 9413 },
     aplastador: { id: 1848, name: "Aplastador", grh: 8623 },
     cofreJefe: { id: 1849, name: "Cofre del jefe", grh: 18532 },
+    rodillo: { id: 1851, name: "Rodillo de púas", grh: 18537 },
 } as const;
 const CHEST_CONTENT: Record<string, string> = {
     K: "llave",
@@ -77,6 +86,7 @@ const CHEST_CONTENT: Record<string, string> = {
     R: "premio",
     T: "trampa",
     Y: "trofeo",
+    C: "caracola",
 };
 const BARRIER_TYPE: Record<string, string> = {
     L: "llave",
@@ -88,6 +98,7 @@ const BARRIER_TYPE: Record<string, string> = {
     ">": "unica",
     "{": "unica",
     "}": "unica",
+    "&": "llave",
 };
 const ONE_WAY_DIR: Record<string, string> = { "<": "oeste", ">": "este", "{": "norte", "}": "sur" };
 // Puertas que arrancan abiertas (no bloquean).
@@ -113,6 +124,10 @@ type Legend = {
     trampa?: number[];
     // Criaturas propias de la mazmorra: número → plantilla de AO de base y los cambios.
     plantillas?: Record<string, { base: number } & Record<string, unknown>>;
+    // Piso y cara de pared propios (bloques de 4 × 4); sin esto, los del mapa 116.
+    graficos?: { piso?: number; pared?: number };
+    // Escaleras (por número) que se ven como portal: el atajo de la Cueva de la Cola.
+    portales?: string[];
 };
 
 const dungeonId = process.argv[2];
@@ -124,6 +139,9 @@ const planDir = path.join(ROOT, "server/mazmorras", dungeonId);
 const legend: Legend = fs.existsSync(path.join(planDir, "leyenda.json"))
     ? JSON.parse(fs.readFileSync(path.join(planDir, "leyenda.json"), "utf8"))
     : {};
+const FLOOR_GRH = Number(legend.graficos?.piso ?? DEFAULT_FLOOR_GRH);
+const WALL_FACE_GRH = Number(legend.graficos?.pared ?? DEFAULT_WALL_FACE_GRH);
+const portalDigits = new Set(legend.portales ?? []);
 
 function readPlan(file: string): Plan {
     const mapId = Number(/mapa_(\d+)\.txt$/.exec(file)?.[1]);
@@ -156,7 +174,12 @@ const block4 = (base: number, x: number, y: number, row?: number) => base + (row
 
 // Escaleras: dónde está cada número en cada mapa.
 const stairs = new Map<string, Array<{ mapId: number; x: number; y: number }>>();
-const markers: { entrada?: { map: number; x: number; y: number }; salidas: Array<{ map: number; x: number; y: number }> } = { salidas: [] };
+const markers: {
+    entrada?: { map: number; x: number; y: number };
+    salidas: Array<{ map: number; x: number; y: number }>;
+    // Adonde se cae en cada mapa (D).
+    caidas: Map<number, { map: number; x: number; y: number }>;
+} = { salidas: [], caidas: new Map() };
 for (const plan of plans) {
     for (let y = 1; y <= SIZE; y++) {
         for (let x = 1; x <= SIZE; x++) {
@@ -164,6 +187,7 @@ for (const plan of plans) {
             if (/[1-9]/.test(c)) stairs.set(c, [...(stairs.get(c) ?? []), { mapId: plan.mapId, x, y }]);
             if (c === "E") markers.entrada = { map: plan.mapId, x, y };
             if (c === "S") markers.salidas.push({ map: plan.mapId, x, y });
+            if (c === "D") markers.caidas.set(plan.mapId, { map: plan.mapId, x, y });
         }
     }
 }
@@ -173,7 +197,7 @@ function arrivalNextTo(target: { mapId: number; x: number; y: number }) {
     const plan = plans.find((p) => p.mapId === target.mapId)!;
     for (const [dx, dy] of [[0, 1], [1, 0], [-1, 0], [0, -1]]) {
         const c = charAt(plan, target.x + dx, target.y + dy);
-        if (c === "." || c === "E") return { map: target.mapId, x: target.x + dx, y: target.y + dy };
+        if (c === "." || c === "E" || c === "D" || c === ",") return { map: target.mapId, x: target.x + dx, y: target.y + dy };
     }
     throw new Error(`La escalera de ${target.mapId} (${target.x},${target.y}) no tiene piso al lado.`);
 }
@@ -212,15 +236,40 @@ function detectRooms(plan: Plan) {
 }
 
 const roomsByMap = new Map(plans.map((plan) => [plan.mapId, detectRooms(plan)]));
-// Los cofres de las salas que se cierran no se ven hasta vaciarlas.
+// Salas con placas (sus cofres aparecen al apretarlas todas).
+const plateRooms = new Set<string>();
+for (const plan of plans) {
+    const { roomOf } = roomsByMap.get(plan.mapId)!;
+    for (let y = 1; y <= SIZE; y++) {
+        for (let x = 1; x <= SIZE; x++) {
+            if (charAt(plan, x, y) === "_" && roomOf.has(`${x},${y}`)) plateRooms.add(`${plan.mapId}:${roomOf.get(`${x},${y}`)}`);
+        }
+    }
+}
+// Los cofres de las salas que se cierran no se ven hasta vaciarlas; los de las salas con placas, hasta apretarlas.
 const hiddenChests = new Set<string>();
 for (const plan of plans) {
     const { rooms, roomOf } = roomsByMap.get(plan.mapId)!;
     for (let y = 1; y <= SIZE; y++) {
         for (let x = 1; x <= SIZE; x++) {
             if (!(charAt(plan, x, y) in CHEST_CONTENT)) continue;
-            const room = rooms.find((r) => r.id === roomOf.get(`${x},${y}`));
-            if (room?.cierra) hiddenChests.add(`${plan.mapId}:${x},${y}`);
+            const roomId = roomOf.get(`${x},${y}`);
+            const room = rooms.find((r) => r.id === roomId);
+            if (room?.cierra || plateRooms.has(`${plan.mapId}:${roomId}`)) hiddenChests.add(`${plan.mapId}:${x},${y}`);
+        }
+    }
+}
+// Las escaleras de una sala que se cierra aparecen al vaciarla, y su otra punta también.
+const hiddenExits = new Map<number, Array<{ x: number; y: number; revela: { map: number; sala: number } }>>();
+for (const ends of stairs.values()) {
+    for (const end of ends) {
+        const { rooms, roomOf } = roomsByMap.get(end.mapId)!;
+        const roomId = roomOf.get(`${end.x},${end.y}`) ?? [[0, 1], [1, 0], [-1, 0], [0, -1]]
+            .map(([dx, dy]) => roomOf.get(`${end.x + dx},${end.y + dy}`))
+            .find((id) => id !== undefined);
+        if (!rooms.find((r) => r.id === roomId)?.cierra) continue;
+        for (const other of ends) {
+            hiddenExits.set(other.mapId, [...(hiddenExits.get(other.mapId) ?? []), { x: other.x, y: other.y, revela: { map: end.mapId, sala: roomId! } }]);
         }
     }
 }
@@ -248,7 +297,14 @@ function buildMechanics(plan: Plan) {
         timedPlates: [] as string[],
         crackedWalls: [] as string[],
         crushers: [] as string[],
+        hiddenExits: hiddenExits.get(plan.mapId) ?? [],
+        caida: null as { map: number; x: number; y: number } | null,
     };
+    if (plan.meta.caida) {
+        const caida = markers.caidas.get(Number(plan.meta.caida));
+        if (!caida) throw new Error(`El mapa ${plan.mapId} dice "caida: ${plan.meta.caida}", pero ese mapa no tiene una D.`);
+        data.caida = caida;
+    }
     for (let y = 1; y <= SIZE; y++) {
         for (let x = 1; x <= SIZE; x++) {
             const c = charAt(plan, x, y);
@@ -264,6 +320,7 @@ function buildMechanics(plan: Plan) {
                     horizontal: isWall(charAt(plan, x - 1, y)) && isWall(charAt(plan, x + 1, y)),
                     salas: [...new Set(salas)],
                     ...(ONE_WAY_DIR[c] ? { dir: ONE_WAY_DIR[c] } : {}),
+                    ...(c === "&" ? { bloque: true } : {}),
                 });
             }
             if (c === "*") data.crystals.push(key);
@@ -306,7 +363,16 @@ function buildTile(plan: Plan, x: number, y: number): Tile {
     if (isBarrier(c)) {
         const horizontal = isWall(charAt(plan, x - 1, y)) && isWall(charAt(plan, x + 1, y));
         const open = OPEN_BARRIERS.has(c);
-        tile.object = horizontal ? (open ? DUNGEON_OBJECTS.puertaAbierta.id : DUNGEON_OBJECTS.puerta.id) : open ? undefined : DUNGEON_OBJECTS.barrera.id;
+        tile.object =
+            c === "&"
+                ? DUNGEON_OBJECTS.puerta.id
+                : horizontal
+                  ? open
+                      ? DUNGEON_OBJECTS.puertaAbierta.id
+                      : DUNGEON_OBJECTS.puerta.id
+                  : open
+                    ? undefined
+                    : DUNGEON_OBJECTS.barrera.id;
         tile.blocked = !open;
         tile.trigger = NO_NPC_TRIGGER;
     }
@@ -325,6 +391,7 @@ function buildTile(plan: Plan, x: number, y: number): Tile {
         tile.object = DUNGEON_OBJECTS.losaAplastador.id;
         tile.trigger = NO_NPC_TRIGGER;
     }
+    if (c === ",") tile.trigger = NO_NPC_TRIGGER;
     if (c === "B") {
         tile.object = DUNGEON_OBJECTS.bloque.id;
         tile.blocked = true;
@@ -340,7 +407,7 @@ function buildTile(plan: Plan, x: number, y: number): Tile {
     if (/[1-9]/.test(c)) {
         const pair = (stairs.get(c) ?? []).filter((s) => !(s.mapId === plan.mapId && s.x === x && s.y === y));
         if (pair.length !== 1) throw new Error(`La escalera ${c} tiene que estar en dos lugares (está en ${pair.length + 1}).`);
-        tile.object = STAIRS_OBJ;
+        tile.object = portalDigits.has(c) ? PORTAL_OBJ : STAIRS_OBJ;
         tile.exit = arrivalNextTo(pair[0]);
     }
     if (/[a-z]/.test(c)) {
@@ -414,6 +481,7 @@ function encodePng(width: number, height: number, rgb: (x: number, y: number) =>
 function minimapColor(plan: Plan, tile: Tile, x: number, y: number) {
     const c = charAt(plan, x, y);
     if (tile.object === PORTAL_OBJ) return MINIMAP_COLORS.portal;
+    if (c === "&") return MINIMAP_COLORS.door;
     if (tile.object === STAIRS_OBJ) return MINIMAP_COLORS.stairs;
     if (c === "*") return MINIMAP_COLORS.crystal;
     if (c === ":") return MINIMAP_COLORS.fragile;

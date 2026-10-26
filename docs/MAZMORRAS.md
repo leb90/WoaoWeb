@@ -113,6 +113,11 @@ Todas por datos del mapa, para que las mazmorras siguientes se armen sin código
    - Un generador de mapas desde un plano en texto, con gráficos de AO, así las salas se editan fácil.
    - Los mapas 510-512, criaturas por sala, minijefe, jefe con fases, Patas de rana y recompensas.
 4. **Prueba y balance.** En vivo solo y en grupo de 5, ajuste de números y página de la wiki.
+5. **Caverna de las Llaves** (cuarta de la serie; el orden está en [mazmorras/00-PATRON_LINKS_AWAKENING.md](mazmorras/00-PATRON_LINKS_AWAKENING.md)). Diseño en [mazmorras/02-CAVERNA_DE_LAS_LLAVES.md](mazmorras/02-CAVERNA_DE_LAS_LLAVES.md).
+   - Primero, los ítems y las mecánicas nuevas:
+     - la Carrera (Botas de Pegaso) y el salto (Pluma, que va a dar la mazmorra anterior);
+     - cristales, piso que se desmorona, placa con tiempo, paredes resquebrajadas, aplastadores, puertas de un solo sentido y estatuas que despiertan.
+   - Después, los mapas 520-522, el minijefe, el jefe y las recompensas.
 
 ## 5. Decisiones
 

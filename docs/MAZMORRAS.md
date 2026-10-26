@@ -165,7 +165,7 @@ Todas por datos del mapa, para que las mazmorras siguientes se armen sin código
 Las paredes usan las texturas del mapa 116: la cara de la pared en el lado norte de cada sala y piedra oscura en el resto. La etapa 3 suma las paredes laterales para la Gruta.
 
 ### Mazmorra de prueba
-- `prueba`, mapas 590 y 591, con `soloDesarrollo: true`: en producción la piedra dice que está en desarrollo.
+- `prueba`, mapas 590 y 591, con `soloDesarrollo: true`: en producción solo entra un GM, solo o llevando a su party (los demás entran aceptando su invocación). Para el resto, la piedra dice que está en desarrollo.
 - Sus mapas están marcados "GM", así que no aparecen en la wiki.
 - La piedra (NPC 9720) no está puesta en ningún mapa. Para probar, un GM la invoca con `/invocarnpc 9720`.
 

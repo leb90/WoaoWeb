@@ -387,8 +387,20 @@ function partyOf(user: RuntimeCharacter): { id: string; leaderId: EntityId; memb
     return partyId ? (vars.parties?.[partyId] ?? null) : null;
 }
 
+// Una mazmorra "solo desarrollo" en producción: solo entra un GM, solo o llevando a su party (los demás entran
+// aceptando su invocación). Así se prueba en el servidor real sin abrirla al público.
+export function developmentLockReason(
+    def: Pick<DungeonDef, "nombre" | "soloDesarrollo">,
+    user: { privileges?: number },
+    production = !isDevelopment(),
+): string | null {
+    if (!def.soloDesarrollo || !production || Number(user.privileges ?? 0) === 1) return null;
+    return `${def.nombre} todavía está en desarrollo: por ahora solo entra un GM, solo o con su party.`;
+}
+
 function entryDeniedReason(user: RuntimeCharacter, def: DungeonDef): string | null {
-    if (def.soloDesarrollo && !isDevelopment()) return `${def.nombre} todavía está en desarrollo.`;
+    const devLock = developmentLockReason(def, user);
+    if (devLock) return devLock;
     if ((user as { dead?: boolean }).dead) return "Los muertos no pueden entrar a una mazmorra.";
     if (Number(user.level ?? 0) < Number(def.nivelMinimo ?? 1)) return `Necesitás nivel ${def.nivelMinimo} para entrar a ${def.nombre}.`;
     if ((user as { huntersGame?: unknown }).huntersGame || Number(user.map) >= 1000) return "No podés entrar a una mazmorra desde acá.";
@@ -1442,6 +1454,7 @@ module.exports = {
     isDungeonInstanceMap,
     isDungeonBaseMap,
     getAttackDeniedReason,
+    developmentLockReason,
     handleNpcInteraction,
     handleCommand,
     enter,

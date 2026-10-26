@@ -159,3 +159,11 @@ test("las llaves del que se va pasan al primero que sigue adentro", () => {
     assert.deepEqual(dungeons.handOverKeys(holdings, "b", []), { heir: null, keys: 1, bossKey: false });
     assert.deepEqual([...holdings.keys], [["c", 2]]);
 });
+
+test("una mazmorra en desarrollo: en producción solo entra un GM", () => {
+    const def = { nombre: "Mazmorra de prueba", soloDesarrollo: true };
+    assert.ok(dungeons.developmentLockReason(def, { privileges: 0 }, true));
+    assert.equal(dungeons.developmentLockReason(def, { privileges: 1 }, true), null);
+    assert.equal(dungeons.developmentLockReason(def, { privileges: 0 }, false), null);
+    assert.equal(dungeons.developmentLockReason({ ...def, soloDesarrollo: false }, { privileges: 0 }, true), null);
+});

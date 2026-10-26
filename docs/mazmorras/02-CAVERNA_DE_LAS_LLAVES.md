@@ -1,6 +1,8 @@
-# Mazmorra 2 · Caverna de las Llaves
+# Caverna de las Llaves
 
-Fecha: 2026-10-26. Estado: **diseño, a confirmar**. El sistema (instancias, grupo, ítems de mazmorra, mecánicas) está en [../MAZMORRAS.md](../MAZMORRAS.md); la mazmorra 1, en [01-GRUTA_DEL_ABISAL.md](01-GRUTA_DEL_ABISAL.md).
+Fecha: 2026-10-26. Estado: **en construcción**. El sistema (instancias, grupo, ítems de mazmorra, mecánicas) está en [../MAZMORRAS.md](../MAZMORRAS.md); la mazmorra 1, en [01-GRUTA_DEL_ABISAL.md](01-GRUTA_DEL_ABISAL.md).
+
+**Lugar en la serie:** es la cuarta, después de la mazmorra de la pluma, como en el original (ver [00-PATRON_LINKS_AWAKENING.md](00-PATRON_LINKS_AWAKENING.md)). Adentro hace falta saltar con la pluma. Hasta que exista la mazmorra que la da, la Caverna queda en desarrollo: entra un GM, y la pluma se da a mano para probar.
 
 Adaptación de la **Cueva de las Llaves** (*Key Cavern*) de *Link's Awakening*. No se copia baldosa por baldosa: se respeta la estructura jugable, que es esta:
 - muchas llaves chicas, que obligan a recorrer todo;
@@ -46,7 +48,7 @@ Una sala de 16 × 12 entra en una pantalla del juego, igual que en Zelda.
 
 ## 3. Salas
 
-Celda = (columna, fila); la fila 0 es la de arriba. Los números de sector son los del pedido (sección 8).
+Celda = (columna, fila); la fila 0 es la de arriba. Los números de sector son los del pedido (sección 9).
 
 ### Mapa 520 (oeste)
 | Sala | Celda | Sector | Contenido | Criaturas | Trampas |
@@ -79,7 +81,7 @@ Celda = (columna, fila); la fila 0 es la de arriba. Los números de sector son l
 | Distribuidor | (1,1) | 7 | **Escalera A**; puertas a las 4 salas | De presión | — |
 | Estatuas | (2,1) | 7 | **Escalera B** | Estatuas que despiertan | Pasillos entre estatuas |
 | Cristal | (1,0) | 6 | **K4** detrás de bloques de cristal | Guardianes | Bloques de cristal |
-| Abismo | (0,1) | 6 | **K5** del otro lado de un abismo, por un puente que se desmorona | De presión | Piso que se desmorona, pozos |
+| Abismo | (0,1) | 6 | **K5** del otro lado de un abismo de 2 baldosas: se cruza corriendo y saltando al llegar al borde (botas y pluma), como en el original | De presión | Pozos |
 | Agujeros | (1,2) | 7 | **K6** al vaciarla | Guardianes | Se cierra al entrar; pozos |
 | Sala D | (2,2) | 11 | **Escalera D** (llega del pasaje), entre bloques de cristal | — | Bloques de cristal |
 | Armaduras | (2,3) | 10 | Encuentro antes del jefe | Estatuas que despiertan, muchas | Se cierra al entrar |
@@ -101,7 +103,7 @@ Celda = (columna, fila); la fila 0 es la de arriba. Los números de sector son l
    - Al este, el altar con las **Botas de Pegaso**. La salida está tapada por cristales: el primer uso de la Carrera es para salir.
 3. **Con las botas** (en cualquier orden):
    - Llave del jefe: se aprieta la placa y, corriendo, se cruza el puente que se desmorona antes de que se cierre la reja: **llave del jefe**.
-   - Escalera A → ala este: Cristal (romper los cristales: **K4**) y Abismo (cruzar el puente corriendo: **K5**).
+   - Escalera A → ala este: Cristal (romper los cristales: **K4**) y Abismo (correr y saltar al llegar al borde: **K5**).
    - **L4** (Distribuidor → Agujeros): se cierra, guardianes: **K6**.
 4. **Recta final:**
    - **L5** (Gran sala → escalera C): el Pasaje del aplastador, que solo se pasa corriendo entre golpe y golpe.
@@ -118,7 +120,7 @@ Celda = (columna, fila); la fila 0 es la de arriba. Los números de sector son l
 | K2 | Llave del sur | Matar a los guardianes | L2 | Sala A → Gran sala |
 | K3 | Llave alta | Matar a los guardianes | L3 | Mapa → Serpientes |
 | K4 | Cristal | Botas (romper cristales) | L4 | Distribuidor → Agujeros |
-| K5 | Abismo | Botas (puente que se desmorona) | L5 | Gran sala → escalera C |
+| K5 | Abismo | Botas y pluma (salto largo) | L5 | Gran sala → escalera C |
 | K6 | Agujeros | Matar a los guardianes | L6 | Armaduras → Antesala |
 | Llave del jefe | Llave del jefe (520) | Botas (placa con tiempo y puente) | Puerta del jefe | Antesala → escalera E |
 
@@ -167,7 +169,8 @@ Son capturas del juego, con las criaturas de AO de las que toman el cuerpo; las 
 | Salas que se cierran | Llave del sur, Llave alta, Serpientes, Agujeros, Armaduras y el cofre trampa | Combate obligatorio |
 | Placas y bloques | Los 200 | Puzzle que da la recompensa secundaria |
 | Bloques de cristal | Botas, Cristal, Sala D | Lo que abre la Carrera |
-| Piso que se desmorona | Llave del jefe, Abismo, Pasaje | Solo se cruza corriendo |
+| Piso que se desmorona | Llave del jefe, Pasaje | Solo se cruza corriendo |
+| Pozos para saltar | Abismo (salto largo), Pasaje (pinchos) | Lo que abre la pluma |
 | Placa con tiempo | Llave del jefe | Llegar antes de que se cierre la reja |
 | Aplastadores | Pasaje | Pasillo con tiempo |
 
@@ -201,18 +204,35 @@ Pasean en 3 × 3 cuando no persiguen a nadie, como en la mazmorra de prueba. La 
 
 **Uso real en esta mazmorra:** hace falta para salir de la sala del ítem, para la llave del jefe, para K4 y K5, para el pasaje y para bajar al jefe. Sin las botas no se termina.
 
-**Base técnica:** en el juego **no hay ninguna embestida o carga implementada**: no está en el código, ni en los datos, ni en otras ramas. La Carrera se hace nueva, apoyada en lo que sí existe:
-- el paso validado por el server (`processUserMovement`), que la Carrera repite varias veces a ritmo rápido;
-- el multiplicador del tiempo de cada paso que ya usa la Descarga eléctrica (`getWalkStepMultiplier`), al revés: para acelerar en vez de frenar;
-- los efectos de polvo, los sonidos de mazmorra y el empuje.
+**Base técnica: el Dash Attack del server anterior.** Está en `leb90/_Argentum` y `leb90/_React-Argentum`, y era del guerrero de nivel 50 o más.
+- **Cómo se usaba:** se mantenía Shift izquierdo con una dirección y se soltaba.
+- **Qué hacía el server:** juntaba lo que había en el camino (hasta 4 baldosas, frenando en lo bloqueado) y movía al personaje baldosa por baldosa cada 30 ms. A los que lo veían les mandaba la posición, con un efecto cada 2 baldosas y un sonido al final, y aplicaba el daño ×1,5 a lo que había atravesado.
 
-## 7. Mecánicas nuevas que necesita
+Andaba bien. Lo que le faltaba era el aspecto de Zelda, y es lo que se suma ahora:
+- **Carga previa:** medio segundo con el personaje pataleando en el lugar (la animación de caminar, rápida y sin moverse) y polvo en los pies.
+- **Estela:** copias del personaje que se desvanecen detrás, con polvo en cada baldosa.
+- **Choque:** frena en seco, con un temblor corto y un sonido de golpe.
+
+## 7. La pluma (salto)
+
+La da la mazmorra 1 del original. Acá se usa, así que el salto queda programado con esta mazmorra. Cuando se haga la mazmorra que la entrega, se le pasa.
+- **Nombre:** Pluma de Roc (propuesta). Es un ítem de mazmorra y solo funciona adentro.
+- **Qué hace:** salta en la dirección en la que mira, en arco, con la sombra en el piso.
+  - **Parado o caminando:** cae 2 baldosas adelante, así que pasa por encima de 1 baldosa de pozo, lava, pinchos o piso que se desmorona.
+  - **Corriendo con las botas:** cae 3 baldosas adelante, por encima de 2 (el salto largo del original).
+- **Dónde no cae:** en paredes, en lo bloqueado ni en el agua profunda. Si no hay dónde caer, no salta.
+- **En el aire:** no se ataca. Se puede volver a saltar al rato (1 s).
+- **Cómo se usa:** con un atajo de teclado, un botón en la franja "Mazmorra" o uno en el celular, igual que la Carrera.
+
+## 8. Mecánicas nuevas que necesita
 
 Las de la mazmorra 1 (llaves, salas que se cierran, pozos, placas, bloques, losas, agua profunda, cofres) ya están hechas. Faltan:
 
 | Mecánica | Para qué |
 |---|---|
 | La Carrera (ítem) | El ítem de esta mazmorra |
+| El salto (pluma) | La pide el Abismo; viene de la mazmorra anterior de la serie |
+| Puertas de un solo sentido | Los atajos de vuelta (también los usa la Gruta) |
 | Bloques de cristal | Se rompen con la Carrera; no vuelven en la corrida |
 | Piso que se desmorona | Se rompe un instante después de pisarlo y queda como pozo unos segundos; caminando no se llega al otro lado |
 | Placa con tiempo | Abre una puerta por unos segundos |
@@ -221,7 +241,7 @@ Las de la mazmorra 1 (llaves, salas que se cierran, pozos, placas, bloques, losa
 | Estatuas que despiertan | Criaturas quietas hasta que alguien se acerca |
 | Criaturas en pareja | Para las Serpientes y la fase 2 del ojo: la muerta revive si la otra sigue viva |
 
-## 8. Los 11 sectores del pedido
+## 9. Los 11 sectores del pedido
 
 | Sector del pedido | Dónde queda |
 |---|---|
@@ -230,14 +250,14 @@ Las de la mazmorra 1 (llaves, salas que se cierran, pozos, placas, bloques, losa
 | 3. Rama superior de progresión | Estatuas, Nido, Llave alta (K3), Pilares y Noreste: pasillos angostos y salas chicas, empujando hacia arriba y a la derecha |
 | 4. Rama izquierda secundaria | Llave del sur (K2), Cofre vacío (trampa), Sala A y B, Oeste y el Pasillo largo como atajo |
 | 5. Sector del ítem principal | Botas: el altar después del minijefe; para salir hay que usarlas |
-| 6. Puzzle con velocidad | Llave del jefe (placa con tiempo y puente), Cristal (K4), Abismo (K5) |
+| 6. Puzzle con velocidad | Llave del jefe (placa con tiempo y puente), Cristal (K4), Abismo (K5, corriendo y saltando) |
 | 7. Rama derecha de progreso | Ala este: Distribuidor (A), Estatuas (B), Agujeros (K6), con guardianes y salas que se cierran |
 | 8. Lore / pista | Losa: la pista del jefe y de la Carrera |
 | 9. Reward secundaria | Mapa (en su pasillo) y Los 200 (puzzle de placa) |
 | 10. Encuentro importante | Serpientes Gemelas (abren las botas) y Armaduras (abren la recta final) |
 | 11. Recta final | L5 → Pasaje del aplastador → Sala D → Armaduras → Antesala → Cámara del Ojo |
 
-## 9. Para confirmar
+## 10. Para confirmar
 
 | Tema | Propuesta |
 |---|---|
@@ -246,4 +266,5 @@ Las de la mazmorra 1 (llaves, salas que se cierran, pozos, placas, bloques, losa
 | Minijefe y jefe | Serpientes Gemelas (Serpiente) y Ojo Viscoso (Beholder) |
 | Trofeo | Iris del Ojo |
 | Gráficos | Piso de tierra y paredes de roca de las cuevas de AO |
-| Orden | Primero se arma la Gruta (etapa 3 de [../MAZMORRAS.md](../MAZMORRAS.md)); después, la Carrera y las mecánicas nuevas, y por último esta mazmorra con el mismo generador de planos |
+| Pluma | Pluma de Roc, con el salto de la sección 7 |
+| Orden en la serie | Cuarta, después de la mazmorra de la pluma (ver [00-PATRON_LINKS_AWAKENING.md](00-PATRON_LINKS_AWAKENING.md)) |

@@ -57,6 +57,7 @@ const smelting = require("./smelting");
 const challengeManager = require("./challengeManager");
 const huntersGame = require("./huntersGame") as typeof import("./huntersGame");
 const pyramid = require("./pyramid") as typeof import("./pyramid");
+const dungeons = require("./dungeons") as typeof import("./dungeons");
 const LOGOUT_CANCELLED_MESSAGE = "[Servidor] La salida se canceló porque te moviste.";
 const MAX_PENDING_MOVE_QUEUE_LENGTH = 8;
 const REVIVE_CAST_MS = 10000;
@@ -1960,8 +1961,19 @@ function processUserMovement(ws: RuntimeClient, heading: number, moveId: number,
     posY = phasedDestination.y;
     const ghostMove = resolveGhostDisplacement(user, posX, posY, heading);
     const destinationIsWater = game.hayAgua(user.map, { x: posX, y: posY });
+    // Mazmorras: el agua profunda se nada con las Patas de rana, sin barca.
+    const inDungeon = dungeons.isDungeonInstanceMap(user.map);
 
-    if (!user.navegando && destinationIsWater) {
+    if (inDungeon) {
+        const waterDenied = dungeons.getWaterStepDeniedReason(user, destinationIsWater);
+        if (waterDenied !== null) {
+            if (waterDenied) {
+                handleProtocol.console(waterDenied, "white", 0, 0, ws);
+            }
+            sendOwnPositionUpdate(ws, user);
+            return;
+        }
+    } else if (!user.navegando && destinationIsWater) {
         if (!game.legalPos(posX, posY, user.map, true, ghostMove?.ghost.id)) {
             sendOwnPositionUpdate(ws, user);
             return;
@@ -1983,7 +1995,13 @@ function processUserMovement(ws: RuntimeClient, heading: number, moveId: number,
         }
     }
 
-    const canReachTargetPosition = game.legalPos(posX, posY, user.map, Boolean(user.navegando), ghostMove?.ghost.id);
+    const canReachTargetPosition = game.legalPos(
+        posX,
+        posY,
+        user.map,
+        inDungeon ? destinationIsWater : Boolean(user.navegando),
+        ghostMove?.ghost.id,
+    );
     const deniedPortalMessage = game.getFactionPortalDeniedMessage(user, user.map, posX, posY);
 
     if (user.navegando && !game.legalPos(user.pos.x, user.pos.y, user.map, true, ws.id)) {
@@ -2014,6 +2032,11 @@ function processUserMovement(ws: RuntimeClient, heading: number, moveId: number,
 
     if (!canReachTargetPosition) {
         sendOwnPositionUpdate(ws, user);
+        return;
+    }
+
+    // Mazmorras: los pozos, el portal de salida y las escaleras entre los mapas de la misma corrida.
+    if (dungeons.handleStep(ws, user, posX, posY)) {
         return;
     }
 
@@ -2103,6 +2126,9 @@ function processUserMovement(ws: RuntimeClient, heading: number, moveId: number,
 
     cancelPendingLogout(user, ws, LOGOUT_CANCELLED_MESSAGE);
     require("./tileEvents").onWalk(String(ws.id));
+    if (inDungeon) {
+        dungeons.afterStep(ws, user);
+    }
 
     syncSafeZoneState(ws, user);
 
@@ -2354,6 +2380,10 @@ function eventClick(ws: RuntimeClient) {
         }
 
         if (targetMap === user.map) {
+            if (dungeons.handleMapClick(ws, user, x, y)) {
+                return;
+            }
+
             if (fishing.handleMapClick(ws, x, y)) {
                 return;
             }
@@ -2546,6 +2576,10 @@ function eventClick(ws: RuntimeClient) {
             }
 
             if (selectedNpc && pyramid.handleNpcInteraction(ws, selectedId)) {
+                return;
+            }
+
+            if (selectedNpc && dungeons.handleNpcInteraction(ws, selectedNpc)) {
                 return;
             }
 
@@ -3314,7 +3348,7 @@ function position(ws: RuntimeClient) {
 }
 
 const UI_PANEL_COMMAND_COOLDOWN_MS = 200;
-const UI_PANEL_COMMANDS = new Set(["/transmog", "/transfigurar", "/transmogponer", "/transmogquitar", "/tienda", "/tiendacomprar"]);
+const UI_PANEL_COMMANDS = new Set(["/transmog", "/transfigurar", "/transmogponer", "/transmogquitar", "/tienda", "/tiendacomprar", "/mazmorra"]);
 
 function isUiPanelCommand(message: string): boolean {
     return UI_PANEL_COMMANDS.has(message.split(/\s+/, 1)[0]?.toLowerCase() ?? "");
@@ -3550,7 +3584,7 @@ function attackMele(ws: RuntimeClient) {
             return;
         }
 
-        const meleeBlock = elementalEffects.getActionBlockReason(user, "melee");
+        const meleeBlock = elementalEffects.getActionBlockReason(user, "melee") ?? dungeons.getSwimBlockReason(user);
         if (meleeBlock) {
             handleProtocol.console(meleeBlock, "white", 0, 0, ws);
             return;
@@ -3763,7 +3797,7 @@ function attackRange(ws: RuntimeClient) {
             return;
         }
 
-        const rangedBlock = elementalEffects.getActionBlockReason(user, "ranged");
+        const rangedBlock = elementalEffects.getActionBlockReason(user, "ranged") ?? dungeons.getSwimBlockReason(user);
         if (rangedBlock) {
             handleProtocol.console(rangedBlock, "white", 0, 0, ws);
             return;
@@ -4183,11 +4217,9 @@ function attackSpell(ws: RuntimeClient) {
             return;
         }
 
-        const elementalBlock = elementalEffects.getActionBlockReason(
-            user,
-            isHostileCombatSpell(datSpell) || isSummonSpell ? "spell" : "support",
-            now,
-        );
+        const elementalBlock =
+            elementalEffects.getActionBlockReason(user, isHostileCombatSpell(datSpell) || isSummonSpell ? "spell" : "support", now) ??
+            dungeons.getSwimBlockReason(user);
         if (elementalBlock) {
             handleProtocol.console(elementalBlock, "white", 0, 0, ws);
             return;

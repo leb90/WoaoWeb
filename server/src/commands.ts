@@ -3570,6 +3570,11 @@ const command: CommandApi = {
                     break;
                 }
 
+                case "/mazmorra": {
+                    require("./dungeons").handleCommand(clientId, nextText);
+                    break;
+                }
+
                 case "/dungeon": {
                     const result = require("./fastTravel").travelDungeon(String(clientId), nextText.trim());
                     handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);

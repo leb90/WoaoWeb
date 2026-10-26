@@ -5,7 +5,7 @@ Fecha: 2026-10-25. Estado: **diseño, a confirmar**. El sistema (instancias, gru
 Adaptación del **Túnel del Pez Abisal** de *Link's Awakening* (ticket de Trello). No se copia baldosa por baldosa: se respeta la estructura jugable, que es esta:
 - se progresa con llaves;
 - el minijefe abre el camino al ítem;
-- el ítem (las Aletas) deja nadar;
+- el ítem (las aletas del original, acá **Patas de rana**) deja nadar bajo el agua;
 - nadando se llega a lo que faltaba y al jefe;
 - los túneles funcionan como atajos.
 
@@ -36,8 +36,8 @@ Lo leímos sala por sala en el mapa del ticket:
   - trampas: pozos, pinchos, salas que se cierran y bloques.
 
 **Diferencia con el ticket:**
-- El ticket ubica las Aletas y la brújula a la izquierda. En el original las Aletas están arriba al centro, después del minijefe, y la brújula abajo, al lado del vestíbulo.
-- Se mantiene el original, porque las Aletas tienen que llegar a mitad de camino: son las que abren la segunda mitad de la mazmorra.
+- El ticket ubica el ítem principal (las aletas del original) y la brújula a la izquierda. En el original las aletas están arriba al centro, después del minijefe, y la brújula abajo, al lado del vestíbulo.
+- Se mantiene el original, porque las Patas de rana tienen que llegar a mitad de camino: son las que abren la segunda mitad de la mazmorra.
 - Los 10 sectores del ticket están todos, solo cambia dónde quedan (sección 6).
 
 ## 2. Mapas de AO
@@ -69,8 +69,8 @@ Celda = (columna, fila) en la cuadrícula del mapa 510; la fila 0 es la de arrib
 | Ala derecha | (5,2)-(5,3) | 7 | **K3** sobre un bloque elevado | De presión | Pinchos |
 | Patio central | (2,3)-(3,4) | 5 | Cofre de oro; **escalera D** en una isla | Muchas, de presión, con riesgo de rodeo | Pozos, agua profunda |
 | Minijefe | (3,1) | 9 | **Tortuga Espinosa** | Minijefe | Se cierra al entrar |
-| Bloques | (3,0) | 6 | Dos bloques sobre dos placas abren el paso a las Aletas | Una criatura que patrulla | Placas |
-| Aletas | (2,0) | 10 | Altar: **Aletas** (ítem de mazmorra) | — | — |
+| Bloques | (3,0) | 6 | Dos bloques sobre dos placas abren el paso a las Patas de rana | Una criatura que patrulla | Placas |
+| Patas de rana | (2,0) | 10 | Altar: **Patas de rana** (ítem de mazmorra) | — | — |
 | Sala larga | (2,1)-(2,2) | 6 | **K4** junto a un pozo; baja nadando al patio | De agua | Pozo, agua profunda |
 | Derecha alta | (4,1) | 7 | Cofre al terminar: **K5** | Guardianes | Se cierra al entrar |
 | Sala E | (1,3) | 2 | Cofre trampa; **escalera E** | Aparecen al abrir el cofre | Se cierra al abrir el cofre |
@@ -92,9 +92,9 @@ Celda = (columna, fila) en la cuadrícula del mapa 510; la fila 0 es la de arrib
 3. **Minijefe:**
    - La K3 abre **L2** (Sala grande → Minijefe).
    - La Tortuga Espinosa da vueltas a la plataforma y embiste. Queda aturdida al chocar contra la pared: ahí se le pega.
-   - Después, la sala de Bloques: hay que dejar las dos placas apretadas con los bloques (o con jugadores) para abrir el paso a las **Aletas**.
-4. **Con las Aletas** (en cualquier orden):
-   - Aletas → Sala larga (puerta de un solo sentido): **K4** junto al pozo; nadando se baja al Patio, que es el atajo al vestíbulo.
+   - Después, la sala de Bloques: hay que dejar las dos placas apretadas con los bloques (o con jugadores) para abrir el paso a las **Patas de rana**.
+4. **Con las Patas de rana** (en cualquier orden):
+   - Patas de rana → Sala larga (puerta de un solo sentido): **K4** junto al pozo; nadando se baja al Patio, que es el atajo al vestíbulo.
    - Túnel A: nadar hasta la plataforma: **K2**.
    - Sala grande → nadando a Derecha alta: se cierra al entrar y da la **K5**.
    - Sala del oro: el cofre de la isla.
@@ -113,12 +113,12 @@ Celda = (columna, fila) en la cuadrícula del mapa 510; la fila 0 es la de arrib
 |---|---|---|---|---|
 | K1 | Primera llave | Matar a los guardianes | L1 | Losa → Sala del oro |
 | K3 | Ala derecha | Cruzar los pinchos | L2 | Sala grande → Minijefe |
-| K2 | Túnel A | Aletas | L3 | Patio → Sala E |
-| K4 | Sala larga | Aletas | L4 | Sala E → Foso |
-| K5 | Derecha alta | Aletas + matar a los guardianes | L5 | Foso → Antesala |
+| K2 | Túnel A | Patas de rana | L3 | Patio → Sala E |
+| K4 | Sala larga | Patas de rana | L4 | Sala E → Foso |
+| K5 | Derecha alta | Patas de rana + matar a los guardianes | L5 | Foso → Antesala |
 | Llave del jefe | Llave del jefe | Túnel B↔C | Puerta del jefe | Antesala → escalera F |
 
-Cualquier llave chica abre cualquier puerta con llave, como en Zelda. Antes de las Aletas hay 2 llaves y 2 puertas; después, 3 y 3.
+Cualquier llave chica abre cualquier puerta con llave, como en Zelda. Antes de las Patas de rana hay 2 llaves y 2 puertas; después, 3 y 3.
 
 ### Escaleras (los warps A-F)
 | Letra | Une | Para qué |
@@ -128,11 +128,12 @@ Cualquier llave chica abre cualquier puerta con llave, como en Zelda. Antes de l
 | D↔E | Isla del Patio ↔ Sala E, por el túnel inundado | Atajo entre el centro y el ala izquierda |
 | F | Antesala → Guarida (mapa 512) | El jefe |
 
-Además hay dos puertas de un solo sentido que acortan la vuelta (Aletas → Sala larga y Llave del jefe → Vestíbulo) y un portal de salida en la Entrada y otro después del jefe.
+Además hay dos puertas de un solo sentido que acortan la vuelta (Patas de rana → Sala larga y Llave del jefe → Vestíbulo) y un portal de salida en la Entrada y otro después del jefe.
 
 ### Recompensa principal, minijefe y jefe
-- **Aletas**, en el altar de la sala (2,0), después del minijefe y los bloques.
-  - Es un ítem de mazmorra permanente: deja nadar en el agua profunda de las mazmorras.
+- **Patas de rana**, en el altar de la sala (2,0), después del minijefe y los bloques.
+  - Es un ítem de mazmorra permanente. Con ellas se nada **bajo el mar**: el agua profunda de las mazmorras (la parte oscura del mapa, que sin ellas no se puede pisar) pasa a ser transitable, con el personaje buceando.
+  - Nadando no se ataca ni se lanzan hechizos, como en Zelda.
   - Hace falta para la segunda mitad de esta mazmorra y se va a usar en las siguientes.
 - **Minijefe: Tortuga Espinosa**, en (3,1).
   - Es la bola del original, con el cuerpo de la Tortuga gigante de AO.
@@ -143,6 +144,12 @@ Además hay dos puertas de un solo sentido que acortan la vuelta (Aletas → Sal
   - **Menos de 33 %:** más rápido, embiste.
   - **Recompensa:** la Escama del Abisal (trofeo de la serie) y un cofre con oro y un objeto, una vez por día por personaje.
 
+Cómo se ven, en la mazmorra de prueba (todavía con las criaturas de AO de las que toman el cuerpo; las plantillas con nombre, vida y fases propias van en la etapa 3):
+
+| Jefe: El Abisal (cuerpo del Leviatán) | Minijefe: Tortuga Espinosa (cuerpo de la Tortuga gigante) |
+|---|---|
+| ![El Abisal](jefes/el-abisal.png) | ![Tortuga Espinosa](jefes/tortuga-espinosa.png) |
+
 ### Trampas
 | Tipo | Dónde | Rol (igual que en Zelda) |
 |---|---|---|
@@ -151,7 +158,7 @@ Además hay dos puertas de un solo sentido que acortan la vuelta (Aletas → Sal
 | Aplastadores | Túnel B↔C | Pasillo angosto con tiempo |
 | Salas que se cierran | Primera llave, Minijefe, Derecha alta y el cofre trampa de la Sala E | Combate obligatorio |
 | Placas y bloques | Bloques | Puzzle que abre el paso al ítem |
-| Agua profunda | Patio, Sala del oro, Sala larga, canales, túneles A y D↔E, Guarida | Lo que se abre con las Aletas |
+| Agua profunda | Patio, Sala del oro, Sala larga, canales, túneles A y D↔E, Guarida | Lo que se abre con las Patas de rana |
 
 ### Criaturas
 Son plantillas nuevas con cuerpos que ya existen en AO (arañas, murciélagos, esqueletos, elementales de agua); se eligen en la etapa 3. Hay tres roles, como en el original:
@@ -167,11 +174,11 @@ La dificultad escala con el tamaño del grupo (ver [../MAZMORRAS.md](../MAZMORRA
 |---|---|
 | 1. Entrada / hub inicial | Entrada y Vestíbulo |
 | 2. Rama izquierda de exploración | Sala E, Sala B, Foso, túneles B↔C y D↔E, Llave del jefe. La brújula queda al este del vestíbulo, como en el original |
-| 3. Rama izquierda de reward principal | Sala de las Aletas: arriba, después del minijefe, como en el original |
+| 3. Rama izquierda de reward principal | Sala de las Patas de rana: arriba, después del minijefe, como en el original |
 | 4. Sala de primera llave / puzzle | Primera llave (se cierra al entrar, K1) |
 | 5. Patio o sala central grande | Patio central (4 celdas, pozos, agua, cofre de oro, escalera D) |
 | 6. Sector superior de puzzle | Bloques (placas) y Sala larga (K4) |
 | 7. Rama derecha de progresión | Sala del oro, Mapa, Sala grande, Ala derecha (K3), Derecha alta (K5), túnel A (K2) |
 | 8. Sector de lore / pista | Losa de piedra |
 | 9. Sala de miniboss | Tortuga Espinosa |
-| 10. Sala de reward posterior | Bloques → Aletas, que abren el tramo final |
+| 10. Sala de reward posterior | Bloques → Patas de rana, que abren el tramo final |

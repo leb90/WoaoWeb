@@ -1,0 +1,15 @@
+{
+    "criaturas": {
+        "z": 502,
+        "k": 503
+    },
+    "losas": {
+        "590": [
+            "Dos runas esperan peso: una piedra y un pie.",
+            "Las puertas de cristal ceden cuando la sala queda en silencio. Las de piedra, solo con su llave."
+        ],
+        "591": ["El fuego duerme dos latidos y despierta en el tercero."]
+    },
+    "oro": 300,
+    "trampa": [503, 503]
+}

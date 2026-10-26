@@ -43,6 +43,8 @@ export type WoaoProgress = {
     // Cobros de diseños personalizados por id de pedido: si la api reintenta
     // el mismo pedido no se cobra dos veces.
     designCharges?: Record<string, { points: number; slot: string; productName: string; at: number }>;
+    // Ítems de mazmorra (dungeons.ts), para siempre: "patas_de_rana" deja nadar por el agua profunda.
+    dungeonItems?: string[];
 };
 
 const DATA_PATH = path.resolve(__dirname, "../data/woaoProgress.json");

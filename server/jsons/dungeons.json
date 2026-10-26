@@ -1,0 +1,40 @@
+[
+    {
+        "id": "prueba",
+        "nombre": "Mazmorra de prueba",
+        "descripcion": "Para probar las mazmorras: llaves, puertas, una sala que se cierra, placas, un bloque, pozos, lava, cofres, agua profunda y la salida.",
+        "nivelMinimo": 1,
+        "maxJugadores": 5,
+        "soloDesarrollo": true,
+        "piedraNpc": 9720,
+        "mapas": [
+            590,
+            591
+        ],
+        "entrada": {
+            "map": 590,
+            "x": 14,
+            "y": 35
+        },
+        "salidas": [
+            {
+                "map": 591,
+                "x": 23,
+                "y": 27
+            }
+        ],
+        "regreso": {
+            "map": 34,
+            "x": 50,
+            "y": 52
+        },
+        "escalado": {
+            "vidaPorJugador": 0.7,
+            "danoPorJugador": 0.15
+        },
+        "itemMazmorra": {
+            "id": "patas_de_rana",
+            "nombre": "Patas de rana"
+        }
+    }
+]

@@ -514,6 +514,7 @@ const socket: SocketApi = {
 
                     this.actOnline(vars.usuariosOnline);
                     mapInstanceManager.onPlayerDisconnected(personajeWS);
+                    require("./dungeons").onDisconnect(personajeWS);
                 } else {
                     const game = require("./game") as GameApi;
                     game.leaveParty(idUser);

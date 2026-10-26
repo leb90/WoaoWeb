@@ -267,6 +267,10 @@ export async function handleIncomingUiPacket({
             ctx.mergeHud({ shopState: packet.payload });
             return true;
 
+        case "dungeonState":
+            ctx.mergeHud({ dungeonState: packet.payload });
+            return true;
+
         case "castleState":
             ctx.mergeHud({ castleState: packet.payload });
             return true;

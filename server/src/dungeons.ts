@@ -45,6 +45,12 @@ const OBJ = {
     aplastador: 1848,
     cofreJefe: 1849,
     rodillo: 1851,
+    vasija: 1852,
+    piedra: 1853,
+    hielo: 1854,
+    poste: 1855,
+    antorchaApagada: 1856,
+    antorchaEncendida: 1857,
 } as const;
 // Portal azul (escaleras que se ven como portal: el atajo de la Cueva de la Cola).
 const PORTAL_OBJ = 378;
@@ -163,7 +169,14 @@ type MapMechanics = {
     // Cueva de la Cola: escaleras ocultas y adónde lleva caer a un pozo de este mapa (si no, a la entrada de la sala).
     hiddenExits?: HiddenExit[];
     caida?: { map: number; x: number; y: number } | null;
+    // Roca de la Tortuga: antorchas, hielo, lo que se levanta con la Pulsera y las estatuas del Gancho.
+    torches?: Torch[];
+    ice?: string[];
+    liftables?: Array<{ x: number; y: number; tipo: LiftableKind; placa: boolean }>;
+    hookPosts?: string[];
 };
+type Torch = { x: number; y: number; encendida: boolean; sala: number };
+type LiftableKind = "vasija" | "piedra";
 
 type MapIndex = {
     mech: MapMechanics;
@@ -182,6 +195,12 @@ type MapIndex = {
     crushers: Set<string>;
     // Placas de cada sala: cada sala se resuelve sola.
     platesByRoom: Map<number, string[]>;
+    torches: Map<string, Torch>;
+    // Antorchas que arrancan apagadas, por sala: encenderlas todas resuelve la sala.
+    torchesByRoom: Map<number, string[]>;
+    ice: Set<string>;
+    liftables: Map<string, { tipo: LiftableKind; placa: boolean }>;
+    hookPosts: Set<string>;
     // Baldosas cuyo bloqueo cambia durante la corrida (puertas, cofres, bloques y cristales): van en la foto del área.
     dynamic: Set<string>;
 };
@@ -207,6 +226,11 @@ type MapState = {
     collapsed: Map<string, number>;
     // Hasta cuándo están abiertas las puertas con tiempo (0: cerradas).
     timedUntil: number;
+    litTorches: Set<string>;
+    solvedTorchRooms: Set<number>;
+    meltedIce: Set<string>;
+    // Vasijas y piedras que ya se levantaron (no vuelven en la corrida).
+    lifted: Set<string>;
 };
 
 type DungeonRun = {
@@ -817,6 +841,7 @@ export function leaveRun(sessionId: EntityId, reason: string) {
     run.inside.delete(key);
     runByCharacter.delete(key);
     passKeysOf(run, key, "salió de la mazmorra");
+    require("./dungeonTools").dropCarry(user);
     if (client && def && isDungeonInstanceMap(user.map)) {
         const game = getGame();
         const landing = game.getFreeSpace(client, def.regreso.map, def.regreso.x, def.regreso.y, "dungeon.salida") ?? def.regreso;
@@ -981,6 +1006,12 @@ export function handleCommand(sessionId: EntityId, text: string) {
             return require("./dungeonMotion").startDash(sessionId);
         case "salto":
             return require("./dungeonMotion").jump(sessionId);
+        case "fuego":
+            return require("./dungeonTools").fire(sessionId);
+        case "gancho":
+            return require("./dungeonTools").hookshot(sessionId);
+        case "pulsera":
+            return require("./dungeonTools").bracelet(sessionId);
         case "item": {
             const [, itemId = "", flag = ""] = text.trim().split(/\s+/);
             return grantItemCommand(sessionId, itemId.toLowerCase(), flag.toLowerCase() === "quitar");
@@ -1014,6 +1045,7 @@ function mechanicsOf(baseMap: number): MapIndex | null {
             if (mech) {
                 const chests = new Map(mech.chests.map((chest) => [coordKey(chest.x, chest.y), chest]));
                 const barriers = new Map(mech.barriers.map((barrier) => [coordKey(barrier.x, barrier.y), barrier]));
+                const liftables = new Map((mech.liftables ?? []).map(({ x, y, tipo, placa }) => [coordKey(x, y), { tipo, placa }]));
                 index = {
                     mech,
                     rooms: new Map(mech.rooms.map((room) => [room.id, room])),
@@ -1030,7 +1062,19 @@ function mechanicsOf(baseMap: number): MapIndex | null {
                     crackedWalls: new Set(mech.crackedWalls ?? []),
                     crushers: new Set(mech.crushers ?? []),
                     platesByRoom: groupPlatesByRoom(mech),
-                    dynamic: new Set([...barriers.keys(), ...chests.keys(), ...mech.blocks, ...(mech.crystals ?? [])]),
+                    torches: new Map((mech.torches ?? []).map((torch) => [coordKey(torch.x, torch.y), torch])),
+                    torchesByRoom: groupTorchesByRoom(mech),
+                    ice: new Set(mech.ice ?? []),
+                    liftables,
+                    hookPosts: new Set(mech.hookPosts ?? []),
+                    dynamic: new Set([
+                        ...barriers.keys(),
+                        ...chests.keys(),
+                        ...mech.blocks,
+                        ...(mech.crystals ?? []),
+                        ...(mech.ice ?? []),
+                        ...liftables.keys(),
+                    ]),
                 };
             }
         } catch {
@@ -1047,6 +1091,15 @@ function groupPlatesByRoom(mech: MapMechanics): Map<number, string[]> {
         const room = mech.roomOf[key];
         if (room === undefined) continue;
         byRoom.set(room, [...(byRoom.get(room) ?? []), key]);
+    }
+    return byRoom;
+}
+
+function groupTorchesByRoom(mech: MapMechanics): Map<number, string[]> {
+    const byRoom = new Map<number, string[]>();
+    for (const torch of mech.torches ?? []) {
+        if (torch.encendida) continue;
+        byRoom.set(torch.sala, [...(byRoom.get(torch.sala) ?? []), coordKey(torch.x, torch.y)]);
     }
     return byRoom;
 }
@@ -1070,6 +1123,10 @@ function createMapState(index: MapIndex): MapState {
         crumbling: new Map(),
         collapsed: new Map(),
         timedUntil: 0,
+        litTorches: new Set([...index.torches.values()].filter((torch) => torch.encendida).map((torch) => coordKey(torch.x, torch.y))),
+        solvedTorchRooms: new Set(),
+        meltedIce: new Set(),
+        lifted: new Set(),
     };
 }
 
@@ -1283,6 +1340,11 @@ function updatePlates(ctx: MapContext) {
         let allPressed = true;
         for (const key of plates) {
             const { x, y } = parseCoord(key);
+            // Un botón bajo una vasija no se puede pisar hasta levantarla.
+            if (ctx.index.liftables.has(key) && !ctx.state.lifted.has(key)) {
+                allPressed = false;
+                continue;
+            }
             const hasBlock = ctx.state.blocks.has(key);
             const pressed = hasBlock || Boolean(playerAt(ctx.mapId, x, y));
             if (!pressed) allPressed = false;
@@ -1720,10 +1782,13 @@ function tickRun(run: DungeonRun) {
     }
     updateCrushers(run, now);
     updateFloatingBoss(run, now);
+    const tools = require("./dungeonTools");
     for (const user of playersInside(run)) {
+        tools.checkCarry(user);
         const key = characterKey(user);
         const ctx = contextOf(Number(user.map));
         if (!key || !ctx || (user as { dead?: boolean }).dead) continue;
+        if (require("./dungeonMotion").isAirborne(user)) continue;
         const tileKey = coordKey(user.pos.x, user.pos.y);
         if (now < (run.nextBurnAt.get(key) ?? 0)) continue;
         if (ctx.index.lava.has(tileKey)) {
@@ -1856,6 +1921,78 @@ export function onDashImpact(ws: RuntimeClient, user: RuntimeCharacter, x: numbe
 }
 
 // El jefe que flota no recibe daño hasta que lo bajan. Una estatua dormida se despierta al primer golpe.
+// --- Roca de la Tortuga: lo que tocan el Polvo de Fuego, el Gancho y la Pulsera (dungeonTools.ts) ---
+
+export type ToolTarget = "antorcha" | "antorchaEncendida" | "hielo" | "vasija" | "piedra" | "estatua" | "cofre" | "bloque" | "cristal" | "puerta";
+
+// Lo que hay en una baldosa para los ítems que se tiran: null si no hay nada de la mazmorra (piso, pared, criatura).
+export function toolTargetAt(mapId: number, x: number, y: number): ToolTarget | null {
+    const ctx = contextOf(mapId);
+    if (!ctx) return null;
+    const key = coordKey(x, y);
+    if (ctx.index.torches.has(key)) return ctx.state.litTorches.has(key) ? "antorchaEncendida" : "antorcha";
+    if (ctx.index.ice.has(key) && !ctx.state.meltedIce.has(key)) return "hielo";
+    const liftable = ctx.index.liftables.get(key);
+    if (liftable && !ctx.state.lifted.has(key)) return liftable.tipo;
+    if (ctx.index.hookPosts.has(key)) return "estatua";
+    const chest = ctx.index.chests.get(key);
+    if (chest && isChestVisible(ctx, chest)) return "cofre";
+    if (ctx.state.blocks.has(key)) return "bloque";
+    if (ctx.index.crystals.has(key) && !ctx.state.brokenCrystals.has(key)) return "cristal";
+    if (ctx.index.barriers.has(key) && !ctx.state.openBarriers.has(key)) return "puerta";
+    return null;
+}
+
+// Enciende una antorcha. Si era la última apagada de su sala, la sala se resuelve: aparecen sus cofres.
+export function lightTorch(mapId: number, x: number, y: number): boolean {
+    const ctx = contextOf(mapId);
+    const key = coordKey(x, y);
+    const torch = ctx?.index.torches.get(key);
+    if (!ctx || !torch || ctx.state.litTorches.has(key)) return false;
+    ctx.state.litTorches.add(key);
+    setObject(mapId, x, y, OBJ.antorchaEncendida);
+    const roomTorches = ctx.index.torchesByRoom.get(torch.sala) ?? [];
+    if (!ctx.state.solvedTorchRooms.has(torch.sala) && roomTorches.every((torchKey) => ctx.state.litTorches.has(torchKey))) {
+        ctx.state.solvedTorchRooms.add(torch.sala);
+        playSoundAt(mapId, { x, y }, DUNGEON_SOUNDS.secreto);
+        const revealed = revealChests(ctx, torch.sala);
+        if (revealed) {
+            tellRun(ctx.run, revealed === 1 ? "¡Las antorchas se encendieron y apareció un cofre!" : `¡Aparecieron ${revealed} cofres!`);
+            refreshRun(ctx.run);
+        }
+    }
+    return true;
+}
+
+export function meltIce(mapId: number, x: number, y: number): boolean {
+    const ctx = contextOf(mapId);
+    const key = coordKey(x, y);
+    if (!ctx || !ctx.index.ice.has(key) || ctx.state.meltedIce.has(key)) return false;
+    ctx.state.meltedIce.add(key);
+    setObject(mapId, x, y, 0);
+    setBlocked(mapId, x, y, false);
+    return true;
+}
+
+// Levanta una vasija o una piedra: libera la baldosa y deja a la vista lo que tapaba (un botón).
+export function liftAt(mapId: number, x: number, y: number): { tipo: LiftableKind; objIndex: number } | null {
+    const ctx = contextOf(mapId);
+    const key = coordKey(x, y);
+    const liftable = ctx?.index.liftables.get(key);
+    if (!ctx || !liftable || ctx.state.lifted.has(key)) return null;
+    ctx.state.lifted.add(key);
+    setObject(mapId, x, y, liftable.placa ? OBJ.placa : 0);
+    setBlocked(mapId, x, y, false);
+    if (liftable.placa) updatePlates(ctx);
+    return { tipo: liftable.tipo, objIndex: liftable.tipo === "piedra" ? OBJ.piedra : OBJ.vasija };
+}
+
+// Si los ítems que se tiran pueden lastimar a esta criatura (las trampas y lo invulnerable, no).
+export function canToolHitNpc(npc: { id?: EntityId; map?: number; hp?: number; attackable?: number | boolean; dormant?: boolean } | undefined): boolean {
+    if (!npc || Number(npc.hp ?? 0) <= 0 || !npc.attackable) return false;
+    return !getNpcInvulnerableReason(npc);
+}
+
 export function getNpcInvulnerableReason(npc: { id?: EntityId; map?: number; dormant?: boolean; nameCharacter?: string } | undefined): string | null {
     if (!npc || !isDungeonInstanceMap(npc.map)) return null;
     if (npc.dormant) npc.dormant = false;
@@ -2189,10 +2326,14 @@ function claimBossReward(run: DungeonRun) {
 }
 
 // Ítems de mazmorra que conoce el juego, para la franja y el comando de GM.
-const DUNGEON_ITEMS: Record<string, { nombre: string; accion: "carrera" | "salto" | null }> = {
+const DUNGEON_ITEMS: Record<string, { nombre: string; accion: "carrera" | "salto" | "fuego" | "gancho" | "pulsera" | null }> = {
     patas_de_rana: { nombre: "Patas de rana", accion: null },
     pluma: { nombre: "Pluma de Roc", accion: "salto" },
     botas_de_pegaso: { nombre: "Botas de Pegaso", accion: "carrera" },
+    // Los de la Roca de la Tortuga (dungeonTools.ts). El Gancho y la Pulsera los van a dar otras mazmorras.
+    polvo_de_fuego: { nombre: "Polvo de Fuego", accion: "fuego" },
+    gancho: { nombre: "Gancho", accion: "gancho" },
+    pulsera: { nombre: "Pulsera", accion: "pulsera" },
 };
 
 function ownedDungeonItems(characterId: string) {
@@ -2395,5 +2536,10 @@ module.exports = {
     setDungeonObject,
     broadcastNpcVitals,
     fallIfHazard,
+    toolTargetAt,
+    lightTorch,
+    meltIce,
+    liftAt,
+    canToolHitNpc,
     _resetForTests,
 };

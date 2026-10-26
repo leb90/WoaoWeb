@@ -521,16 +521,21 @@ export type DungeonStatePayload = {
     // Texto de una losa que se acaba de leer (seq cambia en cada lectura).
     losa: { seq: number; texto: string } | null;
 };
-// La Carrera y el salto de las mazmorras (server/src/dungeonMotion.ts): el movimiento entero, para animarlo.
+// La Carrera y el salto de las mazmorras (server/src/dungeonMotion.ts): el movimiento entero, para animarlo. Con
+// los mismos datos llegan el Polvo de Fuego, el Gancho y la Pulsera (server/src/dungeonTools.ts).
 export type DungeonMotionPayload = {
     id: number;
-    tipo: "carga" | "carrera" | "salto" | "empujon";
+    tipo: "carga" | "carrera" | "salto" | "empujon" | "fuego" | "gancho" | "levanta" | "tira" | "suelta";
     heading?: number;
     ms: number;
     path?: Array<{ x: number; y: number }>;
-    golpe?: "pared" | "criatura" | "obstaculo" | null;
+    golpe?: "pared" | "criatura" | "obstaculo" | "antorcha" | "hielo" | "engancha" | null;
     salto?: { to: { x: number; y: number }; ms: number } | null;
     to?: { x: number; y: number };
+    // Gancho: lo que tarda cada baldosa del arrastre. Pulsera: el objeto que se lleva y de dónde se levantó.
+    pullMs?: number;
+    obj?: number;
+    from?: { x: number; y: number };
 };
 // El Ciempiés de la Cueva de la Cola (server/src/dungeonBoss.ts): la cabeza (en baldosas, con decimales), la
 // dirección (0-15, de a 22,5°), la velocidad (baldosas por segundo) y a qué distancia van las partes; fin al morir.

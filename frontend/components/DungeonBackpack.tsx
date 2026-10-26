@@ -9,6 +9,7 @@ import {
     Compass,
     Dumbbell,
     Feather,
+    Flame,
     Footprints,
     Key,
     KeyRound,
@@ -16,7 +17,6 @@ import {
     Shell,
     Shield,
     Trophy,
-    WandSparkles,
     Wind,
     X,
     type LucideIcon,
@@ -37,12 +37,12 @@ type Slot = "uno" | "dos";
 const SERIES_ITEMS: Array<{ id: string; nombre: string; icon: LucideIcon; tone: string; uso: string; mazmorra: string }> = [
     { id: "patas_de_rana", nombre: "Patas de rana", icon: Footprints, tone: "text-sky-300", uso: "Nadar por el agua profunda (siempre activas)", mazmorra: "Gruta del Abisal" },
     { id: "pluma", nombre: "Pluma de Roc", icon: Feather, tone: "text-teal-200", uso: "Saltar pozos y obstáculos chicos", mazmorra: "Cueva de la Cola" },
-    { id: "pulsera", nombre: "Pulsera", icon: Dumbbell, tone: "text-amber-200", uso: "Levantar vasijas y piedras", mazmorra: "La tercera" },
+    { id: "pulsera", nombre: "Pulsera", icon: Dumbbell, tone: "text-amber-200", uso: "Levantar, llevar y tirar vasijas y piedras", mazmorra: "Mazmorra a definir" },
     { id: "botas_de_pegaso", nombre: "Botas de Pegaso", icon: Wind, tone: "text-orange-200", uso: "La Carrera; con la Pluma, el salto largo", mazmorra: "Caverna de las Llaves" },
-    { id: "gancho", nombre: "Gancho", icon: Anchor, tone: "text-stone-200", uso: "Engancharse para cruzar", mazmorra: "La quinta" },
-    { id: "pulsera_poderosa", nombre: "Pulsera poderosa", icon: BicepsFlexed, tone: "text-rose-200", uso: "Levantar lo más pesado", mazmorra: "La sexta" },
-    { id: "escudo_espejo", nombre: "Escudo espejo", icon: Shield, tone: "text-cyan-200", uso: "Rebotar rayos", mazmorra: "La séptima" },
-    { id: "vara", nombre: "Vara mágica", icon: WandSparkles, tone: "text-violet-200", uso: "Tirar fuego", mazmorra: "La octava" },
+    { id: "gancho", nombre: "Gancho", icon: Anchor, tone: "text-stone-200", uso: "Engancharse a cofres, bloques y estatuas para cruzar; aturde criaturas", mazmorra: "Mazmorra a definir" },
+    { id: "pulsera_poderosa", nombre: "Pulsera poderosa", icon: BicepsFlexed, tone: "text-rose-200", uso: "Levantar lo más pesado", mazmorra: "Mazmorra a definir" },
+    { id: "escudo_espejo", nombre: "Escudo espejo", icon: Shield, tone: "text-cyan-200", uso: "Rebotar rayos", mazmorra: "Mazmorra a definir" },
+    { id: "polvo_de_fuego", nombre: "Polvo de Fuego", icon: Flame, tone: "text-orange-300", uso: "Tirar fuego: enciende antorchas, derrite hielo y quema criaturas", mazmorra: "Roca de la Tortuga" },
 ];
 
 // Los trofeos de los jefes (los instrumentos de Zelda), en orden de juego.

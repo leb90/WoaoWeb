@@ -45,6 +45,7 @@ import {
     type DungeonParticle,
 } from "./dungeonMotion";
 import { updateDungeonBosses } from "./dungeonBoss";
+import { updateDungeonTools } from "./dungeonTools";
 import {
     CHARACTER_SWING_SHIELD,
     CHARACTER_SWING_WEAPON,
@@ -603,6 +604,9 @@ export class Engine {
     // La Carrera o el salto del propio personaje (engine/dungeonMotion.ts): mientras dura no se camina ni se ataca.
     dungeonMotionUntil = 0;
     dungeonParticles: DungeonParticle[] = [];
+    // El Polvo de Fuego, el Gancho y la Pulsera (engine/dungeonTools.ts): efectos en curso y lo que lleva cada uno.
+    dungeonToolEffects: Array<(now: number) => boolean> = [];
+    dungeonCarried: Map<number, Container> = new Map();
     healthBarEntityIds: Set<number> = new Set();
     remoteEntities: Map<number, Container> = new Map();
     worldName = "";
@@ -2234,6 +2238,7 @@ export class Engine {
         this.updateRemoteEntityMovement(now);
         updateDungeonParticles(this, now);
         updateDungeonBosses(this, now);
+        updateDungeonTools(this, now);
     }
 
     updateRemoteEntityMovement(now: number): void {

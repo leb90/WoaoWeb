@@ -43,6 +43,15 @@ Para la Caverna de las Llaves se sumaron sonidos del mismo paquete de Juhani Jun
 | 220 | Salto con la Pluma | `sfx_movement_jump13.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
 | 221 | Bajan los aplastadores | `sfx_exp_shortest_hard1.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
 
+Para el Polvo de Fuego, el Gancho y la Pulsera (Roca de la Tortuga), del mismo paquete y con el mismo criterio de volumen (entre −19 y −20 dB):
+
+| Número | Uso | Original | Autor | Licencia |
+|---|---|---|---|---|
+| 222 | Llamarada del Polvo de Fuego | `sfx_exp_short_soft5.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
+| 223 | Cadena del Gancho | `sfx_movement_ladder2loop.wav` (con un corte suave al final) | Juhani Junkala (SubspaceAudio) | CC0 |
+| 224 | Se rompe una vasija o una piedra tirada con la Pulsera | `sfx_exp_shortest_soft3.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
+| 225 | La Pulsera levanta algo | `sfx_sounds_interaction5.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
+
 Atribución que pide la licencia CC-BY de 213 y 214: "Rock/Metal Slide" de Hansjörg Malthaner (http://opengameart.org/users/varkalandar), CC-BY 4.0, modificado (recortado, normalizado y acelerado).
 
 ## Música de las mazmorras (`frontend/public/music/mazmorras/`)

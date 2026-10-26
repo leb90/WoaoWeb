@@ -29,8 +29,13 @@
 //   &  bloque con cerradura (se abre con una llave chica y desaparece)
 //   ,  piso que las criaturas no pisan (los puentes de la arena del Ciempiés)
 //   D  adonde se cae desde los pozos de otro mapa (el plano de ese mapa dice "caida: <este mapa>")
-// Lo que aparece: los cofres de una sala que se cierra (!) o que tiene placas aparecen al vaciarla o al apretar las
-// placas; las escaleras de una sala que se cierra (y la otra punta) aparecen al vaciarla.
+// Roca de la Tortuga (el Polvo de Fuego, el Gancho y la Pulsera, dungeonTools.ts):
+//   F  antorcha apagada (se enciende con el Polvo; si la sala tiene cofres, aparecen al encender todas)
+//   A  antorcha encendida      I  bloque de hielo (lo derrite el Polvo)      H  estatua (se engancha con el Gancho)
+//   U  vasija    V  vasija sobre una placa    ;  piedra suelta (se levantan y se tiran con la Pulsera)
+// Lo que aparece: los cofres de una sala que se cierra (!), que tiene placas o antorchas apagadas aparecen al vaciarla,
+// al apretar las placas o al encender las antorchas; las escaleras de una sala que se cierra (y la otra punta)
+// aparecen al vaciarla.
 // Las puertas van en pasos de una baldosa: en una pared horizontal se ven como un arco de piedra; en una vertical,
 // como un cristal que tapa el paso.
 // leyenda.json puede traer "plantillas": criaturas propias de la mazmorra, armadas sobre una de AO ("base") con sus
@@ -75,6 +80,13 @@ export const DUNGEON_OBJECTS = {
     aplastador: { id: 1848, name: "Aplastador", grh: 8623 },
     cofreJefe: { id: 1849, name: "Cofre del jefe", grh: 18532 },
     rodillo: { id: 1851, name: "Rodillo de púas", grh: 18537 },
+    // Roca de la Tortuga: lo que tocan el Polvo de Fuego, el Gancho y la Pulsera (docs/CREDITOS_GRAFICOS.md).
+    vasija: { id: 1852, name: "Vasija", grh: 38215 },
+    piedra: { id: 1853, name: "Piedra suelta", grh: 38216 },
+    hielo: { id: 1854, name: "Bloque de hielo", grh: 38217 },
+    poste: { id: 1855, name: "Estatua de piedra", grh: 38218 },
+    antorchaApagada: { id: 1856, name: "Antorcha apagada", grh: 38219 },
+    antorchaEncendida: { id: 1857, name: "Antorcha encendida", grh: 38229 },
 } as const;
 const CHEST_CONTENT: Record<string, string> = {
     K: "llave",
@@ -246,7 +258,18 @@ for (const plan of plans) {
         }
     }
 }
-// Los cofres de las salas que se cierran no se ven hasta vaciarlas; los de las salas con placas, hasta apretarlas.
+// Salas con antorchas apagadas (sus cofres aparecen al encenderlas todas con el Polvo de Fuego).
+const torchRooms = new Set<string>();
+for (const plan of plans) {
+    const { roomOf } = roomsByMap.get(plan.mapId)!;
+    for (let y = 1; y <= SIZE; y++) {
+        for (let x = 1; x <= SIZE; x++) {
+            if (charAt(plan, x, y) === "F" && roomOf.has(`${x},${y}`)) torchRooms.add(`${plan.mapId}:${roomOf.get(`${x},${y}`)}`);
+        }
+    }
+}
+// Los cofres de las salas que se cierran no se ven hasta vaciarlas; los de las salas con placas, hasta apretarlas;
+// los de las salas con antorchas apagadas, hasta encenderlas.
 const hiddenChests = new Set<string>();
 for (const plan of plans) {
     const { rooms, roomOf } = roomsByMap.get(plan.mapId)!;
@@ -255,7 +278,8 @@ for (const plan of plans) {
             if (!(charAt(plan, x, y) in CHEST_CONTENT)) continue;
             const roomId = roomOf.get(`${x},${y}`);
             const room = rooms.find((r) => r.id === roomId);
-            if (room?.cierra || plateRooms.has(`${plan.mapId}:${roomId}`)) hiddenChests.add(`${plan.mapId}:${x},${y}`);
+            const roomKey = `${plan.mapId}:${roomId}`;
+            if (room?.cierra || plateRooms.has(roomKey) || torchRooms.has(roomKey)) hiddenChests.add(`${plan.mapId}:${x},${y}`);
         }
     }
 }
@@ -299,6 +323,11 @@ function buildMechanics(plan: Plan) {
         crushers: [] as string[],
         hiddenExits: hiddenExits.get(plan.mapId) ?? [],
         caida: null as { map: number; x: number; y: number } | null,
+        // Roca de la Tortuga: antorchas, hielo, lo que se levanta con la Pulsera y las estatuas del Gancho.
+        torches: [] as Array<{ x: number; y: number; encendida: boolean; sala: number }>,
+        ice: [] as string[],
+        liftables: [] as Array<{ x: number; y: number; tipo: "vasija" | "piedra"; placa: boolean }>,
+        hookPosts: [] as string[],
     };
     if (plan.meta.caida) {
         const caida = markers.caidas.get(Number(plan.meta.caida));
@@ -331,8 +360,12 @@ function buildMechanics(plan: Plan) {
             if (c === "O") data.pits.push(key);
             if (c === "^") data.lava.push(key);
             if (c === "%") data.lavaPeriodica.push(key);
-            if (c === "_") data.plates.push(key);
+            if (c === "_" || c === "V") data.plates.push(key);
             if (c === "B") data.blocks.push(key);
+            if (c === "F" || c === "A") data.torches.push({ x, y, encendida: c === "A", sala: roomOf.get(key) ?? 0 });
+            if (c === "I") data.ice.push(key);
+            if (c === "U" || c === "V" || c === ";") data.liftables.push({ x, y, tipo: c === ";" ? "piedra" : "vasija", placa: c === "V" });
+            if (c === "H") data.hookPosts.push(key);
             if (c in CHEST_CONTENT) {
                 data.chests.push({ x, y, contenido: CHEST_CONTENT[c], oculto: hiddenChests.has(`${plan.mapId}:${key}`), sala: roomOf.get(key) ?? 0 });
             }
@@ -398,6 +431,21 @@ function buildTile(plan: Plan, x: number, y: number): Tile {
     }
     if (c === "?") {
         tile.object = DUNGEON_OBJECTS.losa.id;
+        tile.blocked = true;
+    }
+    // Roca de la Tortuga: F antorcha apagada, A encendida, I hielo, U vasija, V vasija sobre una placa, ; piedra
+    // suelta y H estatua para el Gancho. Todo tapa el paso hasta que se lo enciende, derrite o levanta.
+    const tortoiseObject: Record<string, number> = {
+        F: DUNGEON_OBJECTS.antorchaApagada.id,
+        A: DUNGEON_OBJECTS.antorchaEncendida.id,
+        I: DUNGEON_OBJECTS.hielo.id,
+        U: DUNGEON_OBJECTS.vasija.id,
+        V: DUNGEON_OBJECTS.vasija.id,
+        ";": DUNGEON_OBJECTS.piedra.id,
+        H: DUNGEON_OBJECTS.poste.id,
+    };
+    if (c in tortoiseObject) {
+        tile.object = tortoiseObject[c];
         tile.blocked = true;
     }
     if (c in CHEST_CONTENT && !hiddenChests.has(`${plan.mapId}:${x},${y}`)) {

@@ -26,9 +26,11 @@ const JUMP_GAP = 1;
 const LONG_JUMP_GAP = 2;
 const PUSH_STEP_MS = 70;
 
-type Motion = { tipo: "carga" | "carrera" | "salto" | "empujon"; until: number };
+type Motion = { tipo: "carga" | "carrera" | "salto" | "empujon" | "gancho"; until: number };
 type MotionUser = RuntimeCharacter & {
     dungeonMotion?: Motion | null;
+    // Lo que lleva sobre la cabeza con la Pulsera (dungeonTools.ts).
+    dungeonCarry?: { tipo: string; objIndex: number; map: number } | null;
     nextDashAt?: number;
     nextJumpAt?: number;
     dead?: boolean;
@@ -87,24 +89,28 @@ export function isMoving(user: RuntimeCharacter | undefined): boolean {
     return Boolean(motion && motion.until > Date.now());
 }
 
-// En el aire (saltando con la Pluma): el rodillo y el Ciempiés pasan por abajo.
+// En el aire (saltando con la Pluma o colgado de la cadena del Gancho): el rodillo, el Ciempiés y la lava no lo tocan.
 export function isAirborne(user: RuntimeCharacter | undefined): boolean {
     const motion = (user as MotionUser | undefined)?.dungeonMotion;
-    return Boolean(motion && motion.tipo === "salto" && motion.until > Date.now());
+    return Boolean(motion && (motion.tipo === "salto" || motion.tipo === "gancho") && motion.until > Date.now());
 }
 
-// Mientras carga, corre, salta o lo empujan no se ataca ni se lanzan hechizos.
+// Mientras carga, corre, salta, lo empujan o lo arrastra el Gancho no se ataca ni se lanzan hechizos; tampoco con
+// algo levantado con la Pulsera.
 export function getMotionBlockReason(user: RuntimeCharacter | undefined): string | null {
-    const motion = (user as MotionUser | undefined)?.dungeonMotion;
-    if (!motion || motion.until <= Date.now()) return null;
+    const mover = user as MotionUser | undefined;
+    const motion = mover?.dungeonMotion;
+    if (!motion || motion.until <= Date.now()) return mover?.dungeonCarry ? "Tenés las manos ocupadas." : null;
     if (motion.tipo === "salto") return "No podés atacar en el aire.";
+    if (motion.tipo === "gancho") return "No podés atacar colgado del gancho.";
     return motion.tipo === "empujon" ? "No podés atacar mientras te empujan." : "No podés atacar mientras corrés.";
 }
 
-function canAct(sessionId: EntityId, user: MotionUser, itemId: string, itemName: string): boolean {
+// Si puede usar un ítem de mazmorra ahora (avisa por qué no). `carrying`: lo puede usar con algo levantado.
+export function canAct(sessionId: EntityId, user: MotionUser, itemId: string, itemName: string, carrying = false): boolean {
     const dungeons = getDungeons();
     if (!dungeons.isDungeonInstanceMap(user.map)) {
-        tell(sessionId, `${itemName} solo funcionan adentro de una mazmorra.`);
+        tell(sessionId, "Los ítems de mazmorra solo funcionan adentro de una mazmorra.");
         return false;
     }
     if (!dungeons.characterHasDungeonItem(user, itemId)) {
@@ -118,6 +124,10 @@ function canAct(sessionId: EntityId, user: MotionUser, itemId: string, itemName:
     }
     if (getGame().hayAgua(Number(user.map), user.pos)) {
         tell(sessionId, "Nadando no se puede.");
+        return false;
+    }
+    if (user.dungeonCarry && !carrying) {
+        tell(sessionId, "Tenés las manos ocupadas.");
         return false;
     }
     return !isMoving(user);
@@ -379,6 +389,7 @@ module.exports = {
     isMoving,
     isAirborne,
     getMotionBlockReason,
+    canAct,
     push,
     findLanding,
     planDash,

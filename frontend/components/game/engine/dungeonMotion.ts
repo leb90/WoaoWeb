@@ -1,6 +1,7 @@
 import { Container, Graphics, Sprite, Text } from "pixi.js";
 import type { DungeonMotionPayload } from "../../../lib/aowProtocol";
 import { syncDisplayObjectToEntityFXRow } from "../rendering/rowLayerContainers";
+import { isDungeonToolMotion, playDungeonTool } from "./dungeonTools";
 import type { Character, Engine } from "./Engine";
 
 // Mazmorras: la Carrera de las Botas de Pegaso y el salto de la Pluma (server/src/dungeonMotion.ts). El server manda
@@ -162,6 +163,14 @@ function bump(engine: Engine, id: number) {
 
 export function playDungeonMotion(engine: Engine, payload: DungeonMotionPayload) {
     const entity = engine.personajes[payload.id] as DungeonMotionCharacter | undefined;
+    if (entity && isDungeonToolMotion(payload)) {
+        if (typeof payload.heading === "number" && entity.heading !== payload.heading) {
+            entity.heading = payload.heading;
+            engine.requestCharacterRerender?.(entity.id);
+        }
+        playDungeonTool(engine, payload);
+        return;
+    }
     if (!entity) return;
     const isSelf = engine.user?.id === entity.id;
     const now = engine.timestamp();

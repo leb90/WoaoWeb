@@ -425,3 +425,51 @@ Hay una pestaña por piso, y el jugador parpadea donde está. La brújula ademá
 
 ### La música (`lib/dungeonMusic.ts`)
 Cada mazmorra tiene en `jsons/dungeons.json` ("musica") tres temas que suenan uno detrás del otro y vuelven a empezar, y uno de combate. El combate suena mientras el jugador está en una sala cerrada con un jefe o un minijefe vivo (`jefe` y `minijefe` en las plantillas). Al terminar, sigue con el próximo tema. No tiene un botón propio para silenciarla: sigue al volumen general del juego. Los archivos están en `frontend/public/music/mazmorras/<mazmorra>/` y los créditos, en `docs/CREDITOS_SONIDOS.md`.
+
+## 11. Polvo de Fuego, Gancho y Pulsera (Roca de la Tortuga)
+
+El diseño está en [mazmorras/04-ROCA_DE_LA_TORTUGA.md](mazmorras/04-ROCA_DE_LA_TORTUGA.md), secciones 6 y 6.2. La Roca de la Tortuga da el Polvo de Fuego y, como en el original, usa el Gancho y la Pulsera. Leandro pidió hacer los dos ahora para que queden listos para las mazmorras que los den. Hasta entonces, un GM los da con `/mazmorra item polvo_de_fuego|gancho|pulsera`.
+
+Son ítems de mazmorra como la Pluma y las Botas: se ponen en las teclas Z o X desde la Mochila y solo funcionan adentro. El server los resuelve en `dungeonTools.ts` y avisa en el mismo paquete que la Carrera (101), con tipos nuevos. El cliente los dibuja en `engine/dungeonTools.ts`.
+
+| Ítem | Qué hace | Números |
+|---|---|---|
+| **Polvo de Fuego** (`fuego`) | Llamarada en línea recta hasta 6 baldosas. Al llegar: enciende una antorcha, derrite un bloque de hielo o quema a una criatura; las plantillas con `debilFuego` se queman el doble. El dibujo es el proyectil de los hechizos en colores de fuego, con chispas al llegar | 45 ms por baldosa, 0,7 s entre usos. Daño: 20 + 3 por nivel (±10 %) |
+| **Gancho** (`gancho`) | Cadena hasta 7 baldosas. Si engancha algo firme (cofre, bloque, vasija, piedra, estatua, antorcha, hielo, cristal o puerta), arrastra al personaje hasta al lado, por encima de pozos y lava. En una criatura, la aturde 1,5 s y le saca un poco. Contra la pared o sin nada, vuelve. No atraviesa a otros personajes | 40 ms por baldosa de ida, 50 por baldosa de arrastre, 0,9 s entre usos. Daño: 5 + 1 por nivel |
+| **Pulsera** (`pulsera`) | Levanta la vasija o la piedra que hay adelante y la lleva sobre la cabeza: se camina, pero no se ataca ni se usan otros ítems. Apretando otra vez la tira hasta 4 baldosas; se rompe al caer y lastima a la criatura que toque. Lo que tapaba queda a la vista (un botón). Al morir, salir o cambiar de mapa se suelta | 70 ms por baldosa del tiro. Daño: 15 + 2 por nivel |
+
+Mientras arrastra el Gancho, el personaje cuenta como en el aire, igual que saltando: la lava, el rodillo y el Ciempiés no lo tocan.
+
+| Las antorchas encendidas y el cofre que aparece | La vasija levantada con la Pulsera | El Gancho cruzando la lava |
+|---|---|---|
+| ![Antorchas](mazmorras/herramientas/antorchas.png) | ![Vasija](mazmorras/herramientas/vasija.png) | ![Gancho](mazmorras/herramientas/gancho.png) |
+
+(En las capturas el personaje es un GM invisible: por eso se ve, con lo que lleva, medio transparente.)
+
+### Símbolos nuevos del plano
+| Símbolo | Qué es |
+|---|---|
+| `F` / `A` | Antorcha apagada / encendida (tapan el paso). Los cofres de una sala con antorchas apagadas aparecen al encenderlas todas |
+| `I` | Bloque de hielo: lo derrite el Polvo |
+| `U` / `V` | Vasija / vasija sobre una placa (la placa cuenta para las puertas `=`) |
+| `;` | Piedra suelta |
+| `H` | Estatua para engancharse |
+
+Objetos 1852-1857 y gráficos 38215-38229 (créditos en [CREDITOS_GRAFICOS.md](CREDITOS_GRAFICOS.md)). Sonidos 222-225 (créditos en [CREDITOS_SONIDOS.md](CREDITOS_SONIDOS.md)).
+
+### Para probarlos
+En la mazmorra de prueba, el mapa 591 tiene debajo de la sala de la salida cuatro salas nuevas:
+- **Antorchas:** dos antorchas y un cofre que aparece al encenderlas; un bloque de hielo tapa la puerta de abajo.
+- **Vasijas:** una vasija, una piedra, un esqueleto y una vasija sobre el botón que abre la sala de la lava.
+- **Detrás del hielo:** un cofre.
+- **Lava:** una franja de lava de 5 baldosas y una estatua del otro lado, para cruzar con el Gancho, y un cofre.
+
+La prueba en vivo es `pw/run-herramientas.mjs`.
+
+### Archivos
+- `server/src/dungeonTools.ts`: los tres ítems.
+- `server/src/dungeons.ts`: `toolTargetAt`, `lightTorch`, `meltIce`, `liftAt` y `canToolHitNpc`; antorchas, hielo y vasijas en el estado de cada mapa; los ítems en `DUNGEON_ITEMS` y los comandos `fuego`, `gancho` y `pulsera`.
+- `server/src/dungeonMotion.ts`: el arrastre cuenta como estar en el aire, y con las manos ocupadas no se ataca.
+- `server/src/scripts/buildDungeonMaps.ts`: los símbolos y objetos nuevos.
+- Cliente: `engine/dungeonTools.ts`, `DungeonBackpack.tsx` (la casilla de la Vara pasa a ser el Polvo de Fuego), `aowProtocol.ts` y los gráficos nuevos en los dos índices de gráficos (con la versión subida en `gameLoader.ts`).
+

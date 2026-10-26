@@ -1,7 +1,8 @@
 // Trampas con movimiento propio de la Cueva de la Cola (docs/mazmorras/03-CUEVA_DE_LA_COLA.md, sección 7). Las marca la
 // plantilla de la criatura en npcs.json y las mueve este módulo, no la IA (npc.customMotion):
 // - chispa: no se mata; da vueltas alrededor del pilar o del cofre que tiene al lado (las 8 baldosas que lo rodean)
-//   y quema al tocar. Si no tiene nada al lado, sigue la pared con la mano derecha;
+//   y quema al tocar, sin empujar (empujando por su anillo, te volvía a alcanzar en cadena). Si no tiene nada al lado,
+//   sigue la pared con la mano derecha;
 // - cuchilla: quieta hasta que alguien queda en su fila o columna; ahí sale disparada hasta chocar y vuelve despacio.
 //   Un bloque empujado en el medio le corta el recorrido;
 // - rodillo: el minijefe (Ogro del Rodillo) empuja una columna de púas que cruza la sala de punta a punta; al llegar,
@@ -15,6 +16,8 @@ const vars = require("./vars");
 
 const SPARK_STEP_MS = 260;
 const SPARK_DAMAGE = 0.1;
+// La chispa vuelve a quemar al mismo jugador recién después de esto (una vuelta al pilar dura unos 2 s).
+const SPARK_COOLDOWN_MS = 1_500;
 const BLADE_RANGE = 7;
 const BLADE_CHARGE_STEP_MS = 55;
 const BLADE_RETURN_STEP_MS = 220;
@@ -99,16 +102,16 @@ function playerAt(mapId: number, x: number, y: number): RuntimeCharacter | null 
     return user && !user.dead ? user : null;
 }
 
-// Quema y empuja una baldosa hacia `dir` (salvo en el aire, o si la misma trampa le pegó recién).
-function hitPlayer(user: RuntimeCharacter, trapId: string, fraction: number, message: string, dir: Pos, tiles = 1) {
+// Quema y empuja `tiles` baldosas hacia `dir` (salvo en el aire, o si la misma trampa le pegó recién).
+function hitPlayer(user: RuntimeCharacter, trapId: string, fraction: number, message: string, dir: Pos, tiles = 1, cooldownMs = HIT_COOLDOWN_MS) {
     const motion = getMotion();
     if (motion.isAirborne(user)) return;
     const key = `${trapId}:${user.id}`;
     const now = Date.now();
     if (now < (lastHitAt.get(key) ?? 0)) return;
-    lastHitAt.set(key, now + HIT_COOLDOWN_MS);
+    lastHitAt.set(key, now + cooldownMs);
     getDungeons().hurtPlayer(user, fraction, message);
-    if (!(user as { dead?: boolean }).dead) motion.push(user, dir, tiles);
+    if (tiles > 0 && !(user as { dead?: boolean }).dead) motion.push(user, dir, tiles);
 }
 
 // Mueve una criatura sin las reglas de la IA (el rodillo salta de punta a punta).
@@ -116,6 +119,7 @@ function placeNpc(npc: any, to: Pos) {
     if (npc.pos.x === to.x && npc.pos.y === to.y) return;
     const cell = vars.mapData[npc.map]?.[npc.pos.y]?.[npc.pos.x];
     if (cell && String(cell.id) === String(npc.id)) cell.id = 0;
+    require("./targetAssist").recordTileLeft(npc, npc.map, npc.pos.x, npc.pos.y);
     const dx = Math.sign(to.x - npc.pos.x);
     const dy = Math.sign(to.y - npc.pos.y);
     const dir = vars.direcciones;
@@ -213,7 +217,7 @@ function stepSpark(spark: Spark, now: number) {
         const dir = { x: next.x - npc.pos.x, y: next.y - npc.pos.y };
         const user = playerAt(spark.mapId, next.x, next.y);
         if (user) {
-            hitPlayer(user, spark.npcId, SPARK_DAMAGE, "Te quemó una chispa:", dir);
+            hitPlayer(user, spark.npcId, SPARK_DAMAGE, "Te quemó una chispa:", dir, 0, SPARK_COOLDOWN_MS);
             return;
         }
         if (vars.mapData[spark.mapId]?.[next.y]?.[next.x]?.id) return;
@@ -228,7 +232,7 @@ function stepSpark(spark: Spark, now: number) {
         spark.dir = dir;
         const user = playerAt(spark.mapId, to.x, to.y);
         if (user) {
-            hitPlayer(user, spark.npcId, SPARK_DAMAGE, "Te quemó una chispa:", DIRS[dir]);
+            hitPlayer(user, spark.npcId, SPARK_DAMAGE, "Te quemó una chispa:", DIRS[dir], 0, SPARK_COOLDOWN_MS);
             return;
         }
         if (vars.mapData[spark.mapId]?.[to.y]?.[to.x]?.id) return;

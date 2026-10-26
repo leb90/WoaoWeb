@@ -281,7 +281,7 @@ Los dos son ítems del inventario de mazmorra y solo funcionan adentro. Se usan 
 
 | | Carrera (Botas de Pegaso) | Salto (Pluma de Roc) |
 |---|---|---|
-| Tecla | Shift izquierdo | F |
+| Tecla | La de objeto que se le asigne en la Mochila (Z o X; ver la sección 10) | La de objeto que se le asigne en la Mochila |
 | Qué hace | Medio segundo de carga, pataleando en el lugar con polvo, y corre en línea recta hasta 8 baldosas (55 ms cada una), con una estela del personaje | Salta en arco, con la sombra en el piso: cae 2 baldosas adelante (por encima de 1 de pozo, lava, pinchos o piso que se desmorona) |
 | Al chocar | Con una criatura: le pega un golpe y medio y la empuja. Con cristales: los rompe y sigue. Con una pared rajada: tiembla (en la arena, el jefe cae). Con otra cosa: frena con un sacudón | — |
 | Juntos | Corriendo, al llegar al borde de un pozo de hasta 2 baldosas salta solo (salto largo, cae 3 adelante) | |
@@ -356,7 +356,7 @@ Los que lo ven reciben la cabeza unas 10 veces por segundo (paquete `dungeonBoss
 ### Trampas que se mueven (`dungeonHazards.ts`)
 | Trampa | Qué hace |
 |---|---|
-| Chispa | No se mata. Da vueltas alrededor del pilar o del cofre que tiene al lado (260 ms por baldosa); al tocar quema el 10 % y empuja |
+| Chispa | No se mata. Da vueltas alrededor del pilar o del cofre que tiene al lado (260 ms por baldosa); al tocar quema el 10 %, sin empujar (empujando por su anillo te volvía a alcanzar en cadena), y al mismo jugador no lo vuelve a quemar hasta 1,5 s después |
 | Cuchilla | Quieta hasta que alguien queda en su fila o columna (hasta 7 baldosas, sin paredes ni bloques en el medio). Sale disparada, quema el 10 % y empuja, y vuelve despacio. Un bloque empujado le corta el recorrido. Van donde se puede salir de su fila: en un pasillo serían inevitables |
 | Rodillo | El del Ogro del Rodillo: una columna de púas que cruza la sala de punta a punta mientras la sala está cerrada; al llegar, el ogro salta al otro lado. Quema el 15 % y empuja, salvo al que está en el aire |
 | Empujón | `empuja` en la plantilla: el golpe de la criatura corre al jugador esas baldosas, y lo puede tirar a un pozo (los escarabajos) |
@@ -392,3 +392,36 @@ La prueba en vivo de punta a punta recorre la Cueva entera con un personaje com�
 - `server/src/scripts/buildDungeonMaps.ts`: los símbolos y opciones nuevos.
 - `server/mazmorras/cueva/`: los planos de los mapas 530-532 y la leyenda.
 - Cliente: `engine/dungeonBoss.ts` (el Ciempiés), `engine/dungeonMotion.ts` (el empujón), `public/sprites/ciempies.png`.
+
+## 10. La Mochila, las teclas de objeto, el mapa grande y la música (todas las mazmorras)
+
+Pedido de Leandro: que el inventario no se deforme con cada ítem nuevo, al estilo del menú de Link's Awakening, y música propia en cada mazmorra. El inventario clásico (la grilla de objetos) no cambia.
+
+### La barra y la Mochila (`components/DungeonBackpack.tsx`)
+Adentro de una mazmorra, arriba del inventario, hay una barra con:
+- las dos **teclas de objeto** (la A y la B de Zelda; por defecto Z y X), con la letra encima del ítem;
+- las llaves chicas, la llave del jefe, la brújula y el botón del mapa;
+- el botón de la **Mochila**.
+
+| La barra (Z y X arriba del inventario) | La Mochila | El mapa grande |
+|---|---|---|
+| ![La barra](mazmorras/mochila/barra.png) | ![La Mochila](mazmorras/mochila/mochila.png) | ![El mapa](mazmorras/mochila/mapa.png) |
+
+La Mochila muestra:
+- las dos teclas y qué ítem tiene cada una;
+- los 8 ítems de la serie: los que tiene, con su letra si está en una tecla, y huecos para los que faltan;
+- lo de la mazmorra actual: llaves, llave del jefe, mapa y brújula;
+- la colección: caracolas secretas y los 8 trofeos.
+
+Para poner un ítem en una tecla, se lo elige en la Mochila; si ya estaba en la otra, se cambian. Se guarda en el personaje (`progress.dungeonButtons`, comando `/mazmorra boton <1|2> <ítem|ninguno>`). Las teclas se cambian en la configuración de teclas, como el resto (`dungeonItem1` y `dungeonItem2`, que reemplazan a las viejas de la Carrera y el salto). Los ítems de mazmorra quedan para siempre, pero solo se usan adentro: afuera las teclas no hacen nada y el server lo vuelve a validar.
+
+### El mapa grande
+Se abre desde la barra, aunque no se tenga el mapa (como en Link's Awakening):
+- **Sin el mapa:** se ven las salas recorridas.
+- **Con el mapa:** también las demás, a media luz.
+- **Con la brújula:** los cofres y la puerta del jefe.
+
+Hay una pestaña por piso, y el jugador parpadea donde está. La brújula además suena al entrar a una sala con una llave sin agarrar.
+
+### La música (`lib/dungeonMusic.ts`)
+Cada mazmorra tiene en `jsons/dungeons.json` ("musica") tres temas que suenan uno detrás del otro y vuelven a empezar, y uno de combate. El combate suena mientras el jugador está en una sala cerrada con un jefe o un minijefe vivo (`jefe` y `minijefe` en las plantillas). Al terminar, sigue con el próximo tema. No tiene un botón propio para silenciarla: sigue al volumen general del juego. Los archivos están en `frontend/public/music/mazmorras/<mazmorra>/` y los créditos, en `docs/CREDITOS_SONIDOS.md`.

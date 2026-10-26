@@ -34,6 +34,14 @@
         "itemMazmorra": {
             "id": "patas_de_rana",
             "nombre": "Patas de rana"
+        },
+        "musica": {
+            "pistas": [
+                "/music/mazmorras/prueba/1.mp3",
+                "/music/mazmorras/prueba/2.mp3",
+                "/music/mazmorras/prueba/3.mp3"
+            ],
+            "combate": "/music/mazmorras/prueba/combate.mp3"
         }
     },
     {
@@ -89,7 +97,15 @@
             "id": "iris_del_ojo",
             "nombre": "el Iris del Ojo"
         },
-        "oroJefe": 1000
+        "oroJefe": 1000,
+        "musica": {
+            "pistas": [
+                "/music/mazmorras/caverna/1.mp3",
+                "/music/mazmorras/caverna/2.mp3",
+                "/music/mazmorras/caverna/3.mp3"
+            ],
+            "combate": "/music/mazmorras/caverna/combate.mp3"
+        }
     },
     {
         "id": "cueva",
@@ -138,6 +154,14 @@
             "id": "aguijon_del_ciempies",
             "nombre": "el Aguijón del Ciempiés"
         },
-        "oroJefe": 600
+        "oroJefe": 600,
+        "musica": {
+            "pistas": [
+                "/music/mazmorras/cueva/1.mp3",
+                "/music/mazmorras/cueva/2.mp3",
+                "/music/mazmorras/cueva/3.mp3"
+            ],
+            "combate": "/music/mazmorras/cueva/combate.mp3"
+        }
     }
 ]

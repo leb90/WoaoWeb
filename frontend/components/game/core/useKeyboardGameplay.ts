@@ -193,21 +193,21 @@ export function useKeyboardGameplay({
                 return;
             }
 
-            // Mazmorras: la Carrera y el salto, si el personaje tiene el ítem (el server lo vuelve a validar).
-            const dungeonAction = isHotkeyMatch(e, settings.dungeonDash ?? [])
-                ? "carrera"
-                : isHotkeyMatch(e, settings.dungeonJump ?? [])
-                  ? "salto"
+            // Mazmorras: las dos teclas de objeto usan el ítem que se eligió para cada una en la Mochila. Fuera de una
+            // mazmorra no hacen nada (y el server lo vuelve a validar).
+            const dungeonSlot = isHotkeyMatch(e, settings.dungeonItem1 ?? [])
+                ? "uno"
+                : isHotkeyMatch(e, settings.dungeonItem2 ?? [])
+                  ? "dos"
                   : null;
+            const insideDungeon = playerHudRef.current?.dungeonState?.enMazmorra;
+            const slotItem = dungeonSlot ? insideDungeon?.botones?.[dungeonSlot] : null;
+            const dungeonAction = slotItem
+                ? (insideDungeon?.items ?? []).find((item: { id: string }) => item.id === slotItem)?.accion ?? null
+                : null;
             if (dungeonAction && !e.repeat) {
-                const items =
-                    playerHudRef.current?.dungeonState?.enMazmorra?.items ?? [];
                 const socket = websocketRef.current;
-                if (
-                    activeEngine?.inDungeon &&
-                    items.some((item: { accion: string | null }) => item.accion === dungeonAction) &&
-                    socket?.readyState === WebSocket.OPEN
-                ) {
+                if (activeEngine?.inDungeon && socket?.readyState === WebSocket.OPEN) {
                     socket.send(createDialogPacket(`/mazmorra ${dungeonAction}`));
                     recordClientGameAction(`dungeon_${dungeonAction}`, { code: e.code });
                     e.preventDefault();

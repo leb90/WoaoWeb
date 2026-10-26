@@ -120,6 +120,9 @@ export type DungeonDef = {
     // Cofre del jefe (Y): trofeo de la serie y oro, una vez por día por personaje.
     trofeo?: { id: string; nombre: string };
     oroJefe?: number;
+    // Música (frontend/public/music/mazmorras): tres temas que suenan en bucle, uno detrás del otro, y el de la pelea
+    // con el jefe o un minijefe.
+    musica?: { pistas: string[]; combate?: string };
 };
 
 // --- Mecánicas: datos fijos de cada mapa base ---
@@ -381,8 +384,16 @@ function buildMinimap(run: DungeonRun, base: number) {
     const index = mechanicsOf(base);
     const state = run.mapState[base];
     if (!index || !state) return null;
+    const rooms = index.mech.rooms;
     return {
         mapa: base,
+        // Lo que ocupa el piso entero (para encuadrar el mapa grande; no dice qué hay adentro).
+        limites: {
+            x1: Math.min(...rooms.map((room) => room.x1)),
+            y1: Math.min(...rooms.map((room) => room.y1)),
+            x2: Math.max(...rooms.map((room) => room.x2)),
+            y2: Math.max(...rooms.map((room) => room.y2)),
+        },
         salas: index.mech.rooms
             .filter((room) => run.hasMap || state.visited.has(room.id))
             .map((room) => ({ x1: room.x1, y1: room.y1, x2: room.x2, y2: room.y2, visitada: state.visited.has(room.id) })),
@@ -434,11 +445,87 @@ function buildState(user: RuntimeCharacter, panel: Record<string, unknown> | nul
                       patas: hasDungeonItem(key, SWIM_ITEM),
                       // Inventario de mazmorra: los ítems que tiene, y cuáles se usan (la Carrera y el salto).
                       items: ownedDungeonItems(key),
+                      // Las dos teclas de objeto (la A y la B de Zelda): qué ítem usa cada una.
+                      botones: dungeonButtons(key),
+                      // La colección de la serie: caracolas secretas y trofeos de los jefes.
+                      coleccion: dungeonCollection(key),
                       minimapa: buildMinimap(insideRun, baseMapOf(Number(user.map)) ?? 0),
+                      // Todos los pisos, para el mapa grande (como el de Link's Awakening).
+                      plano: Object.keys(insideRun.maps).map((base) => ({
+                          ...buildMinimap(insideRun, Number(base)),
+                          nombre: mapNameOf(Number(base)),
+                          actual: Number(base) === baseMapOf(Number(user.map)),
+                      })),
+                      musica: insideDef.musica ?? null,
+                      combate: inBossFight(user),
                   }
                 : null,
         losa: losa ? { seq: ++losaSeq, texto: losa.texto } : null,
     };
+}
+
+// Los dos botones de objeto. Se guardan en el personaje; sin elegir, van los ítems que se usan, en el orden de la serie.
+function dungeonButtons(characterId: string): { uno: string | null; dos: string | null } {
+    const progress = getProgressStore().getProgress({ _id: characterId }) as { dungeonButtons?: { uno?: string | null; dos?: string | null } };
+    const usable = ownedDungeonItems(characterId).filter((item) => item.accion).map((item) => item.id);
+    const chosen = progress.dungeonButtons ?? {};
+    const pick = (value: string | null | undefined) => (value === null ? null : value && usable.includes(value) ? value : undefined);
+    const uno = pick(chosen.uno);
+    const dos = pick(chosen.dos);
+    const free = usable.filter((id) => id !== uno && id !== dos);
+    return {
+        uno: uno === undefined ? (free.shift() ?? null) : uno,
+        dos: dos === undefined ? (free.shift() ?? null) : dos,
+    };
+}
+
+function dungeonCollection(characterId: string) {
+    const progress = getProgressStore().getProgress({ _id: characterId }) as { caracolas?: string[]; trofeos?: string[] };
+    return { caracolas: progress.caracolas ?? [], trofeos: progress.trofeos ?? [] };
+}
+
+const mapNames = new Map<number, string>();
+function mapNameOf(base: number): string {
+    if (!mapNames.has(base)) {
+        let name = `Mapa ${base}`;
+        try {
+            name = String(JSON.parse(fs.readFileSync(path.join(MAPAS_SOURCE, `mapa_${base}`, "meta.json"), "utf8")).name ?? name);
+        } catch {
+            // Sin meta: queda el número.
+        }
+        mapNames.set(base, name);
+    }
+    return mapNames.get(base)!;
+}
+
+// Pelea con un jefe o un minijefe: la sala del jugador está cerrada y adentro queda uno vivo.
+function inBossFight(user: RuntimeCharacter): boolean {
+    const ctx = contextOf(Number(user.map));
+    const roomId = ctx?.index.mech.roomOf[coordKey(user.pos.x, user.pos.y)];
+    if (!ctx || roomId === undefined || !ctx.state.rooms.get(roomId)?.locked) return false;
+    return roomCreatures(ctx, roomId).some((npc) => templateOf(npc).jefe || templateOf(npc).minijefe);
+}
+
+// /mazmorra boton <1|2> <ítem|ninguno>: qué ítem usa cada tecla de objeto. Si el ítem estaba en la otra, se cambian.
+function setButtonCommand(sessionId: EntityId, slot: string, itemId: string) {
+    const user = vars.personajes?.[sessionId] as RuntimeCharacter | undefined;
+    const key = characterKey(user);
+    if (!user || !key) return;
+    const own = slot === "1" ? "uno" : slot === "2" ? "dos" : null;
+    if (!own) return tell(sessionId, "Uso: /mazmorra boton <1|2> <ítem|ninguno>.", "white");
+    const other = own === "uno" ? "dos" : "uno";
+    const current = dungeonButtons(key);
+    const value = itemId === "ninguno" ? null : itemId;
+    if (value && !ownedDungeonItems(key).some((item) => item.id === value && item.accion)) {
+        return tell(sessionId, "Ese ítem no lo tenés o no se usa con una tecla.", "white");
+    }
+    const next = { ...current, [own]: value };
+    if (value && current[other] === value) next[other] = current[own];
+    const progressStore = getProgressStore();
+    const progress = progressStore.getProgress({ _id: key }) as { dungeonButtons?: { uno?: string | null; dos?: string | null } };
+    progress.dungeonButtons = next;
+    progressStore.saveProgress({ _id: key });
+    sendState(sessionId);
 }
 
 function sendState(sessionId: EntityId, panel: Record<string, unknown> | null = null, losa: { texto: string } | null = null) {
@@ -898,6 +985,10 @@ export function handleCommand(sessionId: EntityId, text: string) {
             const [, itemId = "", flag = ""] = text.trim().split(/\s+/);
             return grantItemCommand(sessionId, itemId.toLowerCase(), flag.toLowerCase() === "quitar");
         }
+        case "boton": {
+            const [, slot = "", itemId = ""] = text.trim().split(/\s+/);
+            return setButtonCommand(sessionId, slot, itemId.toLowerCase());
+        }
         default:
             return tell(sessionId, "Uso: /mazmorra entrar solo | entrar grupo | aceptar | rechazar | salir", "white");
     }
@@ -1087,6 +1178,7 @@ function lockRoom(ctx: MapContext, roomId: number) {
     const center = roomCenter(ctx, roomId);
     if (center) playSoundAt(ctx.mapId, center, DUNGEON_SOUNDS.puertasCierran);
     tellRun(ctx.run, "¡Las puertas se cerraron! Derrotá a las criaturas de la sala para abrirlas.", "#FF6B3D");
+    refreshRun(ctx.run);
 }
 
 // Sala vacía: se abren sus puertas y aparecen sus cofres ocultos.
@@ -1520,6 +1612,7 @@ export function afterStep(ws: RuntimeClient, user: RuntimeCharacter) {
         const firstVisit = !ctx.state.visited.has(roomId);
         ctx.state.visited.add(roomId);
         onRoomEnter(ctx, roomId);
+        compassChime(ws, ctx, roomId);
         if (firstVisit) refreshRun(ctx.run);
     }
     const now = Date.now();
@@ -1533,6 +1626,17 @@ export function afterStep(ws: RuntimeClient, user: RuntimeCharacter) {
     crumbleLater(ctx, tileKey);
     if (ctx.index.timedPlates.has(tileKey)) pressTimedPlate(ctx, tileKey);
     updatePlates(ctx);
+}
+
+// La brújula, como en Link's Awakening: al entrar a una sala con una llave sin agarrar, suena.
+function compassChime(ws: RuntimeClient, ctx: MapContext, roomId: number) {
+    if (!ctx.run.hasCompass) return;
+    const hasKey = ctx.index.mech.chests.some(
+        (chest) => chest.sala === roomId && (chest.contenido === "llave" || chest.contenido === "jefe") && !ctx.state.openedChests.has(coordKey(chest.x, chest.y)),
+    );
+    if (!hasKey) return;
+    getHandleProtocol().playSound(0, DUNGEON_SOUNDS.secreto, ws);
+    tell(ws.id!, "La brújula suena: en esta sala hay una llave.");
 }
 
 // Caer a un pozo: daño y vuelta a la entrada de la sala. Devuelve true si el paso terminó ahí.
@@ -1910,6 +2014,9 @@ function updateCrushers(run: DungeonRun, now: number) {
 // revivirMs. flota: el jefe que flota hasta que lo bajan con la Carrera; al llegar a la mitad de la vida se divide
 // en `divide.cantidad` criaturas `divide.npc`.
 type SpecialTemplate = {
+    // Jefe o minijefe: con uno vivo en la sala cerrada suena la música de combate.
+    jefe?: boolean;
+    minijefe?: boolean;
     despierta?: number;
     pareja?: string;
     revivirMs?: number;

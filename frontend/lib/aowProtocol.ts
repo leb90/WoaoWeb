@@ -507,7 +507,16 @@ export type DungeonStatePayload = {
         patas: boolean;
         // Inventario de mazmorra: los ítems que tiene (para siempre) y cuál se usa con un clic.
         items?: Array<{ id: string; nombre: string; accion: "carrera" | "salto" | null }>;
+        // Qué ítem usa cada una de las dos teclas de objeto (la A y la B de Zelda).
+        botones?: { uno: string | null; dos: string | null };
+        // La colección de la serie: las mazmorras con la caracola secreta encontrada y los trofeos.
+        coleccion?: { caracolas: string[]; trofeos: string[] };
         minimapa: DungeonMinimapState | null;
+        // Todos los pisos, para el mapa grande.
+        plano?: Array<DungeonMinimapState & { nombre: string; actual: boolean }>;
+        // Los tres temas que suenan en bucle y el de la pelea con un jefe o un minijefe.
+        musica?: { pistas: string[]; combate?: string } | null;
+        combate?: boolean;
     } | null;
     // Texto de una losa que se acaba de leer (seq cambia en cada lectura).
     losa: { seq: number; texto: string } | null;
@@ -537,6 +546,7 @@ export type DungeonBossPayload = {
 // Salas visitadas (con el mapa, todas) y, con la brújula, los cofres y la puerta del jefe.
 export type DungeonMinimapState = {
     mapa: number;
+    limites?: { x1: number; y1: number; x2: number; y2: number };
     salas: Array<{ x1: number; y1: number; x2: number; y2: number; visitada: boolean }>;
     cofres: Array<{ x: number; y: number; abierto: boolean }>;
     jefe: Array<{ x: number; y: number }>;

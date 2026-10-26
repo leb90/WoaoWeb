@@ -208,6 +208,8 @@ function moveTail(boss: Boss, npc: any) {
     if (vars.mapData[boss.mapId]?.[step.y]?.[step.x]?.id) return;
     const cell = vars.mapData[boss.mapId]?.[npc.pos.y]?.[npc.pos.x];
     if (cell && String(cell.id) === String(npc.id)) cell.id = 0;
+    // Un clic en la baldosa que la cola acaba de dejar igual le apunta (la ayuda para apuntar del juego).
+    require("./targetAssist").recordTileLeft(npc, boss.mapId, npc.pos.x, npc.pos.y);
     const dir = vars.direcciones;
     npc.heading = step.x > npc.pos.x ? dir.right : step.x < npc.pos.x ? dir.left : step.y > npc.pos.y ? dir.down : dir.up;
     npc.pos.x = step.x;

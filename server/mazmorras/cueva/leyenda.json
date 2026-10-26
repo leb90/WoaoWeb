@@ -136,7 +136,8 @@
             "drop": [],
             "movement": 1,
             "desc": "Empuja un rodillo de púas de punta a punta de la sala. Saltalo.",
-            "rodillo": true
+            "rodillo": true,
+            "minijefe": true
         },
         "9743": {
             "base": 541,
@@ -150,16 +151,21 @@
             "drop": [],
             "movement": 1,
             "desc": "Un ciempiés enorme que da vueltas sin parar. Solo siente los golpes en la cola.",
-            "ciempies": true
+            "ciempies": true,
+            "jefe": true
         }
     },
     "graficos": {
         "piso": 8151,
         "pared": 7812
     },
-    "portales": ["6"],
+    "portales": [
+        "6"
+    ],
     "losas": {
-        "530": ["El ciempiés solo siente los golpes en la cola. Saltale por encima y pegale atrás."]
+        "530": [
+            "El ciempiés solo siente los golpes en la cola. Saltale por encima y pegale atrás."
+        ]
     },
     "oro": 50,
     "oroGrande": 200,

@@ -44,3 +44,27 @@ Para la Caverna de las Llaves se sumaron sonidos del mismo paquete de Juhani Jun
 | 221 | Bajan los aplastadores | `sfx_exp_shortest_hard1.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
 
 Atribución que pide la licencia CC-BY de 213 y 214: "Rock/Metal Slide" de Hansjörg Malthaner (http://opengameart.org/users/varkalandar), CC-BY 4.0, modificado (recortado, normalizado y acelerado).
+
+## Música de las mazmorras (`frontend/public/music/mazmorras/`)
+
+Cada mazmorra tiene tres temas que suenan uno detrás del otro y uno de combate, para la pelea con un jefe o un minijefe (`lib/dungeonMusic.ts`). Se pasaron a MP3 de 96 kbps y se igualaron a −18 LUFS. Ninguno tiene voces.
+
+| Archivo | Uso | Original | Autor | Licencia |
+|---|---|---|---|---|
+| `prueba/1.mp3` | Gruta (mazmorra de prueba), tema 1 | "Underwater Theme", https://opengameart.org/content/underwater-theme | CleytonKauffman | CC0 |
+| `prueba/2.mp3` | Gruta, tema 2 | "Underwater Theme II", https://opengameart.org/content/underwater-theme-ii | CleytonKauffman | CC0 |
+| `prueba/3.mp3` | Gruta, tema 3 | "Nautilus", https://opengameart.org/content/nautilus | poinl | CC0 |
+| `prueba/combate.mp3` | Gruta, combate | "Epic Boss Battle", https://opengameart.org/content/boss-battle-music | Juhani Junkala (SubspaceAudio) | CC0 |
+| `caverna/1.mp3` | Caverna de las Llaves, tema 1 | "Cave Theme", https://opengameart.org/content/cave-theme | Brandon75689 (publicado por HaelDB) | CC0 (también OGA-BY 3.0) |
+| `caverna/2.mp3` | Caverna, tema 2 | "Dungeon Ambience", https://opengameart.org/content/dungeon-ambience | yd | CC0 |
+| `caverna/3.mp3` | Caverna, tema 3 | "RPG Exploration - (The Black Temple)", https://opengameart.org/content/rpg-exploration-the-black-temple | Hitctrl | [CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| `caverna/combate.mp3` | Caverna, combate | "Battle Theme A", https://opengameart.org/content/battle-theme-a | cynicmusic (cynicmusic.com, pixelsphere.org) | CC0 |
+| `cueva/1.mp3` | Cueva de la Cola, tema 1 | "8bit Dungeon Level", https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1200066 | Kevin MacLeod (incompetech.com) | [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
+| `cueva/2.mp3` | Cueva, tema 2 | "Video Dungeon Crawl", https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1200064 | Kevin MacLeod (incompetech.com) | CC-BY 4.0 |
+| `cueva/3.mp3` | Cueva, tema 3 | "Dubious Dungeon", https://opengameart.org/content/dubious-dungeon | Bogart VGM | CC-BY 4.0 |
+| `cueva/combate.mp3` | Cueva, combate | "Zelda Style 8-bit Boss Theme", https://opengameart.org/content/zelda-style-8-bit-boss-theme | HydroGene | CC0 |
+
+Atribución que piden las licencias CC-BY:
+- "RPG Exploration - (The Black Temple)", de Hitctrl, CC-BY 3.0, convertido y nivelado.
+- "8bit Dungeon Level" y "Video Dungeon Crawl", de Kevin MacLeod (incompetech.com), con licencia Creative Commons: By Attribution 4.0 (http://creativecommons.org/licenses/by/4.0/), convertidos y nivelados.
+- "Dubious Dungeon", de Bogart VGM, CC-BY 4.0, convertido y nivelado.

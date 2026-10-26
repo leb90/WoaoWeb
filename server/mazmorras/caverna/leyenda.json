@@ -42,7 +42,8 @@
             "drop": [],
             "desc": "Nunca se la ve sola.",
             "pareja": "serpientes",
-            "revivirMs": 15000
+            "revivirMs": 15000,
+            "minijefe": true
         },
         "9732": {
             "base": 537,
@@ -56,7 +57,11 @@
             "drop": [],
             "desc": "Un ojo enorme que flota en la oscuridad de la caverna.",
             "flota": true,
-            "divide": { "npc": 9733, "cantidad": 2 }
+            "divide": {
+                "npc": 9733,
+                "cantidad": 2
+            },
+            "jefe": true
         },
         "9733": {
             "base": 537,
@@ -70,13 +75,19 @@
             "drop": [],
             "desc": "La mitad de un ojo, y furioso.",
             "pareja": "ojos",
-            "revivirMs": 10000
+            "revivirMs": 10000,
+            "jefe": true
         }
     },
     "losas": {
-        "520": ["El ojo no baja por las buenas. Despertalo con el estruendo de una carrera contra sus paredes."]
+        "520": [
+            "El ojo no baja por las buenas. Despertalo con el estruendo de una carrera contra sus paredes."
+        ]
     },
     "oro": 50,
     "oroGrande": 200,
-    "trampa": [508, 508]
+    "trampa": [
+        508,
+        508
+    ]
 }

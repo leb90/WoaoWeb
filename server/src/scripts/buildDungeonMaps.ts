@@ -33,6 +33,8 @@
 //   F  antorcha apagada (se enciende con el Polvo; si la sala tiene cofres, aparecen al encender todas)
 //   A  antorcha encendida      I  bloque de hielo (lo derrite el Polvo)      H  estatua (se engancha con el Gancho)
 //   U  vasija    V  vasija sobre una placa    ;  piedra suelta (se levantan y se tiran con la Pulsera)
+// Bombas (los básicos que tiene todo el mundo):
+//   @  pared rajada: un paso tapado que se abre con una bomba (arco tapiado en una pared horizontal, rocas en una vertical)
 // Lo que aparece: los cofres de una sala que se cierra (!), que tiene placas o antorchas apagadas aparecen al vaciarla,
 // al apretar las placas o al encender las antorchas; las escaleras de una sala que se cierra (y la otra punta)
 // aparecen al vaciarla.
@@ -87,6 +89,9 @@ export const DUNGEON_OBJECTS = {
     poste: { id: 1855, name: "Estatua de piedra", grh: 38218 },
     antorchaApagada: { id: 1856, name: "Antorcha apagada", grh: 38219 },
     antorchaEncendida: { id: 1857, name: "Antorcha encendida", grh: 38229 },
+    // Pared que se vuela con una bomba: un arco tapiado (pared horizontal) o un montón de rocas (vertical).
+    paredBombeable: { id: 1858, name: "Pared rajada", grh: 38230 },
+    rocas: { id: 1859, name: "Rocas sueltas", grh: 38231 },
 } as const;
 const CHEST_CONTENT: Record<string, string> = {
     K: "llave",
@@ -111,6 +116,7 @@ const BARRIER_TYPE: Record<string, string> = {
     "{": "unica",
     "}": "unica",
     "&": "llave",
+    "@": "bomba",
 };
 const ONE_WAY_DIR: Record<string, string> = { "<": "oeste", ">": "este", "{": "norte", "}": "sur" };
 // Puertas que arrancan abiertas (no bloquean).
@@ -406,6 +412,7 @@ function buildTile(plan: Plan, x: number, y: number): Tile {
                   : open
                     ? undefined
                     : DUNGEON_OBJECTS.barrera.id;
+        if (c === "@") tile.object = horizontal ? DUNGEON_OBJECTS.paredBombeable.id : DUNGEON_OBJECTS.rocas.id;
         tile.blocked = !open;
         tile.trigger = NO_NPC_TRIGGER;
     }
@@ -530,6 +537,8 @@ function minimapColor(plan: Plan, tile: Tile, x: number, y: number) {
     const c = charAt(plan, x, y);
     if (tile.object === PORTAL_OBJ) return MINIMAP_COLORS.portal;
     if (c === "&") return MINIMAP_COLORS.door;
+    // La pared que se vuela no se delata: se ve como pared.
+    if (c === "@") return MINIMAP_COLORS.wall;
     if (tile.object === STAIRS_OBJ) return MINIMAP_COLORS.stairs;
     if (c === "*") return MINIMAP_COLORS.crystal;
     if (c === ":") return MINIMAP_COLORS.fragile;

@@ -1,4 +1,4 @@
-import { Container, Graphics, Sprite } from "pixi.js";
+import { Assets, Container, Graphics, Rectangle, Sprite, Texture } from "pixi.js";
 import type { DungeonMotionPayload } from "../../../lib/aowProtocol";
 import type { SpellData } from "../../../types/game";
 import { createSpellProjectileVisual } from "../rendering/effectsRenderer";
@@ -9,7 +9,10 @@ import type { Engine } from "./Engine";
 // la Carrera y el salto, y acá se animan:
 // - fuego: una llamarada que vuela (el mismo proyectil de los hechizos, en colores de fuego) y estalla al llegar;
 // - gancho: la cadena sale hasta el blanco; si engancha, arrastra al personaje hasta ahí; si no, vuelve;
-// - levanta / tira / suelta: lo que se lleva sobre la cabeza, el vuelo en arco al tirarlo y los pedazos al romperse.
+// - levanta / tira / suelta: lo que se lleva sobre la cabeza, el vuelo en arco al tirarlo y los pedazos al romperse;
+// - bomba: la bomba con la mecha encendida, que titila cada vez más rápido, y la explosión de 3 × 3 baldosas.
+// Bomba: "16-bit animated bomb" de victordelima (CC0); explosión: "Pixel Explosion (12 Frames)" de JROB774 (CC-BY 3.0),
+// docs/CREDITOS_GRAFICOS.md. La flecha del Arco usa el proyectil de los arqueros (paquete createProjectile).
 
 const TILE = 32;
 const CARRY_Y = -30;
@@ -20,7 +23,28 @@ const FIRE_SPELL = {
     projectileVisual: { coreColor: "#ffe08a", ringColor: "#ff8c1a", trailColor: "#ff3b00", magnitude: 1.35 },
 } as unknown as SpellData;
 
-const TOOL_TYPES = new Set(["fuego", "gancho", "levanta", "tira", "suelta"]);
+const TOOL_TYPES = new Set(["fuego", "gancho", "levanta", "tira", "suelta", "bomba"]);
+
+const BOMB_URL = "/sprites/bomba.png"; // 3 cuadros de 32 × 32 (la chispa de la mecha)
+const EXPLOSION_URL = "/sprites/explosion.png"; // 12 cuadros de 96 × 96
+const EXPLOSION_FRAME_MS = 50;
+let bombTextures: { bomb: Texture[]; explosion: Texture[] } | null = null;
+let bombTexturesLoading: Promise<void> | null = null;
+
+function frames(base: Texture, size: number, count: number) {
+    return Array.from({ length: count }, (_, i) => new Texture({ source: base.source, frame: new Rectangle(i * size, 0, size, size) }));
+}
+
+function loadBombTextures() {
+    bombTexturesLoading ??= Promise.all([Assets.load(BOMB_URL), Assets.load(EXPLOSION_URL)])
+        .then(([bomb, explosion]: Texture[]) => {
+            bombTextures = { bomb: frames(bomb, 32, 3), explosion: frames(explosion, 96, 12) };
+        })
+        .catch(() => {
+            bombTexturesLoading = null;
+        });
+    return bombTexturesLoading;
+}
 
 export function isDungeonToolMotion(payload: DungeonMotionPayload): boolean {
     return TOOL_TYPES.has(payload.tipo);
@@ -252,11 +276,57 @@ function syncCarried(engine: Engine) {
     }
 }
 
+async function playBomb(engine: Engine, payload: DungeonMotionPayload) {
+    if (!payload.to) return;
+    const startedAt = engine.timestamp();
+    await loadBombTextures();
+    const at = tileCenter(engine, payload.id, payload.to);
+    const textures = bombTextures;
+    const bomb: Container = textures ? new Sprite(textures.bomb[0]) : new Graphics().circle(0, 0, 10).fill({ color: 0x1b1b1b });
+    if (bomb instanceof Sprite) bomb.anchor.set(0.5);
+    bomb.x = at.x;
+    bomb.y = at.y + 4;
+    syncDisplayObjectToEntityFXRow(engine, at.y, bomb);
+    let explosion: Sprite | null = null;
+    engine.dungeonToolEffects.push((now) => {
+        const elapsed = now - startedAt;
+        if (elapsed < payload.ms) {
+            if (bomb.destroyed) return false;
+            if (bomb instanceof Sprite && textures) bomb.texture = textures.bomb[Math.floor(elapsed / 120) % 3];
+            // Titila cada vez más rápido y se infla un poco antes de explotar.
+            const left = payload.ms - elapsed;
+            const blink = left < 700 ? Math.floor(elapsed / (left < 300 ? 60 : 120)) % 2 === 0 : false;
+            bomb.tint = blink ? 0xff5a3c : 0xffffff;
+            bomb.scale.set(1 + Math.max(0, 1 - left / 700) * 0.25);
+            return true;
+        }
+        if (!bomb.destroyed) {
+            bomb.destroy();
+            burst(engine, at, [0xffe08a, 0xff8c1a, 0x6b6b6b], 18, 0.14);
+            if (textures) {
+                explosion = new Sprite(textures.explosion[0]);
+                explosion.anchor.set(0.5);
+                explosion.x = at.x;
+                explosion.y = at.y;
+                syncDisplayObjectToEntityFXRow(engine, at.y + TILE, explosion);
+            }
+        }
+        const frame = Math.floor((elapsed - payload.ms) / EXPLOSION_FRAME_MS);
+        if (!explosion || explosion.destroyed || !textures || frame >= textures.explosion.length) {
+            explosion?.destroy();
+            return false;
+        }
+        explosion.texture = textures.explosion[frame];
+        return true;
+    });
+}
+
 export function playDungeonTool(engine: Engine, payload: DungeonMotionPayload) {
     if (payload.tipo === "fuego") return playFire(engine, payload);
     if (payload.tipo === "gancho") return playHook(engine, payload);
     if (payload.tipo === "levanta") return playLift(engine, payload);
     if (payload.tipo === "tira") return playThrow(engine, payload);
+    if (payload.tipo === "bomba") return void playBomb(engine, payload);
     if (payload.tipo === "suelta") {
         const at = characterCenter(engine, payload.id);
         dropCarried(engine, payload.id, at);

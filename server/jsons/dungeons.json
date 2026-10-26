@@ -5,7 +5,6 @@
         "descripcion": "Para probar las mazmorras: llaves, puertas, una sala que se cierra, placas, un bloque, pozos, lava, cofres, agua profunda y la salida.",
         "nivelMinimo": 1,
         "maxJugadores": 5,
-        "soloDesarrollo": true,
         "piedraNpc": 9720,
         "mapas": [
             590,

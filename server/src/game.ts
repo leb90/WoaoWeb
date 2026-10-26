@@ -5793,6 +5793,10 @@ function Game(this: GameApi) {
         if (typeof tile?.tileExit !== "undefined") {
             return false;
         }
+        // Trigger 2 (POSINVALIDA): pozos y lava de las mazmorras.
+        if (Number(tile?.trigger ?? 0) === 2) {
+            return false;
+        }
         const graphicLayer1 = tile?.graphics?.[1] ?? 0;
         const graphicLayer2 = tile?.graphics?.[2] ?? 0;
         const isWaterTile = isPlayerWaterGraphic(graphicLayer1) && !graphicLayer2;
@@ -8288,6 +8292,7 @@ function Game(this: GameApi) {
             const visibleNpcsForUser: RuntimeNpc[] = [];
             const visibleItemsForUser: Array<{ idItem: number; map: number; pos: Position }> = [];
             const blockedTilesForUser: Array<{ pos: Position; blocked: number }> = [];
+            const dungeons = require("./dungeons");
 
             socket.withFlushGroup(ws, () => {
                 const mapName = vars.mapData[user.map].name;
@@ -8353,6 +8358,14 @@ function Game(this: GameApi) {
                         x: x,
                         y: y,
                     };
+
+                    // Mazmorras: puertas, cofres y bloques que cambiaron en la corrida.
+                    if (tileMap === user.map) {
+                        const dungeonBlocked = dungeons.getDynamicBlocked(tileMap, x, y);
+                        if (dungeonBlocked !== null) {
+                            blockedTilesForUser.push({ pos, blocked: dungeonBlocked });
+                        }
+                    }
 
                     if (game.hayObj(tileMap, pos)) {
                         const item = game.objMap(tileMap, pos)!;

@@ -7,13 +7,24 @@
 // Plano (mapa_<N>.txt): unas líneas "clave: valor" (nombre, musica, origen x,y, restringir), una línea "---" y el dibujo, un
 // carácter por baldosa, ubicado en el origen; lo que queda afuera es vacío.
 //   #  pared: si abajo hay piso a 4 o menos, se dibuja la cara de la pared; si no, piedra oscura
-//   .  piso          ~  agua profunda        (espacio)  vacío
+//   .  piso          ~  agua profunda (se nada con el ítem de la mazmorra)        (espacio)  vacío
 //   E  entrada (piso) S  portal de salida
 //   1-9 escalera: une las dos escaleras con el mismo número en dos mapas de la mazmorra
-//   letras: criaturas, según "criaturas" en leyenda.json
+//   minúsculas: criaturas, según "criaturas" en leyenda.json
+// Mecánicas (dungeons.ts). Las salas se detectan solas: cada zona de piso cerrada por paredes y puertas.
+//   L  puerta con llave chica     J  puerta de la llave del jefe
+//   +  puerta de sala: abierta, se cierra cuando la sala se cierra      =  puerta que abren las placas del mapa
+//   !  esta sala se cierra al entrar hasta matar a sus criaturas (sus cofres aparecen al vaciarla)
+//   O  pozo          ^  lava (quema al pisarla)          %  lava que erupciona cada tanto
+//   _  placa (se aprieta con un jugador o un bloque encima)          B  bloque que se empuja con un clic
+//   ?  losa de piedra (texto en "losas" de leyenda.json, en orden de lectura)
+//   cofres: K llave chica, N llave del jefe, M mapa, X brújula, $ oro, R ítem de la mazmorra, T trampa
+// Las puertas van en pasos de una baldosa: en una pared horizontal se ven como un arco de piedra; en una vertical,
+// como un cristal que tapa el paso.
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
+import { execFileSync } from "node:child_process";
 
 const ROOT = path.resolve(__dirname, "../../..");
 const SIZE = 100;
@@ -23,10 +34,42 @@ const VOID_GRH = 1; // negro
 const WATER_GRH = 1505; // bloque de 4×4 de agua (waterTiles.ts)
 const PORTAL_OBJ = 378; // Teleport (portal azul, no se puede levantar)
 const STAIRS_OBJ = 1198; // Escalera Grande
+const LAVA_GRHS = [9487, 9488, 9489, 9490, 9491, 9492, 9493, 9494, 9495]; // piso de lava del mapa 162
+// Trigger que las criaturas no pisan (POSINVALIDA del AO original): pozos y lava.
+const NO_NPC_TRIGGER = 2;
+// Objetos de mazmorra (tipo 0, no se levantan): se crean o actualizan en objs.json al correr el generador.
+export const DUNGEON_OBJECTS = {
+    cofre: { id: 1832, name: "Cofre de mazmorra", grh: 18532 },
+    cofreAbierto: { id: 1833, name: "Cofre de mazmorra abierto", grh: 502 },
+    puerta: { id: 1834, name: "Puerta de piedra", grh: 9193 },
+    puertaAbierta: { id: 1835, name: "Puerta de piedra abierta", grh: 9199 },
+    bloque: { id: 1836, name: "Bloque de piedra", grh: 8623 },
+    placa: { id: 1837, name: "Runa del suelo", grh: 36796 },
+    placaApretada: { id: 1838, name: "Runa del suelo encendida", grh: 36797 },
+    losa: { id: 1839, name: "Losa de piedra", grh: 513 },
+    barrera: { id: 1840, name: "Barrera de cristal", grh: 18543 },
+} as const;
+const CHEST_CONTENT: Record<string, string> = { K: "llave", N: "jefe", M: "mapa", X: "brujula", $: "oro", R: "premio", T: "trampa" };
+const BARRIER_TYPE: Record<string, string> = { L: "llave", J: "jefe", "+": "sala", "=": "placa" };
 
-type Tile = { graphics: number; blocked?: boolean; object?: number; npc?: number; exit?: { map: number; x: number; y: number } };
+type Tile = {
+    graphics: number;
+    blocked?: boolean;
+    trigger?: number;
+    object?: number;
+    npc?: number;
+    exit?: { map: number; x: number; y: number };
+};
 type Plan = { mapId: number; meta: Record<string, string>; origin: { x: number; y: number }; grid: string[] };
-type Legend = { criaturas?: Record<string, number | { npc: number; movimiento?: number }> };
+type Legend = {
+    criaturas?: Record<string, number | { npc: number; movimiento?: number }>;
+    // Textos de las losas de cada mapa, en orden de lectura (de arriba abajo y de izquierda a derecha).
+    losas?: Record<string, string[]>;
+    // Oro de cada cofre de oro.
+    oro?: number;
+    // Criaturas que suelta un cofre trampa.
+    trampa?: number[];
+};
 
 const dungeonId = process.argv[2];
 if (!dungeonId) {
@@ -62,6 +105,9 @@ const plans = fs
 const charAt = (plan: Plan, x: number, y: number) => plan.grid[y - plan.origin.y]?.[x - plan.origin.x] ?? " ";
 const isWall = (c: string) => c === "#";
 const isOpen = (c: string) => c !== "#" && c !== " ";
+const isBarrier = (c: string) => c in BARRIER_TYPE;
+// Lo que forma parte de una sala (las puertas la cierran).
+const isRoomTile = (c: string) => isOpen(c) && !isBarrier(c);
 const block4 = (base: number, x: number, y: number, row?: number) => base + (row ?? (y - 1) % 4) * 4 + ((x - 1) % 4);
 
 // Escaleras: dónde está cada número en cada mapa.
@@ -88,6 +134,101 @@ function arrivalNextTo(target: { mapId: number; x: number; y: number }) {
     throw new Error(`La escalera de ${target.mapId} (${target.x},${target.y}) no tiene piso al lado.`);
 }
 
+// Salas: zonas de piso unidas por los lados, cortadas por paredes y puertas.
+type Room = { id: number; x1: number; y1: number; x2: number; y2: number; cierra: boolean; tiles: number };
+function detectRooms(plan: Plan) {
+    const roomOf = new Map<string, number>();
+    const rooms: Room[] = [];
+    for (let y = 1; y <= SIZE; y++) {
+        for (let x = 1; x <= SIZE; x++) {
+            if (roomOf.has(`${x},${y}`) || !isRoomTile(charAt(plan, x, y))) continue;
+            const room: Room = { id: rooms.length + 1, x1: x, y1: y, x2: x, y2: y, cierra: false, tiles: 0 };
+            const queue = [[x, y]];
+            roomOf.set(`${x},${y}`, room.id);
+            while (queue.length) {
+                const [cx, cy] = queue.pop()!;
+                room.tiles++;
+                room.x1 = Math.min(room.x1, cx);
+                room.y1 = Math.min(room.y1, cy);
+                room.x2 = Math.max(room.x2, cx);
+                room.y2 = Math.max(room.y2, cy);
+                if (charAt(plan, cx, cy) === "!") room.cierra = true;
+                for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+                    const key = `${cx + dx},${cy + dy}`;
+                    if (!roomOf.has(key) && isRoomTile(charAt(plan, cx + dx, cy + dy))) {
+                        roomOf.set(key, room.id);
+                        queue.push([cx + dx, cy + dy]);
+                    }
+                }
+            }
+            rooms.push(room);
+        }
+    }
+    return { rooms, roomOf };
+}
+
+const roomsByMap = new Map(plans.map((plan) => [plan.mapId, detectRooms(plan)]));
+// Los cofres de las salas que se cierran no se ven hasta vaciarlas.
+const hiddenChests = new Set<string>();
+for (const plan of plans) {
+    const { rooms, roomOf } = roomsByMap.get(plan.mapId)!;
+    for (let y = 1; y <= SIZE; y++) {
+        for (let x = 1; x <= SIZE; x++) {
+            if (!(charAt(plan, x, y) in CHEST_CONTENT)) continue;
+            const room = rooms.find((r) => r.id === roomOf.get(`${x},${y}`));
+            if (room?.cierra) hiddenChests.add(`${plan.mapId}:${x},${y}`);
+        }
+    }
+}
+
+// Datos de mecánicas que lee dungeons.ts (clave "dungeon" de specials.json; el server no la usa para otra cosa).
+function buildMechanics(plan: Plan) {
+    const { rooms, roomOf } = roomsByMap.get(plan.mapId)!;
+    const slabTexts = legend.losas?.[String(plan.mapId)] ?? [];
+    const data = {
+        rooms: rooms.map(({ id, x1, y1, x2, y2, cierra }) => ({ id, x1, y1, x2, y2, cierra })),
+        roomOf: Object.fromEntries(roomOf),
+        barriers: [] as Array<{ x: number; y: number; tipo: string; horizontal: boolean; salas: number[] }>,
+        pits: [] as string[],
+        lava: [] as string[],
+        lavaPeriodica: [] as string[],
+        plates: [] as string[],
+        blocks: [] as string[],
+        chests: [] as Array<{ x: number; y: number; contenido: string; oculto: boolean; sala: number }>,
+        slabs: [] as Array<{ x: number; y: number; texto: string }>,
+        oro: Number(legend.oro ?? 250),
+        trampa: legend.trampa ?? [],
+    };
+    for (let y = 1; y <= SIZE; y++) {
+        for (let x = 1; x <= SIZE; x++) {
+            const c = charAt(plan, x, y);
+            const key = `${x},${y}`;
+            if (isBarrier(c)) {
+                const salas = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+                    .map(([dx, dy]) => roomOf.get(`${x + dx},${y + dy}`))
+                    .filter((id): id is number => Boolean(id));
+                data.barriers.push({
+                    x,
+                    y,
+                    tipo: BARRIER_TYPE[c],
+                    horizontal: isWall(charAt(plan, x - 1, y)) && isWall(charAt(plan, x + 1, y)),
+                    salas: [...new Set(salas)],
+                });
+            }
+            if (c === "O") data.pits.push(key);
+            if (c === "^") data.lava.push(key);
+            if (c === "%") data.lavaPeriodica.push(key);
+            if (c === "_") data.plates.push(key);
+            if (c === "B") data.blocks.push(key);
+            if (c in CHEST_CONTENT) {
+                data.chests.push({ x, y, contenido: CHEST_CONTENT[c], oculto: hiddenChests.has(`${plan.mapId}:${key}`), sala: roomOf.get(key) ?? 0 });
+            }
+            if (c === "?") data.slabs.push({ x, y, texto: slabTexts[data.slabs.length] ?? "La losa está gastada: no se puede leer." });
+        }
+    }
+    return data;
+}
+
 function buildTile(plan: Plan, x: number, y: number): Tile {
     const c = charAt(plan, x, y);
     if (c === " ") return { graphics: VOID_GRH, blocked: true };
@@ -101,8 +242,29 @@ function buildTile(plan: Plan, x: number, y: number): Tile {
         return { graphics: VOID_GRH, blocked: true };
     }
     if (c === "~") return { graphics: block4(WATER_GRH, x, y) };
+    if (c === "O") return { graphics: VOID_GRH, trigger: NO_NPC_TRIGGER };
+    if (c === "^" || c === "%") return { graphics: LAVA_GRHS[(x * 7 + y * 3) % LAVA_GRHS.length], trigger: NO_NPC_TRIGGER };
     const tile: Tile = { graphics: block4(FLOOR_GRH, x, y) };
     if (c === "S") tile.object = PORTAL_OBJ;
+    if (isBarrier(c)) {
+        const horizontal = isWall(charAt(plan, x - 1, y)) && isWall(charAt(plan, x + 1, y));
+        const open = c === "+";
+        tile.object = horizontal ? (open ? DUNGEON_OBJECTS.puertaAbierta.id : DUNGEON_OBJECTS.puerta.id) : open ? undefined : DUNGEON_OBJECTS.barrera.id;
+        tile.blocked = !open;
+    }
+    if (c === "_") tile.object = DUNGEON_OBJECTS.placa.id;
+    if (c === "B") {
+        tile.object = DUNGEON_OBJECTS.bloque.id;
+        tile.blocked = true;
+    }
+    if (c === "?") {
+        tile.object = DUNGEON_OBJECTS.losa.id;
+        tile.blocked = true;
+    }
+    if (c in CHEST_CONTENT && !hiddenChests.has(`${plan.mapId}:${x},${y}`)) {
+        tile.object = DUNGEON_OBJECTS.cofre.id;
+        tile.blocked = true;
+    }
     if (/[1-9]/.test(c)) {
         const pair = (stairs.get(c) ?? []).filter((s) => !(s.mapId === plan.mapId && s.x === x && s.y === y));
         if (pair.length !== 1) throw new Error(`La escalera ${c} tiene que estar en dos lugares (está en ${pair.length + 1}).`);
@@ -125,6 +287,9 @@ const MINIMAP_COLORS = {
     water: [40, 70, 110],
     portal: [70, 150, 230],
     stairs: [150, 110, 60],
+    lava: [150, 50, 20],
+    chest: [210, 170, 60],
+    door: [120, 100, 80],
 } as const;
 
 function crc32(buffer: Buffer) {
@@ -175,7 +340,11 @@ function minimapColor(plan: Plan, tile: Tile, x: number, y: number) {
     if (tile.object === PORTAL_OBJ) return MINIMAP_COLORS.portal;
     if (tile.object === STAIRS_OBJ) return MINIMAP_COLORS.stairs;
     if (c === "~") return MINIMAP_COLORS.water;
-    if (c === " ") return MINIMAP_COLORS.void;
+    if (c === " " || c === "O") return MINIMAP_COLORS.void;
+    if (c === "^" || c === "%") return MINIMAP_COLORS.lava;
+    // Los cofres ocultos no se delatan en el minimapa.
+    if (c in CHEST_CONTENT) return hiddenChests.has(`${plan.mapId}:${x},${y}`) ? MINIMAP_COLORS.floor : MINIMAP_COLORS.chest;
+    if (isBarrier(c)) return MINIMAP_COLORS.door;
     if (isWall(c)) return tile.graphics === VOID_GRH ? MINIMAP_COLORS.void : MINIMAP_COLORS.wall;
     return MINIMAP_COLORS.floor;
 }
@@ -190,7 +359,14 @@ for (const plan of plans) {
     const palette: Record<string, { graphics: number; blocked?: boolean }> = {};
     const paletteIds = new Map<string, number>();
     const rows: number[][] = [];
-    const specials = { id: plan.mapId, exits: {} as Record<string, unknown>, objects: {} as Record<string, unknown>, npcs: {} as Record<string, number>, triggers: {} };
+    const specials = {
+        id: plan.mapId,
+        exits: {} as Record<string, unknown>,
+        objects: {} as Record<string, unknown>,
+        npcs: {} as Record<string, number>,
+        triggers: {} as Record<string, number>,
+        dungeon: buildMechanics(plan),
+    };
     const placements: Array<{ mapNum: number; x: number; y: number; npcIndex: number; movement?: number }> = [];
     const expanded: Record<string, Record<string, Record<string, unknown>>> = {};
 
@@ -211,6 +387,10 @@ for (const plan of plans) {
             const cell: Record<string, unknown> = {};
             if (tile.blocked) cell.blocked = 1;
             cell.graphics = { "1": tile.graphics };
+            if (tile.trigger) {
+                specials.triggers[coord] = tile.trigger;
+                cell.trigger = tile.trigger;
+            }
             if (tile.exit) {
                 specials.exits[coord] = tile.exit;
                 cell.tileExit = tile.exit;
@@ -258,6 +438,23 @@ for (const plan of plans) {
     );
     console.log(`mapa ${plan.mapId} (${meta.name}): ${placements.length} criaturas, ${Object.keys(specials.exits).length} escaleras, ${Object.keys(specials.objects).length} objetos`);
 }
+
+// Objetos de mazmorra en objs.json (server y api) y en la copia del cliente.
+function upsertDungeonObjects() {
+    for (const file of ["server/jsons/objs.json", "api/src/jsons/objs.json"]) {
+        const fullPath = path.join(ROOT, file);
+        const raw = fs.readFileSync(fullPath, "utf8");
+        const objects = JSON.parse(raw);
+        const template = objects["864"]; // Pozo: decoración que no se levanta
+        for (const entry of Object.values(DUNGEON_OBJECTS)) {
+            objects[String(entry.id)] = { ...template, name: entry.name, grhIndex: entry.grh, objType: 0, agarrable: 1, valor: 0 };
+        }
+        fs.writeFileSync(fullPath, `${JSON.stringify(objects)}${raw.endsWith("\n") ? "\n" : ""}`, "utf8");
+    }
+    execFileSync("pnpm", ["exec", "tsx", "src/scripts/exportClientObjs.ts"], { cwd: path.join(ROOT, "server"), stdio: "ignore" });
+    console.log(`objetos de mazmorra: ${Object.values(DUNGEON_OBJECTS).map((entry) => entry.id).join(", ")}`);
+}
+upsertDungeonObjects();
 
 // Plantilla de la piedra de invocación de la mazmorra (piedraNpc en dungeons.json): una estatua que no se ataca,
 // con el nombre de la mazmorra debajo y el id de la mazmorra, que es lo que abre su panel (dungeons.ts).

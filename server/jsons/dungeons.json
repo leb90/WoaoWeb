@@ -2,7 +2,7 @@
     {
         "id": "prueba",
         "nombre": "Mazmorra de prueba",
-        "descripcion": "Dos salas para probar el sistema de mazmorras: una con criaturas y otra, bajando la escalera, con la salida.",
+        "descripcion": "Para probar las mazmorras: llaves, puertas, una sala que se cierra, placas, un bloque, pozos, lava, cofres, agua profunda y la salida.",
         "nivelMinimo": 1,
         "maxJugadores": 5,
         "soloDesarrollo": true,
@@ -14,13 +14,13 @@
         "entrada": {
             "map": 590,
             "x": 14,
-            "y": 21
+            "y": 35
         },
         "salidas": [
             {
                 "map": 591,
-                "x": 15,
-                "y": 14
+                "x": 23,
+                "y": 27
             }
         ],
         "regreso": {
@@ -31,6 +31,10 @@
         "escalado": {
             "vidaPorJugador": 0.7,
             "danoPorJugador": 0.15
+        },
+        "itemMazmorra": {
+            "id": "patas_de_rana",
+            "nombre": "Patas de rana"
         }
     }
 ]

@@ -1078,6 +1078,7 @@ function Login(this: LoginApi) {
                     require("./quests").sendQuestState(String(ws.id), null);
                     void require("./rankedArena").sendRankedState(String(ws.id));
                     require("./bossEvents").sendState(ws);
+                    require("./dungeons").sendLoginState(String(ws.id));
                     sendWelcomeConsoleMessage(ws);
                     require("./skills").sendSkillsState(personajeWS);
                     const initialEnvironment = require("./environment").getEnvironmentForMap(personajeWS.map);

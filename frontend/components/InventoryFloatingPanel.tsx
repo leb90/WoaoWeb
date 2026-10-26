@@ -79,7 +79,7 @@ import EquipmentPanel, { getInventoryItemEquipmentKind } from "./EquipmentPanel"
 import { formatItemNameWithRarity, getRarityName, getRarityTextColor, getRaritySlotClasses } from "../lib/itemRarity";
 import { getEquippedItemAction } from "../lib/equipmentKinds";
 import DonationShopModal from "./transmog/DonationShopModal";
-import DungeonOverlay from "./DungeonOverlay";
+import DungeonOverlay, { DungeonItemsStrip, DungeonMinimapFog } from "./DungeonOverlay";
 import SkillsModal from "./SkillsModal";
 import type { SkillsState } from "../lib/aowProtocol";
 import { DAY_PHASE, SEASON, WEATHER, type EnvironmentState } from "../lib/aowProtocol";
@@ -3399,6 +3399,9 @@ export default function InventoryFloatingPanel({
 
                             {activeTab === "inventory" ? (
                                 <div className="mt-2 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                                    {hud?.dungeonState?.enMazmorra ? (
+                                        <DungeonItemsStrip inside={hud.dungeonState.enMazmorra} />
+                                    ) : null}
                                     <div className="bg-[#120c09] p-1">
                                         <div className="grid grid-cols-6 gap-px">
                                             {slotItems.map(({ slot: slotNumber, item }) => {
@@ -4097,6 +4100,9 @@ export default function InventoryFloatingPanel({
                                       Mapa {hud?.map ?? "-"}
                                   </span>
                               )}
+                              {hud?.dungeonState?.enMazmorra?.minimapa && minimapImageFrame ? (
+                                  <DungeonMinimapFog minimap={hud.dungeonState.enMazmorra.minimapa} frame={minimapImageFrame} />
+                              ) : null}
                               {minimapMarkerPosition ? (
                                   <span
                                       data-testid="minimap-self-marker"

@@ -80,7 +80,7 @@ El jefe escala igual. Si alguien entra después (invocado por el líder mientras
 - **Solo se usan en mazmorras.** Afuera no hacen nada y la franja no se ve.
 
 ### 3.7 Mecánicas de mazmorra
-Todas por datos del mapa, para que las mazmorras siguientes se armen sin código nuevo.
+Todas por datos del mapa, para que las mazmorras siguientes se armen sin código nuevo. Cómo quedó cada una está en la sección 7.
 
 | Mecánica | Cómo funciona en AO |
 |---|---|
@@ -105,7 +105,9 @@ Todas por datos del mapa, para que las mazmorras siguientes se armen sin código
    - Expulsión, muerte, salida y escalado.
    - Generador de mapas desde un plano en texto y una mazmorra de prueba de dos mapas.
    - El bloqueo diario de la recompensa pasa a la etapa 3, junto con el cofre del jefe.
-2. **Mecánicas.** Las de la tabla 3.7, el menú "Mazmorra" y el mapa y la brújula en el minimapa.
+2. **Mecánicas. [hecho]** Ver la sección 7.
+   - Las de la tabla 3.7, el menú "Mazmorra" y el mapa y la brújula en el minimapa.
+   - Los túneles que quedan como atajo pasan a la etapa 3, si la Gruta los necesita.
 3. **Gruta del Abisal.**
    - Un generador de mapas desde un plano en texto, con gráficos de AO, así las salas se editan fácil.
    - Los mapas 510-512, criaturas por sala, minijefe, jefe con fases, Patas de rana y recompensas.
@@ -183,3 +185,58 @@ Las paredes usan las texturas del mapa 116: la cara de la pared en el lado norte
   - `components/DungeonOverlay.tsx` muestra el panel, la invocación y el cartel de adentro.
 - `server/src/dungeons.test.ts`: cuentas de instancias y escalado, lugares libres, datos de cada mazmorra (mapas en las tres copias, entrada, portal de salida, piedra) y escaleras que no salen de la mazmorra.
 
+## 7. Etapa 2: las mecánicas
+
+### Cómo quedó cada una
+Todas salen del plano: el generador las guarda en la clave `dungeon` de `specials.json` y `dungeons.ts` las lee al crear la corrida. Cada corrida tiene su propio estado (puertas abiertas, cofres abiertos, bloques, salas cerradas), y lo que se encuentra es del grupo.
+
+| Símbolo | Mecánica | Cómo funciona |
+|---|---|---|
+| `L` | Puerta con llave chica | Clic a 2 baldosas o menos: si el grupo tiene una llave chica, la gasta y abre. |
+| `J` | Puerta del jefe | Abre con la llave del jefe, que no se gasta. |
+| `!` | Sala que se cierra | Al entrar con criaturas adentro, sus puertas `+` se cierran. Al morir la última se abren y aparecen los cofres de la sala, que hasta ahí no se ven (tampoco en el minimapa). Si alguien está parado en una puerta, se cierra cuando quede libre. |
+| `+` | Puerta de sala | Abierta; se cierra cuando se cierra una sala a la que da. |
+| `O` | Pozo | Caer quita el 10 % de la vida y te deja donde entraste a la sala. |
+| `^` | Lava | Quema el 8 % de la vida al pisarla y cada segundo que te quedás. |
+| `%` | Lava periódica | Erupciona 1 de cada 3 segundos (se ve el fuego de la Llamarada): mientras erupciona quema el 12 % cada medio segundo. |
+| `_` | Placa | Apretada con un jugador o un bloque encima. Con todas las placas del mapa apretadas a la vez se abren las puertas `=`, y quedan abiertas. |
+| `B` | Bloque | Clic estando al lado: se corre una baldosa hacia el otro lado si hay piso libre de la misma sala (no pozo, lava, agua ni otro objeto; sí una placa). Así se resuelve una placa jugando solo. |
+| `?` | Losa | Clic a 2 baldosas o menos: muestra su texto (`losas` en `leyenda.json`, en orden de lectura). |
+| `~` | Agua profunda | Solo se nada con las Patas de rana: el personaje se ve medio sumergido y nadando no se puede atacar ni lanzar hechizos. Sin ellas el cliente no deja pisarla. |
+| `K` `N` `M` `X` | Cofres de llave chica, llave del jefe, mapa y brújula | Clic al lado. Valen para todo el grupo. |
+| `$` | Cofre de oro | El oro (`oro` en `leyenda.json`, 250 si no está) es para el que lo abre. |
+| `R` | Cofre principal | Da el ítem de la mazmorra (`itemMazmorra` en `dungeons.json`) a todos los que están en la corrida, para siempre. |
+| `T` | Cofre trampa | Suelta las criaturas de `trampa` en `leyenda.json` (con el escalado del grupo) y cierra la sala hasta matarlas. |
+
+Las criaturas no pisan pozos ni lava (trigger 2). Los cofres abiertos quedan como cofre abierto.
+
+### Menú "Mazmorra" y minimapa
+- **Franja "Mazmorra":** arriba de la grilla del inventario, solo adentro. Muestra las Patas de rana, las llaves chicas (con contador), la llave del jefe, el mapa y la brújula; lo que falta se ve apagado.
+- **Minimapa:**
+  - lo que no se visitó queda tapado; con el mapa, las salas sin visitar se ven a media luz;
+  - con la brújula se marcan los cofres (dorados si están cerrados) y la puerta del jefe.
+
+### Ítems de mazmorra
+Quedan en el progreso del personaje (`dungeonItems` en `data/woaoProgress.json`), no en el inventario: no se tiran, no se venden y solo hacen algo adentro. Las Patas de rana (`patas_de_rana`) son las que dejan nadar.
+
+### Mazmorra de prueba
+Recorre todas las mecánicas en dos mapas:
+- **Mapa 590:**
+  - **Entrada:** una losa, un cofre con llave, lava y un pozo. La puerta con llave lleva a la sala de las placas y una puerta de sala, a la sala que se cierra (tres criaturas y la brújula oculta).
+  - **Sala de las placas:** dos placas y un bloque. La puerta de cristal que abren lleva al tesoro: el mapa, las Patas de rana, la escalera y un lago con un cofre de oro en una isla.
+- **Mapa 591:** una franja de lava periódica, la llave del jefe del otro lado, una sala con un cofre trampa y la puerta del jefe con el portal de salida.
+
+### Archivos
+- `server/src/dungeons.ts`: las mecánicas.
+- `server/src/scripts/buildDungeonMaps.ts`: los símbolos nuevos, las salas, los objetos de mazmorra (1832-1840 en `objs.json`) y los colores del minimapa.
+- Enganches en el server:
+  - `protocol.ts`: pozos y agua al moverse, sala, lava y placas después del paso, clic en cofres, losas, puertas y bloques, y nada de ataques nadando;
+  - `game.ts`: las criaturas no pisan el trigger 2, y la foto del área manda el bloqueo actual de puertas, cofres y bloques;
+  - `npcs.ts`: abrir la sala al morir la última criatura;
+  - `login.ts`: el estado de la mazmorra al reconectar;
+  - `woaoProgress.ts`: `dungeonItems`.
+- Cliente:
+  - `Engine.ts`: nadar con las Patas de rana, no embarcar adentro y el personaje medio sumergido;
+  - `DungeonOverlay.tsx`: la losa, la franja y la niebla del minimapa;
+  - `InventoryFloatingPanel.tsx`: dónde van la franja y la niebla.
+- `server/src/dungeons.test.ts` suma los objetos de mazmorra y que las mecánicas de cada mapa estén bien armadas: puertas con su objeto, cofres ocultos solo en salas que se cierran, llaves suficientes, llave del jefe si hay puerta del jefe y criaturas que no pisan pozos ni lava.

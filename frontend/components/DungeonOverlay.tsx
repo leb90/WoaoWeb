@@ -1,11 +1,12 @@
 "use client";
 
 import React from "react";
-import { DoorOpen, Mountain, Users, X } from "lucide-react";
-import type { DungeonStatePayload } from "../lib/aowProtocol";
+import { Compass, DoorOpen, Footprints, Key, KeyRound, Map as MapIcon, Mountain, ScrollText, Users, X } from "lucide-react";
+import type { DungeonMinimapState, DungeonStatePayload } from "../lib/aowProtocol";
 
 // Mazmorras (server/src/dungeons.ts): el panel de la piedra de invocación, la invocación del líder con su cuenta
-// regresiva y, adentro, el cartel con la mazmorra y el botón para salir. Todo manda comandos /mazmorra.
+// regresiva y, adentro, el cartel con la mazmorra, el botón para salir y el texto de las losas. Todo manda comandos
+// /mazmorra. Abajo están la franja de la mazmorra (arriba del inventario) y la niebla del minimapa.
 type DungeonOverlayProps = {
     state?: DungeonStatePayload;
     onSendCommand?: (command: string) => void;
@@ -13,6 +14,7 @@ type DungeonOverlayProps = {
 
 export default function DungeonOverlay({ state, onSendCommand }: DungeonOverlayProps) {
     const [closedPanelSeq, setClosedPanelSeq] = React.useState(0);
+    const [closedLosaSeq, setClosedLosaSeq] = React.useState(0);
     const [confirmLeave, setConfirmLeave] = React.useState(false);
     const [now, setNow] = React.useState(() => Date.now());
     const [inviteReceivedAt, setInviteReceivedAt] = React.useState(0);
@@ -29,6 +31,7 @@ export default function DungeonOverlay({ state, onSendCommand }: DungeonOverlayP
     }, [invite]);
 
     const panel = state?.panel && state.panelSeq !== closedPanelSeq ? state.panel : null;
+    const losa = state?.losa && state.losa.seq !== closedLosaSeq ? state.losa : null;
     const inside = state?.enMazmorra ?? null;
     const inviteSecondsLeft = invite ? Math.max(0, Math.ceil((inviteReceivedAt + invite.expiraEnMs - now) / 1000)) : 0;
     const send = (command: string) => onSendCommand?.(command);
@@ -104,6 +107,29 @@ export default function DungeonOverlay({ state, onSendCommand }: DungeonOverlayP
                 </div>
             ) : null}
 
+            {losa ? (
+                <div className="fixed inset-0 z-[88] flex items-center justify-center bg-black/45 p-4" onClick={() => setClosedLosaSeq(losa.seq)}>
+                    <div
+                        data-testid="dungeon-slab"
+                        className="w-full max-w-sm rounded-[20px] border border-stone-500/40 bg-[linear-gradient(180deg,#3a3631_0%,#211e1b_100%)] p-5 text-stone-100 shadow-[0_24px_80px_rgba(0,0,0,0.6)]"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.26em] text-stone-400">
+                            <ScrollText className="h-4 w-4" />
+                            Losa de piedra
+                        </div>
+                        <p className="mt-3 font-serif text-[15px] italic leading-relaxed text-stone-100">“{losa.texto}”</p>
+                        <button
+                            type="button"
+                            onClick={() => setClosedLosaSeq(losa.seq)}
+                            className="mt-4 w-full rounded-xl border border-stone-600 bg-stone-950/50 py-2 text-sm text-stone-300 transition hover:border-stone-400 hover:text-white"
+                        >
+                            Cerrar
+                        </button>
+                    </div>
+                </div>
+            ) : null}
+
             {invite ? (
                 <div className="fixed left-1/2 top-24 z-[87] w-[min(92vw,380px)] -translate-x-1/2 rounded-[20px] border border-amber-300/30 bg-[linear-gradient(180deg,#2b1d13_0%,#18110c_100%)] p-4 text-stone-100 shadow-[0_18px_60px_rgba(0,0,0,0.6)]">
                     <p className="text-[11px] uppercase tracking-[0.24em] text-amber-300/80">Invocación</p>
@@ -170,5 +196,103 @@ export default function DungeonOverlay({ state, onSendCommand }: DungeonOverlayP
                 </div>
             ) : null}
         </>
+    );
+}
+
+type InsideState = NonNullable<DungeonStatePayload["enMazmorra"]>;
+
+// Franja de la mazmorra, arriba del inventario: el ítem de la mazmorra y lo que encontró el grupo.
+export function DungeonItemsStrip({ inside }: { inside: InsideState }) {
+    const slots = [
+        { id: "patas", label: "Patas de rana: nadás por el agua profunda", short: "Patas", icon: Footprints, owned: inside.patas, tone: "text-sky-300" },
+        { id: "llaves", label: `Llaves chicas: ${inside.llaves}`, short: "Llaves", icon: Key, owned: inside.llaves > 0, tone: "text-amber-200", count: inside.llaves },
+        { id: "jefe", label: "Llave del jefe", short: "Jefe", icon: KeyRound, owned: inside.llaveJefe, tone: "text-rose-300" },
+        { id: "mapa", label: "Mapa: muestra todas las salas", short: "Mapa", icon: MapIcon, owned: inside.mapa, tone: "text-emerald-200" },
+        { id: "brujula", label: "Brújula: marca los cofres y la puerta del jefe", short: "Brújula", icon: Compass, owned: inside.brujula, tone: "text-violet-200" },
+    ];
+    return (
+        <div data-testid="dungeon-strip" className="border border-[#4a3424] bg-[#120c09] px-1.5 py-1">
+            <p className="px-0.5 pb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-300/70">Mazmorra</p>
+            <div className="grid grid-cols-5 gap-1">
+                {slots.map(({ id, label, short, icon: Icon, owned, tone, count }) => (
+                    <div
+                        key={id}
+                        data-testid={`dungeon-strip-${id}`}
+                        data-owned={owned ? "1" : "0"}
+                        title={owned ? label : `${short}: todavía no`}
+                        className={`relative flex h-11 flex-col items-center justify-center gap-0.5 border text-[9px] ${
+                            owned ? "border-amber-300/35 bg-[#2a1b12]" : "border-[#2c2018] bg-[#0d0907] opacity-45"
+                        }`}
+                    >
+                        <Icon className={`h-4 w-4 ${owned ? tone : "text-stone-500"}`} />
+                        <span className={owned ? "text-stone-200" : "text-stone-500"}>{short}</span>
+                        {count && count > 1 ? (
+                            <span className="absolute right-0.5 top-0.5 rounded bg-black/70 px-1 text-[9px] font-bold leading-tight text-amber-100">{count}</span>
+                        ) : null}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+// Niebla del minimapa: tapa lo que no se visitó (con el mapa, las salas no visitadas quedan a media luz) y, con la
+// brújula, marca los cofres y la puerta del jefe. Va encima de la imagen del minimapa, en su mismo recuadro.
+export function DungeonMinimapFog({
+    minimap,
+    frame,
+}: {
+    minimap: DungeonMinimapState;
+    frame: { left: number; top: number; width: number; height: number };
+}) {
+    const maskId = `dungeon-fog-${minimap.mapa}`;
+    return (
+        <svg
+            data-testid="dungeon-minimap-fog"
+            className="pointer-events-none absolute"
+            style={{ left: frame.left, top: frame.top, width: frame.width, height: frame.height }}
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+        >
+            <defs>
+                <mask id={maskId} maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
+                    <rect x="0" y="0" width="100" height="100" fill="white" />
+                    {minimap.salas.map((sala) => (
+                        <rect
+                            key={`${sala.x1},${sala.y1}`}
+                            x={sala.x1 - 2}
+                            y={sala.y1 - 2}
+                            width={sala.x2 - sala.x1 + 3}
+                            height={sala.y2 - sala.y1 + 3}
+                            fill={sala.visitada ? "black" : "#8a8a8a"}
+                        />
+                    ))}
+                </mask>
+            </defs>
+            <rect x="0" y="0" width="100" height="100" fill="#050302" mask={`url(#${maskId})`} />
+            {minimap.cofres.map((cofre) => (
+                <rect
+                    key={`c${cofre.x},${cofre.y}`}
+                    data-testid="dungeon-minimap-chest"
+                    x={cofre.x - 1.4}
+                    y={cofre.y - 1.4}
+                    width="1.8"
+                    height="1.8"
+                    fill={cofre.abierto ? "#6b5a45" : "#ffd24a"}
+                    stroke="#2a1600"
+                    strokeWidth="0.3"
+                />
+            ))}
+            {minimap.jefe.map((door) => (
+                <path
+                    key={`j${door.x},${door.y}`}
+                    data-testid="dungeon-minimap-boss"
+                    d={`M ${door.x - 0.5} ${door.y - 2} L ${door.x + 1} ${door.y - 0.5} L ${door.x - 0.5} ${door.y + 1} L ${door.x - 2} ${door.y - 0.5} Z`}
+                    fill="#ff3b5c"
+                    stroke="#3a0010"
+                    strokeWidth="0.3"
+                />
+            ))}
+        </svg>
     );
 }

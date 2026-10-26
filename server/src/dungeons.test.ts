@@ -76,3 +76,71 @@ test("las escaleras de una mazmorra solo llevan a otros mapas de la misma mazmor
         }
     }
 });
+
+const DUNGEON_OBJECT_IDS = { cofre: 1832, puerta: 1834, puertaAbierta: 1835, barrera: 1840 };
+
+test("los objetos de mazmorra existen y no se levantan", () => {
+    const objs = readJson("server/jsons/objs.json");
+    const clientObjs = readJson("frontend/public/init/objs.json");
+    for (let id = 1832; id <= 1840; id++) {
+        assert.ok(objs[id]?.name, `objeto ${id}`);
+        assert.equal(Number(objs[id].objType), 0, `objeto ${id} es decoración`);
+        assert.equal(clientObjs[id]?.name, objs[id].name, `objeto ${id} en el cliente`);
+    }
+});
+
+test("las mecánicas de cada mapa están bien armadas y la mazmorra se puede resolver", () => {
+    const defs = readJson("server/jsons/dungeons.json") as Array<Record<string, any>>;
+    for (const def of defs) {
+        const counts = { llaves: 0, puertasConLlave: 0, llaveJefe: 0, puertaJefe: 0 };
+        for (const map of def.mapas) {
+            const specials = readJson(`server/mapas_source/mapa_${map}/specials.json`);
+            const mech = specials.dungeon;
+            assert.ok(mech, `${def.id} mapa ${map}: tiene mecánicas`);
+            const objects = specials.objects ?? {};
+            const roomIds = new Set(mech.rooms.map((room: { id: number }) => room.id));
+            const closingRooms = new Set(mech.rooms.filter((room: { cierra: boolean }) => room.cierra).map((room: { id: number }) => room.id));
+            for (const barrier of mech.barriers) {
+                const at = `${def.id} ${map} (${barrier.x},${barrier.y})`;
+                assert.ok(barrier.salas.length > 0 && barrier.salas.every((id: number) => roomIds.has(id)), `${at}: la puerta da a una sala`);
+                const objIndex = objects[`${barrier.x},${barrier.y}`]?.objIndex;
+                const expected =
+                    barrier.tipo === "sala"
+                        ? barrier.horizontal
+                            ? DUNGEON_OBJECT_IDS.puertaAbierta
+                            : undefined
+                        : barrier.horizontal
+                          ? DUNGEON_OBJECT_IDS.puerta
+                          : DUNGEON_OBJECT_IDS.barrera;
+                assert.equal(objIndex, expected, `${at}: objeto de la puerta ${barrier.tipo}`);
+                if (barrier.tipo === "llave") counts.puertasConLlave++;
+                if (barrier.tipo === "jefe") counts.puertaJefe++;
+                if (barrier.tipo === "placa") assert.ok(mech.plates.length > 0, `${at}: la puerta de placas tiene placas en su mapa`);
+            }
+            for (const chest of mech.chests) {
+                const at = `${def.id} ${map} cofre (${chest.x},${chest.y})`;
+                assert.ok(roomIds.has(chest.sala), `${at}: está en una sala`);
+                assert.equal(chest.oculto, closingRooms.has(chest.sala), `${at}: oculto solo en salas que se cierran`);
+                assert.equal(objects[`${chest.x},${chest.y}`]?.objIndex, chest.oculto ? undefined : DUNGEON_OBJECT_IDS.cofre, `${at}: objeto`);
+                if (chest.contenido === "llave") counts.llaves++;
+                if (chest.contenido === "jefe") counts.llaveJefe++;
+                if (chest.contenido === "premio") assert.ok(def.itemMazmorra?.id, `${def.id}: el cofre principal tiene ítem`);
+                if (chest.contenido === "trampa") assert.ok(mech.trampa.length > 0, `${at}: la trampa suelta criaturas`);
+            }
+            for (const key of [...mech.pits, ...mech.lava, ...mech.lavaPeriodica]) {
+                assert.equal(specials.triggers?.[key], 2, `${def.id} ${map} (${key}): las criaturas no pisan pozos ni lava`);
+            }
+            for (const slab of mech.slabs) assert.ok(slab.texto, `${def.id} ${map}: la losa tiene texto`);
+        }
+        assert.ok(counts.llaves >= counts.puertasConLlave, `${def.id}: alcanzan las llaves chicas`);
+        if (counts.puertaJefe) assert.ok(counts.llaveJefe > 0, `${def.id}: hay llave del jefe`);
+    }
+});
+
+test("afuera de una mazmorra no se nada ni cambia ningún bloqueo", () => {
+    const user = { id: 1, _id: "x", map: 34, pos: { x: 50, y: 50 } } as never;
+    assert.equal(dungeons.canSwim(user), false);
+    assert.equal(dungeons.getSwimBlockReason(user), null);
+    assert.equal(dungeons.getDynamicBlocked(34, 50, 50), null);
+    assert.equal(dungeons.getWaterStepDeniedReason(user, false), null);
+});

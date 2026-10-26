@@ -489,7 +489,28 @@ export type DungeonStatePayload = {
     panelSeq: number;
     panel: DungeonStonePanel | null;
     invitacion: { dungeonId: string; nombre: string; de: string; expiraEnMs: number } | null;
-    enMazmorra: { dungeonId: string; nombre: string; jugadores: number; grupo: boolean } | null;
+    enMazmorra: {
+        dungeonId: string;
+        nombre: string;
+        jugadores: number;
+        grupo: boolean;
+        // Del grupo: llaves chicas, llave del jefe, mapa y brújula. patas: el jugador tiene las Patas de rana.
+        llaves: number;
+        llaveJefe: boolean;
+        mapa: boolean;
+        brujula: boolean;
+        patas: boolean;
+        minimapa: DungeonMinimapState | null;
+    } | null;
+    // Texto de una losa que se acaba de leer (seq cambia en cada lectura).
+    losa: { seq: number; texto: string } | null;
+};
+// Salas visitadas (con el mapa, todas) y, con la brújula, los cofres y la puerta del jefe.
+export type DungeonMinimapState = {
+    mapa: number;
+    salas: Array<{ x1: number; y1: number; x2: number; y2: number; visitada: boolean }>;
+    cofres: Array<{ x: number; y: number; abierto: boolean }>;
+    jefe: Array<{ x: number; y: number }>;
 };
 
 // tiles: dónde dibujar el efecto: la baldosa de cada objetivo alcanzado (vacía si no alcanzó a nadie).

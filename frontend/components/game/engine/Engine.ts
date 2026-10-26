@@ -589,6 +589,9 @@ export class Engine {
     hoverPointerGlobal: { x: number; y: number } | null = null;
     hoveredEntityId: number | null = null;
     canAutoEmbark = false;
+    // Mazmorras (server/src/dungeons.ts): adentro no se embarca; el agua profunda se nada con las Patas de rana.
+    inDungeon = false;
+    dungeonSwim = false;
     healthBarEntityIds: Set<number> = new Set();
     remoteEntities: Map<number, Container> = new Map();
     worldName = "";
@@ -1524,7 +1527,19 @@ export class Engine {
             return false;
         }
 
+        if (isWaterTile && this.inDungeon) {
+            return this.dungeonSwim && character === this.user;
+        }
+
         return !isWaterTile;
+    }
+
+    // Nadando en el agua profunda de una mazmorra el personaje se ve medio sumergido.
+    private getSwimAlpha(character: Character | null | undefined): number {
+        if (!this.inDungeon || !character || character.navegando) {
+            return 1;
+        }
+        return this.isWaterTile(character.pos.x, character.pos.y) ? 0.55 : 1;
     }
 
     private isNavigationTransitionTileWalkable(
@@ -1541,7 +1556,7 @@ export class Engine {
         }
 
         const tile = this.getWalkTileData(tX, tY);
-        if (tile?.blocked === 1) {
+        if (tile?.blocked === 1 || this.inDungeon) {
             return false;
         }
 
@@ -2200,15 +2215,12 @@ export class Engine {
             const entity = this.personajes[id];
             if (!entity) continue;
 
-            container.alpha = getCharacterRenderAlpha(
-                entity,
-                this.runtimeTiming,
-                {
+            container.alpha =
+                getCharacterRenderAlpha(entity, this.runtimeTiming, {
                     localPartyMemberIds: this.partyMemberIds,
                     localClanTag: this.user?.clan,
                     isAdminViewer: this.user?.privileges === 1,
-                },
-            );
+                }) * this.getSwimAlpha(entity);
 
             if (entity.moving) {
                 const progress = this.getCharacterMovementProgress(entity, now);
@@ -3131,11 +3143,11 @@ export class Engine {
             zRow,
             Z_INDEX_LAYERS.CHARACTER,
         );
-        this.playerContainer.alpha = getCharacterRenderAlpha(
-            this.user,
-            this.runtimeTiming,
-            { isLocalCharacter: true, localClanTag: this.user?.clan },
-        );
+        this.playerContainer.alpha =
+            getCharacterRenderAlpha(this.user, this.runtimeTiming, {
+                isLocalCharacter: true,
+                localClanTag: this.user?.clan,
+            }) * this.getSwimAlpha(this.user);
 
         // Use actualBodySprite if we found it, otherwise use stored reference
         const spriteToUpdate = actualBodySprite || bodySprite;

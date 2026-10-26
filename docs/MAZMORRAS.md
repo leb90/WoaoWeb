@@ -113,6 +113,9 @@ Todas por datos del mapa, para que las mazmorras siguientes se armen sin código
    - Un generador de mapas desde un plano en texto, con gráficos de AO, así las salas se editan fácil.
    - Los mapas 510-512, criaturas por sala, minijefe, jefe con fases, Patas de rana y recompensas.
 4. **Prueba y balance.** En vivo solo y en grupo de 5, ajuste de números y página de la wiki.
+5. **Mazmorra 2: Caverna de las Llaves.** Diseño en [mazmorras/02-CAVERNA_DE_LAS_LLAVES.md](mazmorras/02-CAVERNA_DE_LAS_LLAVES.md).
+   - Primero, el ítem (Botas de Pegaso, con la Carrera) y las mecánicas nuevas: cristales, piso que se desmorona, placa con tiempo, paredes resquebrajadas, aplastadores y estatuas que despiertan.
+   - Después, los mapas 520-522, el minijefe, el jefe y las recompensas.
 
 ## 5. Decisiones
 

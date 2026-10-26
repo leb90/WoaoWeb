@@ -1,3 +1,4 @@
+import { playDungeonMotion } from "../engine/dungeonMotion";
 import type { IncomingPacketHandlerArgs } from "./incomingPacketTypes";
 
 export async function handleIncomingUiPacket({
@@ -269,6 +270,12 @@ export async function handleIncomingUiPacket({
 
         case "dungeonState":
             ctx.mergeHud({ dungeonState: packet.payload });
+            return true;
+
+        case "dungeonMotion":
+            if (engine) {
+                playDungeonMotion(engine, packet.payload);
+            }
             return true;
 
         case "castleState":

@@ -1110,11 +1110,18 @@ export type ProtocolApi = {
     handleData: (ws: RuntimeClient, packageID: number) => void;
     processPendingMovements: () => void;
     syncPendingReviveCastVisibilityForUser: (movedUserId: EntityId) => void;
+    moveUserByServer: (ws: RuntimeClient, x: number, y: number, heading: number) => void;
+    syncOwnPosition: (ws: RuntimeClient) => void;
 };
 
 const protocol = {} as ProtocolApi;
 
 protocol.syncPendingReviveCastVisibilityForUser = syncPendingReviveCastVisibilityForUser;
+protocol.moveUserByServer = (ws, x, y, heading) => moveUserByServer(ws, x, y, heading);
+protocol.syncOwnPosition = (ws) => {
+    const user = getCharacterById(ws.id!);
+    if (user) sendOwnPositionUpdate(ws, user);
+};
 
 Protocol.call(protocol);
 const AREA_RANGE_X = vars.areaVisionRangeX;
@@ -1936,6 +1943,11 @@ function processUserMovement(ws: RuntimeClient, heading: number, moveId: number,
         return;
     }
 
+    // Mazmorras: mientras carga, corre o salta (dungeonMotion.ts) el movimiento lo maneja el server.
+    if (require("./dungeonMotion").isMoving(user)) {
+        return;
+    }
+
     stopMeditation(ws, user);
 
     const oldX = user.pos.x;
@@ -1965,6 +1977,12 @@ function processUserMovement(ws: RuntimeClient, heading: number, moveId: number,
     const inDungeon = dungeons.isDungeonInstanceMap(user.map);
 
     if (inDungeon) {
+        const oneWayDenied = dungeons.getOneWayDeniedReason(user, posX, posY);
+        if (oneWayDenied) {
+            handleProtocol.console(oneWayDenied, "white", 0, 0, ws);
+            sendOwnPositionUpdate(ws, user);
+            return;
+        }
         const waterDenied = dungeons.getWaterStepDeniedReason(user, destinationIsWater);
         if (waterDenied !== null) {
             if (waterDenied) {
@@ -2160,6 +2178,40 @@ function processUserMovement(ws: RuntimeClient, heading: number, moveId: number,
     updateUserAreaAfterMovement(ws, user, heading);
     syncPendingReviveCastVisibilityForUser(ws.id!);
     schedulePendingMovement(ws.id!);
+}
+
+// Movimiento que decide el server (la Carrera y el salto de las mazmorras, dungeonMotion.ts): lleva al jugador a
+// (x, y) del mismo mapa, de a una baldosa por vez, sin el chequeo de paso. Los que miran ya lo animan con el paquete
+// dungeonMotion y el propio jugador también, así que no se avisa cada paso: solo se actualiza el área (entran y
+// salen personajes, criaturas e ítems). Al terminar, dungeonMotion manda la posición final.
+function moveUserByServer(ws: RuntimeClient, x: number, y: number, heading: number) {
+    const user = getCharacterById(ws.id!) as any;
+    if (!user || !vars.mapData[user.map]?.[y]?.[x]) {
+        return;
+    }
+
+    const now = Date.now();
+    while (user.pos.x !== x || user.pos.y !== y) {
+        const stepX = user.pos.x + Math.sign(x - user.pos.x);
+        const stepY = user.pos.x === x ? user.pos.y + Math.sign(y - user.pos.y) : user.pos.y;
+        const cell = vars.mapData[user.map][user.pos.y][user.pos.x];
+        if (cell && String(cell.id) === String(ws.id)) {
+            cell.id = 0;
+        }
+        vars.mapData[user.map][stepY][stepX].id = ws.id;
+        targetAssist.recordTileLeft(user, user.map, user.pos.x, user.pos.y, now);
+        user.pos.x = stepX;
+        user.pos.y = stepY;
+        user.heading = heading;
+        user.stateVersion = Number(user.stateVersion ?? 0) + 1;
+        updateUserAreaAfterMovement(ws, user, heading);
+    }
+
+    user.lastMovementActivityAt = now;
+    cancelPendingLogout(user, ws, LOGOUT_CANCELLED_MESSAGE);
+    syncSafeZoneState(ws, user);
+    game.syncPartyStateForMember(ws.id);
+    syncPendingReviveCastVisibilityForUser(ws.id!);
 }
 
 function buyItem(ws: RuntimeClient) {
@@ -3584,7 +3636,10 @@ function attackMele(ws: RuntimeClient) {
             return;
         }
 
-        const meleeBlock = elementalEffects.getActionBlockReason(user, "melee") ?? dungeons.getSwimBlockReason(user);
+        const meleeBlock =
+            elementalEffects.getActionBlockReason(user, "melee") ??
+            dungeons.getSwimBlockReason(user) ??
+            require("./dungeonMotion").getMotionBlockReason(user);
         if (meleeBlock) {
             handleProtocol.console(meleeBlock, "white", 0, 0, ws);
             return;
@@ -3797,7 +3852,10 @@ function attackRange(ws: RuntimeClient) {
             return;
         }
 
-        const rangedBlock = elementalEffects.getActionBlockReason(user, "ranged") ?? dungeons.getSwimBlockReason(user);
+        const rangedBlock =
+            elementalEffects.getActionBlockReason(user, "ranged") ??
+            dungeons.getSwimBlockReason(user) ??
+            require("./dungeonMotion").getMotionBlockReason(user);
         if (rangedBlock) {
             handleProtocol.console(rangedBlock, "white", 0, 0, ws);
             return;
@@ -4219,7 +4277,8 @@ function attackSpell(ws: RuntimeClient) {
 
         const elementalBlock =
             elementalEffects.getActionBlockReason(user, isHostileCombatSpell(datSpell) || isSummonSpell ? "spell" : "support", now) ??
-            dungeons.getSwimBlockReason(user);
+            dungeons.getSwimBlockReason(user) ??
+            require("./dungeonMotion").getMotionBlockReason(user);
         if (elementalBlock) {
             handleProtocol.console(elementalBlock, "white", 0, 0, ws);
             return;

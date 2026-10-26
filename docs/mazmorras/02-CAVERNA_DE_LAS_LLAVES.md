@@ -1,6 +1,6 @@
 # Caverna de las Llaves
 
-Fecha: 2026-10-26. Estado: **en construcción**. El sistema (instancias, grupo, ítems de mazmorra, mecánicas) está en [../MAZMORRAS.md](../MAZMORRAS.md); la mazmorra 1, en [01-GRUTA_DEL_ABISAL.md](01-GRUTA_DEL_ABISAL.md).
+Fecha: 2026-10-26. Estado: **hecha, en desarrollo** hasta que exista la mazmorra de la pluma (cómo quedó: [../MAZMORRAS.md](../MAZMORRAS.md), sección 8). El sistema (instancias, grupo, ítems de mazmorra, mecánicas) está en [../MAZMORRAS.md](../MAZMORRAS.md); la mazmorra 1, en [01-GRUTA_DEL_ABISAL.md](01-GRUTA_DEL_ABISAL.md).
 
 **Lugar en la serie:** es la cuarta, después de la mazmorra de la pluma, como en el original (ver [00-PATRON_LINKS_AWAKENING.md](00-PATRON_LINKS_AWAKENING.md)). Adentro hace falta saltar con la pluma. Hasta que exista la mazmorra que la da, la Caverna queda en desarrollo: entra un GM, y la pluma se da a mano para probar.
 

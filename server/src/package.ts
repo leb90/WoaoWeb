@@ -133,6 +133,7 @@ const clientPacketID = {
     elementalState: 98,
     areaSpellFx: 99,
     dungeonState: 100,
+    dungeonMotion: 101,
 } as const;
 
 const serverPacketID = {

@@ -9683,7 +9683,9 @@ function Game(this: GameApi) {
             const isHostileSpell = isOffensiveSpellData(datSpell);
 
             if (isHostileSpell) {
-                const castleDeniedMessage = require("./clanCastles").getCastleAttackDeniedMessage(user, npc);
+                const castleDeniedMessage =
+                    require("./clanCastles").getCastleAttackDeniedMessage(user, npc) ??
+                    require("./dungeons").getNpcInvulnerableReason(npc);
                 if (castleDeniedMessage) {
                     withUserClient(idUser, (userClient) => {
                         handleProtocol.console(castleDeniedMessage, "white", 1, 0, userClient);
@@ -10619,7 +10621,9 @@ function Game(this: GameApi) {
                 return 0;
             }
 
-            const castleDeniedMessage = require("./clanCastles").getCastleAttackDeniedMessage(user, npc);
+            const castleDeniedMessage =
+                    require("./clanCastles").getCastleAttackDeniedMessage(user, npc) ??
+                    require("./dungeons").getNpcInvulnerableReason(npc);
             if (castleDeniedMessage) {
                 withUserClient(idUser, (userClient) => {
                     handleProtocol.console(castleDeniedMessage, "white", 1, 0, userClient);

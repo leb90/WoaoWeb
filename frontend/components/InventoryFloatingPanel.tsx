@@ -364,6 +364,23 @@ const HOTKEY_SECTIONS: HotkeySection[] = [
         ],
     },
     {
+        title: "Mazmorras",
+        items: [
+            {
+                action: "dungeonDash",
+                label: "Carrera",
+                description: "Corre en línea recta con las Botas de Pegaso (solo en mazmorras).",
+                slots: 1,
+            },
+            {
+                action: "dungeonJump",
+                label: "Saltar",
+                description: "Salta con la Pluma (solo en mazmorras).",
+                slots: 1,
+            },
+        ],
+    },
+    {
         title: "Inventario y hechizos",
         items: [
             {
@@ -3400,7 +3417,10 @@ export default function InventoryFloatingPanel({
                             {activeTab === "inventory" ? (
                                 <div className="mt-2 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                                     {hud?.dungeonState?.enMazmorra ? (
-                                        <DungeonItemsStrip inside={hud.dungeonState.enMazmorra} />
+                                        <DungeonItemsStrip
+                                            inside={hud.dungeonState.enMazmorra}
+                                            onUseItem={(accion) => onSendCommand?.(`/mazmorra ${accion}`)}
+                                        />
                                     ) : null}
                                     <div className="bg-[#120c09] p-1">
                                         <div className="grid grid-cols-6 gap-px">

@@ -32,4 +32,15 @@ Sonidos al estilo de las mazmorras de Zelda, pero originales: ninguno copia melo
 | 214 | Se cierran las puertas de una sala (sala que se cierra o cofre trampa) | `rock_metal_slide_2.wav`, del mismo autor, acelerado ×1,5 | Hansjörg Malthaner (Varkalandar) | CC-BY 4.0: **pide atribución** |
 | 215 | Cofre de oro | `sfx_coin_cluster3.wav` de "The Essential Retro Video Game Sound Effects Collection" | Juhani Junkala (SubspaceAudio) | CC0 |
 
+Para la Caverna de las Llaves se sumaron sonidos del mismo paquete de Juhani Junkala (CC0). Se igualaron por volumen medio, porque son demasiado cortos para medirlos en LUFS: entre −19 y −22 dB.
+
+| Número | Uso | Original | Autor | Licencia |
+|---|---|---|---|---|
+| 216 | La Carrera rompe un bloque de cristal | `sfx_sounds_impact9.wav` (recortado a 0,85 s) | Juhani Junkala (SubspaceAudio) | CC0 |
+| 217 | Se cae un piso que se desmorona | `sfx_exp_shortest_soft9.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
+| 218 | La Carrera se estrella contra una pared | `sfx_sounds_impact11.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
+| 219 | Arranca la Carrera | `sfx_movement_jump11.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
+| 220 | Salto con la Pluma | `sfx_movement_jump13.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
+| 221 | Bajan los aplastadores | `sfx_exp_shortest_hard1.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
+
 Atribución que pide la licencia CC-BY de 213 y 214: "Rock/Metal Slide" de Hansjörg Malthaner (http://opengameart.org/users/varkalandar), CC-BY 4.0, modificado (recortado, normalizado y acelerado).

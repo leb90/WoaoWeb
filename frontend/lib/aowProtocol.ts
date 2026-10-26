@@ -98,6 +98,7 @@ export const CLIENT_PACKET_ID = {
     elementalState: 98,
     areaSpellFx: 99,
     dungeonState: 100,
+    dungeonMotion: 101,
 } as const;
 
 export const CHARACTER_SWING_WEAPON = 1;
@@ -503,10 +504,23 @@ export type DungeonStatePayload = {
         mapa: boolean;
         brujula: boolean;
         patas: boolean;
+        // Inventario de mazmorra: los ítems que tiene (para siempre) y cuál se usa con un clic.
+        items?: Array<{ id: string; nombre: string; accion: "carrera" | "salto" | null }>;
         minimapa: DungeonMinimapState | null;
     } | null;
     // Texto de una losa que se acaba de leer (seq cambia en cada lectura).
     losa: { seq: number; texto: string } | null;
+};
+// La Carrera y el salto de las mazmorras (server/src/dungeonMotion.ts): el movimiento entero, para animarlo.
+export type DungeonMotionPayload = {
+    id: number;
+    tipo: "carga" | "carrera" | "salto";
+    heading?: number;
+    ms: number;
+    path?: Array<{ x: number; y: number }>;
+    golpe?: "pared" | "criatura" | "obstaculo" | null;
+    salto?: { to: { x: number; y: number }; ms: number } | null;
+    to?: { x: number; y: number };
 };
 // Salas visitadas (con el mapa, todas) y, con la brújula, los cofres y la puerta del jefe.
 export type DungeonMinimapState = {
@@ -1497,6 +1511,7 @@ export type ParsedServerPacket =
     | { type: "elementalState"; payload: ElementalStatePayload }
     | { type: "areaSpellFx"; payload: AreaSpellFxPayload }
     | { type: "dungeonState"; payload: DungeonStatePayload }
+    | { type: "dungeonMotion"; payload: DungeonMotionPayload }
     | { type: "castleState"; payload: CastleStatePayload }
     | { type: "factionWarState"; payload: FactionWarStatePayload }
     | { type: "rankedState"; payload: RankedStatePayload }
@@ -2738,6 +2753,18 @@ function parseServerPacketById(
                 return {
                     type: "dungeonState",
                     payload: JSON.parse(rawPayload) as DungeonStatePayload,
+                };
+            } catch {
+                return { type: "unknown", payload: { packetId } };
+            }
+        }
+        case CLIENT_PACKET_ID.dungeonMotion: {
+            const rawPayload = reader.getString();
+
+            try {
+                return {
+                    type: "dungeonMotion",
+                    payload: JSON.parse(rawPayload) as DungeonMotionPayload,
                 };
             } catch {
                 return { type: "unknown", payload: { packetId } };

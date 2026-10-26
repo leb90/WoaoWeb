@@ -2702,6 +2702,12 @@ function Npcs(this: NpcsApi) {
                     continue;
                 }
 
+                // Mazmorras: las estatuas quedan quietas hasta que alguien se acerca.
+                if (npc.dormant && !require("./dungeons").wakeIfPlayerNear(npc)) {
+                    npc.nextThinkAt = now + vars.timing.npcThinkMs;
+                    continue;
+                }
+
                 if (
                     !vars.areaNpc[idNpc]?.length &&
                     !getHostileNpcCurrentSummonTarget(npc) &&
@@ -2722,7 +2728,8 @@ function Npcs(this: NpcsApi) {
                     );
                 }
 
-                npc.nextThinkAt = now + vars.timing.npcThinkMs;
+                // Criaturas en pareja: la que queda sola se enfurece y piensa más rápido.
+                npc.nextThinkAt = now + vars.timing.npcThinkMs * (npc.enraged ? 0.6 : 1);
                 this.npcAttackUser(idNpc, targetPressure);
 
                 if (npc.currentTargetId) {

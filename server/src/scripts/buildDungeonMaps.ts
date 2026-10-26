@@ -18,9 +18,17 @@
 //   O  pozo          ^  lava (quema al pisarla)          %  lava que erupciona cada tanto
 //   _  placa (se aprieta con un jugador o un bloque encima)          B  bloque que se empuja con un clic
 //   ?  losa de piedra (texto en "losas" de leyenda.json, en orden de lectura)
-//   cofres: K llave chica, N llave del jefe, M mapa, X brújula, $ oro, R ítem de la mazmorra, T trampa
+//   cofres: K llave chica, N llave del jefe, M mapa, X brújula, $ oro, G oro grande, R ítem de la mazmorra, T trampa,
+//           Y cofre del jefe (trofeo y oro, una vez por día)
+// Caverna de las Llaves (la Carrera y el salto, dungeonMotion.ts):
+//   *  bloque de cristal (lo rompe la Carrera)      :  piso que se desmorona (se cruza corriendo o saltando)
+//   P  runa con tiempo (abre las puertas Q por unos segundos)      Q  reja que abre la runa con tiempo
+//   W  pared rajada (tiembla con la Carrera; en la arena del jefe, lo baja)      Z  aplastador
+//   < > { }  puerta de un solo sentido hacia el oeste, el este, el norte y el sur
 // Las puertas van en pasos de una baldosa: en una pared horizontal se ven como un arco de piedra; en una vertical,
 // como un cristal que tapa el paso.
+// leyenda.json puede traer "plantillas": criaturas propias de la mazmorra, armadas sobre una de AO ("base") con sus
+// cambios (nombre, cuerpo, vida y las marcas de dungeons.ts: despierta, pareja, revivirMs, flota, divide).
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
@@ -49,9 +57,41 @@ export const DUNGEON_OBJECTS = {
     placaApretada: { id: 1838, name: "Runa del suelo encendida", grh: 36797 },
     losa: { id: 1839, name: "Losa de piedra", grh: 513 },
     barrera: { id: 1840, name: "Barrera de cristal", grh: 18543 },
+    cristal: { id: 1841, name: "Bloque de cristal", grh: 18542 },
+    pisoRajado: { id: 1842, name: "Baldosa rajada", grh: 8629 },
+    hueco: { id: 1843, name: "Hueco", grh: 1 },
+    runaTiempo: { id: 1844, name: "Runa del tiempo", grh: 36798 },
+    runaTiempoEncendida: { id: 1845, name: "Runa del tiempo encendida", grh: 36797 },
+    paredRajada: { id: 1846, name: "Pared rajada", grh: 2161 },
+    losaAplastador: { id: 1847, name: "Losa del aplastador", grh: 9413 },
+    aplastador: { id: 1848, name: "Aplastador", grh: 8623 },
+    cofreJefe: { id: 1849, name: "Cofre del jefe", grh: 18532 },
 } as const;
-const CHEST_CONTENT: Record<string, string> = { K: "llave", N: "jefe", M: "mapa", X: "brujula", $: "oro", R: "premio", T: "trampa" };
-const BARRIER_TYPE: Record<string, string> = { L: "llave", J: "jefe", "+": "sala", "=": "placa" };
+const CHEST_CONTENT: Record<string, string> = {
+    K: "llave",
+    N: "jefe",
+    M: "mapa",
+    X: "brujula",
+    $: "oro",
+    G: "oroGrande",
+    R: "premio",
+    T: "trampa",
+    Y: "trofeo",
+};
+const BARRIER_TYPE: Record<string, string> = {
+    L: "llave",
+    J: "jefe",
+    "+": "sala",
+    "=": "placa",
+    Q: "tiempo",
+    "<": "unica",
+    ">": "unica",
+    "{": "unica",
+    "}": "unica",
+};
+const ONE_WAY_DIR: Record<string, string> = { "<": "oeste", ">": "este", "{": "norte", "}": "sur" };
+// Puertas que arrancan abiertas (no bloquean).
+const OPEN_BARRIERS = new Set(["+", "<", ">", "{", "}"]);
 
 type Tile = {
     graphics: number;
@@ -66,10 +106,13 @@ type Legend = {
     criaturas?: Record<string, number | { npc: number; movimiento?: number }>;
     // Textos de las losas de cada mapa, en orden de lectura (de arriba abajo y de izquierda a derecha).
     losas?: Record<string, string[]>;
-    // Oro de cada cofre de oro.
+    // Oro de cada cofre de oro y de cada cofre de oro grande.
     oro?: number;
+    oroGrande?: number;
     // Criaturas que suelta un cofre trampa.
     trampa?: number[];
+    // Criaturas propias de la mazmorra: número → plantilla de AO de base y los cambios.
+    plantillas?: Record<string, { base: number } & Record<string, unknown>>;
 };
 
 const dungeonId = process.argv[2];
@@ -104,8 +147,8 @@ const plans = fs
     .sort((a, b) => a.mapId - b.mapId);
 
 const charAt = (plan: Plan, x: number, y: number) => plan.grid[y - plan.origin.y]?.[x - plan.origin.x] ?? " ";
-const isWall = (c: string) => c === "#";
-const isOpen = (c: string) => c !== "#" && c !== " ";
+const isWall = (c: string) => c === "#" || c === "W";
+const isOpen = (c: string) => !isWall(c) && c !== " ";
 const isBarrier = (c: string) => c in BARRIER_TYPE;
 // Lo que forma parte de una sala (las puertas la cierran).
 const isRoomTile = (c: string) => isOpen(c) && !isBarrier(c);
@@ -189,7 +232,7 @@ function buildMechanics(plan: Plan) {
     const data = {
         rooms: rooms.map(({ id, x1, y1, x2, y2, cierra }) => ({ id, x1, y1, x2, y2, cierra })),
         roomOf: Object.fromEntries(roomOf),
-        barriers: [] as Array<{ x: number; y: number; tipo: string; horizontal: boolean; salas: number[] }>,
+        barriers: [] as Array<{ x: number; y: number; tipo: string; horizontal: boolean; salas: number[]; dir?: string }>,
         pits: [] as string[],
         lava: [] as string[],
         lavaPeriodica: [] as string[],
@@ -198,7 +241,13 @@ function buildMechanics(plan: Plan) {
         chests: [] as Array<{ x: number; y: number; contenido: string; oculto: boolean; sala: number }>,
         slabs: [] as Array<{ x: number; y: number; texto: string }>,
         oro: Number(legend.oro ?? 250),
+        oroGrande: Number(legend.oroGrande ?? 4 * Number(legend.oro ?? 250)),
         trampa: legend.trampa ?? [],
+        crystals: [] as string[],
+        fragile: [] as string[],
+        timedPlates: [] as string[],
+        crackedWalls: [] as string[],
+        crushers: [] as string[],
     };
     for (let y = 1; y <= SIZE; y++) {
         for (let x = 1; x <= SIZE; x++) {
@@ -214,8 +263,14 @@ function buildMechanics(plan: Plan) {
                     tipo: BARRIER_TYPE[c],
                     horizontal: isWall(charAt(plan, x - 1, y)) && isWall(charAt(plan, x + 1, y)),
                     salas: [...new Set(salas)],
+                    ...(ONE_WAY_DIR[c] ? { dir: ONE_WAY_DIR[c] } : {}),
                 });
             }
+            if (c === "*") data.crystals.push(key);
+            if (c === ":") data.fragile.push(key);
+            if (c === "P") data.timedPlates.push(key);
+            if (c === "W") data.crackedWalls.push(key);
+            if (c === "Z") data.crushers.push(key);
             if (c === "O") data.pits.push(key);
             if (c === "^") data.lava.push(key);
             if (c === "%") data.lavaPeriodica.push(key);
@@ -237,10 +292,11 @@ function buildTile(plan: Plan, x: number, y: number): Tile {
         // Cara de la pared si hay piso abajo a 4 baldosas o menos; la fila de la textura depende de la distancia.
         let distance = 1;
         while (distance <= 4 && isWall(charAt(plan, x, y + distance))) distance++;
+        const object = c === "W" ? DUNGEON_OBJECTS.paredRajada.id : undefined;
         if (distance <= 4 && isOpen(charAt(plan, x, y + distance))) {
-            return { graphics: block4(WALL_FACE_GRH, x, y, 4 - distance), blocked: true };
+            return { graphics: block4(WALL_FACE_GRH, x, y, 4 - distance), blocked: true, object };
         }
-        return { graphics: VOID_GRH, blocked: true };
+        return { graphics: VOID_GRH, blocked: true, object };
     }
     if (c === "~") return { graphics: block4(WATER_GRH, x, y) };
     if (c === "O") return { graphics: VOID_GRH, trigger: NO_NPC_TRIGGER };
@@ -249,12 +305,26 @@ function buildTile(plan: Plan, x: number, y: number): Tile {
     if (c === "S") tile.object = PORTAL_OBJ;
     if (isBarrier(c)) {
         const horizontal = isWall(charAt(plan, x - 1, y)) && isWall(charAt(plan, x + 1, y));
-        const open = c === "+";
+        const open = OPEN_BARRIERS.has(c);
         tile.object = horizontal ? (open ? DUNGEON_OBJECTS.puertaAbierta.id : DUNGEON_OBJECTS.puerta.id) : open ? undefined : DUNGEON_OBJECTS.barrera.id;
         tile.blocked = !open;
         tile.trigger = NO_NPC_TRIGGER;
     }
     if (c === "_") tile.object = DUNGEON_OBJECTS.placa.id;
+    if (c === "P") tile.object = DUNGEON_OBJECTS.runaTiempo.id;
+    if (c === "*") {
+        tile.object = DUNGEON_OBJECTS.cristal.id;
+        tile.blocked = true;
+    }
+    // Las criaturas no pisan el piso que se desmorona ni los aplastadores.
+    if (c === ":") {
+        tile.object = DUNGEON_OBJECTS.pisoRajado.id;
+        tile.trigger = NO_NPC_TRIGGER;
+    }
+    if (c === "Z") {
+        tile.object = DUNGEON_OBJECTS.losaAplastador.id;
+        tile.trigger = NO_NPC_TRIGGER;
+    }
     if (c === "B") {
         tile.object = DUNGEON_OBJECTS.bloque.id;
         tile.blocked = true;
@@ -264,7 +334,7 @@ function buildTile(plan: Plan, x: number, y: number): Tile {
         tile.blocked = true;
     }
     if (c in CHEST_CONTENT && !hiddenChests.has(`${plan.mapId}:${x},${y}`)) {
-        tile.object = DUNGEON_OBJECTS.cofre.id;
+        tile.object = c === "Y" ? DUNGEON_OBJECTS.cofreJefe.id : DUNGEON_OBJECTS.cofre.id;
         tile.blocked = true;
     }
     if (/[1-9]/.test(c)) {
@@ -292,6 +362,10 @@ const MINIMAP_COLORS = {
     lava: [150, 50, 20],
     chest: [210, 170, 60],
     door: [120, 100, 80],
+    crystal: [150, 110, 200],
+    fragile: [120, 70, 40],
+    crusher: [110, 40, 30],
+    crackedWall: [90, 70, 50],
 } as const;
 
 function crc32(buffer: Buffer) {
@@ -341,6 +415,10 @@ function minimapColor(plan: Plan, tile: Tile, x: number, y: number) {
     const c = charAt(plan, x, y);
     if (tile.object === PORTAL_OBJ) return MINIMAP_COLORS.portal;
     if (tile.object === STAIRS_OBJ) return MINIMAP_COLORS.stairs;
+    if (c === "*") return MINIMAP_COLORS.crystal;
+    if (c === ":") return MINIMAP_COLORS.fragile;
+    if (c === "Z") return MINIMAP_COLORS.crusher;
+    if (c === "W") return MINIMAP_COLORS.crackedWall;
     if (c === "~") return MINIMAP_COLORS.water;
     if (c === " " || c === "O") return MINIMAP_COLORS.void;
     if (c === "^" || c === "%") return MINIMAP_COLORS.lava;
@@ -457,6 +535,38 @@ function upsertDungeonObjects() {
     console.log(`objetos de mazmorra: ${Object.values(DUNGEON_OBJECTS).map((entry) => entry.id).join(", ")}`);
 }
 upsertDungeonObjects();
+
+// Criaturas propias de la mazmorra (plantillas de leyenda.json) en npcs.json (server y api) y en las copias del cliente.
+function upsertCustomNpcs() {
+    const custom = Object.entries(legend.plantillas ?? {});
+    if (!custom.length) return;
+    const serverNpcs = JSON.parse(fs.readFileSync(path.join(ROOT, "server/jsons/npcs.json"), "utf8"));
+    const templates = new Map<string, Record<string, unknown>>();
+    for (const [id, { base, ...changes }] of custom) {
+        const baseTemplate = serverNpcs[String(base)];
+        if (!baseTemplate) throw new Error(`La plantilla ${id} usa de base la criatura ${base}, que no existe.`);
+        templates.set(id, { ...baseTemplate, ...changes });
+    }
+    for (const file of ["server/jsons/npcs.json", "api/src/jsons/npcs.json"]) {
+        const fullPath = path.join(ROOT, file);
+        const raw = fs.readFileSync(fullPath, "utf8");
+        const npcs = JSON.parse(raw);
+        for (const [id, template] of templates) npcs[id] = template;
+        fs.writeFileSync(fullPath, `${JSON.stringify(npcs)}${raw.endsWith("\n") ? "\n" : ""}`, "utf8");
+    }
+    for (const file of ["frontend/public/init/npcs.json", "frontend/public/init/npcs_optimized.json"]) {
+        const fullPath = path.join(ROOT, file);
+        const raw = fs.readFileSync(fullPath, "utf8");
+        const npcs = JSON.parse(raw);
+        for (const [id, template] of templates) {
+            const fields = ["name", "idHead", "idBody", "exp", "gold", "hp", "maxHp", "minHit", "maxHit", "def", "poderAtaque", "poderEvasion"];
+            npcs[id] = Object.fromEntries(fields.filter((field) => template[field] !== undefined).map((field) => [field, template[field]]));
+        }
+        fs.writeFileSync(fullPath, `${JSON.stringify(npcs)}${raw.endsWith("\n") ? "\n" : ""}`, "utf8");
+    }
+    console.log(`criaturas propias: ${[...templates.keys()].join(", ")}`);
+}
+upsertCustomNpcs();
 
 // Plantilla de la piedra de invocación de la mazmorra (piedraNpc en dungeons.json): una estatua que no se ataca,
 // con el nombre de la mazmorra debajo y el id de la mazmorra, que es lo que abre su panel (dungeons.ts).

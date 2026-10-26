@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Compass, DoorOpen, Footprints, Key, KeyRound, Map as MapIcon, Mountain, ScrollText, Users, X } from "lucide-react";
+import { Compass, DoorOpen, Feather, Footprints, Key, KeyRound, Map as MapIcon, Mountain, ScrollText, Users, Wind, X } from "lucide-react";
 import type { DungeonMinimapState, DungeonStatePayload } from "../lib/aowProtocol";
 
 // Mazmorras (server/src/dungeons.ts): el panel de la piedra de invocación, la invocación del líder con su cuenta
@@ -203,10 +203,25 @@ type InsideState = NonNullable<DungeonStatePayload["enMazmorra"]>;
 
 // Franja de la mazmorra, arriba del inventario. Las Patas de rana quedan para siempre; las llaves, el mapa y la
 // brújula son de la corrida y no salen de la mazmorra. Las llaves que lleva otro del grupo se ven a media luz.
-export function DungeonItemsStrip({ inside }: { inside: InsideState }) {
+// Arriba, el inventario de mazmorra (para siempre): las Patas de rana, la Pluma y las Botas; la Pluma y las Botas
+// se usan con un clic (o con su tecla). Abajo, lo de la corrida.
+export function DungeonItemsStrip({ inside, onUseItem }: { inside: InsideState; onUseItem?: (accion: "carrera" | "salto") => void }) {
     const othersKeys = inside.llavesDeOtros ?? [];
+    const owned = new Map((inside.items ?? []).map((item) => [item.id, item]));
+    const itemSlots = [
+        { id: "patas", label: "Patas de rana: nadás por el agua profunda", short: "Patas", icon: Footprints, owned: inside.patas, tone: "text-sky-300", accion: null },
+        { id: "pluma", label: "Pluma de Roc: clic o F para saltar", short: "Pluma", icon: Feather, owned: owned.has("pluma"), tone: "text-teal-200", accion: "salto" as const },
+        {
+            id: "botas",
+            label: "Botas de Pegaso: clic o Shift para la Carrera",
+            short: "Botas",
+            icon: Wind,
+            owned: owned.has("botas_de_pegaso"),
+            tone: "text-orange-200",
+            accion: "carrera" as const,
+        },
+    ];
     const slots = [
-        { id: "patas", label: "Patas de rana: nadás por el agua profunda", short: "Patas", icon: Footprints, owned: inside.patas, tone: "text-sky-300" },
         {
             id: "llaves",
             label: `Llaves chicas: ${inside.llaves}. Se gastan al abrir una puerta.`,
@@ -232,7 +247,26 @@ export function DungeonItemsStrip({ inside }: { inside: InsideState }) {
     return (
         <div data-testid="dungeon-strip" className="border border-[#4a3424] bg-[#120c09] px-1.5 py-1">
             <p className="px-0.5 pb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-300/70">Mazmorra</p>
-            <div className="grid grid-cols-5 gap-1">
+            <div className="mb-1 grid grid-cols-3 gap-1">
+                {itemSlots.map(({ id, label, short, icon: Icon, owned: has, tone, accion }) => (
+                    <button
+                        key={id}
+                        type="button"
+                        data-testid={`dungeon-strip-${id}`}
+                        data-owned={has ? "1" : "0"}
+                        title={has ? label : `${short}: todavía no`}
+                        disabled={!has || !accion}
+                        onClick={() => accion && onUseItem?.(accion)}
+                        className={`relative flex h-11 flex-col items-center justify-center gap-0.5 border text-[9px] ${
+                            has ? "border-amber-300/35 bg-[#2a1b12]" : "border-[#2c2018] bg-[#0d0907] opacity-45"
+                        } ${has && accion ? "cursor-pointer transition hover:border-amber-200/70 hover:bg-[#3a2516]" : "cursor-default"}`}
+                    >
+                        <Icon className={`h-4 w-4 ${has ? tone : "text-stone-500"}`} />
+                        <span className={has ? "text-stone-200" : "text-stone-500"}>{short}</span>
+                    </button>
+                ))}
+            </div>
+            <div className="grid grid-cols-4 gap-1">
                 {slots.map(({ id, label, short, icon: Icon, owned, tone, count, heldBy }) => (
                     <div
                         key={id}

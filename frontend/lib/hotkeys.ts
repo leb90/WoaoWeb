@@ -14,7 +14,9 @@ export type HotkeyAction =
     | "meditate"
     | "equipItem"
     | "useItem"
-    | "dropItem";
+    | "dropItem"
+    | "dungeonDash"
+    | "dungeonJump";
 
 export type HotkeySettings = Record<HotkeyAction, string[]>;
 
@@ -33,6 +35,9 @@ export const DEFAULT_HOTKEY_SETTINGS: HotkeySettings = {
     equipItem: ["KeyE"],
     useItem: ["KeyU"],
     dropItem: ["KeyT"],
+    // Ítems de mazmorra: la Carrera (Botas de Pegaso) y el salto (Pluma).
+    dungeonDash: ["ShiftLeft"],
+    dungeonJump: ["KeyF"],
 };
 
 const HOTKEY_ACTIONS = Object.keys(DEFAULT_HOTKEY_SETTINGS) as HotkeyAction[];

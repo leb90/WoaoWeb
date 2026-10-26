@@ -193,7 +193,33 @@ export function useKeyboardGameplay({
                 return;
             }
 
+            // Mazmorras: la Carrera y el salto, si el personaje tiene el ítem (el server lo vuelve a validar).
+            const dungeonAction = isHotkeyMatch(e, settings.dungeonDash ?? [])
+                ? "carrera"
+                : isHotkeyMatch(e, settings.dungeonJump ?? [])
+                  ? "salto"
+                  : null;
+            if (dungeonAction && !e.repeat) {
+                const items =
+                    playerHudRef.current?.dungeonState?.enMazmorra?.items ?? [];
+                const socket = websocketRef.current;
+                if (
+                    activeEngine?.inDungeon &&
+                    items.some((item: { accion: string | null }) => item.accion === dungeonAction) &&
+                    socket?.readyState === WebSocket.OPEN
+                ) {
+                    socket.send(createDialogPacket(`/mazmorra ${dungeonAction}`));
+                    recordClientGameAction(`dungeon_${dungeonAction}`, { code: e.code });
+                    e.preventDefault();
+                    return;
+                }
+            }
+
             if (isHotkeyMatch(e, settings.attackOrTarget) && !e.repeat) {
+                if (activeEngine && activeEngine.dungeonMotionUntil > activeEngine.timestamp()) {
+                    e.preventDefault();
+                    return;
+                }
                 if (hasEquippedRangedWeapon()) {
                     setTargetingMode({ type: "range" });
                     e.preventDefault();

@@ -1,6 +1,6 @@
 # Cueva de la Cola
 
-Fecha: 2026-10-26. Estado: **diseño** (falta construirla). El sistema (instancias, grupo, ítems de mazmorra, mecánicas) está en [../MAZMORRAS.md](../MAZMORRAS.md). La mazmorra anterior de la serie es [01-GRUTA_DEL_ABISAL.md](01-GRUTA_DEL_ABISAL.md); la siguiente que ya existe es [02-CAVERNA_DE_LAS_LLAVES.md](02-CAVERNA_DE_LAS_LLAVES.md).
+Fecha: 2026-10-26. Estado: **en construcción**. Leandro aprobó todo lo propuesto (nombres, trofeo, caracola y gráficos). El sistema (instancias, grupo, ítems de mazmorra, mecánicas) está en [../MAZMORRAS.md](../MAZMORRAS.md). La mazmorra anterior de la serie es [01-GRUTA_DEL_ABISAL.md](01-GRUTA_DEL_ABISAL.md); la siguiente que ya existe es [02-CAVERNA_DE_LAS_LLAVES.md](02-CAVERNA_DE_LAS_LLAVES.md).
 
 **Lugar en la serie:** es la segunda, y la que da la **Pluma de Roc** (ver [00-PATRON_LINKS_AWAKENING.md](00-PATRON_LINKS_AWAKENING.md)). La Caverna de las Llaves pide la pluma para entrar, así que con esta mazmorra la Caverna se puede abrir para todos.
 
@@ -152,12 +152,13 @@ Las llaves chicas abren cualquier cerradura; el orden de la tabla es el natural.
   - Tocar el rodillo saca vida y empuja. Se esquiva **saltando** con la pluma justo cuando pasa.
   - Entre un rodillo y el siguiente el ogro queda expuesto. En grupo, el rodillo obliga a saltar a todos a la vez.
   - La sala se cierra hasta vencerlo.
-- **Jefe: Ciempiés Colosal**, en la Guarida (532). Es el Moldorm del original.
-  - **Cuerpo:** en AO no hay ningún gusano de segmentos (el "Gusano de Arena" es un hombre lagarto). La propuesta es indexar el [LPC Centipede](https://opengameart.org/content/lpc-centipede) de FiveBrosStopMosYT: un ciempiés de pixel art visto desde arriba, que camina en las 4 direcciones, con cuadros de 128 × 128. Licencia OGA-BY 3.0: solo pide el crédito, que va en los créditos del juego.
-  - **Fase 1:** recorre la plataforma rápido y cambia de dirección. Si choca a alguien, lo empuja 2 baldosas. Los bordes son pozos: el que cae aparece en la Galería baja (D) y el ciempiés **se cura**.
-  - **Solo recibe daño en la cola:** golpes y hechizos tienen que venir de atrás, del lado contrario adonde mira. Saltarle por encima con la pluma es la forma de quedar detrás.
-  - **Fase 2 (al 50 %):** se enfurece y va más rápido.
-  - Es la pista de la losa: "El ciempiés solo siente los golpes en la cola. Saltale por encima y pegale de atrás."
+- **Jefe: Ciempiés Colosal**, en la Guarida (532). Es el Moldorm del original; cómo se mueve está en la sección 6.1.
+  - **Cuerpo:** en AO no hay ningún gusano de segmentos (el "Gusano de Arena" es un hombre lagarto). Se indexa el [LPC Centipede](https://opengameart.org/content/lpc-centipede) de FiveBrosStopMosYT: un ciempiés de pixel art visto desde arriba, con cuadros de 128 × 128. Licencia OGA-BY 3.0: solo pide el crédito, que va en los créditos del juego.
+  - **Cómo se dibuja:** no como un personaje de AO (4 direcciones y de baldosa en baldosa), sino en partes: la cabeza, dos segmentos y la cola, recortados del sprite. Cada parte va girada hacia donde avanza y sigue el rastro exacto de la cabeza, así el cuerpo dobla en las curvas como en Zelda.
+  - **Solo recibe daño en la cola:** la criatura de AO (con nombre y barra de vida, a la que se le pega y se le apunta) es la cola. La cabeza y los segmentos no se pueden golpear: si tocan a alguien, le sacan vida y lo empujan 2 baldosas.
+  - **Los bordes son pozos:** el que cae aparece en la Galería baja (D). Si se caen todos los que estaban en la plataforma, el ciempiés **se cura**, como en el original.
+  - **Más rápido:** después de cada golpe en la cola corre al doble por unos segundos, y por debajo de un cuarto de la vida corre al doble para siempre.
+  - Es la pista de la losa: "El ciempiés solo siente los golpes en la cola. Saltale por encima y pegale atrás."
 
 ### Trampas
 | Tipo | Dónde | Rol (igual que en Zelda) |
@@ -191,6 +192,22 @@ Pasean en 3 × 3 cuando no persiguen a nadie, y la dificultad escala con el tama
 - **Solo dentro de mazmorras.** Queda para siempre en el inventario de mazmorra.
 - **Uso real en esta mazmorra:** hace falta para la llave del jefe (Cornisa), para llegar al minijefe (Foso), para esquivar su rodillo y para ponerse detrás del jefe. Sin la pluma no se termina. La Isla y el atajo del Túnel son premios para el que la domina.
 
+### 6.1 Cómo se mueve el Ciempiés (Moldorm)
+
+En AO las criaturas caminan de baldosa en baldosa en 4 direcciones; Moldorm no. Lo sacamos del código del original (el desensamblado [zladx/LADX-Disassembly](https://github.com/zladx/LADX-Disassembly), archivos `04_moldorm.asm` y `04_minimoldorm.asm`):
+
+| En el original | En AO |
+|---|---|
+| 16 direcciones (de a 22,5°), velocidad constante: 1 píxel por cuadro | Igual: posición con decimales, unas 3 baldosas por segundo |
+| Cada 6 cuadros (0,1 s) gira una dirección para un lado | Cada 0,1 s gira 22,5°: da vueltas en círculos de 1 a 2 baldosas |
+| Cada 16 a 47 cuadros (0,3 a 0,8 s) sortea si gira a la izquierda o a la derecha | Igual: zigzaguea y a veces encadena una vuelta entera |
+| Al chocar con una pared sale hacia el lado contrario y puede cambiar el sentido de giro | Igual, en el borde de la plataforma: no se cae a los pozos |
+| La cabeza guarda su posición de cada cuadro; los 3 segmentos y la cola se dibujan donde estuvo la cabeza 12, 24, 36 y 46 cuadros antes | Igual: el server guarda el rastro y el cliente dibuja cada parte en su punto, girada |
+| Después de un golpe, y con poca vida, avanza dos veces por cuadro | El doble de velocidad por 3 s después de cada golpe, y para siempre por debajo del 25 % |
+| Solo la cola es vulnerable | La cola es la criatura de AO; el resto empuja |
+
+El server simula el movimiento cada 50 ms y manda a los que miran la posición de la cabeza, el ángulo y la velocidad unas 10 veces por segundo. El cliente interpola y arma el cuerpo con su propio rastro, igual que el original. La cola se mueve de baldosa en baldosa siguiendo el rastro, para que se le pueda pegar y apuntar como a cualquier criatura.
+
 ## 7. Mecánicas nuevas que necesita
 
 Las de las mazmorras anteriores ya están hechas: llaves, salas que se cierran, pozos, placas, bloques, losas, cofres ocultos, puertas de un solo sentido, estatuas que despiertan, criaturas en pareja y el salto. Faltan:
@@ -203,7 +220,8 @@ Las de las mazmorras anteriores ya están hechas: llaves, salas que se cierran, 
 | Rodillo de púas | El ataque del minijefe: una columna de púas que cruza la sala; no lastima al que está en el aire |
 | Escalera y portal que aparecen | Al vaciar una sala: la escalera A y el portal-atajo |
 | Pozos con destino | En la Guarida, caer lleva a la Galería baja y cura al jefe |
-| Cola débil | El jefe solo recibe daño desde atrás |
+| Movimiento del Ciempiés | 16 direcciones, giros en círculo, rebote en el borde, cuerpo que sigue el rastro y velocidad que sube (sección 6.1) |
+| Cola débil | Solo la cola recibe daño; la cabeza y el cuerpo empujan |
 | Bloque con cerradura | Como una puerta con llave, pero en un bloque |
 | Placa que hace aparecer un cofre | El Botón |
 
@@ -235,7 +253,7 @@ Las de las mazmorras anteriores ya están hechas: llaves, salas que se cierran, 
 |---|---|
 | Nombre de la mazmorra | Cueva de la Cola |
 | Minijefe | Ogro del Rodillo, con el cuerpo del Ogro de AO |
-| Jefe | Ciempiés Colosal, con el LPC Centipede indexado (sprite nuevo) |
+| Jefe | Ciempiés Colosal, con el LPC Centipede indexado (sprite nuevo) y el movimiento de Moldorm |
 | Trofeo | Aguijón del Ciempiés |
 | Caracola secreta | Coleccionable nuevo de la serie, para un premio a definir |
 | Gráficos | Piso de piedra gris y paredes de ladrillo de las mazmorras de AO |
@@ -244,4 +262,5 @@ Las de las mazmorras anteriores ya están hechas: llaves, salas que se cierran, 
 ## Fuentes
 - El mapa del pedido (VinnyVideo, 2008), con la leyenda de llaves, warps y objetos.
 - [Wikibooks: Tail Cave](https://en.wikibooks.org/wiki/The_Legend_of_Zelda:_Link%27s_Awakening/Walkthrough/Tail_Cave): el orden del recorrido, Rolling Bones y Moldorm.
-- [OpenGameArt: LPC Centipede](https://opengameart.org/content/lpc-centipede) de FiveBrosStopMosYT (OGA-BY 3.0, CC-BY-SA 3.0 y 4.0): la propuesta de cuerpo para el jefe.
+- [OpenGameArt: LPC Centipede](https://opengameart.org/content/lpc-centipede) de FiveBrosStopMosYT (OGA-BY 3.0, CC-BY-SA 3.0 y 4.0): el cuerpo del jefe.
+- [zladx/LADX-Disassembly](https://github.com/zladx/LADX-Disassembly): el código de Moldorm (`src/code/entities/04_moldorm.asm` y `04_minimoldorm.asm`).

@@ -56,6 +56,7 @@ Para el Polvo de Fuego, el Gancho, el Brazalete de Fuerza, el Escudo Espejo, las
 | 228 | Se tira una flecha con el Arco | `sfx_wpn_sword2.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
 | 229 | Se levanta el Escudo Espejo | `sfx_sounds_high1.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
 | 230 | El Escudo Espejo frena un golpe | `sfx_sounds_impact3.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
+| 231 | El Polvo mágico | `sfx_sounds_high3.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
 
 Atribución que pide la licencia CC-BY de 213 y 214: "Rock/Metal Slide" de Hansjörg Malthaner (http://opengameart.org/users/varkalandar), CC-BY 4.0, modificado (recortado, normalizado y acelerado).
 

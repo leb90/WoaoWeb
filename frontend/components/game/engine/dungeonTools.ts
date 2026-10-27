@@ -11,7 +11,8 @@ import type { Engine } from "./Engine";
 // - gancho: la cadena sale hasta el blanco; si engancha, arrastra al personaje hasta ahí; si no, vuelve;
 // - levanta / tira / suelta: lo que se lleva sobre la cabeza, el vuelo en arco al tirarlo y los pedazos al romperse;
 // - bomba: la bomba con la mecha encendida, que titila cada vez más rápido, y la explosión de 3 × 3 baldosas;
-// - escudo: el Escudo Espejo levantado delante del personaje, con un brillo que lo recorre, mientras dura.
+// - escudo: el Escudo Espejo levantado delante del personaje, con un brillo que lo recorre, mientras dura;
+// - polvo: una nube de chispas doradas y violetas sobre la baldosa de adelante.
 // Bomba: "16-bit animated bomb" de victordelima (CC0); explosión: "Pixel Explosion (12 Frames)" de JROB774 (CC-BY 3.0),
 // docs/CREDITOS_GRAFICOS.md. La flecha del Arco usa el proyectil de los arqueros (paquete createProjectile).
 
@@ -24,7 +25,7 @@ const FIRE_SPELL = {
     projectileVisual: { coreColor: "#ffe08a", ringColor: "#ff8c1a", trailColor: "#ff3b00", magnitude: 1.35 },
 } as unknown as SpellData;
 
-const TOOL_TYPES = new Set(["fuego", "gancho", "levanta", "tira", "suelta", "bomba", "escudo"]);
+const TOOL_TYPES = new Set(["fuego", "gancho", "levanta", "tira", "suelta", "bomba", "escudo", "polvo"]);
 // El Escudo de Diamantes del juego (grh 28661), que parece un espejo.
 const MIRROR_URL = "/sprites/escudo-espejo.png";
 
@@ -368,6 +369,15 @@ async function playMirror(engine: Engine, payload: DungeonMotionPayload) {
     });
 }
 
+// El polvo mágico: sale de la mano y cae como una nube de chispas en la baldosa de adelante.
+function playPowder(engine: Engine, payload: DungeonMotionPayload) {
+    if (!payload.to) return;
+    const from = characterCenter(engine, payload.id);
+    const at = tileCenter(engine, payload.id, payload.to);
+    if (from) burst(engine, { x: (from.x + at.x) / 2, y: (from.y + at.y) / 2 }, [0xfff3b0, 0xd7a6ff], 6, 0.04);
+    burst(engine, at, [0xffe066, 0xfff3b0, 0xc77dff, 0xffffff], 18, 0.06);
+}
+
 export function playDungeonTool(engine: Engine, payload: DungeonMotionPayload) {
     if (payload.tipo === "fuego") return playFire(engine, payload);
     if (payload.tipo === "gancho") return playHook(engine, payload);
@@ -375,6 +385,7 @@ export function playDungeonTool(engine: Engine, payload: DungeonMotionPayload) {
     if (payload.tipo === "tira") return playThrow(engine, payload);
     if (payload.tipo === "bomba") return void playBomb(engine, payload);
     if (payload.tipo === "escudo") return void playMirror(engine, payload);
+    if (payload.tipo === "polvo") return playPowder(engine, payload);
     if (payload.tipo === "suelta") {
         const at = characterCenter(engine, payload.id);
         dropCarried(engine, payload.id, at);

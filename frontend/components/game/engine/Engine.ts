@@ -45,11 +45,13 @@ import {
     type DungeonParticle,
 } from "./dungeonMotion";
 import { updateDungeonBosses } from "./dungeonBoss";
+import { updateDungeonDarkness } from "./dungeonDarkness";
 import { updateDungeonTools } from "./dungeonTools";
 import {
     CHARACTER_SWING_SHIELD,
     CHARACTER_SWING_WEAPON,
     type CharacterSnapshot,
+    type DungeonDarkRoom,
     type EnvironmentState,
 } from "../../../lib/aowProtocol";
 import {
@@ -607,6 +609,9 @@ export class Engine {
     // El Polvo de Fuego, el Gancho y la Pulsera (engine/dungeonTools.ts): efectos en curso y lo que lleva cada uno.
     dungeonToolEffects: Array<(now: number) => boolean> = [];
     dungeonCarried: Map<number, Container> = new Map();
+    // Las salas a oscuras del piso (engine/dungeonDarkness.ts): las manda el estado de la mazmorra.
+    dungeonDarkRooms: DungeonDarkRoom[] = [];
+    dungeonDarknessLayer: Graphics | null = null;
     healthBarEntityIds: Set<number> = new Set();
     remoteEntities: Map<number, Container> = new Map();
     worldName = "";
@@ -2239,6 +2244,7 @@ export class Engine {
         updateDungeonParticles(this, now);
         updateDungeonBosses(this, now);
         updateDungeonTools(this, now);
+        updateDungeonDarkness(this);
     }
 
     updateRemoteEntityMovement(now: number): void {

@@ -10624,7 +10624,7 @@ function Game(this: GameApi) {
 
             const castleDeniedMessage =
                     require("./clanCastles").getCastleAttackDeniedMessage(user, npc) ||
-                    require("./dungeons").getNpcInvulnerableReason(npc);
+                    require("./dungeons").getNpcInvulnerableReason(npc, user);
             if (castleDeniedMessage) {
                 withUserClient(idUser, (userClient) => {
                     handleProtocol.console(castleDeniedMessage, "white", 1, 0, userClient);

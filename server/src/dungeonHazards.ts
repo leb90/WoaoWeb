@@ -7,7 +7,9 @@
 //   Un bloque empujado en el medio le corta el recorrido;
 // - rodillo: el minijefe (Ogro del Rodillo) empuja una columna de púas que cruza la sala de punta a punta; al llegar,
 //   salta al otro lado y la empuja de vuelta. No lastima al que está en el aire (la Pluma);
-// - empuja: el golpe de la criatura corre al jugador unas baldosas (y lo puede tirar a un pozo).
+// - empuja: el golpe de la criatura corre al jugador unas baldosas (y lo puede tirar a un pozo);
+// - imitador (Roca de la Tortuga y Gruta de la Botella): copia cada paso del jugador de su sala, al revés (como el
+//   Masked Mimic de Link's Awakening, 19_masked_mimic.asm), le pega si queda al lado y se cubre de frente.
 import type { EntityId, RuntimeCharacter } from "./types/runtime";
 
 export {};
@@ -26,6 +28,8 @@ const BLADE_DAMAGE = 0.1;
 const ROLLER_STEP_MS = 170;
 const ROLLER_PAUSE_MS = 1_500;
 const ROLLER_DAMAGE = 0.15;
+const MIMIC_DAMAGE = 0.08;
+const MIMIC_COOLDOWN_MS = 900;
 // Un mismo jugador no se quema dos veces seguidas con la misma trampa.
 const HIT_COOLDOWN_MS = 700;
 
@@ -38,7 +42,7 @@ const DIRS: Pos[] = [
     { x: -1, y: 0 },
 ];
 
-type HazardTemplate = { chispa?: boolean; cuchilla?: boolean; rodillo?: boolean; empuja?: number };
+type HazardTemplate = { chispa?: boolean; cuchilla?: boolean; rodillo?: boolean; empuja?: number; imitador?: boolean };
 type Spark = { npcId: string; mapId: number; dir: number; nextAt: number; loop: Pos[] | null; index: number };
 // Las 8 baldosas alrededor de un centro, en el sentido de las agujas del reloj.
 const RING: Pos[] = [
@@ -67,6 +71,7 @@ type Roller = {
 const sparks = new Map<string, Spark>();
 const blades = new Map<string, Blade>();
 const rollers = new Map<string, Roller>();
+const mimics = new Map<string, { npcId: string; mapId: number }>();
 const lastHitAt = new Map<string, number>();
 
 function getDungeons() {
@@ -161,6 +166,8 @@ export function register(npc: any): boolean {
         // Sale del lado del ogro hacia el otro.
         const dir = npc.pos.x - bounds.x1 <= bounds.x2 - npc.pos.x ? 1 : -1;
         rollers.set(id, { npcId: id, mapId, room, bounds, col: null, dir, nextAt: 0, tiles: [] });
+    } else if (template.imitador) {
+        mimics.set(id, { npcId: id, mapId });
     } else {
         return false;
     }
@@ -172,6 +179,7 @@ export function onNpcDied(npc: { id?: EntityId } | undefined) {
     const id = String(npc?.id ?? "");
     sparks.delete(id);
     blades.delete(id);
+    mimics.delete(id);
     const roller = rollers.get(id);
     if (roller) {
         clearRoller(roller);
@@ -183,6 +191,45 @@ export function forgetMap(mapId: number) {
     for (const [id, spark] of sparks) if (spark.mapId === mapId) sparks.delete(id);
     for (const [id, blade] of blades) if (blade.mapId === mapId) blades.delete(id);
     for (const [id, roller] of rollers) if (roller.mapId === mapId) rollers.delete(id);
+    for (const [id, mimic] of mimics) if (mimic.mapId === mapId) mimics.delete(id);
+}
+
+// --- Imitadores ---
+
+// Un jugador dio un paso (dx, dy): los imitadores de su sala dan el mismo paso al revés, si pueden.
+export function onPlayerStep(user: RuntimeCharacter, dx: number, dy: number) {
+    const dungeons = getDungeons();
+    const mapId = Number(user.map);
+    const room = dungeons.roomAt(mapId, user.pos.x, user.pos.y);
+    if (room === undefined) return;
+    for (const mimic of mimics.values()) {
+        const npc = vars.npcs?.[mimic.npcId];
+        if (!npc || mimic.mapId !== mapId || Number(npc.hp ?? 0) <= 0) continue;
+        if (dungeons.roomAt(mapId, npc.pos.x, npc.pos.y) !== room) continue;
+        const to = { x: npc.pos.x - dx, y: npc.pos.y - dy };
+        if (isOpenFloor(mapId, to.x, to.y) && !vars.mapData[mapId]?.[to.y]?.[to.x]?.id && !dungeons.isHazard(mapId, to.x, to.y)) {
+            placeNpc(npc, to);
+        } else {
+            // Contra una pared se queda, pero igual mira hacia donde quería ir (así deja la espalda o el costado).
+            const dir = vars.direcciones;
+            npc.heading = -dx > 0 ? dir.right : -dx < 0 ? dir.left : -dy > 0 ? dir.down : dir.up;
+            getNpcs().npcToArea(npc.id, npc.heading);
+        }
+        for (const offset of DIRS) {
+            const target = playerAt(mapId, npc.pos.x + offset.x, npc.pos.y + offset.y);
+            if (target) hitPlayer(target, mimic.npcId, MIMIC_DAMAGE, "Te pegó el imitador:", offset, 0, MIMIC_COOLDOWN_MS);
+        }
+    }
+}
+
+// Si el golpe le llega de frente a una criatura que se cubre (los imitadores), por qué no entra.
+export function frontalBlockReason(npc: any, attacker: RuntimeCharacter): string | null {
+    if (!npc || !mimics.has(String(npc.id))) return null;
+    const facing = getMotion().headingOffset(Number(npc.heading ?? vars.direcciones.down));
+    const dx = Math.sign(attacker.pos.x - npc.pos.x);
+    const dy = Math.sign(attacker.pos.y - npc.pos.y);
+    const inFront = (facing.x !== 0 && dx === facing.x) || (facing.y !== 0 && dy === facing.y);
+    return inFront ? "El imitador se cubre: pegale por la espalda o de costado." : null;
 }
 
 // El golpe de una criatura que empuja (los escarabajos): corre al jugador lejos de ella.
@@ -360,4 +407,4 @@ function stepRoller(roller: Roller, now: number) {
     roller.nextAt = now + ROLLER_STEP_MS;
 }
 
-module.exports = { register, onNpcDied, forgetMap, onNpcMeleeHit, tick };
+module.exports = { register, onNpcDied, forgetMap, onNpcMeleeHit, onPlayerStep, frontalBlockReason, tick };

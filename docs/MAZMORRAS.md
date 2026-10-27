@@ -530,3 +530,39 @@ En el mapa 591 de la mazmorra de prueba, la sala de las antorchas tiene una pare
   - `DungeonBackpack.tsx`: la fila de básicos.
 - Sonidos 226-228. Los créditos de gráficos y sonidos están en [CREDITOS_GRAFICOS.md](CREDITOS_GRAFICOS.md) y [CREDITOS_SONIDOS.md](CREDITOS_SONIDOS.md).
 
+## 13. Mecánicas compartidas: Polvo mágico, salas oscuras, cristales, remolino, imitadores y búhos
+
+Las pide tanto la Roca de la Tortuga como la Gruta de la Botella ([mazmorras/04-ROCA_DE_LA_TORTUGA.md](mazmorras/04-ROCA_DE_LA_TORTUGA.md) y [mazmorras/05-GRUTA_DE_LA_BOTELLA.md](mazmorras/05-GRUTA_DE_LA_BOTELLA.md)). Leandro aprobó el Polvo mágico como tercer básico.
+
+| Mecánica | Cómo funciona | Plano |
+|---|---|---|
+| **Polvo mágico** (`polvo`, básico) | Espolvorea la baldosa de adelante: enciende una antorcha apagada o le saca un poco a la criatura que esté ahí (10 + 1,5 por nivel; el doble a las `debilFuego`). Nube de chispas doradas y violetas | — |
+| **Salas oscuras** | Una sala con antorchas está a oscuras mientras quede alguna apagada: un velo negro sobre la sala, más claro cuantas más estén encendidas. Hay un círculo de luz alrededor de cada personaje y de cada antorcha encendida, y el velo también tapa a las criaturas. Las antorchas las encienden el Polvo mágico y el Polvo de Fuego | `F` / `A` |
+| **Cristales y bloques de color** | Los bloques **azules** arrancan levantados y los **naranjas** bajados. Golpear un cristal los invierte **en toda la corrida**, y el cristal muestra el color de los que están arriba. Le pegan un golpe al aire de frente, una flecha, una llamarada, una bomba o el Gancho. Un bloque que tiene que subir con alguien encima sube apenas quede libre | `(` azul, `)` naranja, `\|` cristal |
+| **Remolino** | Cada 0,6 s arrastra una baldosa hacia él a los que están en su sala (salvo en el aire). Al llegar al centro te deja en la entrada de la mazmorra | `"` |
+| **Imitadores** | Copian cada paso del jugador de su sala, **al revés** (como el Masked Mimic de Link's Awakening, `19_masked_mimic.asm`). Si quedan al lado, pegan. Se cubren de frente: se les pega por la espalda o de costado. Contra una pared se quedan, pero miran hacia donde querían ir | plantilla con `imitador` |
+| **Pico de piedra y búhos** | El pico sale de un cofre y vale para todo el grupo, como el mapa (aparece en la barra y en la Mochila). Sin el pico, los búhos "quieren decir algo"; con él, muestran su pista (texto en `buhos` de leyenda.json) | `0` cofre del pico, `/` búho |
+
+| La sala oscura: la luz alrededor del personaje | El cristal golpeado: los azules abajo, los naranjas arriba | Los imitadores |
+|---|---|---|
+| ![Sala oscura](mazmorras/compartidas/oscura.png) | ![Cristal](mazmorras/compartidas/cristal.png) | ![Imitadores](mazmorras/compartidas/imitadores.png) |
+
+Objetos 1861-1868; gráficos 42249-42266. Sonido 231 (polvo). Créditos en [CREDITOS_GRAFICOS.md](CREDITOS_GRAFICOS.md) y [CREDITOS_SONIDOS.md](CREDITOS_SONIDOS.md).
+
+### Para probarlas
+En el mapa 591 de la mazmorra de prueba, al sur de la sala detrás del hielo, hay cuatro salas:
+- **Sala oscura:** dos antorchas y el pico.
+- **Sala del búho y el cristal:** una columna de bloques azules y otra de naranjas, con un cofre entre las dos.
+- **Imitadores.**
+- **Remolino.**
+
+La prueba en vivo es `pw/run-compartidas.mjs`.
+
+### Archivos
+- `server/src/dungeons.ts`: `hitSwitch`, `onAirSwing` (lo llama el ataque al aire de `protocol.ts`), las salas oscuras en el estado (`oscuras`), el remolino en el tic, los búhos y el cofre del pico.
+- `server/src/dungeonHazards.ts`: los imitadores (`onPlayerStep` y `frontalBlockReason`, que consulta `getNpcInvulnerableReason` con el atacante).
+- `server/src/dungeonTools.ts`: el Polvo mágico y los golpes al cristal de la llamarada, la flecha y la bomba.
+- Cliente:
+  - `engine/dungeonDarkness.ts`: el velo;
+  - `engine/dungeonTools.ts`: el polvo;
+  - la Mochila, con el Polvo mágico en los básicos y el pico.

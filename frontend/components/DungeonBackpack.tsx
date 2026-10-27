@@ -6,6 +6,7 @@ import {
     Anchor,
     Backpack,
     BicepsFlexed,
+    Bird,
     Bomb,
     BowArrow,
     Compass,
@@ -18,6 +19,7 @@ import {
     Map as MapIcon,
     Shell,
     Shield,
+    Sparkles,
     Trophy,
     Wind,
     X,
@@ -63,6 +65,7 @@ const SERIES_TROPHIES: Array<{ id: string | null; nombre: string }> = [
 const BASIC_ITEMS: typeof SERIES_ITEMS = [
     { id: "bombas", nombre: "Bombas", icon: Bomb, tone: "text-stone-200", uso: "Poner una bomba: explota a los 2 s, lastima a las criaturas y abre las paredes rajadas", mazmorra: "Desde la primera mazmorra" },
     { id: "arco", nombre: "Arco", icon: BowArrow, tone: "text-amber-100", uso: "Tirar una flecha en línea recta, sin gastar flechas", mazmorra: "Desde la primera mazmorra" },
+    { id: "polvo_magico", nombre: "Polvo mágico", icon: Sparkles, tone: "text-yellow-200", uso: "Espolvorear adelante: enciende antorchas y le saca un poco a una criatura", mazmorra: "Desde la primera mazmorra" },
 ];
 
 const itemInfo = (id: string | null | undefined) => [...BASIC_ITEMS, ...SERIES_ITEMS].find((item) => item.id === id) ?? null;
@@ -154,6 +157,7 @@ export function DungeonBar({ inside, keyLabels, playerPos, onSendCommand }: BarP
             count: 0,
         },
         { id: "brujula", label: inside.brujula ? "Brújula: marca los cofres y la puerta del jefe" : "Brújula: todavía no", icon: Compass, owned: inside.brujula, heldBy: null, tone: "text-violet-200", count: 0 },
+        { id: "pico", label: inside.pico ? "Pico de piedra: los búhos hablan" : "Pico de piedra: todavía no", icon: Bird, owned: Boolean(inside.pico), heldBy: null, tone: "text-teal-200", count: 0 },
     ];
     return (
         <div data-testid="dungeon-strip" className="border border-[#4a3424] bg-[#120c09] px-1.5 py-1">
@@ -352,7 +356,7 @@ function BackpackModal({
                 <section className="space-y-4">
                     <div>
                         <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-300/80">{inside.nombre}</h3>
-                        <div className="grid grid-cols-4 gap-2 text-center text-[10px]">
+                        <div className="grid grid-cols-5 gap-2 text-center text-[10px]">
                             <div className={`rounded-lg border p-2 ${inside.llaves ? "border-amber-300/35 bg-[#2a1b12]" : "border-[#2c2018] opacity-50"}`}>
                                 <div className="flex flex-wrap justify-center gap-0.5">
                                     {Array.from({ length: Math.max(1, inside.llaves) }).map((_, i) => (
@@ -372,6 +376,10 @@ function BackpackModal({
                             <div className={`rounded-lg border p-2 ${inside.brujula ? "border-amber-300/35 bg-[#2a1b12]" : "border-[#2c2018] opacity-50"}`}>
                                 <Compass className={`mx-auto h-5 w-5 ${inside.brujula ? "text-violet-200" : "text-stone-600"}`} />
                                 <p className="mt-1 text-stone-300">Brújula</p>
+                            </div>
+                            <div className={`rounded-lg border p-2 ${inside.pico ? "border-amber-300/35 bg-[#2a1b12]" : "border-[#2c2018] opacity-50"}`}>
+                                <Bird className={`mx-auto h-5 w-5 ${inside.pico ? "text-teal-200" : "text-stone-600"}`} />
+                                <p className="mt-1 text-stone-300">Pico</p>
                             </div>
                         </div>
                     </div>

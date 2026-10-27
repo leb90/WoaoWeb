@@ -3704,6 +3704,8 @@ function attackMele(ws: RuntimeClient) {
             : undefined;
 
         if (!targetTile || !recibe) {
+            // Mazmorras: el golpe al aire le pega a un cristal que haya adelante (sube y baja los bloques de color).
+            dungeons.onAirSwing(user, x + frontOffset.x, y + frontOffset.y);
             emitMeleeAirSwing(ws, clientId, user);
             return;
         }

@@ -226,6 +226,7 @@ export function useHudStateController({
                 );
                 engineRef.current.inDungeon = Boolean(nextHud?.dungeonState?.enMazmorra);
                 engineRef.current.dungeonSwim = Boolean(nextHud?.dungeonState?.enMazmorra?.patas);
+                engineRef.current.dungeonDarkRooms = nextHud?.dungeonState?.enMazmorra?.oscuras ?? [];
                 if (engineRef.current.user) {
                     engineRef.current.user.zonaSegura = nextHud?.zonaSegura;
                 }

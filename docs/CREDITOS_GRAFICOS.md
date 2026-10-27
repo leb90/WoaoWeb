@@ -60,3 +60,14 @@ Hecho con gráficos del propio juego: **`graphics/320261.png`, la pared rajada e
 
 Hecho con gráficos del propio juego: **`sprites/escudo-espejo.png`**, el Escudo Espejo levantado, es el ícono del Escudo de Diamantes (grh 28661).
 
+## Mecánicas compartidas: búho, remolino y bloques de color
+
+| Archivo | Uso en el juego | Original | Autor | Licencia |
+|---|---|---|---|---|
+| `graphics/330009.png` | Estatua búho (habla con el pico de piedra) | "OWL", https://opengameart.org/content/owl-0, pasado a gris piedra y achicado, sobre la base de una estatua de "[LPC] Jungle Ruins" | pechvogel; base: bluecarrot16 | CC-BY 3.0; CC-BY 3.0+ / OGA-BY 3.0+ |
+| `graphics/330010.png` | Remolino (12 cuadros) | "Alot of Particles Whirlpool #01", variante celeste, https://opengameart.org/content/alot-of-particles-whirlpool-special-effect-alotofparticles01 (uno de cada tres cuadros, a 48 × 48) | JoesAlotofthings | CC-BY 4.0 |
+
+Hechos con gráficos del propio juego:
+- **`graphics/330005.png` a `330008.png`, los bloques de color:** levantados, el bloque de piedra (grh 8623) pasado a azul o a naranja; bajados, una baldosa con el borde del color.
+- **Los cristales que los invierten:** los íconos de cristal azul y naranja del juego (grh 18543 y 18544).
+

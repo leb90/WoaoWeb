@@ -2,7 +2,7 @@
 // 6.2): el Polvo de Fuego (una llamarada que vuela), el Gancho (una cadena que engancha y arrastra, o aturde), el
 // Brazalete de Fuerza (levantar, llevar y tirar vasijas y piedras; el II también las pesadas) y el Escudo Espejo (frena
 // lo que llega de frente). Además, los básicos que tiene todo el mundo desde la primera mazmorra: las Bombas (explotan
-// a los 2 s y abren paredes rajadas) y el Arco. Solo funcionan adentro de una mazmorra. Ninguno toca los atributos ni
+// a los 2 s y abren paredes rajadas), el Arco y el Polvo mágico (enciende la antorcha de adelante). Solo funcionan adentro de una mazmorra. Ninguno toca los atributos ni
 // los hechizos del personaje: son mecánicas de mazmorra.
 //
 // Como la Carrera y el salto (dungeonMotion.ts), el server decide todo de una vez y se lo manda a los que miran en el
@@ -21,6 +21,7 @@ export const STRONG_BRACELET_ITEM = "pulsera_poderosa";
 export const MIRROR_ITEM = "escudo_espejo";
 export const BOMB_ITEM = "bombas";
 export const BOW_ITEM = "arco";
+export const POWDER_ITEM = "polvo_magico";
 
 const FIRE_RANGE = 6;
 const FIRE_STEP_MS = 45;
@@ -41,6 +42,7 @@ const ARROW_STEP_MS = 35;
 const ARROW_COOLDOWN_MS = 600;
 // La flecha común de los arqueros (objeto 480).
 const ARROW_GRH = 752;
+const POWDER_COOLDOWN_MS = 500;
 
 export const TOOL_SOUNDS = {
     fuego: 222,
@@ -52,10 +54,11 @@ export const TOOL_SOUNDS = {
     flecha: 228,
     escudo: 229,
     bloqueo: 230,
+    polvo: 231,
 } as const;
 
 // Lo que engancha el Gancho (como en Zelda: cofres, bloques, vasijas, estatuas y antorchas).
-const HOOKABLE = new Set(["antorcha", "antorchaEncendida", "hielo", "vasija", "piedra", "pesada", "estatua", "cofre", "bloque", "cristal", "puerta"]);
+const HOOKABLE = new Set(["antorcha", "antorchaEncendida", "hielo", "vasija", "piedra", "pesada", "estatua", "interruptor", "cofre", "bloque", "cristal", "puerta"]);
 
 type Pos = { x: number; y: number };
 type ToolUser = RuntimeCharacter & {
@@ -68,6 +71,7 @@ type ToolUser = RuntimeCharacter & {
     mirrorUntil?: number;
     nextMirrorAt?: number;
     nextArrowAt?: number;
+    nextPowderAt?: number;
     heading?: number;
     dead?: boolean;
     level?: number;
@@ -192,6 +196,7 @@ export function fire(sessionId: EntityId) {
         const dungeons = getDungeons();
         if (golpe === "antorcha") dungeons.lightTorch(mapId, to.x, to.y);
         else if (golpe === "hielo") dungeons.meltIce(mapId, to.x, to.y);
+        else if (line.target === "interruptor") dungeons.hitSwitch(mapId, to.x, to.y);
         else if (golpe === "criatura" && line.npcId) {
             // Las babosas, las momias, las hélices y los vire (plantillas con "debilFuego") se queman el doble.
             const npc = vars.npcs?.[line.npcId];
@@ -352,7 +357,9 @@ function isFreeFloor(mapId: number, tile: Pos) {
 
 function explode(user: ToolUser, mapId: number, at: Pos) {
     playSoundAt(mapId, at, TOOL_SOUNDS.explosion);
-    getDungeons().bombBlast(mapId, at.x, at.y);
+    const dungeons = getDungeons();
+    dungeons.bombBlast(mapId, at.x, at.y);
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) dungeons.hitSwitch(mapId, at.x + dx, at.y + dy);
     const hit = new Set<string>();
     for (let dy = -1; dy <= 1; dy++) {
         for (let dx = -1; dx <= 1; dx++) {
@@ -396,6 +403,35 @@ export function arrow(sessionId: EntityId) {
     if (line.npcId) {
         const npcId = line.npcId;
         setTimeout(() => damageNpc(user, npcId, toolDamage(user, 15, 2.5)), distance * ARROW_STEP_MS);
+    } else if (line.target === "interruptor") {
+        setTimeout(() => getDungeons().hitSwitch(mapId, to.x, to.y), distance * ARROW_STEP_MS);
+    }
+}
+
+// --- Polvo mágico ---
+
+// Espolvorea la baldosa de adelante: enciende una antorcha apagada o le saca un poco a la criatura que esté ahí.
+export function powder(sessionId: EntityId) {
+    const user = vars.personajes?.[sessionId] as ToolUser | undefined;
+    if (!user || !getMotion().canAct(sessionId, user, POWDER_ITEM, "el Polvo mágico")) return;
+    const now = Date.now();
+    if (now < Number(user.nextPowderAt ?? 0)) return;
+    user.nextPowderAt = now + POWDER_COOLDOWN_MS;
+    const mapId = Number(user.map);
+    const heading = Number(user.heading ?? vars.direcciones.down);
+    const dir = getMotion().headingOffset(heading);
+    const to = { x: user.pos.x + dir.x, y: user.pos.y + dir.y };
+    playSound(user, TOOL_SOUNDS.polvo);
+    broadcast(user, { id: Number(user.id), tipo: "polvo", heading, ms: 0, to });
+    const dungeons = getDungeons();
+    if (dungeons.toolTargetAt(mapId, to.x, to.y) === "antorcha") {
+        dungeons.lightTorch(mapId, to.x, to.y);
+        return;
+    }
+    const npcId = vars.mapData[mapId]?.[to.y]?.[to.x]?.id;
+    if (npcId && vars.npcs?.[npcId]) {
+        const weak = Boolean(vars.datNpc?.[Number(vars.npcs[npcId].templateNpcIndex ?? 0)]?.debilFuego);
+        damageNpc(user, npcId, toolDamage(user, 10, 1.5) * (weak ? 2 : 1));
     }
 }
 
@@ -468,6 +504,7 @@ module.exports = {
     MIRROR_ITEM,
     BOMB_ITEM,
     BOW_ITEM,
+    POWDER_ITEM,
     TOOL_SOUNDS,
     traceLine,
     fire,
@@ -479,6 +516,7 @@ module.exports = {
     mirrorBlocksNpcHit,
     bomb,
     arrow,
+    powder,
     dropCarry,
     checkCarry,
 };

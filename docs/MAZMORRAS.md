@@ -128,6 +128,10 @@ Todas por datos del mapa, para que las mazmorras siguientes se armen sin código
    - La grilla de 6 × 7 salas en un mapa (550), los 3 pasajes (551) y la Guarida del Genio (552).
    - Comparte con la Roca de la Tortuga las salas oscuras, las antorchas, los cristales, el remolino, los imitadores y los búhos: esas mecánicas se arman juntas, en un PR para las dos.
    - Propone el **Polvo mágico** como tercer básico (para las antorchas), para que no quede un círculo con la Roca.
+9. **Santuario del Rostro. [mapas hechos; faltan los jefes]** Adapta el Santuario del Rostro (nivel 6 de Link's Awakening) y da el **Brazalete de Fuerza nivel 2**. Diseño en [mazmorras/06-SANTUARIO_DEL_ROSTRO.md](mazmorras/06-SANTUARIO_DEL_ROSTRO.md).
+   - La grilla de 8 × 7 salas en un mapa (560), los 3 pasajes (561) y la Guarida del Rostro (562).
+   - Las mecánicas están en la sección 17; los mapas, las criaturas y la música, en la 18.
+   - Se construye en tres PR: las mecánicas; los mapas, las criaturas y la música; y los jefes.
 
 ## 5. Decisiones
 
@@ -372,7 +376,7 @@ El empujón usa `dungeonMotion.push`: el server mueve al jugador como en la Carr
 
 ### Lo nuevo del motor
 - **Placas por sala:** cada sala se resuelve sola. Abre sus rejas `=` y hace aparecer sus cofres; los cofres de una sala con placas arrancan ocultos.
-- **Escaleras y portales que aparecen:** los de una sala que se cierra (y su otra punta, aunque esté en otro mapa) aparecen al vaciarla. En `leyenda.json`, `portales` dice qué escaleras se ven como portal.
+- **Escaleras y portales que aparecen:** los de una sala que se cierra (y su otra punta, aunque esté en otro mapa) aparecen al vaciarla. En `leyenda.json`, `portales` dice qué escaleras se ven como portal. Las de `siempreVisibles` no se esconden nunca: se llega por ellas a una sala que se cierra hasta vaciarla.
 - **Pozos con destino:** el plano dice `caida: <mapa>` y la `D` de ese mapa es adonde se cae.
 - **Otros símbolos:** el bloque con cerradura (`&`) y el piso que las criaturas no pisan (`,`).
 - **Caracola secreta (`C`):** un coleccionable por mazmorra, para cada uno del grupo (`progress.caracolas`).
@@ -790,3 +794,103 @@ En el mapa 591 de la mazmorra de prueba, a la derecha, hay seis salas sueltas (s
 
 La prueba en vivo es `pw/run-santuario.mjs`.
 
+
+## 18. Santuario del Rostro: los mapas, las criaturas y la música
+
+El diseño está en [mazmorras/06-SANTUARIO_DEL_ROSTRO.md](mazmorras/06-SANTUARIO_DEL_ROSTRO.md). Da el **Brazalete de Fuerza nivel 2**, pide el Brazalete de Fuerza, la Pluma de Roc, las Botas de Pegaso y el Gancho, y está marcada `soloDesarrollo`. La piedra es el NPC 9725.
+
+Los jefes (el Machacador, las Serpientes Glotonas y el Rostro de Piedra) van en el PR que sigue. Por ahora son criaturas comunes con su plantilla, su sala y su música de combate.
+
+![El Santuario del Rostro entero (mapa 560)](mazmorras/rostro/vista-santuario.png)
+
+### Mapas
+| Mapa | Qué tiene |
+|---|---|
+| 560 | El santuario: la grilla del original, 8 × 7 celdas de 11 × 9 con salas de 10 × 8 (como en Zelda), 40 salas |
+| 561 | Los tres pasajes: A → B (islas cortadas por pozos de 1, con chispas), C → D (pozos de 1 y chispas) y E → F (siete aplastadores que se pasan con la Carrera) |
+| 562 | La Guarida: la arena de 18 × 14 con el borde de baldosas voladoras y una vasija en cada esquina, la sala del trofeo y la llegada |
+
+- **Gráficos:**
+  - piso de baldosas hexagonales (bloque de grh 9667);
+  - paredes de piedra tallada (bloque de grh 9699).
+- **Compositor:** los planos salen de `scratchpad/dungeon6/componer.py`.
+- **Simulador:** `scratchpad/dungeon6/simular.py` es el de la Gruta con lo del Santuario:
+  - las estatuas solo con el nivel 2;
+  - las cabezas y las vasijas con el Brazalete;
+  - las persianas, que abre algo tirado desde su lado;
+  - las baldosas que dejan pozo, que cuentan como pozo;
+  - el Gancho, que tira hasta 7 baldosas por encima de pozos y agua;
+  - el salto en carrera, que cruza dos pozos.
+
+  El agua solo se cruza con `--nadar`. Confirma tres cosas:
+  - se llega a todas las salas y a todos los cofres, con o sin las Patas de rana;
+  - antes del Brazalete nivel 2 hay 2 cerraduras para 2 llaves;
+  - desde ningún lugar, con ningún estado de los bloques, se queda uno trabado.
+
+### Lo que cambió respecto del diseño
+- **Canal:**
+  - el bolsillo del poste queda detrás de tres filas de pozos, porque el salto en carrera cruza dos y nadando se llegaba igual;
+  - del lado de acá hay un segundo poste para volver con el Gancho; sin él, el bolsillo y el Anillo de vasijas eran un callejón sin salida;
+  - un puente sobre el agua lleva a la puerta de la K2.
+- **Escalera F:** llega a los Orejudos, que se cierra, pero se ve siempre. Si no, el pasaje E → F terminaba en nada para el que venía de la Pasarela.
+- **Pico y brújula:** se pueden agarrar antes del Brazalete nivel 2, porque la Pasarela queda abierta desde la Vasija del botón, como en el plano.
+- **Plano:** la Escalera B no tiene puerta a los Hechiceros (se llega por el pasaje A → B), como en el original.
+
+### Lo nuevo del motor
+**`siempreVisibles` en `leyenda.json`:** las escaleras de esa lista no se esconden aunque lleguen a una sala que se cierra. Se llega por ellas y la sala se cierra hasta vaciarla. Las demás escaleras de una sala que se cierra siguen apareciendo al vaciarla.
+
+### Criaturas
+| Id | Criatura | Cuerpo |
+|---|---|---|
+| 9776 | Hechicero | El de AO |
+| 9777 | Moco escondido | Moco chico (cuerpo 146) |
+| 9778 | Estrella | La nueva (cuerpo 578) |
+| 9779 | Chispa | La de la Cueva |
+| 9780 | Cuchilla | La de la Cueva |
+| 9781 | Gusano | Cuerpo 375 |
+| 9782 | Imitador | Asesino |
+| 9783 | Orejudo | El conejo (cuerpo 577) |
+| 9784 | Machacador (minijefe, provisorio) | Ogro |
+| 9785 | Serpiente Glotona (minijefe, provisorio) | Cuerpo 13 |
+| 9786 | Rostro de Piedra (jefe, provisorio) | Cuerpo 141; el sprite de la cara va con los jefes |
+
+Todas son atacables y hostiles, y pisan los hechizos de su base.
+
+### Música
+Son cuatro temas de Kevin MacLeod (CC-BY 4.0), igualados a −18 LUFS:
+1. Temple of the Manes (arpas y flautas modales, un templo antiguo);
+2. Vulcan (percusión lenta y pareja, lo más parecido al original);
+3. Shamanistic (ritual e inquietante, crece hacia el final);
+4. de combate, Grim Idol (oscuro, con órgano y metales, para la cara de piedra).
+
+Los créditos están en [CREDITOS_SONIDOS.md](CREDITOS_SONIDOS.md).
+
+### Cómo se ve
+| La Entrada, con la Mochila y la música | El Brazalete de Fuerza nivel 2 | Con el nivel 2 se levanta la estatua |
+|---|---|---|
+| ![Entrada](mazmorras/rostro/01-entrada-ui.png) | ![Brazalete](mazmorras/rostro/02-brazalete.png) | ![Estatua](mazmorras/rostro/03-estatua.png) |
+
+| Las cintas y la cuchilla | Las baldosas voladoras | El Gancho cruza los pozos del Canal |
+|---|---|---|
+| ![Cintas](mazmorras/rostro/05-cintas.png) | ![Baldosas](mazmorras/rostro/06-baldosas.png) | ![Gancho](mazmorras/rostro/07-gancho.png) |
+
+| El Anillo de vasijas y el cofre trabado | Los siete aplastadores del pasaje E → F | La Guarida del Rostro (jefe provisorio) |
+|---|---|---|
+| ![Anillo](mazmorras/rostro/08-anillo.png) | ![Aplastadores](mazmorras/rostro/09-aplastadores.png) | ![Guarida](mazmorras/rostro/10-guarida.png) |
+
+### Para probarla
+Con un GM:
+1. `/mazmorra item pulsera`, `/mazmorra item pluma`, `/mazmorra item botas_de_pegaso` y `/mazmorra item gancho`.
+2. `/invocarnpc 9725`.
+3. Entrar por la piedra.
+
+La prueba en vivo es `pw/run-rostro.mjs`, con 15 controles:
+- la piedra pide los ítems;
+- se entra y suena la música;
+- el cofre da el nivel 2, que levanta las estatuas y abre la pared giratoria;
+- las cintas;
+- las baldosas abren la puerta;
+- el Gancho ida y vuelta en el Canal;
+- el cofre trabado del Anillo;
+- el pasaje de los aplastadores;
+- la Guarida.

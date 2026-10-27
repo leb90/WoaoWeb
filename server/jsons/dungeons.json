@@ -226,5 +226,80 @@
             ],
             "combate": "/music/mazmorras/botella/combate.mp3"
         }
+    },
+    {
+        "id": "rostro",
+        "nombre": "Santuario del Rostro",
+        "descripcion": "Un santuario de piedra tallado con caras. Las estatuas son demasiado pesadas, las baldosas no se quedan quietas y en el fondo una cara enorme mira desde el piso. Dicen que guarda un brazalete que levanta hasta las estatuas.",
+        "nivelMinimo": 25,
+        "maxJugadores": 5,
+        "soloDesarrollo": true,
+        "piedraNpc": 9725,
+        "mapas": [
+            560,
+            561,
+            562
+        ],
+        "entrada": {
+            "map": 560,
+            "x": 43,
+            "y": 66
+        },
+        "salidas": [
+            {
+                "map": 560,
+                "x": 40,
+                "y": 67
+            },
+            {
+                "map": 562,
+                "x": 50,
+                "y": 27
+            }
+        ],
+        "regreso": {
+            "map": 34,
+            "x": 50,
+            "y": 52
+        },
+        "requiere": [
+            {
+                "id": "pulsera",
+                "nombre": "el Brazalete de Fuerza"
+            },
+            {
+                "id": "pluma",
+                "nombre": "la Pluma de Roc"
+            },
+            {
+                "id": "botas_de_pegaso",
+                "nombre": "las Botas de Pegaso"
+            },
+            {
+                "id": "gancho",
+                "nombre": "el Gancho"
+            }
+        ],
+        "escalado": {
+            "vidaPorJugador": 0.7,
+            "danoPorJugador": 0.15
+        },
+        "itemMazmorra": {
+            "id": "pulsera_poderosa",
+            "nombre": "el Brazalete de Fuerza nivel 2"
+        },
+        "trofeo": {
+            "id": "mascara_de_piedra",
+            "nombre": "la Máscara de Piedra"
+        },
+        "oroJefe": 800,
+        "musica": {
+            "pistas": [
+                "/music/mazmorras/rostro/1.mp3",
+                "/music/mazmorras/rostro/2.mp3",
+                "/music/mazmorras/rostro/3.mp3"
+            ],
+            "combate": "/music/mazmorras/rostro/combate.mp3"
+        }
     }
 ]

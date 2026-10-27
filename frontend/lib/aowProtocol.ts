@@ -555,7 +555,7 @@ export type DungeonBossPayload = {
     fin?: boolean;
     // Gruta de la Botella (server/src/dungeonGrotto.ts): la botella del Genio (dónde está, si salta, si el Genio está
     // adentro, si está aturdida, tiembla, la llevan o se rompió), el humo y las bolas de fuego.
-    tipo?: "botella" | "humo" | "fuego";
+    tipo?: "botella" | "humo" | "fuego" | "oculto" | "baldosa" | "rayo";
     dentro?: boolean;
     estado?: string;
     tiembla?: boolean;
@@ -565,6 +565,13 @@ export type DungeonBossPayload = {
     desde?: { x: number; y: number };
     hasta?: { x: number; y: number };
     ms?: number;
+    // Santuario del Rostro (server/src/dungeonShrine.ts): las criaturas escondidas, las baldosas voladoras ("sube" o
+    // "vuela"), el rayo del ojo (con su aviso) y el fuego recto de los lanzallamas y los hechiceros ("magia").
+    oculto?: boolean;
+    fase?: "sube" | "vuela";
+    aviso?: boolean;
+    recto?: boolean;
+    color?: "magia";
 };
 // Salas visitadas (con el mapa, todas) y, con la brújula, los cofres y la puerta del jefe.
 export type DungeonMinimapState = {

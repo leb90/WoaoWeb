@@ -82,3 +82,24 @@ Atribución que pide el autor: PixelFarm (https://bitbucket.org/tebruno99/pixelf
 
 Hechos con gráficos del propio juego: el piso (bloque de grh 33847) y la cara de las paredes (bloque de grh 9683).
 
+
+## Santuario del Rostro
+
+Todos se pasaron a la paleta de piedra de "[LPC] Jungle Ruins", con alfa limpio y escalados con vecino más cercano.
+
+| Archivo | Uso en el juego | Original | Autor | Licencia |
+|---|---|---|---|---|
+| `graphics/330013.png` | Estatua pesada (solo con el Brazalete nivel 2) | Una cabeza de ídolo y un pedestal de "[LPC] Jungle Ruins", https://opengameart.org/content/lpc-jungle-ruins, montados | bluecarrot16 (encargo de Pierre Vigier) | OGA-BY 3.0+ / CC-BY 3.0+ |
+| `graphics/330014.png` | Cabeza de caballo parada y acostada | El caballo gris de "M484 Chess Set", https://opengameart.org/content/m484-chess-set (la acostada es la parada rotada) | Master484 (https://opengameart.org/users/master484) | [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
+| `graphics/330015.png` | Baldosa voladora | La losa con espiral de "[LPC] Jungle Ruins" | bluecarrot16 | OGA-BY 3.0+ / CC-BY 3.0+ |
+| `graphics/330017.png` | Cinta transportadora (4 direcciones, 4 cuadros) | El tramo de cinta de "Tiny Factory", https://opengameart.org/content/tiny-factory, animado corriendo el dibujo, al doble y en piedra | Kenney | CC0 |
+| `graphics/330018.png` | Lanzallamas | La cabeza con la boca abierta de "[LPC] Jungle Ruins" | bluecarrot16 | OGA-BY 3.0+ / CC-BY 3.0+ |
+| `graphics/330019.png` | Ojo de piedra (cerrado, abierto, mirando y brillando) | "Jade Cyclops", https://opengameart.org/content/jade-cyclops, en piedra y sobre el pedestal de Jungle Ruins | IndigoFenix | CC0 / CC-BY 3.0 / CC-BY 4.0 |
+| `graphics/330020.png` | Estrella (cuerpo 578, gira) | "Spinning heart and star trinkets items collectables", https://opengameart.org/node/125344, al doble | Haley Halcyon | CC0 |
+
+Atribución que piden:
+- "[LPC] Jungle Ruins" by bluecarrot16. Commissioned by Pierre Vigier (pvigier). Licenses: OGA-BY 3.0+, CC-BY 3.0+, GPL 2.0+. http://opengameart.org/content/lpc-jungle-ruins
+- Master484 (https://opengameart.org/users/master484), "M484 Chess Set".
+- IndigoFenix, "Jade Cyclops".
+
+Hecho con gráficos propios: el pozo que deja una baldosa (`graphics/330016.png`).

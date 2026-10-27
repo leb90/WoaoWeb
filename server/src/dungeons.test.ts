@@ -124,12 +124,15 @@ test("las mecánicas de cada mapa están bien armadas y la mazmorra se puede res
                 if (barrier.tipo === "llave") counts.puertasConLlave++;
                 if (barrier.tipo === "jefe") counts.puertaJefe++;
                 if (barrier.tipo === "placa") {
-                    // La abren las placas o las antorchas de una de las salas que separa.
+                    // La abren las placas, las antorchas, las cabezas de caballo o las baldosas voladoras de una de las salas
+                    // que separa.
+                    const shrine = mech.santuario ?? { cabezas: [], baldosas: [] };
                     const solvable = barrier.salas.some((sala: number) =>
                         mech.plates.some((key: string) => mech.roomOf[key] === sala) ||
-                        (mech.torches ?? []).some((torch: { sala: number }) => torch.sala === sala),
+                        (mech.torches ?? []).some((torch: { sala: number }) => torch.sala === sala) ||
+                        [...shrine.cabezas, ...shrine.baldosas].some((thing: { sala: number }) => thing.sala === sala),
                     );
-                    assert.ok(solvable, `${at}: la puerta "=" da a una sala con placas o antorchas`);
+                    assert.ok(solvable, `${at}: la puerta "=" da a una sala con algo que la abra`);
                 }
             }
             for (const chest of mech.chests) {
@@ -144,8 +147,10 @@ test("las mecánicas de cada mapa están bien armadas y la mazmorra se puede res
                         .filter(([, id]) => allNpcs[String(id)]?.orden)
                         .map(([key]) => mech.roomOf[key]),
                 );
-                const hides = closingRooms.has(chest.sala) || plateRooms.has(chest.sala) || torchRooms.has(chest.sala) || orderRooms.has(chest.sala);
-                assert.equal(chest.oculto, hides, `${at}: oculto solo en salas que se cierran, con placas, con antorchas apagadas o de matar en orden`);
+                const tileRooms = new Set((mech.santuario?.baldosas ?? []).map((tile: { sala: number }) => tile.sala));
+                const hides =
+                    closingRooms.has(chest.sala) || plateRooms.has(chest.sala) || torchRooms.has(chest.sala) || orderRooms.has(chest.sala) || tileRooms.has(chest.sala);
+                assert.equal(chest.oculto, hides, `${at}: oculto solo en salas que se cierran, con placas, con antorchas apagadas, de matar en orden o con baldosas voladoras`);
                 const chestObject = chest.contenido === "trofeo" ? DUNGEON_OBJECT_IDS.cofreJefe : DUNGEON_OBJECT_IDS.cofre;
                 assert.equal(objects[`${chest.x},${chest.y}`]?.objIndex, chest.oculto ? undefined : chestObject, `${at}: objeto`);
                 if (chest.contenido === "llave") counts.llaves++;
@@ -282,7 +287,7 @@ test("la mazmorra de prueba trae lo que tocan el Polvo de Fuego, el Gancho y el 
     const liftables = mech.liftables as Array<{ x: number; y: number; tipo: string; placa: boolean }>;
     for (const tipo of ["pesada", "piedra", "vasija"]) assert.ok(liftables.some((item) => item.tipo === tipo), `hay ${tipo}`);
     assert.ok(liftables.some((item) => item.placa), "una vasija tapa una placa");
-    const liftableObject: Record<string, number> = { vasija: OBJ.vasija, piedra: OBJ.piedra, pesada: OBJ.piedraPesada };
+    const liftableObject: Record<string, number> = { vasija: OBJ.vasija, piedra: OBJ.piedra, pesada: OBJ.piedraPesada, estatua: OBJ.estatuaPesada };
     for (const item of liftables) {
         const key = `${item.x},${item.y}`;
         assert.equal(objectAt(key), liftableObject[item.tipo]);
@@ -458,3 +463,36 @@ test("la Gruta de la Botella: antorchas que abren, fantasmas con el Brazalete, m
         assert.ok(credits.includes(file.replace("/music/mazmorras/", "")), `créditos de ${file}`);
     }
 });
+
+test("la mazmorra de prueba trae lo del Santuario del Rostro", () => {
+    const specials = readJson("server/mapas_source/mapa_591/specials.json");
+    const mech = specials.dungeon;
+    const npcs = readJson("server/jsons/npcs.json");
+    const shrine = mech.santuario;
+    // Estatua pesada, persiana que se abre tirándole algo y cofre trabado de la llave del jefe.
+    assert.ok(mech.liftables.some((l: { tipo: string }) => l.tipo === "estatua"));
+    assert.ok(mech.barriers.some((b: { tipo: string }) => b.tipo === "golpe"));
+    assert.ok(mech.chests.some((c: { contenido: string; golpe?: boolean }) => c.contenido === "jefe" && c.golpe));
+    // Dos cabezas en una sala con una puerta "=", y baldosas voladoras (una deja pozo) con un cofre oculto.
+    assert.equal(shrine.cabezas.length, 2);
+    const headRoom = shrine.cabezas[0].sala;
+    assert.ok(mech.barriers.some((b: { tipo: string; salas: number[] }) => b.tipo === "placa" && b.salas.includes(headRoom)));
+    assert.ok(shrine.baldosas.some((t: { pozo: boolean }) => t.pozo) && shrine.baldosas.some((t: { pozo: boolean }) => !t.pozo));
+    const tileRoom = shrine.baldosas[0].sala;
+    assert.ok(mech.chests.some((c: { sala: number; oculto: boolean }) => c.sala === tileRoom && c.oculto));
+    // Cintas, un lanzallamas que escupe hacia la sala y un ojo de piedra.
+    assert.ok(shrine.cintas.length > 0 && shrine.cintas.every((c: { dir: string }) => c.dir === "este"));
+    assert.deepEqual(shrine.lanzallamas.map((s: { dir: string }) => s.dir), ["este"]);
+    assert.equal(shrine.ojos.length, 1);
+    // Los objetos nuevos existen en el server y en el cliente, y no se levantan del piso.
+    const objs = readJson("server/jsons/objs.json");
+    const clientObjs = readJson("frontend/public/init/objs.json");
+    for (let id = 1870; id <= 1880; id++) {
+        assert.equal(Number(objs[id]?.objType), 0, `objeto ${id}`);
+        assert.equal(clientObjs[id]?.name, objs[id].name, `objeto ${id} en el cliente`);
+    }
+    // Hechicero, moco escondido y estrella.
+    const kinds = Object.values(specials.npcs as Record<string, number>).map((id) => npcs[id]);
+    assert.ok(kinds.some((npc) => npc?.hechicero) && kinds.some((npc) => npc?.escondido) && kinds.some((npc) => npc?.estrella));
+});
+

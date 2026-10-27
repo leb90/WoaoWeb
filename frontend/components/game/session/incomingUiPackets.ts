@@ -1,5 +1,6 @@
 import { handleDungeonBoss } from "../engine/dungeonBoss";
 import { handleGrottoBoss } from "../engine/dungeonGrotto";
+import { handleShrineEffect } from "../engine/dungeonShrine";
 import { playDungeonMotion } from "../engine/dungeonMotion";
 import type { IncomingPacketHandlerArgs } from "./incomingPacketTypes";
 
@@ -282,7 +283,9 @@ export async function handleIncomingUiPacket({
 
         case "dungeonBoss":
             if (engine) {
-                if (packet.payload.tipo) handleGrottoBoss(engine, packet.payload);
+                const tipo = packet.payload.tipo;
+                if (tipo === "oculto" || tipo === "baldosa" || tipo === "rayo") handleShrineEffect(engine, packet.payload);
+                else if (tipo) handleGrottoBoss(engine, packet.payload);
                 else handleDungeonBoss(engine, packet.payload);
             }
             return true;

@@ -749,3 +749,44 @@ La prueba en vivo es `pw/run-botella-jefes.mjs`. Prueba lo siguiente:
 
 El recorrido completo, `pw/run-botella.mjs`, también pelea con los dos.
 
+## 17. Santuario del Rostro: las mecánicas propias
+
+El diseño está en [mazmorras/06-SANTUARIO_DEL_ROSTRO.md](mazmorras/06-SANTUARIO_DEL_ROSTRO.md). Como el resto, salen del original. Las nuevas están en `server/src/dungeonShrine.ts`. Lo que toca a los objetos que se levantan, a las puertas y a los cofres está en `dungeons.ts` y `dungeonTools.ts`.
+
+| Mecánica | Cómo funciona | Plano |
+|---|---|---|
+| **Estatua pesada** | Se levanta solo con el Brazalete de Fuerza nivel 2; tirada, pega como la piedra pesada | `♜` |
+| **Persiana** | Una puerta sin cerradura que se abre cuando le pega algo tirado con el Brazalete (una estatua o una vasija) | `[` |
+| **Cofre trabado** | El de la llave del jefe: con un clic no se abre, tirándole algo sí (se lo lleva el que tiró) | `Ñ` |
+| **Cabezas de caballo** | Se levantan con el nivel 1 y se tiran; no se rompen y caen paradas o acostadas (mitad y mitad), en la última baldosa libre del vuelo. Con todas las de su sala paradas, la sala se resuelve: se abren sus puertas `=` | `♞` |
+| **Baldosas voladoras** | Con alguien en la sala, cada 1,1 s una se despega, sube y tiembla, y sale derecho hacia donde está el jugador más cercano (10 %; el Escudo Espejo la frena de frente). Las marcadas dejan un pozo. Rotas todas, la sala se resuelve: aparecen sus cofres (que arrancan ocultos) | `▦`, `▩` (deja pozo) |
+| **Cintas transportadoras** | Cada 0,33 s corren una baldosa al que está encima (salvo en el aire) | `→ ← ↑ ↓` |
+| **Lanzallamas** | Cada 2,6 s escupe una bola de fuego en línea recta hacia la sala, hasta la pared; quema (12 %) al primero que encuentra | `♨` |
+| **Ojo de piedra** | Gira por las 8 direcciones; si ve a alguien en línea (hasta 8 baldosas, sin paredes), avisa con una línea fina y le tira un rayo (12 %; el Escudo Espejo lo frena) | `◉` |
+| **Hechiceros** | Aparecen en la fila o la columna del jugador, tiran un rayo mágico y desaparecen. Escondidos no se los puede tocar; el golpe cuerpo a cuerpo solo los empuja; una bomba o algo tirado los mata de una | plantilla con `hechicero` |
+| **Mocos escondidos** | No se ven ni ocupan baldosa hasta que alguien pasa a 2 baldosas; ahí aparecen y pelean | plantilla con `escondido` |
+| **Estrellas** | Rebotan en diagonal contra las paredes y pegan al tocar | plantilla con `estrella` |
+
+**La puerta `=`:** ahora también la abren las cabezas paradas y las baldosas rotas, además de las placas y las antorchas de la sala.
+
+**Las criaturas escondidas** (los hechiceros entre apariciones y los mocos):
+- no ocupan baldosa y el cliente no las dibuja (paquete `dungeonBoss` con `tipo: "oculto"`);
+- al aparecer se presentan enteras a los que las ven, como al revivir.
+
+| Las cabezas paradas abren la puerta | Las baldosas voladoras | El ojo de piedra y la cinta |
+|---|---|---|
+| ![Cabezas](mazmorras/santuario/cabezas.png) | ![Baldosas](mazmorras/santuario/baldosas.png) | ![Ojo](mazmorras/santuario/ojo.png) |
+
+**Gráficos:** archivos 330013 a 330020, con la estrella como cuerpo 578. Los créditos están en [CREDITOS_GRAFICOS.md](CREDITOS_GRAFICOS.md).
+
+### Para probarlas
+En el mapa 591 de la mazmorra de prueba, a la derecha, hay seis salas sueltas (se llega con `/telepme`):
+- la estatua y la persiana;
+- el cofre trabado y las cabezas;
+- las baldosas;
+- las cintas;
+- el lanzallamas y el ojo;
+- las criaturas.
+
+La prueba en vivo es `pw/run-santuario.mjs`.
+

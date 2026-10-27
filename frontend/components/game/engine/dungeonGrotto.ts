@@ -174,7 +174,11 @@ function fireball(engine: Engine, payload: DungeonBossPayload) {
     const ms = Math.max(1, payload.ms ?? 400);
     const start = engine.timestamp();
     const ball = new Graphics();
-    const pointAt = (t: number) => ({ x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t - Math.sin(Math.PI * t) * 18 });
+    // Las del Genio van en arco; las de los lanzallamas y los hechiceros, derecho. Las de los hechiceros son de magia.
+    const arc = payload.recto ? 0 : 18;
+    const magic = payload.color === "magia";
+    const colors = magic ? { glow: 0x7a3cff, core: 0xb48cff, inner: 0xf0e6ff, trail: 0x9a6bff } : { glow: 0xff5a14, core: 0xffa233, inner: 0xfff0a0, trail: 0xff7a1a };
+    const pointAt = (t: number) => ({ x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t - Math.sin(Math.PI * t) * arc });
     effects.push((now) => {
         const t = (now - start) / ms;
         if (engine.mapNumber !== map) {
@@ -194,11 +198,11 @@ function fireball(engine: Engine, payload: DungeonBossPayload) {
         ] as const) {
             const p = pointAt(Math.max(0, t - lag));
             const here = pointAt(t);
-            ball.circle(p.x - here.x, p.y - here.y, radius).fill({ color: 0xff7a1a, alpha });
+            ball.circle(p.x - here.x, p.y - here.y, radius).fill({ color: colors.trail, alpha });
         }
-        ball.circle(0, 0, 9).fill({ color: 0xff5a14, alpha: 0.45 });
-        ball.circle(0, 0, 6).fill({ color: 0xffa233 });
-        ball.circle(0, 0, 3).fill({ color: 0xfff0a0 });
+        ball.circle(0, 0, 9).fill({ color: colors.glow, alpha: 0.45 });
+        ball.circle(0, 0, 6).fill({ color: colors.core });
+        ball.circle(0, 0, 3).fill({ color: colors.inner });
         const here = pointAt(t);
         ball.x = here.x;
         ball.y = here.y;

@@ -3,6 +3,7 @@ import type { DungeonMotionPayload } from "../../../lib/aowProtocol";
 import type { SpellData } from "../../../types/game";
 import { createSpellProjectileVisual } from "../rendering/effectsRenderer";
 import { getEntityFXRowContainer, syncDisplayObjectToEntityFXRow } from "../rendering/rowLayerContainers";
+import { GENIE_BOTTLE_OBJ, genieBottleTexture } from "./dungeonGrotto";
 import type { Engine } from "./Engine";
 
 // Mazmorras: el Polvo de Fuego, el Gancho y la Pulsera (server/src/dungeonTools.ts). Llegan en el mismo paquete que
@@ -32,6 +33,7 @@ const MIRROR_URL = "/sprites/escudo-espejo.png";
 const BOMB_URL = "/sprites/bomba.png"; // 3 cuadros de 32 × 32 (la chispa de la mecha)
 const EXPLOSION_URL = "/sprites/explosion.png"; // 12 cuadros de 96 × 96
 const EXPLOSION_FRAME_MS = 50;
+const BOMB_THROW_MS = 450;
 let bombTextures: { bomb: Texture[]; explosion: Texture[] } | null = null;
 let bombTexturesLoading: Promise<void> | null = null;
 
@@ -105,7 +107,7 @@ function textureOfObject(engine: Engine, objIndex: number) {
 
 // Lo que se lleva: la textura del objeto o, si todavía no está cargada, una vasija dibujada.
 function carriedNode(engine: Engine, objIndex: number): Container {
-    const texture = textureOfObject(engine, objIndex);
+    const texture = textureOfObject(engine, objIndex) ?? (objIndex === GENIE_BOTTLE_OBJ ? genieBottleTexture() : null);
     if (texture) {
         const sprite = new Sprite(texture);
         sprite.anchor.set(0.5, 1);
@@ -261,7 +263,8 @@ function playThrow(engine: Engine, payload: DungeonMotionPayload) {
         syncDisplayObjectToEntityFXRow(engine, flying.y, flying);
         if (t < 1) return true;
         flying.destroy({ children: true });
-        burst(engine, to, [0x9a5b2e, 0x6b3a1c, 0xc98a52], 12, 0.1);
+        // La botella del Genio cae entera si no le pegó a una pared (el server la vuelve a mostrar en el piso).
+        if (!payload.entera) burst(engine, to, [0x9a5b2e, 0x6b3a1c, 0xc98a52], 12, 0.1);
         return false;
     });
 }
@@ -285,6 +288,8 @@ async function playBomb(engine: Engine, payload: DungeonMotionPayload) {
     const startedAt = engine.timestamp();
     await loadBombTextures();
     const at = tileCenter(engine, payload.id, payload.to);
+    // La que tira el Cíclope vuela en arco desde él antes de quedar en el piso.
+    const thrownFrom = payload.from ? tileCenter(engine, payload.id, payload.from) : null;
     const textures = bombTextures;
     const bomb: Container = textures ? new Sprite(textures.bomb[0]) : new Graphics().circle(0, 0, 10).fill({ color: 0x1b1b1b });
     if (bomb instanceof Sprite) bomb.anchor.set(0.5);
@@ -296,6 +301,12 @@ async function playBomb(engine: Engine, payload: DungeonMotionPayload) {
         const elapsed = now - startedAt;
         if (elapsed < payload.ms) {
             if (bomb.destroyed) return false;
+            if (thrownFrom) {
+                const t = Math.min(1, elapsed / BOMB_THROW_MS);
+                bomb.x = thrownFrom.x + (at.x - thrownFrom.x) * t;
+                bomb.y = thrownFrom.y + (at.y + 4 - thrownFrom.y) * t - Math.sin(Math.PI * t) * 30;
+                syncDisplayObjectToEntityFXRow(engine, Math.max(bomb.y, at.y), bomb);
+            }
             if (bomb instanceof Sprite && textures) bomb.texture = textures.bomb[Math.floor(elapsed / 120) % 3];
             // Titila cada vez más rápido y se infla un poco antes de explotar.
             const left = payload.ms - elapsed;

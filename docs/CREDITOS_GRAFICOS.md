@@ -76,6 +76,7 @@ Hechos con gráficos del propio juego:
 | Archivo | Uso en el juego | Original | Autor | Licencia |
 |---|---|---|---|---|
 | `graphics/330011.png` | Orejudo (cuerpo 577): el salto en 4 direcciones, 4 cuadros de 36 × 36 cada una | "Bunny Rabbit LPC style for PixelFarm", https://opengameart.org/content/bunny-rabbit-lpc-style-for-pixelfarm, en el reacomodo "Reorganised LPC rabbit" de Evert (https://opengameart.org/content/reorganised-lpc-rabbit), con cada cuadro centrado y apoyado abajo | Stephen "Redshrike" Challener, encargo de Tebruno99 para PixelFarm | [CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/) / [OGA-BY 3.0](https://static.opengameart.org/OGA-BY-3.0.txt) (también CC-BY-SA 3.0) |
+| `graphics/330012.png` | La botella del Genio, entera y rota (cuadros 42287 y 42288; objeto 1869) | Un ánfora y su versión rota de `pint_brown.png`, "Free ceramic jars", https://opengameart.org/content/free-ceramic-jars, sin el soporte, pasada a violeta y achicada a 46 px | Clodo | [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
 
 Atribución que pide el autor: PixelFarm (https://bitbucket.org/tebruno99/pixelfarm) Stephen "Redshrike" Challener.
 

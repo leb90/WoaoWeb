@@ -536,10 +536,12 @@ export type DungeonMotionPayload = {
     golpe?: "pared" | "criatura" | "obstaculo" | "antorcha" | "hielo" | "engancha" | null;
     salto?: { to: { x: number; y: number }; ms: number } | null;
     to?: { x: number; y: number };
-    // Gancho: lo que tarda cada baldosa del arrastre. Pulsera: el objeto que se lleva y de dónde se levantó.
+    // Gancho: lo que tarda cada baldosa del arrastre. Pulsera: el objeto que se lleva y de dónde se levantó. Bomba:
+    // de dónde la tiraron (la del Cíclope vuela en arco). Tiro: si cae entera (la botella del Genio, sin pared).
     pullMs?: number;
     obj?: number;
     from?: { x: number; y: number };
+    entera?: boolean;
 };
 // El Ciempiés de la Cueva de la Cola (server/src/dungeonBoss.ts): la cabeza (en baldosas, con decimales), la
 // dirección (0-15, de a 22,5°), la velocidad (baldosas por segundo) y a qué distancia van las partes; fin al morir.
@@ -551,6 +553,18 @@ export type DungeonBossPayload = {
     v?: number;
     s?: number[];
     fin?: boolean;
+    // Gruta de la Botella (server/src/dungeonGrotto.ts): la botella del Genio (dónde está, si salta, si el Genio está
+    // adentro, si está aturdida, tiembla, la llevan o se rompió), el humo y las bolas de fuego.
+    tipo?: "botella" | "humo" | "fuego";
+    dentro?: boolean;
+    estado?: string;
+    tiembla?: boolean;
+    cargada?: boolean;
+    rota?: boolean;
+    salto?: { desde: { x: number; y: number }; hasta: { x: number; y: number }; ms: number };
+    desde?: { x: number; y: number };
+    hasta?: { x: number; y: number };
+    ms?: number;
 };
 // Salas visitadas (con el mapa, todas) y, con la brújula, los cofres y la puerta del jefe.
 export type DungeonMinimapState = {

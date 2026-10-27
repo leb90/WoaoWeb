@@ -114,6 +114,8 @@ export const DUNGEON_OBJECTS = {
     cristalAzul: { id: 1866, name: "Cristal azul", grh: 18543 },
     cristalNaranja: { id: 1867, name: "Cristal naranja", grh: 18544 },
     remolino: { id: 1868, name: "Remolino", grh: 42266 },
+    // La botella del Genio (dungeonGrotto.ts): no va en el plano; es lo que se ve al levantarla y tirarla.
+    botellaGenio: { id: 1869, name: "Botella del Genio", grh: 42287 },
 } as const;
 const CHEST_CONTENT: Record<string, string> = {
     K: "llave",

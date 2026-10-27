@@ -5,7 +5,8 @@ import type { Engine } from "./Engine";
 
 // Lo que se ve aparte en el Santuario del Rostro (server/src/dungeonShrine.ts):
 // - las criaturas escondidas (los hechiceros entre apariciones, los mocos hasta que alguien se acerca) no se dibujan;
-// - las baldosas voladoras suben de su lugar, flotan temblando y salen derecho hacia donde estaba el jugador;
+// - las baldosas voladoras (y las vasijas que tira el Rostro de Piedra) suben de su lugar, flotan temblando y salen
+//   derecho hacia donde estaba el jugador;
 // - el rayo del ojo de piedra: primero un aviso fino y después el rayo.
 // Las bolas de fuego de los lanzallamas y de los hechiceros son las del Genio (engine/dungeonGrotto.ts).
 
@@ -53,9 +54,12 @@ export function handleShrineEffect(engine: Engine, payload: DungeonBossPayload) 
     if (payload.tipo === "rayo") return beam(engine, payload);
 }
 
-function tileNode(): Sprite | Graphics {
-    if (tileTexture) {
-        const sprite = new Sprite(tileTexture);
+// La baldosa, o lo que vuela en su lugar (las vasijas del Rostro de Piedra: el gráfico de su objeto).
+function tileNode(engine: Engine, obj?: number): Sprite | Graphics {
+    const grh = obj ? engine.objectsDB?.[String(obj)]?.grhIndex : undefined;
+    const texture = (grh ? engine.textureCache.get(String(grh)) : undefined) ?? tileTexture;
+    if (texture) {
+        const sprite = new Sprite(texture);
         sprite.anchor.set(0.5);
         return sprite;
     }
@@ -67,7 +71,7 @@ function flyingTile(engine: Engine, payload: DungeonBossPayload) {
     const map = engine.mapNumber;
     const start = engine.timestamp();
     const ms = Math.max(1, payload.ms ?? 500);
-    const node = tileNode();
+    const node = tileNode(engine, payload.obj);
     const shadow = new Graphics().ellipse(0, 0, 13, 4).fill({ color: 0x000000, alpha: 0.35 });
     if (payload.fase === "sube") {
         const at = centerOf(engine, map, { x: payload.x ?? 0, y: payload.y ?? 0 });

@@ -68,6 +68,9 @@ const OBJ = {
     pozoAbierto: 1874,
     // La botella del Genio de la Gruta de la Botella: no está en el mapa, es lo que se ve al levantarla y tirarla.
     botellaGenio: 1869,
+    // La bola de hierro del Machacador (dungeonShrineBosses.ts): tampoco está en el mapa ni en objs.json; el cliente
+    // la dibuja (engine/dungeonShrineBosses.ts) cuando se lleva y se tira.
+    bolaDeHierro: 1881,
 } as const;
 // Portal azul (escaleras que se ven como portal: el atajo de la Cueva de la Cola).
 const PORTAL_OBJ = 378;
@@ -869,6 +872,7 @@ function destroyRun(run: DungeonRun) {
         require("./dungeonBoss").forgetMap(mapId);
         require("./dungeonGrotto").forgetMap(mapId);
         require("./dungeonShrine").forgetMap(mapId);
+        require("./dungeonShrineBosses").forgetMap(mapId);
         for (const npcId of Object.keys(vars.npcs ?? {})) {
             if (vars.npcs[npcId]?.map === mapId) {
                 delete vars.npcs[npcId];
@@ -1999,6 +2003,7 @@ function fastTickRun(run: DungeonRun) {
         require("./dungeonBoss").tick(mapId, now);
         require("./dungeonGrotto").tick(mapId, now);
         require("./dungeonShrine").tick(mapId, now);
+        require("./dungeonShrineBosses").tick(mapId, now);
     }
 }
 
@@ -2060,6 +2065,25 @@ export function openPitAt(mapId: number, x: number, y: number) {
     if (!ctx) return;
     ctx.state.openedPits.add(coordKey(x, y));
     setObject(mapId, x, y, OBJ.pozoAbierto);
+}
+
+// Los pozos del Rostro de Piedra (dungeonShrineBosses.ts) se abren y se cierran solos; los dibuja el cliente.
+export function setBossPit(mapId: number, x: number, y: number, open: boolean) {
+    const ctx = contextOf(mapId);
+    if (!ctx) return;
+    if (open) ctx.state.openedPits.add(coordKey(x, y));
+    else ctx.state.openedPits.delete(coordKey(x, y));
+}
+
+// Las vasijas que siguen en su lugar en una sala (las que tira el Rostro de Piedra).
+export function vasesInRoom(mapId: number, roomId: number): Array<{ x: number; y: number }> {
+    const ctx = contextOf(mapId);
+    if (!ctx) return [];
+    const vases: Array<{ x: number; y: number }> = [];
+    for (const [key, liftable] of ctx.index.liftables) {
+        if (liftable.tipo === "vasija" && !ctx.state.lifted.has(key) && ctx.index.mech.roomOf[key] === roomId) vases.push(parseCoord(key));
+    }
+    return vases;
 }
 
 // Pone o saca un objeto de la corrida (las cabezas de caballo, las baldosas), con su bloqueo.
@@ -2444,6 +2468,9 @@ export function getNpcInvulnerableReason(
     if (genie) return genie;
     const shrine = require("./dungeonShrine").invulnerableReason(npc);
     if (shrine) return shrine;
+    // El Machacador, las Serpientes Glotonas y el Rostro de Piedra: a cada uno le entra una sola cosa.
+    const shrineBoss = require("./dungeonShrineBosses").invulnerableReason(npc, source);
+    if (shrineBoss) return shrineBoss;
     // Los imitadores se cubren de frente: hay que pegarles por la espalda o de costado.
     const frontal = attacker ? require("./dungeonHazards").frontalBlockReason(npc, attacker) : null;
     if (frontal) return frontal;
@@ -2628,7 +2655,7 @@ function templateOf(npc: { templateNpcIndex?: number } | undefined): SpecialTemp
 }
 
 function registerSpecialNpc(run: DungeonRun, npc: any) {
-    if (require("./dungeonHazards").register(npc) || require("./dungeonBoss").register(npc) || require("./dungeonGrotto").register(npc) || require("./dungeonShrine").register(npc)) return;
+    if (require("./dungeonHazards").register(npc) || require("./dungeonBoss").register(npc) || require("./dungeonGrotto").register(npc) || require("./dungeonShrine").register(npc) || require("./dungeonShrineBosses").register(npc)) return;
     const template = templateOf(npc);
     if (template.despierta) npc.dormant = true;
     if (template.pareja) {
@@ -2959,6 +2986,7 @@ export function onNpcDied(npc: { id?: EntityId; map?: number; templateNpcIndex?:
     require("./dungeonBoss").onNpcDied(npc);
     require("./dungeonGrotto").onNpcDied(npc);
     require("./dungeonShrine").onNpcDied(npc);
+    require("./dungeonShrineBosses").onNpcDied(npc);
     const boss = ctx.run.floatingBoss;
     if (boss?.npcId === String(npc.id)) {
         ctx.run.floatingBoss = null;
@@ -3063,6 +3091,8 @@ module.exports = {
     shrineDataOf,
     solveRoomPuzzle,
     openPitAt,
+    setBossPit,
+    vasesInRoom,
     setShrineObject,
     broadcastNpcVitals,
     fallIfHazard,

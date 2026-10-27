@@ -301,7 +301,7 @@ El ojo de piedra también lo pide la Roca de la Tortuga: se hace una vez para la
 Para que no tarde tanto, en tres PR seguidos:
 1. **Mecánicas nuevas** (sección 8, menos los jefes) y los hechiceros (**hecho**, ver [../MAZMORRAS.md](../MAZMORRAS.md), sección 17).
 2. **Mapas 560-562, criaturas y música:** tres temas y uno de combate, libres. Incluye el recorrido completo en vivo con el simulador de recorrido (**hecho**, ver [../MAZMORRAS.md](../MAZMORRAS.md), sección 18).
-3. **Jefes:** el Machacador, las Serpientes Glotonas y el Rostro de Piedra.
+3. **Jefes:** el Machacador, las Serpientes Glotonas y el Rostro de Piedra (**hecho**, ver [../MAZMORRAS.md](../MAZMORRAS.md), sección 19).
 
 **Números:**
 - Mapas 560-562.

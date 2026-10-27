@@ -542,6 +542,8 @@ export type DungeonMotionPayload = {
     obj?: number;
     from?: { x: number; y: number };
     entera?: boolean;
+    // Bomba: una Serpiente Glotona se la tragó (no explota).
+    comida?: boolean;
 };
 // El Ciempiés de la Cueva de la Cola (server/src/dungeonBoss.ts): la cabeza (en baldosas, con decimales), la
 // dirección (0-15, de a 22,5°), la velocidad (baldosas por segundo) y a qué distancia van las partes; fin al morir.
@@ -555,7 +557,7 @@ export type DungeonBossPayload = {
     fin?: boolean;
     // Gruta de la Botella (server/src/dungeonGrotto.ts): la botella del Genio (dónde está, si salta, si el Genio está
     // adentro, si está aturdida, tiembla, la llevan o se rompió), el humo y las bolas de fuego.
-    tipo?: "botella" | "humo" | "fuego" | "oculto" | "baldosa" | "rayo";
+    tipo?: "botella" | "humo" | "fuego" | "oculto" | "baldosa" | "rayo" | "bola" | "rostro" | "pozo" | "glotona";
     dentro?: boolean;
     estado?: string;
     tiembla?: boolean;
@@ -572,6 +574,14 @@ export type DungeonBossPayload = {
     aviso?: boolean;
     recto?: boolean;
     color?: "magia";
+    // La vasija que tira el Rostro de Piedra vuela como una baldosa, con el dibujo de su objeto.
+    obj?: number;
+    // Los jefes del Santuario (server/src/dungeonShrineBosses.ts): la bola del Machacador (`alto`: la tira él, desde
+    // arriba de su cabeza), la cara del Rostro de Piedra (`sync`: la repetición de cada segundo), las fases de sus pozos
+    // (en ms) y lo que le pasa a una Serpiente Glotona en `estado`.
+    alto?: boolean;
+    sync?: boolean;
+    fases?: { aviso: number; abre: number; abierto: number; cierra: number };
 };
 // Salas visitadas (con el mapa, todas) y, con la brújula, los cofres y la puerta del jefe.
 export type DungeonMinimapState = {

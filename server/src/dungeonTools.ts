@@ -77,6 +77,10 @@ type ToolUser = RuntimeCharacter & {
     level?: number;
 };
 type Hit = "antorcha" | "hielo" | "criatura" | "engancha" | "pared" | null;
+// Una bomba puesta que todavía no explotó (las Serpientes Glotonas del Santuario del Rostro se la pueden tragar).
+type LiveBomb = { mapId: number; x: number; y: number; ownerId: string; placedAt: number; eaten: boolean };
+
+const liveBombs = new Set<LiveBomb>();
 
 function getDungeons() {
     return require("./dungeons");
@@ -306,6 +310,13 @@ export function bracelet(sessionId: EntityId) {
     }
     // La cabeza de caballo cuenta para la sala de la que salió aunque la tiren a otra.
     const headRoom = kind === "cabeza" ? require("./dungeonShrine").headRoomAt(Number(user.map), from.x, from.y) : undefined;
+    // La bola de hierro del Machacador del Santuario del Rostro.
+    if (require("./dungeonShrineBosses").liftBall(user, from)) {
+        const obj = dungeons.DUNGEON_OBJ.bolaDeHierro;
+        user.dungeonCarry = { tipo: "bola", objIndex: obj, map: Number(user.map) };
+        playSound(user, TOOL_SOUNDS.levantar);
+        return broadcast(user, { id: Number(user.id), tipo: "levanta", heading, ms: 150, from, obj });
+    }
     // La botella aturdida del Genio de la Gruta de la Botella.
     if (require("./dungeonGrotto").liftBottle(user, from)) {
         const obj = dungeons.DUNGEON_OBJ.botellaGenio;
@@ -330,6 +341,7 @@ function throwCarried(user: ToolUser) {
     const heading = Number(user.heading ?? vars.direcciones.down);
     const dir = getMotion().headingOffset(heading);
     if (carry.tipo === "botella") return require("./dungeonGrotto").throwBottle(user, heading, dir);
+    if (carry.tipo === "bola") return require("./dungeonShrineBosses").throwBall(user, heading, dir);
     const line = traceLine(mapId, user.pos, dir, THROW_RANGE, false);
     const golpe: Hit = line.npcId ? "criatura" : line.target || line.blocked ? "pared" : null;
     const to = line.npcId ? line.end! : (line.end ?? { x: user.pos.x, y: user.pos.y });
@@ -375,7 +387,30 @@ export function bomb(sessionId: EntityId) {
     const at = isFreeFloor(mapId, front) ? front : { x: user.pos.x, y: user.pos.y };
     playSoundAt(mapId, at, TOOL_SOUNDS.bomba);
     broadcast(user, { id: Number(user.id), tipo: "bomba", heading, ms: BOMB_FUSE_MS, to: at });
-    setTimeout(() => explode(user, mapId, at), BOMB_FUSE_MS);
+    const live: LiveBomb = { mapId, x: at.x, y: at.y, ownerId: String(sessionId), placedAt: now, eaten: false };
+    liveBombs.add(live);
+    setTimeout(() => {
+        liveBombs.delete(live);
+        if (!live.eaten) explode(user, mapId, at);
+    }, BOMB_FUSE_MS);
+}
+
+// Las bombas sin explotar de un mapa.
+export function bombsOn(mapId: number): LiveBomb[] {
+    return [...liveBombs].filter((bomb) => bomb.mapId === mapId && !bomb.eaten);
+}
+
+// Una Serpiente Glotona se la tragó: no explota, desaparece del piso y su dueño ya puede poner otra.
+export function eatBomb(bomb: LiveBomb) {
+    bomb.eaten = true;
+    liveBombs.delete(bomb);
+    const owner = vars.personajes?.[bomb.ownerId] as ToolUser | undefined;
+    if (owner) owner.bombUntil = 0;
+    const handleProtocol = getHandleProtocol();
+    getGame().loopAreaPos(bomb.mapId, bomb, (target: { id: EntityId }) => {
+        const client = vars.clients?.[target.id] as RuntimeClient | undefined;
+        if (client) handleProtocol.dungeonMotion({ id: Number(bomb.ownerId), tipo: "bomba", ms: 0, to: { x: bomb.x, y: bomb.y }, comida: true }, client);
+    });
 }
 
 function isFreeFloor(mapId: number, tile: Pos) {
@@ -390,7 +425,8 @@ function explode(user: ToolUser, mapId: number, at: Pos) {
     const dungeons = getDungeons();
     dungeons.bombBlast(mapId, at.x, at.y);
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) dungeons.hitSwitch(mapId, at.x + dx, at.y + dy);
-    const hit = new Set<string>();
+    // La cara del Rostro de Piedra (Santuario del Rostro) la resuelve su módulo: solo le entran las bombas.
+    const hit = require("./dungeonShrineBosses").onExplosion(user, mapId, at) as Set<string>;
     for (let dy = -1; dy <= 1; dy++) {
         for (let dx = -1; dx <= 1; dx++) {
             const npcId = vars.mapData[mapId]?.[at.y + dy]?.[at.x + dx]?.id;
@@ -514,10 +550,11 @@ export function mirrorBlocksNpcHit(user: RuntimeCharacter | undefined, npc: { po
 export function dropCarry(user: RuntimeCharacter | undefined) {
     const carrier = user as ToolUser | undefined;
     if (!carrier?.dungeonCarry) return;
-    const bottle = carrier.dungeonCarry.tipo === "botella";
+    const kind = carrier.dungeonCarry.tipo;
     carrier.dungeonCarry = null;
     broadcast(carrier, { id: Number(carrier.id), tipo: "suelta", ms: 0 });
-    if (bottle) require("./dungeonGrotto").dropBottle(carrier);
+    if (kind === "botella") require("./dungeonGrotto").dropBottle(carrier);
+    if (kind === "bola") require("./dungeonShrineBosses").dropBall(carrier);
 }
 
 // Lo revisa el tic de la mazmorra: si murió o cambió de mapa con algo levantado, lo suelta.
@@ -547,6 +584,8 @@ module.exports = {
     mirrorBlocks,
     mirrorBlocksNpcHit,
     bomb,
+    bombsOn,
+    eatBomb,
     arrow,
     powder,
     dropCarry,

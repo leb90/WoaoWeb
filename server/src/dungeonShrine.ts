@@ -285,7 +285,31 @@ export function isTouchedTile(mapId: number, x: number, y: number): boolean {
 
 // --- Baldosas voladoras ---
 
-function launchTile(state: ShrineMap, sala: number, players: Player[], now: number) {
+type FlightOptions = { damage: number; message: string; obj?: number; onLanded?: () => void };
+
+// Lo que se despega del piso (una baldosa o, en la sala del Rostro de Piedra, una vasija): sube, flota y sale derecho
+// hacia donde está el jugador más cercano de la sala. Se rompe al llegar.
+function flyFromFloor(state: ShrineMap, tile: Pos, sala: number, options: FlightOptions) {
+    const obj = options.obj ? { obj: options.obj } : {};
+    packet(state.mapId, tile, { id: 0, tipo: "baldosa", fase: "sube", x: tile.x, y: tile.y, ms: TILE_RISE_MS, ...obj });
+    setTimeout(() => {
+        if (maps.get(state.mapId) !== state) return;
+        const players = playersOf(state.mapId);
+        const inRoom = players.filter((user) => roomOfPos(state, user.pos) === sala);
+        const target = nearest(inRoom.length ? inRoom : players, tile);
+        const to = target ? { x: target.pos.x, y: target.pos.y } : { ...tile };
+        const ms = Math.max(200, Math.round(Math.hypot(to.x - tile.x, to.y - tile.y) * TILE_TILE_MS));
+        packet(state.mapId, tile, { id: 0, tipo: "baldosa", fase: "vuela", desde: { x: tile.x, y: tile.y }, hasta: to, ms, ...obj });
+        setTimeout(() => {
+            if (maps.get(state.mapId) !== state) return;
+            hitAt(state.mapId, to, { x: to.x - tile.x, y: to.y - tile.y }, options.damage, options.message);
+            sound(state.mapId, to, getTools().TOOL_SOUNDS.romper);
+            options.onLanded?.();
+        }, ms);
+    }, TILE_RISE_MS);
+}
+
+function launchTile(state: ShrineMap, sala: number, now: number) {
     const left = state.tiles.get(sala) ?? [];
     // Como en el original, de a parejas opuestas: una del principio de la lista y otra del final.
     const tile = (left.length % 2 ? left.pop() : left.shift())!;
@@ -294,34 +318,44 @@ function launchTile(state: ShrineMap, sala: number, players: Player[], now: numb
     const dungeons = getDungeons();
     if (tile.pozo) dungeons.openPitAt(state.mapId, tile.x, tile.y);
     else dungeons.setShrineObject(state.mapId, tile.x, tile.y, 0, false);
-    packet(state.mapId, tile, { id: 0, tipo: "baldosa", fase: "sube", x: tile.x, y: tile.y, ms: TILE_RISE_MS });
-    setTimeout(() => {
-        if (maps.get(state.mapId) !== state) return;
-        const inRoom = playersOf(state.mapId).filter((user) => roomOfPos(state, user.pos) === sala);
-        const target = nearest(inRoom.length ? inRoom : players, tile);
-        const to = target ? { x: target.pos.x, y: target.pos.y } : { ...tile };
-        const ms = Math.max(200, Math.round(Math.hypot(to.x - tile.x, to.y - tile.y) * TILE_TILE_MS));
-        packet(state.mapId, tile, { id: 0, tipo: "baldosa", fase: "vuela", desde: { x: tile.x, y: tile.y }, hasta: to, ms });
-        setTimeout(() => {
-            if (maps.get(state.mapId) !== state) return;
-            hitAt(state.mapId, to, { x: to.x - tile.x, y: to.y - tile.y }, TILE_DAMAGE, "Te pegó una baldosa:");
-            sound(state.mapId, to, getTools().TOOL_SOUNDS.romper);
+    flyFromFloor(state, tile, sala, {
+        damage: TILE_DAMAGE,
+        message: "Te pegó una baldosa:",
+        onLanded: () => {
             const flying = (state.tilesInFlight.get(sala) ?? 1) - 1;
             state.tilesInFlight.set(sala, flying);
             if (!flying && !(state.tiles.get(sala) ?? []).length && !state.solvedTileRooms.has(sala)) {
                 state.solvedTileRooms.add(sala);
                 getDungeons().solveRoomPuzzle(state.mapId, sala, "¡Se rompieron todas las baldosas!");
             }
-        }, ms);
-    }, TILE_RISE_MS);
+        },
+    });
+}
+
+// Las baldosas de la sala del Rostro de Piedra (dungeonShrineBosses.ts): se las lleva él, para tirarlas en su orden.
+export function takeRoomTiles(mapId: number, sala: number): Pos[] {
+    const state = stateOf(mapId);
+    const tiles = state?.tiles.get(sala) ?? [];
+    state?.tiles.set(sala, []);
+    return tiles.map((tile) => ({ x: tile.x, y: tile.y }));
+}
+
+// El Rostro de Piedra tira una baldosa o una vasija (`lifted`: la vasija ya la sacó del piso con dungeons.liftAt).
+export function launchFloorTile(mapId: number, tile: Pos, sala: number, options: FlightOptions & { lifted?: boolean }) {
+    const state = stateOf(mapId);
+    if (!state) return;
+    if (!options.lifted) getDungeons().setShrineObject(mapId, tile.x, tile.y, 0, false);
+    flyFromFloor(state, tile, sala, options);
 }
 
 function tickTiles(state: ShrineMap, players: Player[], now: number) {
+    const bosses = require("./dungeonShrineBosses");
     for (const [sala, left] of state.tiles) {
         if (!left.length || now < (state.nextTileAt.get(sala) ?? 0)) continue;
+        if (bosses.claimsTiles(state.mapId, sala)) continue;
         const inRoom = players.filter((user) => roomOfPos(state, user.pos) === sala);
         if (!inRoom.length) continue;
-        launchTile(state, sala, inRoom, now);
+        launchTile(state, sala, now);
     }
 }
 
@@ -633,6 +667,8 @@ module.exports = {
     landHead,
     headRoomAt,
     isTouchedTile,
+    takeRoomTiles,
+    launchFloorTile,
     onNpcStruck,
     invulnerableReason,
     damageFor,

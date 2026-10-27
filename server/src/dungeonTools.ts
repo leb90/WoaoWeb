@@ -155,10 +155,16 @@ function toolDamage(user: ToolUser, base: number, perLevel: number) {
     return Math.max(1, Math.round((base + level * perLevel) * (0.9 + Math.random() * 0.2)));
 }
 
-function damageNpc(user: ToolUser, npcId: EntityId, amount: number) {
+// `source`: con qué le pega (fuego, gancho, tiro, bomba, flecha o polvo); a algunas criaturas solo les entra lo tirado.
+function damageNpc(user: ToolUser, npcId: EntityId, amount: number, source: string) {
     const npc = vars.npcs?.[npcId];
     const ws = vars.clients?.[user.id] as RuntimeClient | undefined;
-    if (!npc || !ws || !getDungeons().canToolHitNpc(npc)) return false;
+    if (!npc || !ws) return false;
+    if (!getDungeons().canToolHitNpc(npc, source)) {
+        const reason = getDungeons().getNpcInvulnerableReason(npc, undefined, source);
+        if (reason) tell(user.id, reason);
+        return false;
+    }
     npc.hp = Math.max(0, Number(npc.hp ?? 0) - amount);
     const handleProtocol = getHandleProtocol();
     getGame().loopAreaPos(Number(npc.map), npc.pos, (target: { id: EntityId }) => {
@@ -201,7 +207,7 @@ export function fire(sessionId: EntityId) {
             // Las babosas, las momias, las hélices y los vire (plantillas con "debilFuego") se queman el doble.
             const npc = vars.npcs?.[line.npcId];
             const weak = Boolean(vars.datNpc?.[Number(npc?.templateNpcIndex ?? 0)]?.debilFuego);
-            damageNpc(user, line.npcId, toolDamage(user, 20, 3) * (weak ? 2 : 1));
+            damageNpc(user, line.npcId, toolDamage(user, 20, 3) * (weak ? 2 : 1), "fuego");
         }
     }, distance * FIRE_STEP_MS);
 }
@@ -263,8 +269,8 @@ export function hookshot(sessionId: EntityId) {
 // El Gancho en una criatura: la aturde un momento y le saca un poco de vida.
 function stunNpc(user: ToolUser, npcId: EntityId) {
     const npc = vars.npcs?.[npcId];
-    if (!npc || !getDungeons().canToolHitNpc(npc)) return;
-    damageNpc(user, npcId, toolDamage(user, 5, 1));
+    if (!npc || !getDungeons().canToolHitNpc(npc, "gancho")) return;
+    damageNpc(user, npcId, toolDamage(user, 5, 1), "gancho");
     const stunned = vars.npcs?.[npcId];
     if (!stunned || Number(stunned.hp ?? 0) <= 0 || stunned.customMotion || stunned.paralizado) return;
     stunned.paralizado = 1;
@@ -316,7 +322,7 @@ function throwCarried(user: ToolUser) {
     broadcast(user, { id: Number(user.id), tipo: "tira", heading, ms: THROW_STEP_MS, to, golpe, obj: carry.objIndex });
     setTimeout(() => {
         playSoundAt(mapId, to, TOOL_SOUNDS.romper);
-        if (line.npcId) damageNpc(user, line.npcId, carry.tipo === "pesada" ? toolDamage(user, 30, 3) : toolDamage(user, 15, 2));
+        if (line.npcId) damageNpc(user, line.npcId, carry.tipo === "pesada" ? toolDamage(user, 30, 3) : toolDamage(user, 15, 2), "tiro");
     }, distance * THROW_STEP_MS);
 }
 
@@ -366,7 +372,7 @@ function explode(user: ToolUser, mapId: number, at: Pos) {
             const npcId = vars.mapData[mapId]?.[at.y + dy]?.[at.x + dx]?.id;
             if (!npcId || !vars.npcs?.[npcId] || hit.has(String(npcId))) continue;
             hit.add(String(npcId));
-            damageNpc(user, npcId, toolDamage(user, 30, 4));
+            damageNpc(user, npcId, toolDamage(user, 30, 4), "bomba");
         }
     }
 }
@@ -402,7 +408,7 @@ export function arrow(sessionId: EntityId) {
     getGame().loopAreaPos(mapId, user.pos, (target: { id: EntityId }) => send(target.id));
     if (line.npcId) {
         const npcId = line.npcId;
-        setTimeout(() => damageNpc(user, npcId, toolDamage(user, 15, 2.5)), distance * ARROW_STEP_MS);
+        setTimeout(() => damageNpc(user, npcId, toolDamage(user, 15, 2.5), "flecha"), distance * ARROW_STEP_MS);
     } else if (line.target === "interruptor") {
         setTimeout(() => getDungeons().hitSwitch(mapId, to.x, to.y), distance * ARROW_STEP_MS);
     }
@@ -431,7 +437,7 @@ export function powder(sessionId: EntityId) {
     const npcId = vars.mapData[mapId]?.[to.y]?.[to.x]?.id;
     if (npcId && vars.npcs?.[npcId]) {
         const weak = Boolean(vars.datNpc?.[Number(vars.npcs[npcId].templateNpcIndex ?? 0)]?.debilFuego);
-        damageNpc(user, npcId, toolDamage(user, 10, 1.5) * (weak ? 2 : 1));
+        damageNpc(user, npcId, toolDamage(user, 10, 1.5) * (weak ? 2 : 1), "polvo");
     }
 }
 

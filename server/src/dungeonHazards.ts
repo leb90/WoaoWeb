@@ -222,6 +222,24 @@ export function onPlayerStep(user: RuntimeCharacter, dx: number, dy: number) {
     }
 }
 
+// --- Escarabajo que retrocede (el Hardhat Beetle de la Gruta de la Botella) ---
+
+// Un golpe lo corre una baldosa, lejos del que le pegó; si cae en un pozo o en la lava, muere. No recibe daño.
+export function strikeBeetle(npc: any, attacker: RuntimeCharacter) {
+    const dx = npc.pos.x - attacker.pos.x;
+    const dy = npc.pos.y - attacker.pos.y;
+    const dir = Math.abs(dx) >= Math.abs(dy) ? { x: Math.sign(dx), y: 0 } : { x: 0, y: Math.sign(dy) };
+    const to = { x: npc.pos.x + dir.x, y: npc.pos.y + dir.y };
+    const mapId = Number(npc.map);
+    const tile = vars.mapa[mapId]?.[to.y]?.[to.x];
+    if (!tile || tile.blocked || vars.mapData[mapId]?.[to.y]?.[to.x]?.id) return;
+    placeNpc(npc, to);
+    if (!getDungeons().isHazard(mapId, to.x, to.y)) return;
+    npc.hp = 0;
+    const ws = vars.clients?.[attacker.id];
+    if (ws) require("./respawn").muere(ws, npc.id);
+}
+
 // Si el golpe le llega de frente a una criatura que se cubre (los imitadores), por qué no entra.
 export function frontalBlockReason(npc: any, attacker: RuntimeCharacter): string | null {
     if (!npc || !mimics.has(String(npc.id))) return null;
@@ -407,4 +425,4 @@ function stepRoller(roller: Roller, now: number) {
     roller.nextAt = now + ROLLER_STEP_MS;
 }
 
-module.exports = { register, onNpcDied, forgetMap, onNpcMeleeHit, onPlayerStep, frontalBlockReason, tick };
+module.exports = { register, onNpcDied, forgetMap, onNpcMeleeHit, onPlayerStep, frontalBlockReason, strikeBeetle, tick };

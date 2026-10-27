@@ -90,6 +90,7 @@ test("los objetos de mazmorra existen y no se levantan", () => {
 });
 
 test("las mecánicas de cada mapa están bien armadas y la mazmorra se puede resolver", () => {
+    const allNpcs = readJson("server/jsons/npcs.json");
     const defs = readJson("server/jsons/dungeons.json") as Array<Record<string, any>>;
     for (const def of defs) {
         const counts = { llaves: 0, puertasConLlave: 0, llaveJefe: 0, puertaJefe: 0 };
@@ -127,12 +128,17 @@ test("las mecánicas de cada mapa están bien armadas y la mazmorra se puede res
             for (const chest of mech.chests) {
                 const at = `${def.id} ${map} cofre (${chest.x},${chest.y})`;
                 assert.ok(roomIds.has(chest.sala), `${at}: está en una sala`);
-                // Los cofres aparecen al vaciar una sala que se cierra, al apretar las placas de su sala o al encender sus
-                // antorchas.
+                // Los cofres aparecen al vaciar una sala que se cierra, al apretar las placas de su sala, al encender sus
+                // antorchas o al matar en orden a sus criaturas.
                 const plateRooms = new Set(mech.plates.map((key: string) => mech.roomOf[key]));
                 const torchRooms = new Set((mech.torches ?? []).filter((torch: { encendida: boolean }) => !torch.encendida).map((torch: { sala: number }) => torch.sala));
-                const hides = closingRooms.has(chest.sala) || plateRooms.has(chest.sala) || torchRooms.has(chest.sala);
-                assert.equal(chest.oculto, hides, `${at}: oculto solo en salas que se cierran, con placas o con antorchas apagadas`);
+                const orderRooms = new Set(
+                    Object.entries((specials.npcs ?? {}) as Record<string, number>)
+                        .filter(([, id]) => allNpcs[String(id)]?.orden)
+                        .map(([key]) => mech.roomOf[key]),
+                );
+                const hides = closingRooms.has(chest.sala) || plateRooms.has(chest.sala) || torchRooms.has(chest.sala) || orderRooms.has(chest.sala);
+                assert.equal(chest.oculto, hides, `${at}: oculto solo en salas que se cierran, con placas, con antorchas apagadas o de matar en orden`);
                 const chestObject = chest.contenido === "trofeo" ? DUNGEON_OBJECT_IDS.cofreJefe : DUNGEON_OBJECT_IDS.cofre;
                 assert.equal(objects[`${chest.x},${chest.y}`]?.objIndex, chest.oculto ? undefined : chestObject, `${at}: objeto`);
                 if (chest.contenido === "llave") counts.llaves++;
@@ -259,7 +265,8 @@ test("la mazmorra de prueba trae lo que tocan el Polvo de Fuego, el Gancho y el 
         assert.ok(blocked(key));
     }
     const liftables = mech.liftables as Array<{ x: number; y: number; tipo: string; placa: boolean }>;
-    assert.deepEqual(liftables.map((item) => item.tipo).sort(), ["pesada", "piedra", "vasija", "vasija"]);
+    for (const tipo of ["pesada", "piedra", "vasija"]) assert.ok(liftables.some((item) => item.tipo === tipo), `hay ${tipo}`);
+    assert.ok(liftables.some((item) => item.placa), "una vasija tapa una placa");
     const liftableObject: Record<string, number> = { vasija: OBJ.vasija, piedra: OBJ.piedra, pesada: OBJ.piedraPesada };
     for (const item of liftables) {
         const key = `${item.x},${item.y}`;
@@ -329,5 +336,23 @@ test("la mazmorra de prueba trae búho, pico, cristal, bloques de color, remolin
     }
     const npcs = readJson("server/jsons/npcs.json");
     assert.ok(Object.values(specials.npcs).some((id) => npcs[String(id)]?.imitador), "hay imitadores");
+});
+
+test("la mazmorra de prueba trae fantasmas, orejudos, el escarabajo, matar en orden y la placa de peso", () => {
+    const specials = readJson("server/mapas_source/mapa_591/specials.json");
+    const mech = specials.dungeon;
+    const npcs = readJson("server/jsons/npcs.json");
+    const placed = Object.entries(specials.npcs as Record<string, number>).map(([key, id]) => ({ key, template: npcs[String(id)] }));
+    for (const flag of ["fantasma", "orejudo", "retrocede"]) assert.ok(placed.some((p) => p.template?.[flag]), `hay una criatura con ${flag}`);
+    // Matar en orden: tres números distintos en una sala, y el cofre de esa sala arranca oculto.
+    const ordered = placed.filter((p) => p.template?.orden);
+    const orderRoom = mech.roomOf[ordered[0].key];
+    assert.deepEqual(ordered.filter((p) => mech.roomOf[p.key] === orderRoom).map((p) => p.template.orden).sort(), [1, 2, 3]);
+    assert.ok(mech.chests.some((chest: { sala: number; oculto: boolean }) => chest.sala === orderRoom && chest.oculto), "el cofre del orden");
+    // La placa de peso cuenta como placa, y la sala de las placas revela sus escaleras (las dos puntas).
+    assert.equal(mech.weightPlates.length, 1);
+    assert.ok(mech.plates.includes(mech.weightPlates[0]));
+    const plateRoom = mech.roomOf[mech.weightPlates[0]];
+    assert.equal(mech.hiddenExits.filter((exit: { revela: { sala: number } }) => exit.revela.sala === plateRoom).length, 2);
 });
 

@@ -1777,6 +1777,8 @@ function updateUserAreaAfterMovement(ws: RuntimeClient, user: RuntimeCharacter, 
             }
 
             handleProtocol.renderItem(item.objIndex, tileMap, pos, ws);
+        } else if (dungeons.isObjectRemoved(tileMap, x, y)) {
+            handleProtocol.deleteItem(tileMap, pos, ws);
         }
 
         // Mazmorras: puertas, cofres y bloques que cambiaron en la corrida. El cliente carga el mapa base (con las

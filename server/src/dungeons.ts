@@ -190,6 +190,8 @@ type MapMechanics = {
     colorBlocks?: { azul: string[]; naranja: string[] };
     switches?: string[];
     vortexes?: string[];
+    // Placas que solo se aprietan si el que las pisa carga algo con el Brazalete (la plataforma de peso del original).
+    weightPlates?: string[];
 };
 type Torch = { x: number; y: number; encendida: boolean; sala: number };
 // La piedra pesada solo la levanta el Brazalete de Fuerza II.
@@ -226,6 +228,7 @@ type MapIndex = {
     vortexes: Set<string>;
     // Todas las antorchas de cada sala: la sala está a oscuras mientras quede alguna apagada.
     torchesInRoom: Map<number, string[]>;
+    weightPlates: Set<string>;
     // Baldosas cuyo bloqueo cambia durante la corrida (puertas, cofres, bloques y cristales): van en la foto del área.
     dynamic: Set<string>;
 };
@@ -258,6 +261,10 @@ type MapState = {
     lifted: Set<string>;
     // Bloques de color que tienen que subir pero tienen a alguien encima: suben apenas quede libre.
     pendingColor: Set<string>;
+    // Matar en orden: los ya vencidos de cada sala (para revivirlos si se mata a otro fuera de orden).
+    orderDead: Map<number, Array<{ index: number; at: { x: number; y: number } }>>;
+    // Cuándo se le avisó a cada jugador que a la placa de peso le falta peso.
+    weightHintAt: Map<string, number>;
 };
 
 type DungeonRun = {
@@ -1127,6 +1134,7 @@ function mechanicsOf(baseMap: number): MapIndex | null {
                     switches: new Set(mech.switches ?? []),
                     vortexes: new Set(mech.vortexes ?? []),
                     torchesInRoom: groupAllTorchesByRoom(mech),
+                    weightPlates: new Set(mech.weightPlates ?? []),
                     dynamic: new Set([
                         ...(mech.colorBlocks?.azul ?? []),
                         ...(mech.colorBlocks?.naranja ?? []),
@@ -1196,6 +1204,8 @@ function createMapState(index: MapIndex): MapState {
         meltedIce: new Set(),
         lifted: new Set(),
         pendingColor: new Set(),
+        orderDead: new Map(),
+        weightHintAt: new Map(),
     };
 }
 
@@ -1418,7 +1428,9 @@ function updatePlates(ctx: MapContext) {
                 continue;
             }
             const hasBlock = ctx.state.blocks.has(key);
-            const pressed = hasBlock || Boolean(playerAt(ctx.mapId, x, y));
+            const standing = playerAt(ctx.mapId, x, y) as (RuntimeCharacter & { dungeonCarry?: unknown }) | null;
+            // La placa de peso solo baja con alguien que carga algo (o con un bloque).
+            const pressed = hasBlock || Boolean(standing && (!ctx.index.weightPlates.has(key) || standing.dungeonCarry));
             if (!pressed) allPressed = false;
             if (hasBlock) continue;
             const wanted = pressed || solved ? OBJ.placaApretada : OBJ.placa;
@@ -1439,6 +1451,8 @@ function solvePlates(ctx: MapContext, room: number, plates: string[]) {
         opened++;
     }
     const revealed = revealChests(ctx, room);
+    // Las escaleras ocultas de la sala (los bloques que abren la escalera A de la Gruta de la Botella).
+    if (revealExits(ctx.run, ctx.base, room)) tellRun(ctx.run, "¡Apareció una escalera!");
     // El puzzle resuelto suena para los que están en la sala de las placas.
     playSoundAt(ctx.mapId, parseCoord(plates[0]), DUNGEON_SOUNDS.secreto);
     if (opened) tellRun(ctx.run, "Se oye un mecanismo de piedra: una puerta se abrió.");
@@ -1787,6 +1801,12 @@ export function afterStep(ws: RuntimeClient, user: RuntimeCharacter) {
         if (Math.abs(dx) + Math.abs(dy) === 1) require("./dungeonHazards").onPlayerStep(user, dx, dy);
     }
     if (ctx.index.vortexes.has(tileKey)) enterVortex(user, ctx);
+    if (ctx.index.weightPlates.has(tileKey) && !(user as { dungeonCarry?: unknown }).dungeonCarry && !ctx.state.solvedPlateRooms.has(roomId ?? -1)) {
+        if (now >= (ctx.state.weightHintAt.get(key) ?? 0)) {
+            ctx.state.weightHintAt.set(key, now + 4_000);
+            tell(user.id, "La placa no baja: le falta peso. Probá parándote encima con algo levantado.", "white");
+        }
+    }
 }
 
 // La brújula, como en Link's Awakening: al entrar a una sala con una llave sin agarrar, suena.
@@ -1832,6 +1852,14 @@ export function getSwimBlockReason(user: RuntimeCharacter | undefined): string |
 }
 
 // Bloqueo actual de las baldosas que cambian en la corrida (para la foto del área), o null si la baldosa no cambia.
+// El cliente dibuja los objetos del mapa base: lo que la corrida sacó (escaleras ocultas, vasijas levantadas, bloques
+// corridos) hay que borrarlo cuando entra a la vista caminando, o se seguiría viendo.
+export function isObjectRemoved(mapId: number, x: number, y: number): boolean {
+    if (!runByInstanceMap.has(mapId)) return false;
+    const base = baseMapOf(mapId);
+    return base !== null && Boolean(vars.mapa[base]?.[y]?.[x]?.objInfo) && !vars.mapa[mapId]?.[y]?.[x]?.objInfo;
+}
+
 export function getDynamicBlocked(mapId: number, x: number, y: number): number | null {
     if (!runByInstanceMap.has(mapId)) return null;
     const ctx = contextOf(mapId);
@@ -2239,17 +2267,44 @@ export function bombBlast(mapId: number, x: number, y: number): number {
     return opened;
 }
 
-// Si los ítems que se tiran pueden lastimar a esta criatura (las trampas y lo invulnerable, no).
-export function canToolHitNpc(npc: { id?: EntityId; map?: number; hp?: number; attackable?: number | boolean; dormant?: boolean } | undefined): boolean {
+// Si los ítems que se tiran pueden lastimar a esta criatura (las trampas y lo invulnerable, no). `source`: con qué
+// (fuego, gancho, tiro, bomba, flecha o polvo): a los orejudos solo les entra lo tirado, las bombas y las flechas.
+export function canToolHitNpc(
+    npc: { id?: EntityId; map?: number; hp?: number; attackable?: number | boolean; dormant?: boolean } | undefined,
+    source?: string,
+): boolean {
     if (!npc || Number(npc.hp ?? 0) <= 0 || !npc.attackable) return false;
-    return !getNpcInvulnerableReason(npc);
+    return !getNpcInvulnerableReason(npc, undefined, source);
+}
+
+// Una sala está a oscuras del todo si tiene antorchas y ninguna está encendida (los fantasmas no se dejan tocar).
+function isRoomDarkAt(mapId: number, pos: { x: number; y: number }): boolean {
+    const ctx = contextOf(mapId);
+    const roomId = ctx?.index.mech.roomOf[coordKey(pos.x, pos.y)];
+    const torches = roomId === undefined ? undefined : ctx?.index.torchesInRoom.get(roomId);
+    return Boolean(ctx && torches?.length && !torches.some((key) => ctx.state.litTorches.has(key)));
+}
+
+// Un golpe cuerpo a cuerpo (o la Carrera) a una criatura que no recibe daño pero se corre (el escarabajo que
+// retrocede): la empuja. Devuelve true si el golpe ya quedó resuelto así.
+export function onNpcStruck(npc: any, attacker: RuntimeCharacter): boolean {
+    if (!npc || !isDungeonInstanceMap(npc.map) || !templateOf(npc).retrocede) return false;
+    require("./dungeonHazards").strikeBeetle(npc, attacker);
+    return true;
 }
 
 export function getNpcInvulnerableReason(
-    npc: { id?: EntityId; map?: number; dormant?: boolean; nameCharacter?: string } | undefined,
+    npc: { id?: EntityId; map?: number; dormant?: boolean; nameCharacter?: string; pos?: { x: number; y: number } } | undefined,
     attacker?: RuntimeCharacter,
+    source?: string,
 ): string | null {
     if (!npc || !isDungeonInstanceMap(npc.map)) return null;
+    const template = templateOf(npc as { templateNpcIndex?: number });
+    if (template.fantasma && npc.pos && isRoomDarkAt(Number(npc.map), npc.pos)) return "El fantasma se escurre en la oscuridad: encendé una antorcha.";
+    if (template.orejudo && !(source && THROWN_SOURCES.has(source))) {
+        return "Al orejudo no le entran golpes ni hechizos: tirale algo (una vasija, una bomba o una flecha).";
+    }
+    if (template.retrocede) return "No le hace nada: empujalo a un pozo.";
     // Los imitadores se cubren de frente: hay que pegarles por la espalda o de costado.
     const frontal = attacker ? require("./dungeonHazards").frontalBlockReason(npc, attacker) : null;
     if (frontal) return frontal;
@@ -2417,7 +2472,16 @@ type SpecialTemplate = {
     revivirMs?: number;
     flota?: boolean;
     divide?: { npc: number; cantidad: number };
+    // Gruta de la Botella: los fantasmas (los Boo) no se dejan tocar a oscuras; a los orejudos (los Pols Voice) solo
+    // les entra algo tirado; el escarabajo que retrocede no recibe daño, se empuja; y los de "orden" se matan en orden.
+    fantasma?: boolean;
+    orejudo?: boolean;
+    retrocede?: boolean;
+    orden?: number;
 };
+
+// Lo que le entra a un orejudo: algo tirado con el Brazalete, una bomba o una flecha.
+const THROWN_SOURCES = new Set(["tiro", "bomba", "flecha"]);
 
 function templateOf(npc: { templateNpcIndex?: number } | undefined): SpecialTemplate {
     return (npc ? vars.datNpc?.[Number(npc.templateNpcIndex ?? 0)] : undefined) ?? {};
@@ -2540,6 +2604,37 @@ function onPairDied(ctx: MapContext, npc: any) {
         const revived = spawnDungeonNpc(ctx, npcIndex, spawnAt, roomId);
         if (revived) tellRun(ctx.run, `¡${revived.nameCharacter} volvió!`, "#FF6B3D");
     }, delay);
+}
+
+// Matar en orden (la sala de la llave del jefe de la Gruta de la Botella): si queda viva una de número menor, vuelven
+// todas las ya vencidas de la sala; si era la última, aparecen los cofres de la sala.
+const ORDER_REVIVE_MS = 1_500;
+
+function onOrderDied(ctx: MapContext, npc: any) {
+    const order = Number(templateOf(npc).orden ?? 0);
+    const roomId = ctx.index.mech.roomOf[coordKey(npc.pos.x, npc.pos.y)];
+    if (!order || roomId === undefined) return;
+    const others = roomCreatures(ctx, roomId, npc.id).filter((other) => Number(templateOf(other).orden ?? 0) > 0);
+    const killed = ctx.state.orderDead.get(roomId) ?? [];
+    const self = { index: Number(npc.templateNpcIndex ?? 0), at: { x: Number(npc.spawnOrigin?.x ?? npc.pos.x), y: Number(npc.spawnOrigin?.y ?? npc.pos.y) } };
+    if (others.some((other) => Number(templateOf(other).orden) < order)) {
+        ctx.state.orderDead.set(roomId, []);
+        tellRun(ctx.run, "No era el orden: los vencidos vuelven a aparecer.", "#FF6B3D");
+        setTimeout(() => {
+            if (!runs.has(ctx.run.id)) return;
+            for (const dead of [...killed, self]) spawnDungeonNpc(ctx, dead.index, dead.at, roomId);
+        }, ORDER_REVIVE_MS);
+        return;
+    }
+    ctx.state.orderDead.set(roomId, [...killed, self]);
+    if (others.length) return;
+    ctx.state.orderDead.delete(roomId);
+    const revealed = revealChests(ctx, roomId);
+    playSoundAt(ctx.mapId, npc.pos, DUNGEON_SOUNDS.secreto);
+    if (revealed) {
+        tellRun(ctx.run, revealed === 1 ? "¡En el orden justo! Apareció un cofre." : `¡En el orden justo! Aparecieron ${revealed} cofres.`, "#FFD24A");
+        refreshRun(ctx.run);
+    }
 }
 
 // Despierta a una estatua si hay un jugador cerca. Devuelve true si está despierta.
@@ -2707,6 +2802,7 @@ export function onNpcDied(npc: { id?: EntityId; map?: number; templateNpcIndex?:
     const ctx = contextOf(Number(npc.map));
     if (!ctx) return true;
     onPairDied(ctx, npc);
+    onOrderDied(ctx, npc);
     require("./dungeonHazards").onNpcDied(npc);
     require("./dungeonBoss").onNpcDied(npc);
     const boss = ctx.run.floatingBoss;
@@ -2791,6 +2887,7 @@ module.exports = {
     getWaterStepDeniedReason,
     getSwimBlockReason,
     getDynamicBlocked,
+    isObjectRemoved,
     onLeftParty,
     resolveLoginLocation,
     sendLoginState,
@@ -2812,6 +2909,7 @@ module.exports = {
     liftAt,
     liftableKindAt,
     canToolHitNpc,
+    onNpcStruck,
     bombBlast,
     hitSwitch,
     onAirSwing,

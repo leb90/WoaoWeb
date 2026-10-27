@@ -566,3 +566,50 @@ La prueba en vivo es `pw/run-compartidas.mjs`.
   - `engine/dungeonDarkness.ts`: el velo;
   - `engine/dungeonTools.ts`: el polvo;
   - la Mochila, con el Polvo mágico en los básicos y el pico.
+
+## 14. Mecánicas de la Gruta de la Botella: fantasmas, orejudos, escarabajo, matar en orden y placa de peso
+
+Son las que pide solo la Gruta de la Botella ([mazmorras/05-GRUTA_DE_LA_BOTELLA.md](mazmorras/05-GRUTA_DE_LA_BOTELLA.md)). Ninguna toca atributos ni hechizos del personaje: son reglas de las criaturas y de las salas.
+
+| Mecánica | Cómo funciona | Plano |
+|---|---|---|
+| **Fantasmas** | En una sala con todas sus antorchas apagadas no les entra nada: ni golpes, ni hechizos, ni ítems ("se escurre en la oscuridad"). Con una antorcha encendida (Polvo mágico o Polvo de Fuego) ya se los puede lastimar | plantilla con `fantasma` |
+| **Orejudos** | Solo les entra lo tirado: una vasija o una piedra con el Brazalete, una bomba o una flecha. Los golpes, los hechizos, el fuego, el Gancho y el polvo no les hacen nada | plantilla con `orejudo` |
+| **Escarabajo de casco** | No recibe daño de nada. Cada golpe cuerpo a cuerpo lo corre una baldosa hacia atrás; si cae a un pozo, muere | plantilla con `retrocede` |
+| **Matar en orden** | Las criaturas de la sala llevan un número. Si cae una antes que otra de número menor, todas las vencidas vuelven a aparecer a los 1,5 s. Si caen todas en orden, aparece el cofre de la sala | plantilla con `orden: 1, 2, 3…` |
+| **Bloques que abren la escalera** | Las escaleras de una sala con placas quedan ocultas (las dos puntas) hasta que se apriete la última placa. Las placas se aprietan con bloques empujados o parándose encima | `_` placa, `B` bloque |
+| **Placa de peso** | Una placa que no baja con un jugador solo: hay que pararse encima con algo levantado (una vasija o una piedra) o correrle un bloque. Si te parás sin nada, avisa que le falta peso | `-` |
+
+Una sala de matar en orden esconde su cofre hasta que caen todas sus criaturas. El cofre va en el plano como cualquier otro: lo oculta el generador, igual que en las salas con placas o con antorchas apagadas.
+
+| A oscuras, el fantasma no recibe el rayo | Matar en orden: aparece el cofre | La placa de peso con la vasija levantada |
+|---|---|---|
+| ![Fantasmas](mazmorras/gruta/fantasmas.png) | ![Orden](mazmorras/gruta/orden.png) | ![Placa de peso](mazmorras/gruta/placa-peso.png) |
+
+**Objetos del mapa base que la corrida saca.** El cliente dibuja los objetos del mapa base. Por eso, cuando una escalera oculta, una vasija levantada o un bloque corrido entra a la vista caminando, el server lo borra (`isObjectRemoved` en `enterTile` de `protocol.ts`). Antes, una escalera oculta lejos de donde entraste se veía aunque no funcionara.
+
+### Para probarlas
+En el mapa 591 de la mazmorra de prueba, al sur de los imitadores, hay cuatro salas:
+- **Fantasmas:** una antorcha apagada y dos fantasmas.
+- **Orden:**
+  - un orejudo (1), un murciélago (2) y un esqueleto (3);
+  - cuatro vasijas para tirarle al orejudo;
+  - un cofre oculto.
+- **Escarabajo:** una columna de pozos.
+- **Bloques:**
+  - dos placas con sus bloques debajo y la placa de peso;
+  - una vasija para levantar;
+  - una escalera oculta que lleva a la sala del escarabajo.
+
+La prueba en vivo es `pw/run-gruta.mjs`.
+
+### Archivos
+- `server/src/dungeons.ts`:
+  - `getNpcInvulnerableReason(npc, atacante, fuente)`: fantasmas, orejudos y escarabajo;
+  - `onNpcStruck`, que lo llama el golpe cuerpo a cuerpo de `game.ts`;
+  - `onOrderDied`;
+  - la placa de peso en `updatePlates`;
+  - las escaleras de las salas con placas en `solvePlates`.
+- `server/src/dungeonHazards.ts`: `strikeBeetle`, el empujón del escarabajo y la caída al pozo.
+- `server/src/dungeonTools.ts`: cada ítem le dice a `damageNpc` con qué pega (`fuego`, `gancho`, `tiro`, `bomba`, `flecha`, `polvo`).
+- `server/src/scripts/buildDungeonMaps.ts`: el símbolo `-`, los cofres ocultos de las salas de orden y las escaleras ocultas de las salas con placas.

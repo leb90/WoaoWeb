@@ -148,9 +148,15 @@ test("las mecánicas de cada mapa están bien armadas y la mazmorra se puede res
                         .map(([key]) => mech.roomOf[key]),
                 );
                 const tileRooms = new Set((mech.santuario?.baldosas ?? []).map((tile: { sala: number }) => tile.sala));
+                const joinRooms = new Set(mech.fauces?.salasJuntar ?? []);
                 const hides =
-                    closingRooms.has(chest.sala) || plateRooms.has(chest.sala) || torchRooms.has(chest.sala) || orderRooms.has(chest.sala) || tileRooms.has(chest.sala);
-                assert.equal(chest.oculto, hides, `${at}: oculto solo en salas que se cierran, con placas, con antorchas apagadas, de matar en orden o con baldosas voladoras`);
+                    closingRooms.has(chest.sala) ||
+                    plateRooms.has(chest.sala) ||
+                    torchRooms.has(chest.sala) ||
+                    orderRooms.has(chest.sala) ||
+                    tileRooms.has(chest.sala) ||
+                    joinRooms.has(chest.sala);
+                assert.equal(chest.oculto, hides, `${at}: oculto solo en salas que se cierran, con placas, con antorchas apagadas, de matar en orden, con baldosas voladoras o con bloques que se juntan`);
                 const chestObject = chest.contenido === "trofeo" ? DUNGEON_OBJECT_IDS.cofreJefe : DUNGEON_OBJECT_IDS.cofre;
                 assert.equal(objects[`${chest.x},${chest.y}`]?.objIndex, chest.oculto ? undefined : chestObject, `${at}: objeto`);
                 if (chest.contenido === "llave") counts.llaves++;
@@ -295,7 +301,8 @@ test("la mazmorra de prueba trae lo que tocan el Polvo de Fuego, el Gancho y el 
         assert.equal(mech.plates.includes(key), item.placa, "la vasija con placa la tapa");
     }
     assert.ok(mech.barriers.some((barrier: { tipo: string }) => barrier.tipo === "placa"), "la placa abre una puerta");
-    for (const key of mech.hookPosts) assert.equal(objectAt(key), OBJ.poste);
+    // Los postes del Gancho son estatuas o cabezas de dragón (las Fauces del Bagre).
+    for (const key of mech.hookPosts) assert.ok([OBJ.poste, OBJ.cabezaDragon].includes(objectAt(key)), key);
     // La estatua está pasando la lava, a 7 baldosas como mucho de la orilla.
     const [hx, hy] = mech.hookPosts[0].split(",").map(Number);
     const lavaInRow = (mech.lava as string[]).map((key) => key.split(",").map(Number)).filter(([, y]) => y === hy).map(([x]) => x);
@@ -613,4 +620,54 @@ test("los jefes del Santuario del Rostro: el Machacador, las Serpientes Glotonas
     assert.equal(OBJ.bolaDeHierro, 1881);
     assert.equal(Object.values(OBJ).filter((id) => id === 1881).length, 1);
     assert.ok(!readJson("frontend/public/init/objs.json")["1881"], "1881 no está en objs.json");
+});
+
+test("las mecánicas de las Fauces del Bagre en la mazmorra de prueba: agua baja, zambullida, ancla, piso flojo, cristales, bloques y nota", () => {
+    const specials = readJson("server/mapas_source/mapa_591/specials.json");
+    const terrain = readJson("server/mapas_source/mapa_591/terrain.json");
+    const npcs = readJson("server/jsons/npcs.json");
+    const mech = specials.dungeon;
+    const cell = (key: string) => {
+        const [x, y] = key.split(",").map(Number);
+        return terrain.palette[String(terrain.rows[y - 1][x - 1])];
+    };
+    const isWater = (graphics: unknown) => {
+        const layer1 = Array.isArray(graphics) ? graphics[0] : graphics;
+        return Number(layer1) >= 1505 && Number(layer1) <= 1520;
+    };
+    // El agua baja es agua con algo en la capa 2 (así se camina); la profunda, agua sola.
+    assert.ok(mech.fauces.aguaBaja.length >= 40);
+    for (const key of mech.fauces.aguaBaja) {
+        const graphics = cell(key).graphics;
+        assert.ok(Array.isArray(graphics) && isWater(graphics) && graphics[1] > 0, `agua baja en ${key}`);
+    }
+    // La escalera bajo el agua: en el agua profunda, sin objeto, y la otra punta en otra sala.
+    const underwater = Object.entries(specials.exits as Record<string, { map: number; x: number; y: number }>).filter(([key]) => isWater(cell(key).graphics) && !Array.isArray(cell(key).graphics));
+    assert.equal(underwater.length, 1);
+    assert.ok(!specials.objects[underwater[0][0]], "la zambullida no se ve");
+    assert.notEqual(mech.roomOf[underwater[0][0]], mech.roomOf[`${underwater[0][1].x},${underwater[0][1].y}`]);
+    // El ancla: al lado de una columna de pozos.
+    assert.equal(mech.fauces.anclas.length, 1);
+    const [ax, ay] = mech.fauces.anclas[0].split(",").map(Number);
+    assert.ok(mech.pits.includes(`${ax},${ay - 1}`), "pozos arriba del ancla");
+    // Piso flojo, cristales de golpe (tapan el paso), peces y la cabeza de dragón (se engancha).
+    assert.equal(mech.fauces.pisoFlojo.length, 6);
+    for (const key of mech.fauces.cristalesGolpe) assert.ok(cell(key).blocked, `cristal en ${key}`);
+    assert.equal(mech.fauces.peces.length, 1);
+    assert.ok(mech.hookPosts.some((key: string) => specials.objects[key]?.objIndex === 1885), "cabeza de dragón");
+    // Los bloques que se juntan: su sala esconde el cofre hasta juntarlos.
+    assert.equal(mech.fauces.salasJuntar.length, 1);
+    const joinRoom = mech.fauces.salasJuntar[0];
+    assert.equal(mech.blocks.filter((key: string) => mech.roomOf[key] === joinRoom).length, 2);
+    assert.ok(mech.chests.some((chest: { sala: number; oculto: boolean }) => chest.sala === joinRoom && chest.oculto));
+    // El cofre con nota.
+    const note = mech.chests.find((chest: { contenido: string }) => chest.contenido === "nota");
+    assert.ok(note && /Vení a buscarlo/.test(note.texto));
+    // Las criaturas de prueba: cada una con su marca; las de agua nacen en el agua.
+    const placed = Object.entries(specials.npcs as Record<string, number>);
+    for (const flag of ["mascara", "saltarin", "esquiva", "pulga"]) assert.ok(placed.some(([, id]) => npcs[id]?.[flag]), flag);
+    const squid = placed.find(([, id]) => npcs[id]?.tierraInvalida);
+    assert.ok(squid && isWater(cell(squid[0]).graphics) && !Array.isArray(cell(squid[0]).graphics), "el calamar en el agua profunda");
+    const flea = placed.find(([, id]) => npcs[id]?.pulga);
+    assert.ok(flea && Array.isArray(cell(flea[0]).graphics), "la pulga en el agua baja");
 });

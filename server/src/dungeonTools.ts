@@ -168,6 +168,12 @@ function damageNpc(user: ToolUser, npcId: EntityId, amount: number, source: stri
     if (require("./dungeonGrotto").onNpcStruck(npc)) return false;
     // Una bomba o algo tirado mata a un hechicero de una (Santuario del Rostro).
     amount = require("./dungeonShrine").damageFor(npc, source, amount);
+    // Las Máscaras de Hierro (Fauces del Bagre) se cubren de frente de todo menos de las bombas.
+    const masked = require("./dungeonMaw").invulnerableReason(npc, user, source);
+    if (masked) {
+        tell(user.id, masked);
+        return false;
+    }
     if (!getDungeons().canToolHitNpc(npc, source)) {
         const reason = getDungeons().getNpcInvulnerableReason(npc, undefined, source);
         if (reason) tell(user.id, reason);
@@ -252,6 +258,11 @@ export function hookshot(sessionId: EntityId) {
     setTimeout(() => {
         const mover = vars.personajes?.[sessionId] as ToolUser | undefined;
         if (!mover || Number(mover.map) !== mapId) return;
+        // Las anclas que la cadena pasó por encima arman su puente (Fauces del Bagre).
+        require("./dungeonMaw").onHookPath(mapId, mover.pos, line.end ? [...line.path, line.end] : line.path);
+        // A una Máscara de Hierro de frente, el Gancho le arranca la máscara en vez de aturdirla.
+        const hooked = golpe === "criatura" && line.npcId ? vars.npcs?.[line.npcId] : null;
+        if (hooked && require("./dungeonMaw").onHooked(hooked, mover)) return;
         if (golpe === "criatura" && line.npcId) stunNpc(mover, line.npcId);
         if (!pull.length) return;
         // Lo arrastra por encima de pozos y lava: recién al llegar cuenta lo que hay en el piso.

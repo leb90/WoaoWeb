@@ -104,3 +104,32 @@ Atribución que piden:
 - IndigoFenix, "Jade Cyclops".
 
 Hecho con gráficos propios: el pozo que deja una baldosa (`graphics/330016.png`) y la bola de hierro del Machacador (`graphics/330022.png`, una esfera sombreada).
+
+
+## Fauces del Bagre
+
+Los objetos van con alfa limpio. Las criaturas usan los originales a escala 1, menos la Máscara de Hierro, que está al doble con vecino más cercano.
+
+| Archivo | Uso en el juego | Original | Autor | Licencia |
+|---|---|---|---|---|
+| `graphics/330026.png` | Piso flojo, firme y hundiéndose (42346 y 42347) | La losa lisa de "[LPC] Jungle Ruins", https://opengameart.org/content/lpc-jungle-ruins, con rajas dibujadas y una junta oscura; la hundida está achicada y más oscura | bluecarrot16 (encargo de Pierre Vigier) | OGA-BY 3.0+ / CC-BY 3.0+ |
+| `graphics/330027.png` | Cristal que se rompe de un golpe (42348) | `crystal-red-small.png` de "Crystals", https://opengameart.org/content/crystals-0, pasado a celeste verdoso | Chris Fiedler (Chrisdesign), Iwan Gabovitch (qubodup) y Jordan Irwin (AntumDeluge) | CC0 |
+| `graphics/330031.png` | Pulga de agua (cuerpo 579): 4 direcciones, 6 cuadros de 56 × 50 | `spider06.png` de "[LPC] Spider", https://opengameart.org/node/21036, pasada a celeste con un arco de agua debajo | Stephen "Redshrike" Challener (dibujo) y William.Thompsonj (colaborador) | [CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/) / [OGA-BY 3.0](https://static.opengameart.org/OGA-BY-3.0.txt) (también CC-BY 4.0 y GPL) |
+| `graphics/330032.png` | Calamar (cuerpo 580): 4 direcciones, 8 cuadros de 49 × 41 (la izquierda es la derecha espejada) | "Cugzilia II Prototype Squid", https://opengameart.org/node/122940, separado del GIF y pasado a blanco con los ojos oscuros | Spring Spring | CC0 |
+| `graphics/330033.png` | Pez que salta (cuerpo 581): sube, arriba, baja y el salpicón, a la derecha y a la izquierda | El pez rojo de "Swimming Fish", https://opengameart.org/content/swimming-fish, menos saturado y girado; el salpicón está dibujado | Mepavi @ You're Perfect Studio | CC0 (también CC-BY 4.0 / OGA-BY 3.0) |
+| `graphics/330034.png` | Máscara de Hierro (cuerpo 582): 4 cuadros, a la derecha y espejada | `masked_orc_run_anim` de "DungeonTileset II", https://0x72.itch.io/dungeontileset-ii, al doble, con la calavera pasada a hierro | 0x72 | CC0 |
+| `graphics/330035.png` | La Máscara de Hierro sin la máscara (cuerpo 583) | `orc_warrior_run_anim` de "DungeonTileset II", al doble | 0x72 | CC0 |
+| `graphics/330036.png` | La máscara suelta, la que arranca el Gancho (42447) | La máscara de `masked_orc_idle_anim_f0` de "DungeonTileset II", recortada y al doble | 0x72 | CC0 |
+
+Atribución que piden:
+- "[LPC] Jungle Ruins" by bluecarrot16. Commissioned by Pierre Vigier (pvigier). Licenses: OGA-BY 3.0+, CC-BY 3.0+, GPL 2.0+. http://opengameart.org/content/lpc-jungle-ruins
+- "[LPC] Spider": Stephen "Redshrike" Challener, graphic artist; William.Thompsonj, contributor. https://opengameart.org/node/21036
+- Los CC0 no la piden. Se nombra igual a Spring Spring, Mepavi @ You're Perfect Studio, 0x72, Chrisdesign, qubodup y AntumDeluge.
+
+Hechos para el juego, sin gráficos de terceros:
+- el agua baja: `graphics/330023.png` es una baldosa sola (42325) y `graphics/330024.png` es el bloque de 4 × 4 (42326-42341), con piedritas, arena y ondas que se repiten sin costura;
+- el ancla del Gancho, en 4 orientaciones (`graphics/330025.png`, 42342-42345);
+- la cabeza de dragón de piedra con su argolla (`graphics/330028.png`, 42349), con la paleta de Jungle Ruins;
+- el hueso (`graphics/330030.png`, 42352).
+
+El puente (`graphics/330029.png`, 42350 y 42351) está armado con la madera del muelle del propio juego (grh 5500-5503).

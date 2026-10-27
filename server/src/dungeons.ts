@@ -71,6 +71,13 @@ const OBJ = {
     // La bola de hierro del Machacador (dungeonShrineBosses.ts): tampoco está en el mapa ni en objs.json; el cliente
     // la dibuja (engine/dungeonShrineBosses.ts) cuando se lleva y se tira.
     bolaDeHierro: 1881,
+    // Fauces del Bagre (dungeonMaw.ts).
+    ancla: 1882,
+    pisoFlojo: 1883,
+    cristalGolpe: 1884,
+    cabezaDragon: 1885,
+    puente: 1886,
+    puenteHorizontal: 1890,
 } as const;
 // Portal azul (escaleras que se ven como portal: el atajo de la Cueva de la Cola).
 const PORTAL_OBJ = 378;
@@ -166,7 +173,8 @@ type Barrier = {
 // Escaleras y portales que aparecen al vaciar una sala (la propia o la de la otra punta).
 type HiddenExit = { x: number; y: number; revela: { map: number; sala: number } };
 // golpe: el cofre trabado del Santuario del Rostro, que se abre tirándole algo.
-type Chest = { x: number; y: number; contenido: string; oculto: boolean; sala: number; golpe?: boolean };
+// `texto`: lo que dice la nota de un cofre con nota (el del Maestro Stalfos de las Fauces del Bagre).
+type Chest = { x: number; y: number; contenido: string; oculto: boolean; sala: number; golpe?: boolean; texto?: string };
 type MapMechanics = {
     rooms: Array<{ id: number; x1: number; y1: number; x2: number; y2: number; cierra: boolean }>;
     roomOf: Record<string, number>;
@@ -209,6 +217,16 @@ type MapMechanics = {
         cintas: Array<{ x: number; y: number; dir: string }>;
         lanzallamas: Array<{ x: number; y: number; dir: string; sala: number }>;
         ojos: Array<{ x: number; y: number; sala: number }>;
+    };
+    // Fauces del Bagre: anclas del Gancho, piso que se hunde, cristales de golpe, salas de bloques que se juntan, peces
+    // que saltan y el agua baja (dungeonMaw.ts).
+    fauces?: {
+        anclas: string[];
+        pisoFlojo: string[];
+        cristalesGolpe: string[];
+        salasJuntar: number[];
+        peces: Array<{ x: number; y: number; sala: number }>;
+        aguaBaja: string[];
     };
 };
 type Torch = { x: number; y: number; encendida: boolean; sala: number };
@@ -286,6 +304,8 @@ type MapState = {
     weightHintAt: Map<string, number>;
     // Pozos que se abrieron en la corrida (las baldosas voladoras del Santuario del Rostro).
     openedPits: Set<string>;
+    // Pozos tapados por un puente del Gancho (las anclas de las Fauces del Bagre).
+    bridged: Set<string>;
 };
 
 type DungeonRun = {
@@ -873,6 +893,7 @@ function destroyRun(run: DungeonRun) {
         require("./dungeonGrotto").forgetMap(mapId);
         require("./dungeonShrine").forgetMap(mapId);
         require("./dungeonShrineBosses").forgetMap(mapId);
+        require("./dungeonMaw").forgetMap(mapId);
         for (const npcId of Object.keys(vars.npcs ?? {})) {
             if (vars.npcs[npcId]?.map === mapId) {
                 delete vars.npcs[npcId];
@@ -1176,6 +1197,7 @@ function mechanicsOf(baseMap: number): MapIndex | null {
                         ...(mech.crystals ?? []),
                         ...(mech.ice ?? []),
                         ...liftables.keys(),
+                        ...(mech.fauces?.cristalesGolpe ?? []),
                     ]),
                 };
             }
@@ -1239,6 +1261,7 @@ function createMapState(index: MapIndex): MapState {
         orderDead: new Map(),
         weightHintAt: new Map(),
         openedPits: new Set(),
+        bridged: new Set(),
     };
 }
 
@@ -1632,6 +1655,11 @@ function openChest(sessionId: EntityId, user: RuntimeCharacter, ctx: MapContext,
             tellRun(run, `¡${name} encontró la Caracola secreta! Queda en cada uno del grupo.`, "#FFD24A");
             break;
         }
+        // Un cofre vacío con una nota adentro: se lee como una losa (después de refrescar a todos, que si no la tapa).
+        case "nota":
+            refreshRun(run);
+            sendState(sessionId, null, { titulo: "Una nota", texto: chest.texto ?? "La nota está borrosa." });
+            return;
         case "trampa": {
             const spawned = spawnTrap(ctx, chest);
             tellRun(run, spawned ? "¡Era una trampa!" : "El cofre estaba vacío.", spawned ? "#FF6B3D" : "white");
@@ -1752,6 +1780,7 @@ function pushBlock(sessionId: EntityId, user: RuntimeCharacter, ctx: MapContext,
     setObject(ctx.mapId, to.x, to.y, OBJ.bloque);
     setBlocked(ctx.mapId, to.x, to.y, true);
     updatePlates(ctx);
+    require("./dungeonMaw").onBlockMoved(ctx.mapId);
 }
 
 type ClickTarget =
@@ -1880,6 +1909,7 @@ function compassChime(ws: RuntimeClient, ctx: MapContext, roomId: number) {
 function stepIntoPit(ws: RuntimeClient, user: RuntimeCharacter, ctx: MapContext, x: number, y: number): boolean {
     const key = coordKey(x, y);
     if ((!ctx.index.pits.has(key) && !ctx.state.collapsed.has(key) && !ctx.state.openedPits.has(key)) || (user as { dead?: boolean }).dead) return false;
+    if (ctx.state.bridged.has(key)) return false;
     fallIntoPit(ws, user, ctx);
     return true;
 }
@@ -2004,6 +2034,7 @@ function fastTickRun(run: DungeonRun) {
         require("./dungeonGrotto").tick(mapId, now);
         require("./dungeonShrine").tick(mapId, now);
         require("./dungeonShrineBosses").tick(mapId, now);
+        require("./dungeonMaw").tick(mapId, now);
     }
 }
 
@@ -2086,6 +2117,36 @@ export function vasesInRoom(mapId: number, roomId: number): Array<{ x: number; y
     return vases;
 }
 
+// --- Ayudas para dungeonMaw.ts (Fauces del Bagre) ---
+
+export function mawDataOf(mapId: number): { fauces: NonNullable<MapMechanics["fauces"]>; roomOf: Record<string, number> } | null {
+    const ctx = contextOf(mapId);
+    if (!ctx?.index.mech.fauces) return null;
+    return { fauces: ctx.index.mech.fauces, roomOf: ctx.index.mech.roomOf };
+}
+
+// Un pozo del plano que todavía no tiene puente.
+export function isPitAt(mapId: number, x: number, y: number): boolean {
+    const ctx = contextOf(mapId);
+    const key = coordKey(x, y);
+    return Boolean(ctx && ctx.index.pits.has(key) && !ctx.state.bridged.has(key));
+}
+
+// El puente del Gancho tapa un pozo: se pisa y no se cae (queda toda la corrida). Los tablones van a lo largo.
+export function bridgePit(mapId: number, x: number, y: number, horizontal = false) {
+    const ctx = contextOf(mapId);
+    if (!ctx) return;
+    ctx.state.bridged.add(coordKey(x, y));
+    setObject(mapId, x, y, horizontal ? OBJ.puenteHorizontal : OBJ.puente);
+}
+
+// Los bloques que se empujan de una sala, donde están ahora.
+export function blocksInRoom(mapId: number, roomId: number): Array<{ x: number; y: number }> {
+    const ctx = contextOf(mapId);
+    if (!ctx) return [];
+    return [...ctx.state.blocks].filter((key) => ctx.index.mech.roomOf[key] === roomId).map(parseCoord);
+}
+
 // Pone o saca un objeto de la corrida (las cabezas de caballo, las baldosas), con su bloqueo.
 export function setShrineObject(mapId: number, x: number, y: number, objIndex: number, blocked: boolean) {
     if (!contextOf(mapId)) return;
@@ -2132,6 +2193,7 @@ export function isHazard(mapId: number, x: number, y: number): boolean {
     const ctx = contextOf(mapId);
     if (!ctx) return false;
     const key = coordKey(x, y);
+    if (ctx.state.bridged.has(key)) return false;
     return (
         ctx.index.pits.has(key) ||
         ctx.index.lava.has(key) ||
@@ -2352,6 +2414,7 @@ export function hitSwitch(mapId: number, x: number, y: number): boolean {
 export function onAirSwing(user: RuntimeCharacter, x: number, y: number) {
     if (!isDungeonInstanceMap(user.map)) return;
     hitSwitch(Number(user.map), x, y);
+    require("./dungeonMaw").onAirSwing(Number(user.map), { x, y });
     const emptyBottle = require("./dungeonGrotto").onAirSwing(Number(user.map), { x, y });
     if (emptyBottle) tell(user.id, emptyBottle);
 }
@@ -2404,6 +2467,7 @@ function enterVortex(user: RuntimeCharacter, ctx: MapContext) {
 export function bombBlast(mapId: number, x: number, y: number): number {
     const ctx = contextOf(mapId);
     if (!ctx) return 0;
+    require("./dungeonMaw").onBlast(mapId, { x, y });
     let opened = 0;
     for (let dy = -1; dy <= 1; dy++) {
         for (let dx = -1; dx <= 1; dx++) {
@@ -2471,6 +2535,9 @@ export function getNpcInvulnerableReason(
     // El Machacador, las Serpientes Glotonas y el Rostro de Piedra: a cada uno le entra una sola cosa.
     const shrineBoss = require("./dungeonShrineBosses").invulnerableReason(npc, source);
     if (shrineBoss) return shrineBoss;
+    // Las Máscaras de Hierro de las Fauces del Bagre se cubren de frente.
+    const masked = require("./dungeonMaw").invulnerableReason(npc, attacker, source);
+    if (masked) return masked;
     // Los imitadores se cubren de frente: hay que pegarles por la espalda o de costado.
     const frontal = attacker ? require("./dungeonHazards").frontalBlockReason(npc, attacker) : null;
     if (frontal) return frontal;
@@ -2655,7 +2722,7 @@ function templateOf(npc: { templateNpcIndex?: number } | undefined): SpecialTemp
 }
 
 function registerSpecialNpc(run: DungeonRun, npc: any) {
-    if (require("./dungeonHazards").register(npc) || require("./dungeonBoss").register(npc) || require("./dungeonGrotto").register(npc) || require("./dungeonShrine").register(npc) || require("./dungeonShrineBosses").register(npc)) return;
+    if (require("./dungeonHazards").register(npc) || require("./dungeonBoss").register(npc) || require("./dungeonGrotto").register(npc) || require("./dungeonShrine").register(npc) || require("./dungeonShrineBosses").register(npc) || require("./dungeonMaw").register(npc)) return;
     const template = templateOf(npc);
     if (template.despierta) npc.dormant = true;
     if (template.pareja) {
@@ -2987,6 +3054,7 @@ export function onNpcDied(npc: { id?: EntityId; map?: number; templateNpcIndex?:
     require("./dungeonGrotto").onNpcDied(npc);
     require("./dungeonShrine").onNpcDied(npc);
     require("./dungeonShrineBosses").onNpcDied(npc);
+    require("./dungeonMaw").onNpcDied(npc);
     const boss = ctx.run.floatingBoss;
     if (boss?.npcId === String(npc.id)) {
         ctx.run.floatingBoss = null;
@@ -3092,6 +3160,10 @@ module.exports = {
     solveRoomPuzzle,
     openPitAt,
     setBossPit,
+    mawDataOf,
+    isPitAt,
+    bridgePit,
+    blocksInRoom,
     vasesInRoom,
     setShrineObject,
     broadcastNpcVitals,

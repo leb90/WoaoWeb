@@ -78,8 +78,13 @@ Cada mazmorra tiene tres temas que suenan uno detrás del otro y uno de combate,
 | `cueva/2.mp3` | Cueva, tema 2 | "Video Dungeon Crawl", https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1200064 | Kevin MacLeod (incompetech.com) | CC-BY 4.0 |
 | `cueva/3.mp3` | Cueva, tema 3 | "Dubious Dungeon", https://opengameart.org/content/dubious-dungeon | Bogart VGM | CC-BY 4.0 |
 | `cueva/combate.mp3` | Cueva, combate | "Zelda Style 8-bit Boss Theme", https://opengameart.org/content/zelda-style-8-bit-boss-theme | HydroGene | CC0 |
+| `botella/1.mp3` | Gruta de la Botella, tema 1 | "Mirage", https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100877 | Kevin MacLeod (incompetech.com) | CC-BY 4.0 |
+| `botella/2.mp3` | Gruta de la Botella, tema 2 | "Mystery Bazaar", https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1700005 | Kevin MacLeod (incompetech.com) | CC-BY 4.0 |
+| `botella/3.mp3` | Gruta de la Botella, tema 3 | "Hidden Wonders", https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1700006 | Kevin MacLeod (incompetech.com) | CC-BY 4.0 |
+| `botella/combate.mp3` | Gruta de la Botella, combate | "Ibn Al-Noor", https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100706 | Kevin MacLeod (incompetech.com) | CC-BY 4.0 |
 
 Atribución que piden las licencias CC-BY:
 - "RPG Exploration - (The Black Temple)", de Hitctrl, CC-BY 3.0, convertido y nivelado.
 - "8bit Dungeon Level" y "Video Dungeon Crawl", de Kevin MacLeod (incompetech.com), con licencia Creative Commons: By Attribution 4.0 (http://creativecommons.org/licenses/by/4.0/), convertidos y nivelados.
 - "Dubious Dungeon", de Bogart VGM, CC-BY 4.0, convertido y nivelado.
+- "Mirage", "Mystery Bazaar", "Hidden Wonders" e "Ibn Al-Noor", de Kevin MacLeod (incompetech.com), con licencia Creative Commons: By Attribution 4.0 (http://creativecommons.org/licenses/by/4.0/), convertidos, nivelados y con los silencios de las puntas recortados.

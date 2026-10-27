@@ -163,5 +163,68 @@
             ],
             "combate": "/music/mazmorras/cueva/combate.mp3"
         }
+    },
+    {
+        "id": "botella",
+        "nombre": "Gruta de la Botella",
+        "descripcion": "Una gruta húmeda y oscura, llena de vasijas y antorchas apagadas. Al fondo, una botella salta sola. Dicen que guarda un brazalete que da fuerza para levantar lo que sea.",
+        "nivelMinimo": 20,
+        "maxJugadores": 5,
+        "soloDesarrollo": true,
+        "piedraNpc": 9724,
+        "mapas": [
+            550,
+            551,
+            552
+        ],
+        "entrada": {
+            "map": 550,
+            "x": 27,
+            "y": 78
+        },
+        "salidas": [
+            {
+                "map": 550,
+                "x": 23,
+                "y": 80
+            },
+            {
+                "map": 552,
+                "x": 50,
+                "y": 27
+            }
+        ],
+        "regreso": {
+            "map": 34,
+            "x": 50,
+            "y": 52
+        },
+        "requiere": [
+            {
+                "id": "pluma",
+                "nombre": "la Pluma de Roc"
+            }
+        ],
+        "escalado": {
+            "vidaPorJugador": 0.7,
+            "danoPorJugador": 0.15
+        },
+        "itemMazmorra": {
+            "id": "pulsera",
+            "nombre": "el Brazalete de Fuerza"
+        },
+        "trofeo": {
+            "id": "lampara_del_genio",
+            "nombre": "la Lámpara del Genio"
+        },
+        "oroJefe": 700,
+        "musica": {
+            "pistas": [
+                "/music/mazmorras/botella/1.mp3",
+                "/music/mazmorras/botella/2.mp3",
+                "/music/mazmorras/botella/3.mp3"
+            ],
+            "combate": "/music/mazmorras/botella/combate.mp3"
+        }
     }
 ]

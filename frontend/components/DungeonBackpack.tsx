@@ -53,7 +53,7 @@ const SERIES_ITEMS: Array<{ id: string; nombre: string; icon: LucideIcon; tone: 
 const SERIES_TROPHIES: Array<{ id: string | null; nombre: string }> = [
     { id: "escama_del_abisal", nombre: "Escama del Abisal" },
     { id: "aguijon_del_ciempies", nombre: "Aguijón del Ciempiés" },
-    { id: null, nombre: "Tercera mazmorra" },
+    { id: "lampara_del_genio", nombre: "Lámpara del Genio" },
     { id: "iris_del_ojo", nombre: "Iris del Ojo" },
     { id: null, nombre: "Quinta mazmorra" },
     { id: null, nombre: "Sexta mazmorra" },

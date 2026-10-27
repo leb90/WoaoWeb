@@ -314,7 +314,7 @@ En la Mochila, el Gancho pasa a decir "Fauces del Bagre" (hoy dice "Mazmorra a d
 
 Para que no tarde tanto, en tres PR seguidos, como el Santuario del Rostro:
 1. **Mecánicas nuevas y criaturas** (sección 8, menos los jefes): el puente del ancla, el piso que se hunde, la escalera bajo el agua, juntar dos bloques, los cristales de golpe, el cofre con nota, las Máscaras de Hierro, los esqueletos y las criaturas del agua (**hecho**, ver [../MAZMORRAS.md](../MAZMORRAS.md), sección 20). Las plataformas que se hunden del pasaje A → B son el piso que se desmorona que ya existía.
-2. **Mapas 570-572, criaturas y música:** tres temas y uno de combate, libres. Incluye el recorrido completo en vivo con el simulador de recorrido.
+2. **Mapas 570-572, criaturas y música:** tres temas y uno de combate, libres. Incluye el recorrido completo con el simulador de recorrido (**hecho**, ver [../MAZMORRAS.md](../MAZMORRAS.md), sección 21).
 3. **Jefes:** el Maestro Stalfos (los cuatro encuentros), las Gohma y la Anguila Viscosa.
 
 **Números:**

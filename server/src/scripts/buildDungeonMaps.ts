@@ -9,7 +9,8 @@
 //   #  pared: si abajo hay piso a 4 o menos, se dibuja la cara de la pared; si no, piedra oscura
 //   .  piso          ~  agua profunda (se nada con el ítem de la mazmorra)        (espacio)  vacío
 //   E  entrada (piso) S  portal de salida
-//   1-9 escalera: une las dos escaleras con el mismo número en dos mapas de la mazmorra
+//   1-9 escalera: une las dos escaleras con el mismo número en dos mapas de la mazmorra (con más de nueve pares, se
+//       suman símbolos en "escalerasExtra" de leyenda.json)
 //   minúsculas: criaturas, según "criaturas" en leyenda.json
 // Mecánicas (dungeons.ts). Las salas se detectan solas: cada zona de piso cerrada por paredes y puertas.
 //   L  puerta con llave chica     J  puerta de la llave del jefe
@@ -230,6 +231,8 @@ type Legend = {
     bajoElAgua?: string[];
     // Lo que dice cada cofre con nota de cada mapa, en orden de lectura.
     notas?: Record<string, string[]>;
+    // Símbolos de escalera además de los números del 1 al 9, para mazmorras con más de nueve pares (las Fauces del Bagre).
+    escalerasExtra?: string[];
 };
 
 const dungeonId = process.argv[2];
@@ -245,6 +248,9 @@ const FLOOR_GRH = Number(legend.graficos?.piso ?? DEFAULT_FLOOR_GRH);
 const WALL_FACE_GRH = Number(legend.graficos?.pared ?? DEFAULT_WALL_FACE_GRH);
 const portalDigits = new Set(legend.portales ?? []);
 const underwaterDigits = new Set(legend.bajoElAgua ?? []);
+const extraStairs = new Set(legend.escalerasExtra ?? []);
+// Una escalera: un número del 1 al 9 o uno de los símbolos de "escalerasExtra".
+const isStair = (c: string) => /[1-9]/.test(c) || extraStairs.has(c);
 
 function readPlan(file: string): Plan {
     const mapId = Number(/mapa_(\d+)\.txt$/.exec(file)?.[1]);
@@ -278,7 +284,7 @@ const block4 = (base: number, x: number, y: number, row?: number) => base + (row
 // Una escalera de "bajoElAgua" está bajo el agua en la punta que tiene agua profunda al lado (la otra es común).
 function isUnderwaterStair(plan: Plan, x: number, y: number): boolean {
     const c = charAt(plan, x, y);
-    if (!/[1-9]/.test(c) || !underwaterDigits.has(c)) return false;
+    if (!isStair(c) || !underwaterDigits.has(c)) return false;
     return [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => ["~", "∿"].includes(charAt(plan, x + dx, y + dy)));
 }
 
@@ -294,7 +300,7 @@ for (const plan of plans) {
     for (let y = 1; y <= SIZE; y++) {
         for (let x = 1; x <= SIZE; x++) {
             const c = charAt(plan, x, y);
-            if (/[1-9]/.test(c)) stairs.set(c, [...(stairs.get(c) ?? []), { mapId: plan.mapId, x, y }]);
+            if (isStair(c)) stairs.set(c, [...(stairs.get(c) ?? []), { mapId: plan.mapId, x, y }]);
             if (c === "E") markers.entrada = { map: plan.mapId, x, y };
             if (c === "S") markers.salidas.push({ map: plan.mapId, x, y });
             if (c === "D") markers.caidas.set(plan.mapId, { map: plan.mapId, x, y });
@@ -607,7 +613,7 @@ function buildTile(plan: Plan, x: number, y: number): Tile {
     }
     if (c === "~" || c === "∿" || isUnderwaterStair(plan, x, y)) {
         // La escalera bajo el agua no se ve: es la zambullida.
-        const exit = /[1-9]/.test(c) ? stairExit(plan, c, x, y) : undefined;
+        const exit = isStair(c) ? stairExit(plan, c, x, y) : undefined;
         return { graphics: block4(WATER_GRH, x, y), ...(exit ? { exit } : {}) };
     }
     // El agua baja es agua con un reflejo encima (capa 2): así el juego no la toma como agua y se camina.
@@ -724,7 +730,7 @@ function buildTile(plan: Plan, x: number, y: number): Tile {
         tile.object = c === "Y" ? DUNGEON_OBJECTS.cofreJefe.id : DUNGEON_OBJECTS.cofre.id;
         tile.blocked = true;
     }
-    if (/[1-9]/.test(c)) {
+    if (isStair(c)) {
         tile.object = portalDigits.has(c) ? PORTAL_OBJ : STAIRS_OBJ;
         tile.exit = stairExit(plan, c, x, y);
     }

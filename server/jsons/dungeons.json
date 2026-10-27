@@ -301,5 +301,76 @@
             ],
             "combate": "/music/mazmorras/rostro/combate.mp3"
         }
+    },
+    {
+        "id": "fauces",
+        "nombre": "Fauces del Bagre",
+        "descripcion": "Una cueva marina con forma de bagre, en la bahía. Adentro hay agua, cornisas y pozos, y un esqueleto espadachín que se lleva lo que encontrás. Dicen que al fondo vive una anguila que asoma por las paredes.",
+        "nivelMinimo": 25,
+        "maxJugadores": 5,
+        "soloDesarrollo": true,
+        "piedraNpc": 9726,
+        "mapas": [
+            570,
+            571,
+            572
+        ],
+        "entrada": {
+            "map": 570,
+            "x": 82,
+            "y": 83
+        },
+        "salidas": [
+            {
+                "map": 570,
+                "x": 86,
+                "y": 84
+            },
+            {
+                "map": 572,
+                "x": 50,
+                "y": 27
+            }
+        ],
+        "regreso": {
+            "map": 34,
+            "x": 50,
+            "y": 52
+        },
+        "requiere": [
+            {
+                "id": "patas_de_rana",
+                "nombre": "las Patas de rana"
+            },
+            {
+                "id": "pluma",
+                "nombre": "la Pluma de Roc"
+            },
+            {
+                "id": "pulsera",
+                "nombre": "el Brazalete de Fuerza"
+            }
+        ],
+        "escalado": {
+            "vidaPorJugador": 0.7,
+            "danoPorJugador": 0.15
+        },
+        "itemMazmorra": {
+            "id": "gancho",
+            "nombre": "el Gancho"
+        },
+        "trofeo": {
+            "id": "colmillo_de_la_anguila",
+            "nombre": "el Colmillo de la Anguila"
+        },
+        "oroJefe": 800,
+        "musica": {
+            "pistas": [
+                "/music/mazmorras/fauces/1.mp3",
+                "/music/mazmorras/fauces/2.mp3",
+                "/music/mazmorras/fauces/3.mp3"
+            ],
+            "combate": "/music/mazmorras/fauces/combate.mp3"
+        }
     }
 ]

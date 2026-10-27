@@ -444,7 +444,8 @@ function playersInside(run: DungeonRun): RuntimeCharacter[] {
 function hasDungeonItem(characterId: string, itemId: string): boolean {
     if (DEFAULT_DUNGEON_ITEMS.includes(itemId)) return true;
     const progress = getProgressStore().getProgress({ _id: characterId }) as { dungeonItems?: string[] };
-    return Boolean(progress.dungeonItems?.includes(itemId));
+    const upgrade = ITEM_UPGRADES[itemId];
+    return Boolean(progress.dungeonItems?.includes(itemId) || (upgrade && progress.dungeonItems?.includes(upgrade)));
 }
 
 // Minimapa de la mazmorra: las salas visitadas (con el mapa, todas) y, con la brújula, los cofres y la puerta del jefe.
@@ -543,7 +544,12 @@ function dungeonButtons(characterId: string): { uno: string | null; dos: string 
     const progress = getProgressStore().getProgress({ _id: characterId }) as { dungeonButtons?: { uno?: string | null; dos?: string | null } };
     const usable = ownedDungeonItems(characterId).filter((item) => item.accion).map((item) => item.id);
     const chosen = progress.dungeonButtons ?? {};
-    const pick = (value: string | null | undefined) => (value === null ? null : value && usable.includes(value) ? value : undefined);
+    // La tecla que tenía el ítem de nivel 1 pasa al mejorado.
+    const resolve = (value: string | null | undefined) => (value && ITEM_UPGRADES[value] && usable.includes(ITEM_UPGRADES[value]) ? ITEM_UPGRADES[value] : value);
+    const pick = (raw: string | null | undefined) => {
+        const value = resolve(raw);
+        return value === null ? null : value && usable.includes(value) ? value : undefined;
+    };
     const uno = pick(chosen.uno);
     const dos = pick(chosen.dos);
     const free = usable.filter((id) => id !== uno && id !== dos);
@@ -589,8 +595,10 @@ function setButtonCommand(sessionId: EntityId, slot: string, itemId: string) {
     if (!own) return tell(sessionId, "Uso: /mazmorra boton <1|2> <ítem|ninguno>.", "white");
     const other = own === "uno" ? "dos" : "uno";
     const current = dungeonButtons(key);
-    const value = itemId === "ninguno" ? null : itemId;
-    if (value && !ownedDungeonItems(key).some((item) => item.id === value && item.accion)) {
+    const owned = ownedDungeonItems(key);
+    const upgraded = ITEM_UPGRADES[itemId];
+    const value = itemId === "ninguno" ? null : upgraded && owned.some((item) => item.id === upgraded) ? upgraded : itemId;
+    if (value && !owned.some((item) => item.id === value && item.accion)) {
         return tell(sessionId, "Ese ítem no lo tenés o no se usa con una tecla.", "white");
     }
     const next = { ...current, [own]: value };
@@ -2730,16 +2738,21 @@ const DUNGEON_ITEMS: Record<string, { nombre: string; accion: "carrera" | "salto
     gancho: { nombre: "Gancho", accion: "gancho" },
     // El Brazalete de Fuerza (la Pulsera de Zelda) lo da la Gruta de la Botella; el II y el Escudo Espejo, otras.
     pulsera: { nombre: "Brazalete de Fuerza", accion: "pulsera" },
-    pulsera_poderosa: { nombre: "Brazalete de Fuerza II", accion: "pulsera" },
+    pulsera_poderosa: { nombre: "Brazalete de Fuerza nivel 2", accion: "pulsera" },
     escudo_espejo: { nombre: "Escudo Espejo", accion: "escudo" },
 };
 
-function ownedDungeonItems(characterId: string) {
+// Ítems que mejoran a otro, como en Zelda: el Brazalete de Fuerza nivel 2 reemplaza al nivel 1 (ocupa su lugar en la
+// Mochila y en las teclas) y cumple lo que pedía el 1.
+const ITEM_UPGRADES: Record<string, string> = { pulsera: "pulsera_poderosa" };
+
+export function ownedDungeonItems(characterId: string) {
     const progress = getProgressStore().getProgress({ _id: characterId }) as { dungeonItems?: string[] };
     // Los básicos van al final: las teclas por defecto son las dos primeras, y a quien ya tiene la Pluma o las Botas
-    // no le cambian.
-    return [...new Set([...(progress.dungeonItems ?? []), ...DEFAULT_DUNGEON_ITEMS])]
-        .filter((id) => DUNGEON_ITEMS[id])
+    // no le cambian. Un ítem mejorado reemplaza al de nivel 1 (no se listan los dos).
+    const ids = new Set([...(progress.dungeonItems ?? []), ...DEFAULT_DUNGEON_ITEMS]);
+    return [...ids]
+        .filter((id) => DUNGEON_ITEMS[id] && !(ITEM_UPGRADES[id] && ids.has(ITEM_UPGRADES[id])))
         .map((id) => ({ id, nombre: DUNGEON_ITEMS[id].nombre, accion: DUNGEON_ITEMS[id].accion }));
 }
 
@@ -2940,6 +2953,7 @@ module.exports = {
     hurtPlayer,
     setDungeonObject,
     setDungeonBlocked,
+    ownedDungeonItems,
     broadcastNpcVitals,
     fallIfHazard,
     toolTargetAt,

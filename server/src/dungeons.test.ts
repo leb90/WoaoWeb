@@ -304,6 +304,17 @@ test("las bombas y el arco los tiene todo el mundo desde la primera mazmorra", (
     assert.equal(dungeons.characterHasDungeonItem(nuevo, "pluma"), false);
 });
 
+test("el Brazalete de Fuerza nivel 2 reemplaza al 1 y cumple lo que pedía el 1", () => {
+    const progressStore = require("./woaoProgress") as typeof import("./woaoProgress");
+    // En memoria, sin guardar: no toca los datos del server.
+    progressStore.getProgress({ _id: "personaje-con-los-dos" }).dungeonItems = ["pulsera", "pulsera_poderosa"];
+    const items = dungeons.ownedDungeonItems("personaje-con-los-dos").map((item: { id: string }) => item.id);
+    assert.ok(items.includes("pulsera_poderosa") && !items.includes("pulsera"), "en la Mochila solo está el nivel 2");
+    progressStore.getProgress({ _id: "personaje-solo-nivel-2" }).dungeonItems = ["pulsera_poderosa"];
+    const solo = { id: 3, _id: "personaje-solo-nivel-2", map: 34, pos: { x: 50, y: 50 } } as never;
+    assert.equal(dungeons.characterHasDungeonItem(solo, "pulsera"), true, "lo que pide el nivel 1 lo cumple el 2");
+});
+
 test("el Escudo Espejo solo frena lo que llega de frente, y solo adentro de una mazmorra", () => {
     const tools = require("./dungeonTools") as typeof import("./dungeonTools");
     const right = 3; // mira al este

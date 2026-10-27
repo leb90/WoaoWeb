@@ -233,6 +233,9 @@ type Legend = {
     notas?: Record<string, string[]>;
     // Símbolos de escalera además de los números del 1 al 9, para mazmorras con más de nueve pares (las Fauces del Bagre).
     escalerasExtra?: string[];
+    // Cofres (por letra) que no aparecen al vaciar su sala sino cuando lo dice el módulo del jefe (el del Gancho, al vencer
+    // al cuarto Maestro Stalfos).
+    cofresTrasJefe?: string[];
 };
 
 const dungeonId = process.argv[2];
@@ -590,6 +593,7 @@ function buildMechanics(plan: Plan) {
                     sala: roomOf.get(key) ?? 0,
                     ...(c === "Ñ" ? { golpe: true } : {}),
                     ...(c === "✉" ? { texto: noteTexts[notes++] ?? "La nota está borrosa." } : {}),
+                    ...((legend.cofresTrasJefe ?? []).includes(c) ? { trasJefe: true } : {}),
                 });
             }
             if (c === "?") data.slabs.push({ x, y, texto: slabTexts[data.slabs.length] ?? "La losa está gastada: no se puede leer." });

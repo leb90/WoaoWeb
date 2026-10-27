@@ -689,9 +689,16 @@ test("las Fauces del Bagre: el Gancho, los cuatro Maestro Stalfos, las Gohma, la
     assert.ok(stalfos.every((key) => closing.has(mech.roomOf[key])));
     const item = mech.chests.find((chest: { contenido: string }) => chest.contenido === "premio");
     assert.ok(item && item.oculto && stalfos.some((key) => mech.roomOf[key] === item.sala));
+    // Los cuatro encuentros, cada uno con su número y sus bombazos (huye a los 3, 2 y 2; el cuarto muere al tercero). El
+    // cofre del Gancho no aparece al vaciar su sala: lo revela la muerte del cuarto.
+    const encounters = stalfos.map((key) => npcs[maw.npcs[key]]).sort((a, b) => a.maestroStalfos - b.maestroStalfos);
+    assert.deepEqual(encounters.map((npc) => [npc.maestroStalfos, npc.bombazos]), [[1, 3], [2, 2], [3, 2], [4, 3]]);
+    assert.equal(mech.roomOf[stalfos.find((key) => npcs[maw.npcs[key]].maestroStalfos === 4)!], item.sala);
+    assert.ok(item.trasJefe, "el cofre del Gancho espera al cuarto Maestro Stalfos");
     // Las Gohma: dos en una sala que se cierra, con el portal-atajo a la Entrada escondido hasta vencerlas.
     const gohma = placed("Gohma");
     assert.equal(gohma.length, 2);
+    assert.ok(gohma.every((key) => npcs[maw.npcs[key]].gohma), "las Gohma las mueve dungeonMawBosses.ts");
     const gohmaRoom = mech.roomOf[gohma[0]];
     assert.ok(closing.has(gohmaRoom));
     assert.ok(mech.hiddenExits.some((h: { revela: { sala: number } }) => h.revela.sala === gohmaRoom));
@@ -734,7 +741,13 @@ test("las Fauces del Bagre: el Gancho, los cuatro Maestro Stalfos, las Gohma, la
         assert.ok(Object.values(maw.npcs as Record<string, number>).some((id) => npcs[id]?.[flag]), flag);
     }
     const eel = Object.values(specials(572).npcs as Record<string, number>).map((id) => npcs[id]).find((npc) => npc?.jefe);
-    assert.ok(eel && Number(eel.attackable) === 1 && Number(eel.hostile) === 1);
+    assert.ok(eel && Number(eel.attackable) === 1 && Number(eel.hostile) === 1 && eel.anguila);
+    // La Guarida: la sala de la Anguila tiene lugar para los cuatro agujeros (a cuatro baldosas de cada esquina) y el
+    // pozo del medio.
+    const lair = specials(572).dungeon;
+    const eelKey = Object.keys(specials(572).npcs)[0];
+    const lairRoom = lair.rooms.find((room: { id: number }) => room.id === lair.roomOf[eelKey]);
+    assert.ok(lairRoom.x2 - lairRoom.x1 >= 12 && lairRoom.y2 - lairRoom.y1 >= 10 && lairRoom.cierra);
     // La música: tres temas y el de combate, con sus créditos.
     const credits = fs.readFileSync(path.join(root, "docs/CREDITOS_SONIDOS.md"), "utf8");
     for (const file of [...def.musica.pistas, def.musica.combate]) {

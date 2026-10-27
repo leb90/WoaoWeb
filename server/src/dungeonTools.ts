@@ -168,6 +168,8 @@ function damageNpc(user: ToolUser, npcId: EntityId, amount: number, source: stri
     if (require("./dungeonGrotto").onNpcStruck(npc)) return false;
     // Una bomba o algo tirado mata a un hechicero de una (Santuario del Rostro).
     amount = require("./dungeonShrine").damageFor(npc, source, amount);
+    // Las Gohma (Fauces del Bagre): con el ojo abierto, una flecha saca un tercio y el Gancho, un sexto.
+    amount = require("./dungeonMawBosses").damageFor(npc, source, amount);
     // Las Máscaras de Hierro (Fauces del Bagre) se cubren de frente de todo menos de las bombas.
     const masked = require("./dungeonMaw").invulnerableReason(npc, user, source);
     if (masked) {
@@ -263,6 +265,8 @@ export function hookshot(sessionId: EntityId) {
         // A una Máscara de Hierro de frente, el Gancho le arranca la máscara en vez de aturdirla.
         const hooked = golpe === "criatura" && line.npcId ? vars.npcs?.[line.npcId] : null;
         if (hooked && require("./dungeonMaw").onHooked(hooked, mover)) return;
+        // A la Anguila Viscosa (Fauces del Bagre), el Gancho la saca de la pared.
+        if (hooked && require("./dungeonMawBosses").onHooked(hooked, mover)) return;
         if (golpe === "criatura" && line.npcId) stunNpc(mover, line.npcId);
         if (!pull.length) return;
         // Lo arrastra por encima de pozos y lava: recién al llegar cuenta lo que hay en el piso.
@@ -436,8 +440,10 @@ function explode(user: ToolUser, mapId: number, at: Pos) {
     const dungeons = getDungeons();
     dungeons.bombBlast(mapId, at.x, at.y);
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) dungeons.hitSwitch(mapId, at.x + dx, at.y + dy);
-    // La cara del Rostro de Piedra (Santuario del Rostro) la resuelve su módulo: solo le entran las bombas.
+    // La cara del Rostro de Piedra (Santuario del Rostro) y el Maestro Stalfos (Fauces del Bagre) los resuelven sus
+    // módulos: solo les entran las bombas.
     const hit = require("./dungeonShrineBosses").onExplosion(user, mapId, at) as Set<string>;
+    for (const id of require("./dungeonMawBosses").onExplosion(user, mapId, at) as Set<string>) hit.add(id);
     for (let dy = -1; dy <= 1; dy++) {
         for (let dx = -1; dx <= 1; dx++) {
             const npcId = vars.mapData[mapId]?.[at.y + dy]?.[at.x + dx]?.id;

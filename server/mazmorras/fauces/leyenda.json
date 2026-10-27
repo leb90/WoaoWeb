@@ -15,7 +15,10 @@
   "c": 9815,
   "t": 9816,
   "g": 9817,
-  "e": 9818
+  "e": 9818,
+  "u": 9819,
+  "w": 9820,
+  "x": 9821
  },
  "plantillas": {
   "9803": {
@@ -274,12 +277,15 @@
    "maxHit": 50,
    "exp": 5200,
    "gold": 250,
-   "desc": "Un esqueleto espadachín que huye cuando lo vencés... hasta la última vez.",
+   "desc": "Un esqueleto espadachín con escudo: un golpe justo después de su espadazo, o de costado, lo desarma, y desarmado solo le entran las bombas.",
    "def": 15,
    "poderAtaque": 90,
    "poderEvasion": 30,
    "movement": 3,
-   "minijefe": true
+   "minijefe": true,
+   "maestroStalfos": 1,
+   "bombazos": 3,
+   "idBody": 482
   },
   "9817": {
    "drop": [],
@@ -294,12 +300,13 @@
    "maxHit": 40,
    "exp": 2600,
    "gold": 140,
-   "desc": "Una araña gigante que solo se lastima con el ojo abierto.",
+   "desc": "Una araña gigante: solo se la lastima con el ojo abierto, con flechas o con el Gancho.",
    "def": 12,
    "poderAtaque": 80,
    "poderEvasion": 30,
    "movement": 3,
-   "minijefe": true
+   "minijefe": true,
+   "gohma": true
   },
   "9818": {
    "drop": [],
@@ -320,7 +327,77 @@
    "poderEvasion": 40,
    "idBody": 13,
    "movement": 3,
-   "jefe": true
+   "jefe": true,
+   "anguila": true
+  },
+  "9819": {
+   "drop": [],
+   "spells": [],
+   "attackable": 1,
+   "hostile": 1,
+   "base": 520,
+   "name": "Maestro Stalfos",
+   "hp": 2800,
+   "maxHp": 2800,
+   "minHit": 30,
+   "maxHit": 50,
+   "exp": 5200,
+   "gold": 250,
+   "desc": "Un esqueleto espadachín que huye cuando lo vencés... hasta la última vez.",
+   "def": 15,
+   "poderAtaque": 90,
+   "poderEvasion": 30,
+   "movement": 3,
+   "minijefe": true,
+   "maestroStalfos": 2,
+   "bombazos": 2,
+   "idBody": 482
+  },
+  "9820": {
+   "drop": [],
+   "spells": [],
+   "attackable": 1,
+   "hostile": 1,
+   "base": 520,
+   "name": "Maestro Stalfos",
+   "hp": 2800,
+   "maxHp": 2800,
+   "minHit": 30,
+   "maxHit": 50,
+   "exp": 5200,
+   "gold": 250,
+   "desc": "Un esqueleto espadachín que huye cuando lo vencés... hasta la última vez.",
+   "def": 15,
+   "poderAtaque": 90,
+   "poderEvasion": 30,
+   "movement": 3,
+   "minijefe": true,
+   "maestroStalfos": 3,
+   "bombazos": 2,
+   "idBody": 482
+  },
+  "9821": {
+   "drop": [],
+   "spells": [],
+   "attackable": 1,
+   "hostile": 1,
+   "base": 520,
+   "name": "Maestro Stalfos",
+   "hp": 2800,
+   "maxHp": 2800,
+   "minHit": 30,
+   "maxHit": 50,
+   "exp": 5200,
+   "gold": 250,
+   "desc": "Esta vez no se escapa.",
+   "def": 15,
+   "poderAtaque": 90,
+   "poderEvasion": 30,
+   "movement": 3,
+   "minijefe": true,
+   "maestroStalfos": 4,
+   "bombazos": 3,
+   "idBody": 482
   }
  },
  "graficos": {
@@ -354,5 +431,8 @@
  "losas": {},
  "oro": 50,
  "oroGrande": 200,
- "trampa": []
+ "trampa": [],
+ "cofresTrasJefe": [
+  "R"
+ ]
 }

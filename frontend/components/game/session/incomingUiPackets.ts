@@ -3,6 +3,7 @@ import { handleGrottoBoss } from "../engine/dungeonGrotto";
 import { handleShrineEffect } from "../engine/dungeonShrine";
 import { handleShrineBoss } from "../engine/dungeonShrineBosses";
 import { handleMawEffect } from "../engine/dungeonMaw";
+import { handleMawBoss } from "../engine/dungeonMawBosses";
 import { playDungeonMotion } from "../engine/dungeonMotion";
 import type { IncomingPacketHandlerArgs } from "./incomingPacketTypes";
 
@@ -289,6 +290,7 @@ export async function handleIncomingUiPacket({
                 if (tipo === "oculto" || tipo === "baldosa" || tipo === "rayo") handleShrineEffect(engine, packet.payload);
                 else if (tipo === "bola" || tipo === "rostro" || tipo === "pozo" || tipo === "glotona") handleShrineBoss(engine, packet.payload);
                 else if (tipo === "salto" || tipo === "hueso" || tipo === "pez" || tipo === "mascara") handleMawEffect(engine, packet.payload);
+                else if (tipo === "stalfos" || tipo === "gohma" || tipo === "anguila") handleMawBoss(engine, packet.payload);
                 else if (tipo) handleGrottoBoss(engine, packet.payload);
                 else handleDungeonBoss(engine, packet.payload);
             }

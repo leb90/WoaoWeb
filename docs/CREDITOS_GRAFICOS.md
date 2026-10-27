@@ -29,14 +29,14 @@ El jefe de la Cueva de la Cola se dibuja con la planilla original sin cambios (`
 |---|---|---|---|---|
 | `sprites/ciempies.png` | Ciempiés Colosal (jefe) | "[LPC] Centipede", https://opengameart.org/content/lpc-centipede | FiveBrosStopMosYT (con agradecimiento a bluecarrot16, bzt y Ragnar Random) | [OGA-BY 3.0](https://static.opengameart.org/OGA-BY-3.0.txt) (también CC-BY-SA 3.0 y 4.0) |
 
-## Roca de la Tortuga: lo que tocan el Polvo de Fuego, el Gancho y la Pulsera
+## Roca de la Tortuga: lo que tocan el Polvo de Fuego, el Gancho y el Brazalete de Fuerza
 
 Objetos de mazmorra 1852-1857 (gráficos 38215-38229, archivos `frontend/public/graphics/320255.png` a `320260.png`). Ver [docs/mazmorras/04-ROCA_DE_LA_TORTUGA.md](mazmorras/04-ROCA_DE_LA_TORTUGA.md).
 
 | Archivo | Uso en el juego | Original | Autor | Licencia |
 |---|---|---|---|---|
-| `320255.png` | Vasija (se levanta con la Pulsera) | La primera vasija redonda de `pint_brown.png`, "Free ceramic jars", https://opengameart.org/content/free-ceramic-jars, achicada a 28 px | Clodo | [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
-| `320256.png` | Piedra suelta (se levanta con la Pulsera) | Una piedra de los escombros de "[LPC] Jungle Ruins", https://opengameart.org/content/lpc-jungle-ruins | bluecarrot16 (encargo de Pierre Vigier) | CC-BY 3.0+ / OGA-BY 3.0+ |
+| `320255.png` | Vasija (se levanta con el Brazalete de Fuerza) | La primera vasija redonda de `pint_brown.png`, "Free ceramic jars", https://opengameart.org/content/free-ceramic-jars, achicada a 28 px | Clodo | [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
+| `320256.png` | Piedra suelta (se levanta con el Brazalete de Fuerza) | Una piedra de los escombros de "[LPC] Jungle Ruins", https://opengameart.org/content/lpc-jungle-ruins | bluecarrot16 (encargo de Pierre Vigier) | CC-BY 3.0+ / OGA-BY 3.0+ |
 | `320258.png` | Estatua de piedra (se engancha con el Gancho) | Una estatua de "[LPC] Jungle Ruins" | bluecarrot16 | CC-BY 3.0+ / OGA-BY 3.0+ |
 | `320259.png`, `320260.png` | Antorcha apagada y encendida (9 cuadros) | "[LPC] Animated Torch", https://opengameart.org/content/lpc-animated-torch; la apagada es el primer cuadro sin la llama | William.Thompsonj | CC-BY 3.0+ / OGA-BY 3.0 |
 
@@ -51,4 +51,12 @@ Hecho con gráficos del propio juego: **`320257.png`, el bloque de hielo**, es e
 | `graphics/320262.png` | Rocas sueltas: la pared rajada en una pared vertical | Escombros de "[LPC] Jungle Ruins", https://opengameart.org/content/lpc-jungle-ruins | bluecarrot16 | CC-BY 3.0+ / OGA-BY 3.0+ |
 
 Hecho con gráficos del propio juego: **`graphics/320261.png`, la pared rajada en una pared horizontal**, es la puerta de piedra (grh 9193) con la abertura rellena de piedra y una grieta.
+
+## Brazalete de Fuerza II y Escudo Espejo
+
+| Archivo | Uso en el juego | Original | Autor | Licencia |
+|---|---|---|---|---|
+| `graphics/320263.png` | Piedra pesada (solo la levanta el Brazalete de Fuerza II) | Un bloque de piedra de "[LPC] Jungle Ruins", https://opengameart.org/content/lpc-jungle-ruins | bluecarrot16 | CC-BY 3.0+ / OGA-BY 3.0+ |
+
+Hecho con gráficos del propio juego: **`sprites/escudo-espejo.png`**, el Escudo Espejo levantado, es el ícono del Escudo de Diamantes (grh 28661).
 

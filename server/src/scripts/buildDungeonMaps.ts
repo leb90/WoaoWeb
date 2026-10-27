@@ -29,10 +29,11 @@
 //   &  bloque con cerradura (se abre con una llave chica y desaparece)
 //   ,  piso que las criaturas no pisan (los puentes de la arena del Ciempiés)
 //   D  adonde se cae desde los pozos de otro mapa (el plano de ese mapa dice "caida: <este mapa>")
-// Roca de la Tortuga (el Polvo de Fuego, el Gancho y la Pulsera, dungeonTools.ts):
+// Roca de la Tortuga (el Polvo de Fuego, el Gancho y el Brazalete de Fuerza, dungeonTools.ts):
 //   F  antorcha apagada (se enciende con el Polvo; si la sala tiene cofres, aparecen al encender todas)
 //   A  antorcha encendida      I  bloque de hielo (lo derrite el Polvo)      H  estatua (se engancha con el Gancho)
-//   U  vasija    V  vasija sobre una placa    ;  piedra suelta (se levantan y se tiran con la Pulsera)
+//   U  vasija    V  vasija sobre una placa    ;  piedra suelta (se levantan y se tiran con el Brazalete de Fuerza)
+//   ]  piedra pesada (solo con el Brazalete de Fuerza II)
 // Bombas (los básicos que tiene todo el mundo):
 //   @  pared rajada: un paso tapado que se abre con una bomba (arco tapiado en una pared horizontal, rocas en una vertical)
 // Lo que aparece: los cofres de una sala que se cierra (!), que tiene placas o antorchas apagadas aparecen al vaciarla,
@@ -82,7 +83,7 @@ export const DUNGEON_OBJECTS = {
     aplastador: { id: 1848, name: "Aplastador", grh: 8623 },
     cofreJefe: { id: 1849, name: "Cofre del jefe", grh: 18532 },
     rodillo: { id: 1851, name: "Rodillo de púas", grh: 18537 },
-    // Roca de la Tortuga: lo que tocan el Polvo de Fuego, el Gancho y la Pulsera (docs/CREDITOS_GRAFICOS.md).
+    // Roca de la Tortuga: lo que tocan el Polvo de Fuego, el Gancho y el Brazalete de Fuerza (docs/CREDITOS_GRAFICOS.md).
     vasija: { id: 1852, name: "Vasija", grh: 38215 },
     piedra: { id: 1853, name: "Piedra suelta", grh: 38216 },
     hielo: { id: 1854, name: "Bloque de hielo", grh: 38217 },
@@ -92,6 +93,8 @@ export const DUNGEON_OBJECTS = {
     // Pared que se vuela con una bomba: un arco tapiado (pared horizontal) o un montón de rocas (vertical).
     paredBombeable: { id: 1858, name: "Pared rajada", grh: 38230 },
     rocas: { id: 1859, name: "Rocas sueltas", grh: 38231 },
+    // Piedra pesada: solo la levanta el Brazalete de Fuerza II.
+    piedraPesada: { id: 1860, name: "Piedra pesada", grh: 38232 },
 } as const;
 const CHEST_CONTENT: Record<string, string> = {
     K: "llave",
@@ -329,10 +332,10 @@ function buildMechanics(plan: Plan) {
         crushers: [] as string[],
         hiddenExits: hiddenExits.get(plan.mapId) ?? [],
         caida: null as { map: number; x: number; y: number } | null,
-        // Roca de la Tortuga: antorchas, hielo, lo que se levanta con la Pulsera y las estatuas del Gancho.
+        // Roca de la Tortuga: antorchas, hielo, lo que se levanta con el Brazalete y las estatuas del Gancho.
         torches: [] as Array<{ x: number; y: number; encendida: boolean; sala: number }>,
         ice: [] as string[],
-        liftables: [] as Array<{ x: number; y: number; tipo: "vasija" | "piedra"; placa: boolean }>,
+        liftables: [] as Array<{ x: number; y: number; tipo: "vasija" | "piedra" | "pesada"; placa: boolean }>,
         hookPosts: [] as string[],
     };
     if (plan.meta.caida) {
@@ -370,7 +373,9 @@ function buildMechanics(plan: Plan) {
             if (c === "B") data.blocks.push(key);
             if (c === "F" || c === "A") data.torches.push({ x, y, encendida: c === "A", sala: roomOf.get(key) ?? 0 });
             if (c === "I") data.ice.push(key);
-            if (c === "U" || c === "V" || c === ";") data.liftables.push({ x, y, tipo: c === ";" ? "piedra" : "vasija", placa: c === "V" });
+            if (c === "U" || c === "V" || c === ";" || c === "]") {
+                data.liftables.push({ x, y, tipo: c === ";" ? "piedra" : c === "]" ? "pesada" : "vasija", placa: c === "V" });
+            }
             if (c === "H") data.hookPosts.push(key);
             if (c in CHEST_CONTENT) {
                 data.chests.push({ x, y, contenido: CHEST_CONTENT[c], oculto: hiddenChests.has(`${plan.mapId}:${key}`), sala: roomOf.get(key) ?? 0 });
@@ -449,6 +454,7 @@ function buildTile(plan: Plan, x: number, y: number): Tile {
         U: DUNGEON_OBJECTS.vasija.id,
         V: DUNGEON_OBJECTS.vasija.id,
         ";": DUNGEON_OBJECTS.piedra.id,
+        "]": DUNGEON_OBJECTS.piedraPesada.id,
         H: DUNGEON_OBJECTS.poste.id,
     };
     if (c in tortoiseObject) {

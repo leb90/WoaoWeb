@@ -10,7 +10,8 @@ import type { Engine } from "./Engine";
 // - fuego: una llamarada que vuela (el mismo proyectil de los hechizos, en colores de fuego) y estalla al llegar;
 // - gancho: la cadena sale hasta el blanco; si engancha, arrastra al personaje hasta ahí; si no, vuelve;
 // - levanta / tira / suelta: lo que se lleva sobre la cabeza, el vuelo en arco al tirarlo y los pedazos al romperse;
-// - bomba: la bomba con la mecha encendida, que titila cada vez más rápido, y la explosión de 3 × 3 baldosas.
+// - bomba: la bomba con la mecha encendida, que titila cada vez más rápido, y la explosión de 3 × 3 baldosas;
+// - escudo: el Escudo Espejo levantado delante del personaje, con un brillo que lo recorre, mientras dura.
 // Bomba: "16-bit animated bomb" de victordelima (CC0); explosión: "Pixel Explosion (12 Frames)" de JROB774 (CC-BY 3.0),
 // docs/CREDITOS_GRAFICOS.md. La flecha del Arco usa el proyectil de los arqueros (paquete createProjectile).
 
@@ -23,7 +24,9 @@ const FIRE_SPELL = {
     projectileVisual: { coreColor: "#ffe08a", ringColor: "#ff8c1a", trailColor: "#ff3b00", magnitude: 1.35 },
 } as unknown as SpellData;
 
-const TOOL_TYPES = new Set(["fuego", "gancho", "levanta", "tira", "suelta", "bomba"]);
+const TOOL_TYPES = new Set(["fuego", "gancho", "levanta", "tira", "suelta", "bomba", "escudo"]);
+// El Escudo de Diamantes del juego (grh 28661), que parece un espejo.
+const MIRROR_URL = "/sprites/escudo-espejo.png";
 
 const BOMB_URL = "/sprites/bomba.png"; // 3 cuadros de 32 × 32 (la chispa de la mecha)
 const EXPLOSION_URL = "/sprites/explosion.png"; // 12 cuadros de 96 × 96
@@ -321,12 +324,57 @@ async function playBomb(engine: Engine, payload: DungeonMotionPayload) {
     });
 }
 
+// Delante del personaje según adonde mira (en el contenedor del personaje, que arranca arriba a la izquierda de su
+// baldosa): adelante, a un costado o un poco más arriba que el cuerpo.
+// Orientaciones del juego: 1 arriba, 2 abajo, 3 derecha, 4 izquierda.
+const MIRROR_OFFSET: Record<number, { x: number; y: number; behind: boolean }> = {
+    1: { x: 16, y: -14, behind: true },
+    2: { x: 16, y: 14, behind: false },
+    3: { x: 30, y: 6, behind: false },
+    4: { x: 2, y: 6, behind: false },
+};
+
+async function playMirror(engine: Engine, payload: DungeonMotionPayload) {
+    const startedAt = engine.timestamp();
+    const texture = await Assets.load(MIRROR_URL).catch(() => null);
+    const shield: Container = texture ? new Sprite(texture as Texture) : new Graphics().roundRect(-8, -10, 16, 20, 4).fill({ color: 0xcfe8ff });
+    if (shield instanceof Sprite) shield.anchor.set(0.5);
+    const shine = new Graphics();
+    engine.dungeonToolEffects.push((now) => {
+        const elapsed = now - startedAt;
+        const container = containerOf(engine, payload.id);
+        const entity = engine.personajes[payload.id];
+        if (elapsed >= payload.ms || !container || !entity || shield.destroyed) {
+            shield.destroy();
+            shine.destroy();
+            return false;
+        }
+        const offset = MIRROR_OFFSET[entity.heading] ?? MIRROR_OFFSET[2];
+        if (shield.parent !== container) container.addChild(shield, shine);
+        // Mirando hacia arriba, el escudo queda detrás del cuerpo.
+        container.setChildIndex(shield, offset.behind ? 0 : container.children.length - 1);
+        shield.x = offset.x;
+        shield.y = offset.y;
+        shield.alpha = elapsed > payload.ms - 300 ? (payload.ms - elapsed) / 300 : 1;
+        // Un brillo que cruza el escudo cada medio segundo.
+        const t = (elapsed % 500) / 500;
+        shine.clear();
+        shine.rect(-1.5, -9, 3, 18).fill({ color: 0xffffff, alpha: 0.55 * Math.sin(Math.PI * t) });
+        shine.x = offset.x - 7 + t * 14;
+        shine.y = offset.y;
+        shine.rotation = 0.35;
+        if (container.getChildIndex(shine) < container.getChildIndex(shield)) container.setChildIndex(shine, container.getChildIndex(shield));
+        return true;
+    });
+}
+
 export function playDungeonTool(engine: Engine, payload: DungeonMotionPayload) {
     if (payload.tipo === "fuego") return playFire(engine, payload);
     if (payload.tipo === "gancho") return playHook(engine, payload);
     if (payload.tipo === "levanta") return playLift(engine, payload);
     if (payload.tipo === "tira") return playThrow(engine, payload);
     if (payload.tipo === "bomba") return void playBomb(engine, payload);
+    if (payload.tipo === "escudo") return void playMirror(engine, payload);
     if (payload.tipo === "suelta") {
         const at = characterCenter(engine, payload.id);
         dropCarried(engine, payload.id, at);

@@ -235,7 +235,7 @@ test("en la Cueva de la Cola aparecen la escalera A, el portal y la K2, y los po
     assert.ok(tile && !tile.blocked, "la D es piso");
 });
 
-test("la mazmorra de prueba trae lo que tocan el Polvo de Fuego, el Gancho y la Pulsera", () => {
+test("la mazmorra de prueba trae lo que tocan el Polvo de Fuego, el Gancho y el Brazalete de Fuerza", () => {
     const specials = readJson("server/mapas_source/mapa_591/specials.json");
     const mech = specials.dungeon;
     const terrain = readJson("server/mapas_source/mapa_591/terrain.json");
@@ -259,10 +259,11 @@ test("la mazmorra de prueba trae lo que tocan el Polvo de Fuego, el Gancho y la 
         assert.ok(blocked(key));
     }
     const liftables = mech.liftables as Array<{ x: number; y: number; tipo: string; placa: boolean }>;
-    assert.deepEqual(liftables.map((item) => item.tipo).sort(), ["piedra", "vasija", "vasija"]);
+    assert.deepEqual(liftables.map((item) => item.tipo).sort(), ["pesada", "piedra", "vasija", "vasija"]);
+    const liftableObject: Record<string, number> = { vasija: OBJ.vasija, piedra: OBJ.piedra, pesada: OBJ.piedraPesada };
     for (const item of liftables) {
         const key = `${item.x},${item.y}`;
-        assert.equal(objectAt(key), item.tipo === "piedra" ? OBJ.piedra : OBJ.vasija);
+        assert.equal(objectAt(key), liftableObject[item.tipo]);
         assert.ok(blocked(key));
         assert.equal(mech.plates.includes(key), item.placa, "la vasija con placa la tapa");
     }
@@ -279,4 +280,17 @@ test("las bombas y el arco los tiene todo el mundo desde la primera mazmorra", (
     assert.equal(dungeons.characterHasDungeonItem(nuevo, "bombas"), true);
     assert.equal(dungeons.characterHasDungeonItem(nuevo, "arco"), true);
     assert.equal(dungeons.characterHasDungeonItem(nuevo, "pluma"), false);
+});
+
+test("el Escudo Espejo solo frena lo que llega de frente, y solo adentro de una mazmorra", () => {
+    const tools = require("./dungeonTools") as typeof import("./dungeonTools");
+    const right = 3; // mira al este
+    // Una bola de fuego que viaja hacia el oeste viene del este: de frente.
+    assert.equal(tools.comesFromFront(right, { x: -1, y: 0 }), true);
+    assert.equal(tools.comesFromFront(right, { x: 1, y: 0 }), false);
+    assert.equal(tools.comesFromFront(right, { x: 0, y: 1 }), false);
+    assert.equal(tools.comesFromFront(1, { x: 0, y: 1 }), true, "mirando al norte, lo que baja");
+    // Afuera de una mazmorra no frena nada, aunque esté levantado.
+    const outside = { id: 1, _id: "x", map: 34, pos: { x: 50, y: 50 }, heading: right, mirrorUntil: Date.now() + 2_000 } as never;
+    assert.equal(tools.mirrorBlocks(outside, { x: -1, y: 0 }), false);
 });

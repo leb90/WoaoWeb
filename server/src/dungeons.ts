@@ -53,6 +53,7 @@ const OBJ = {
     antorchaEncendida: 1857,
     paredBombeable: 1858,
     rocas: 1859,
+    piedraPesada: 1860,
 } as const;
 // Portal azul (escaleras que se ven como portal: el atajo de la Cueva de la Cola).
 const PORTAL_OBJ = 378;
@@ -171,14 +172,15 @@ type MapMechanics = {
     // Cueva de la Cola: escaleras ocultas y adónde lleva caer a un pozo de este mapa (si no, a la entrada de la sala).
     hiddenExits?: HiddenExit[];
     caida?: { map: number; x: number; y: number } | null;
-    // Roca de la Tortuga: antorchas, hielo, lo que se levanta con la Pulsera y las estatuas del Gancho.
+    // Roca de la Tortuga: antorchas, hielo, lo que se levanta con el Brazalete y las estatuas del Gancho.
     torches?: Torch[];
     ice?: string[];
     liftables?: Array<{ x: number; y: number; tipo: LiftableKind; placa: boolean }>;
     hookPosts?: string[];
 };
 type Torch = { x: number; y: number; encendida: boolean; sala: number };
-type LiftableKind = "vasija" | "piedra";
+// La piedra pesada solo la levanta el Brazalete de Fuerza II.
+type LiftableKind = "vasija" | "piedra" | "pesada";
 
 type MapIndex = {
     mech: MapMechanics;
@@ -1015,6 +1017,8 @@ export function handleCommand(sessionId: EntityId, text: string) {
             return require("./dungeonTools").hookshot(sessionId);
         case "pulsera":
             return require("./dungeonTools").bracelet(sessionId);
+        case "escudo":
+            return require("./dungeonTools").mirror(sessionId);
         case "bomba":
             return require("./dungeonTools").bomb(sessionId);
         case "flecha":
@@ -1933,9 +1937,9 @@ export function onDashImpact(ws: RuntimeClient, user: RuntimeCharacter, x: numbe
 }
 
 // El jefe que flota no recibe daño hasta que lo bajan. Una estatua dormida se despierta al primer golpe.
-// --- Roca de la Tortuga: lo que tocan el Polvo de Fuego, el Gancho y la Pulsera (dungeonTools.ts) ---
+// --- Lo que tocan el Polvo de Fuego, el Gancho y el Brazalete de Fuerza (dungeonTools.ts) ---
 
-export type ToolTarget = "antorcha" | "antorchaEncendida" | "hielo" | "vasija" | "piedra" | "estatua" | "cofre" | "bloque" | "cristal" | "puerta";
+export type ToolTarget = "antorcha" | "antorchaEncendida" | "hielo" | "vasija" | "piedra" | "pesada" | "estatua" | "cofre" | "bloque" | "cristal" | "puerta";
 
 // Lo que hay en una baldosa para los ítems que se tiran: null si no hay nada de la mazmorra (piso, pared, criatura).
 export function toolTargetAt(mapId: number, x: number, y: number): ToolTarget | null {
@@ -1996,7 +2000,17 @@ export function liftAt(mapId: number, x: number, y: number): { tipo: LiftableKin
     setObject(mapId, x, y, liftable.placa ? OBJ.placa : 0);
     setBlocked(mapId, x, y, false);
     if (liftable.placa) updatePlates(ctx);
-    return { tipo: liftable.tipo, objIndex: liftable.tipo === "piedra" ? OBJ.piedra : OBJ.vasija };
+    return { tipo: liftable.tipo, objIndex: LIFTABLE_OBJECT[liftable.tipo] };
+}
+
+const LIFTABLE_OBJECT: Record<LiftableKind, number> = { vasija: OBJ.vasija, piedra: OBJ.piedra, pesada: OBJ.piedraPesada };
+
+// Qué se puede levantar en una baldosa (sin levantarlo): el Brazalete se fija si es pesado antes de intentarlo.
+export function liftableKindAt(mapId: number, x: number, y: number): LiftableKind | null {
+    const ctx = contextOf(mapId);
+    const key = coordKey(x, y);
+    const liftable = ctx?.index.liftables.get(key);
+    return ctx && liftable && !ctx.state.lifted.has(key) ? liftable.tipo : null;
 }
 
 // Una bomba explota en (x, y): se abren las paredes rajadas de las 3 × 3 baldosas. Devuelve cuántas se abrieron.
@@ -2362,16 +2376,19 @@ function claimBossReward(run: DungeonRun) {
 // Las bombas y el arco los tiene todo el mundo desde la primera mazmorra (en Zelda se compran: no los da ninguna).
 const DEFAULT_DUNGEON_ITEMS = ["bombas", "arco"];
 
-const DUNGEON_ITEMS: Record<string, { nombre: string; accion: "carrera" | "salto" | "fuego" | "gancho" | "pulsera" | "bomba" | "flecha" | null }> = {
+const DUNGEON_ITEMS: Record<string, { nombre: string; accion: "carrera" | "salto" | "fuego" | "gancho" | "pulsera" | "bomba" | "flecha" | "escudo" | null }> = {
     bombas: { nombre: "Bombas", accion: "bomba" },
     arco: { nombre: "Arco", accion: "flecha" },
     patas_de_rana: { nombre: "Patas de rana", accion: null },
     pluma: { nombre: "Pluma de Roc", accion: "salto" },
     botas_de_pegaso: { nombre: "Botas de Pegaso", accion: "carrera" },
-    // Los de la Roca de la Tortuga (dungeonTools.ts). El Gancho y la Pulsera los van a dar otras mazmorras.
+    // Los de la Roca de la Tortuga (dungeonTools.ts). El Gancho lo va a dar otra mazmorra.
     polvo_de_fuego: { nombre: "Polvo de Fuego", accion: "fuego" },
     gancho: { nombre: "Gancho", accion: "gancho" },
-    pulsera: { nombre: "Pulsera", accion: "pulsera" },
+    // El Brazalete de Fuerza (la Pulsera de Zelda) lo da la Gruta de la Botella; el II y el Escudo Espejo, otras.
+    pulsera: { nombre: "Brazalete de Fuerza", accion: "pulsera" },
+    pulsera_poderosa: { nombre: "Brazalete de Fuerza II", accion: "pulsera" },
+    escudo_espejo: { nombre: "Escudo Espejo", accion: "escudo" },
 };
 
 function ownedDungeonItems(characterId: string) {
@@ -2580,6 +2597,7 @@ module.exports = {
     lightTorch,
     meltIce,
     liftAt,
+    liftableKindAt,
     canToolHitNpc,
     bombBlast,
     _resetForTests,

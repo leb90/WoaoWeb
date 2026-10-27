@@ -39,11 +39,11 @@ type Slot = "uno" | "dos";
 const SERIES_ITEMS: Array<{ id: string; nombre: string; icon: LucideIcon; tone: string; uso: string; mazmorra: string }> = [
     { id: "patas_de_rana", nombre: "Patas de rana", icon: Footprints, tone: "text-sky-300", uso: "Nadar por el agua profunda (siempre activas)", mazmorra: "Gruta del Abisal" },
     { id: "pluma", nombre: "Pluma de Roc", icon: Feather, tone: "text-teal-200", uso: "Saltar pozos y obstáculos chicos", mazmorra: "Cueva de la Cola" },
-    { id: "pulsera", nombre: "Pulsera", icon: Dumbbell, tone: "text-amber-200", uso: "Levantar, llevar y tirar vasijas y piedras", mazmorra: "Mazmorra a definir" },
+    { id: "pulsera", nombre: "Brazalete de Fuerza", icon: Dumbbell, tone: "text-amber-200", uso: "Levantar, llevar y tirar vasijas y piedras", mazmorra: "Gruta de la Botella" },
     { id: "botas_de_pegaso", nombre: "Botas de Pegaso", icon: Wind, tone: "text-orange-200", uso: "La Carrera; con la Pluma, el salto largo", mazmorra: "Caverna de las Llaves" },
     { id: "gancho", nombre: "Gancho", icon: Anchor, tone: "text-stone-200", uso: "Engancharse a cofres, bloques y estatuas para cruzar; aturde criaturas", mazmorra: "Mazmorra a definir" },
-    { id: "pulsera_poderosa", nombre: "Pulsera poderosa", icon: BicepsFlexed, tone: "text-rose-200", uso: "Levantar lo más pesado", mazmorra: "Mazmorra a definir" },
-    { id: "escudo_espejo", nombre: "Escudo espejo", icon: Shield, tone: "text-cyan-200", uso: "Rebotar rayos", mazmorra: "Mazmorra a definir" },
+    { id: "pulsera_poderosa", nombre: "Brazalete de Fuerza II", icon: BicepsFlexed, tone: "text-rose-200", uso: "Como el Brazalete, y además levanta las piedras pesadas", mazmorra: "Mazmorra a definir" },
+    { id: "escudo_espejo", nombre: "Escudo Espejo", icon: Shield, tone: "text-cyan-200", uso: "Levantarlo 3 s: frena lo que llega de frente (golpes, rayos y bolas de fuego)", mazmorra: "Mazmorra a definir" },
     { id: "polvo_de_fuego", nombre: "Polvo de Fuego", icon: Flame, tone: "text-orange-300", uso: "Tirar fuego: enciende antorchas, derrite hielo y quema criaturas", mazmorra: "Roca de la Tortuga" },
 ];
 

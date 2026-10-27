@@ -1,0 +1,93 @@
+{
+    "criaturas": {
+        "m": 566,
+        "s": 504,
+        "b": 505,
+        "k": 508,
+        "d": 567,
+        "e": 9730,
+        "g": 9731,
+        "o": 9732
+    },
+    "plantillas": {
+        "9730": {
+            "base": 552,
+            "name": "Estatua guardiana",
+            "hp": 420,
+            "maxHp": 420,
+            "minHit": 14,
+            "maxHit": 32,
+            "def": 8,
+            "poderAtaque": 55,
+            "poderEvasion": 20,
+            "spells": [],
+            "exp": 380,
+            "gold": 15,
+            "drop": [],
+            "desc": "Una estatua de piedra. Parece que te mira.",
+            "despierta": 2
+        },
+        "9731": {
+            "base": 504,
+            "name": "Serpiente Gemela",
+            "hp": 900,
+            "maxHp": 900,
+            "minHit": 18,
+            "maxHit": 40,
+            "def": 8,
+            "poderAtaque": 70,
+            "poderEvasion": 40,
+            "exp": 1600,
+            "gold": 120,
+            "drop": [],
+            "desc": "Nunca se la ve sola.",
+            "pareja": "serpientes",
+            "revivirMs": 15000,
+            "minijefe": true
+        },
+        "9732": {
+            "base": 537,
+            "name": "Ojo Viscoso",
+            "hp": 4000,
+            "maxHp": 4000,
+            "minHit": 35,
+            "maxHit": 80,
+            "exp": 6000,
+            "gold": 400,
+            "drop": [],
+            "desc": "Un ojo enorme que flota en la oscuridad de la caverna.",
+            "flota": true,
+            "divide": {
+                "npc": 9733,
+                "cantidad": 2
+            },
+            "jefe": true
+        },
+        "9733": {
+            "base": 537,
+            "name": "Ojo Menor",
+            "hp": 1000,
+            "maxHp": 1000,
+            "minHit": 20,
+            "maxHit": 55,
+            "exp": 1500,
+            "gold": 100,
+            "drop": [],
+            "desc": "La mitad de un ojo, y furioso.",
+            "pareja": "ojos",
+            "revivirMs": 10000,
+            "jefe": true
+        }
+    },
+    "losas": {
+        "520": [
+            "El ojo no baja por las buenas. Despertalo con el estruendo de una carrera contra sus paredes."
+        ]
+    },
+    "oro": 50,
+    "oroGrande": 200,
+    "trampa": [
+        508,
+        508
+    ]
+}

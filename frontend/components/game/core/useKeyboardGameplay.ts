@@ -193,7 +193,33 @@ export function useKeyboardGameplay({
                 return;
             }
 
+            // Mazmorras: las dos teclas de objeto usan el ítem que se eligió para cada una en la Mochila. Fuera de una
+            // mazmorra no hacen nada (y el server lo vuelve a validar).
+            const dungeonSlot = isHotkeyMatch(e, settings.dungeonItem1 ?? [])
+                ? "uno"
+                : isHotkeyMatch(e, settings.dungeonItem2 ?? [])
+                  ? "dos"
+                  : null;
+            const insideDungeon = playerHudRef.current?.dungeonState?.enMazmorra;
+            const slotItem = dungeonSlot ? insideDungeon?.botones?.[dungeonSlot] : null;
+            const dungeonAction = slotItem
+                ? (insideDungeon?.items ?? []).find((item: { id: string }) => item.id === slotItem)?.accion ?? null
+                : null;
+            if (dungeonAction && !e.repeat) {
+                const socket = websocketRef.current;
+                if (activeEngine?.inDungeon && socket?.readyState === WebSocket.OPEN) {
+                    socket.send(createDialogPacket(`/mazmorra ${dungeonAction}`));
+                    recordClientGameAction(`dungeon_${dungeonAction}`, { code: e.code });
+                    e.preventDefault();
+                    return;
+                }
+            }
+
             if (isHotkeyMatch(e, settings.attackOrTarget) && !e.repeat) {
+                if (activeEngine && activeEngine.dungeonMotionUntil > activeEngine.timestamp()) {
+                    e.preventDefault();
+                    return;
+                }
                 if (hasEquippedRangedWeapon()) {
                     setTargetingMode({ type: "range" });
                     e.preventDefault();

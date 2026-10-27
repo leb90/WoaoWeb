@@ -97,6 +97,9 @@ export const CLIENT_PACKET_ID = {
     bleedState: 97,
     elementalState: 98,
     areaSpellFx: 99,
+    dungeonState: 100,
+    dungeonMotion: 101,
+    dungeonBoss: 102,
 } as const;
 
 export const CHARACTER_SWING_WEAPON = 1;
@@ -469,6 +472,91 @@ export type ShopProductPayload = {
 // Desangrado de la apuñalada (server/src/game.ts, startBleeding): ms que quedan, 0 = terminó.
 export type BleedStatePayload = { remainingMs: number };
 // Hechizo de área: centro de la cruz, forma (aoe), efecto y sonido.
+// Mazmorras (server/src/dungeons.ts): panel de la piedra de invocación (cuando se la toca), invocación pendiente
+// del líder y la mazmorra en la que está el jugador.
+export type DungeonStonePanel = {
+    dungeonId: string;
+    nombre: string;
+    descripcion: string;
+    nivelMinimo: number;
+    maxJugadores: number;
+    enParty: boolean;
+    esLider: boolean;
+    miembrosParty: number;
+    puedeSolo: boolean;
+    puedeGrupo: boolean;
+    motivo: string | null;
+};
+export type DungeonStatePayload = {
+    panelSeq: number;
+    panel: DungeonStonePanel | null;
+    invitacion: { dungeonId: string; nombre: string; de: string; expiraEnMs: number } | null;
+    enMazmorra: {
+        dungeonId: string;
+        nombre: string;
+        jugadores: number;
+        grupo: boolean;
+        // Llaves chicas y llave del jefe que lleva el jugador (se gastan al abrir), y las que lleva otro del grupo.
+        llaves: number;
+        llaveJefe: boolean;
+        llavesDeOtros: Array<{ nombre: string; cantidad: number }>;
+        llaveJefeDe: string | null;
+        // Del grupo: mapa y brújula. patas: el jugador tiene las Patas de rana (quedan para siempre).
+        mapa: boolean;
+        brujula: boolean;
+        patas: boolean;
+        // Inventario de mazmorra: los ítems que tiene (para siempre) y cuál se usa con un clic.
+        items?: Array<{ id: string; nombre: string; accion: "carrera" | "salto" | null }>;
+        // Qué ítem usa cada una de las dos teclas de objeto (la A y la B de Zelda).
+        botones?: { uno: string | null; dos: string | null };
+        // La colección de la serie: las mazmorras con la caracola secreta encontrada y los trofeos.
+        coleccion?: { caracolas: string[]; trofeos: string[] };
+        minimapa: DungeonMinimapState | null;
+        // Todos los pisos, para el mapa grande.
+        plano?: Array<DungeonMinimapState & { nombre: string; actual: boolean }>;
+        // Los tres temas que suenan en bucle y el de la pelea con un jefe o un minijefe.
+        musica?: { pistas: string[]; combate?: string } | null;
+        combate?: boolean;
+    } | null;
+    // Texto de una losa que se acaba de leer (seq cambia en cada lectura).
+    losa: { seq: number; texto: string } | null;
+};
+// La Carrera y el salto de las mazmorras (server/src/dungeonMotion.ts): el movimiento entero, para animarlo. Con
+// los mismos datos llegan el Polvo de Fuego, el Gancho y la Pulsera (server/src/dungeonTools.ts).
+export type DungeonMotionPayload = {
+    id: number;
+    tipo: "carga" | "carrera" | "salto" | "empujon" | "fuego" | "gancho" | "levanta" | "tira" | "suelta" | "bomba" | "escudo";
+    heading?: number;
+    ms: number;
+    path?: Array<{ x: number; y: number }>;
+    golpe?: "pared" | "criatura" | "obstaculo" | "antorcha" | "hielo" | "engancha" | null;
+    salto?: { to: { x: number; y: number }; ms: number } | null;
+    to?: { x: number; y: number };
+    // Gancho: lo que tarda cada baldosa del arrastre. Pulsera: el objeto que se lleva y de dónde se levantó.
+    pullMs?: number;
+    obj?: number;
+    from?: { x: number; y: number };
+};
+// El Ciempiés de la Cueva de la Cola (server/src/dungeonBoss.ts): la cabeza (en baldosas, con decimales), la
+// dirección (0-15, de a 22,5°), la velocidad (baldosas por segundo) y a qué distancia van las partes; fin al morir.
+export type DungeonBossPayload = {
+    id: number;
+    x?: number;
+    y?: number;
+    a?: number;
+    v?: number;
+    s?: number[];
+    fin?: boolean;
+};
+// Salas visitadas (con el mapa, todas) y, con la brújula, los cofres y la puerta del jefe.
+export type DungeonMinimapState = {
+    mapa: number;
+    limites?: { x1: number; y1: number; x2: number; y2: number };
+    salas: Array<{ x1: number; y1: number; x2: number; y2: number; visitada: boolean }>;
+    cofres: Array<{ x: number; y: number; abierto: boolean }>;
+    jefe: Array<{ x: number; y: number }>;
+};
+
 // tiles: dónde dibujar el efecto: la baldosa de cada objetivo alcanzado (vacía si no alcanzó a nadie).
 export type AreaSpellFxPayload = {
     map: number;
@@ -856,6 +944,7 @@ export interface PlayerHudState {
     transmogState?: TransmogStatePayload;
     shopState?: ShopStatePayload;
     aggroState?: AggroStatePayload;
+    dungeonState?: DungeonStatePayload;
     // Hasta cuándo dura el desangrado (Date.now() del cliente; 0 o ausente = no sangra).
     bleedUntil?: number;
     // Efectos del chamán sobre el propio personaje (escudos, evasión, silencios, lentitud, quemadura).
@@ -1448,6 +1537,9 @@ export type ParsedServerPacket =
     | { type: "bleedState"; payload: BleedStatePayload }
     | { type: "elementalState"; payload: ElementalStatePayload }
     | { type: "areaSpellFx"; payload: AreaSpellFxPayload }
+    | { type: "dungeonState"; payload: DungeonStatePayload }
+    | { type: "dungeonMotion"; payload: DungeonMotionPayload }
+    | { type: "dungeonBoss"; payload: DungeonBossPayload }
     | { type: "castleState"; payload: CastleStatePayload }
     | { type: "factionWarState"; payload: FactionWarStatePayload }
     | { type: "rankedState"; payload: RankedStatePayload }
@@ -2676,6 +2768,43 @@ function parseServerPacketById(
                 return {
                     type: "bleedState",
                     payload: JSON.parse(rawPayload) as BleedStatePayload,
+                };
+            } catch {
+                return { type: "unknown", payload: { packetId } };
+            }
+        }
+
+        case CLIENT_PACKET_ID.dungeonState: {
+            const rawPayload = reader.getString();
+
+            try {
+                return {
+                    type: "dungeonState",
+                    payload: JSON.parse(rawPayload) as DungeonStatePayload,
+                };
+            } catch {
+                return { type: "unknown", payload: { packetId } };
+            }
+        }
+        case CLIENT_PACKET_ID.dungeonMotion: {
+            const rawPayload = reader.getString();
+
+            try {
+                return {
+                    type: "dungeonMotion",
+                    payload: JSON.parse(rawPayload) as DungeonMotionPayload,
+                };
+            } catch {
+                return { type: "unknown", payload: { packetId } };
+            }
+        }
+        case CLIENT_PACKET_ID.dungeonBoss: {
+            const rawPayload = reader.getString();
+
+            try {
+                return {
+                    type: "dungeonBoss",
+                    payload: JSON.parse(rawPayload) as DungeonBossPayload,
                 };
             } catch {
                 return { type: "unknown", payload: { packetId } };

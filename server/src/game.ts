@@ -3242,7 +3242,8 @@ function isAreaNpcImmune(npc: GameNpc): boolean {
             npc.summonedByUserId ||
             Number(npc.raid ?? 0) > 0 ||
             Number(npc.hp ?? 0) <= 0 ||
-            require("./npcPowers").hasSpecialPower(npc, 2),
+            require("./npcPowers").hasSpecialPower(npc, 2) ||
+            require("./dungeons").getNpcInvulnerableReason(npc) !== null,
     );
 }
 
@@ -5793,6 +5794,10 @@ function Game(this: GameApi) {
         if (typeof tile?.tileExit !== "undefined") {
             return false;
         }
+        // Trigger 2 (POSINVALIDA): pozos y lava de las mazmorras.
+        if (Number(tile?.trigger ?? 0) === 2) {
+            return false;
+        }
         const graphicLayer1 = tile?.graphics?.[1] ?? 0;
         const graphicLayer2 = tile?.graphics?.[2] ?? 0;
         const isWaterTile = isPlayerWaterGraphic(graphicLayer1) && !graphicLayer2;
@@ -8288,6 +8293,7 @@ function Game(this: GameApi) {
             const visibleNpcsForUser: RuntimeNpc[] = [];
             const visibleItemsForUser: Array<{ idItem: number; map: number; pos: Position }> = [];
             const blockedTilesForUser: Array<{ pos: Position; blocked: number }> = [];
+            const dungeons = require("./dungeons");
 
             socket.withFlushGroup(ws, () => {
                 const mapName = vars.mapData[user.map].name;
@@ -8353,6 +8359,14 @@ function Game(this: GameApi) {
                         x: x,
                         y: y,
                     };
+
+                    // Mazmorras: puertas, cofres y bloques que cambiaron en la corrida.
+                    if (tileMap === user.map) {
+                        const dungeonBlocked = dungeons.getDynamicBlocked(tileMap, x, y);
+                        if (dungeonBlocked !== null) {
+                            blockedTilesForUser.push({ pos, blocked: dungeonBlocked });
+                        }
+                    }
 
                     if (game.hayObj(tileMap, pos)) {
                         const item = game.objMap(tileMap, pos)!;
@@ -9191,6 +9205,8 @@ function Game(this: GameApi) {
 
         const previousPartyId = user.partyId;
         party.memberIds = party.memberIds.filter((memberId) => !isSameEntityId(memberId, idUser));
+        // Salir de la party en una mazmorra de grupo te deja afuera (dungeons.ts).
+        require("./dungeons").onLeftParty(idUser);
         user.partyId = null;
         user.partyLeaderId = null;
         updatePartyIndexForUser(user, previousPartyId);
@@ -9243,6 +9259,7 @@ function Game(this: GameApi) {
 
         const previousTargetPartyId = target.partyId;
         party.memberIds = party.memberIds.filter((memberId) => !isSameEntityId(memberId, targetId));
+        require("./dungeons").onLeftParty(targetId);
         target.partyId = null;
         target.partyLeaderId = null;
         updatePartyIndexForUser(target, previousTargetPartyId);
@@ -9667,7 +9684,9 @@ function Game(this: GameApi) {
             const isHostileSpell = isOffensiveSpellData(datSpell);
 
             if (isHostileSpell) {
-                const castleDeniedMessage = require("./clanCastles").getCastleAttackDeniedMessage(user, npc);
+                const castleDeniedMessage =
+                    require("./clanCastles").getCastleAttackDeniedMessage(user, npc) ||
+                    require("./dungeons").getNpcInvulnerableReason(npc);
                 if (castleDeniedMessage) {
                     withUserClient(idUser, (userClient) => {
                         handleProtocol.console(castleDeniedMessage, "white", 1, 0, userClient);
@@ -9908,7 +9927,10 @@ function Game(this: GameApi) {
             const isOffensiveSpell = idUser !== idUserAttacked && isOffensiveSpellData(datSpell);
             const factionWars = getFactionWars();
             const isSupportSpellCast = idUser !== idUserAttacked && isSupportSpell(datSpell);
-            const huntersDeniedReason = isOffensiveSpell ? getHuntersGame().getAttackDeniedReason(user, userAttacked) : null;
+            const huntersDeniedReason = isOffensiveSpell
+                ? (getHuntersGame().getAttackDeniedReason(user, userAttacked) ??
+                  require("./dungeons").getAttackDeniedReason(user, userAttacked))
+                : null;
             if (huntersDeniedReason) {
                 withUserClient(idUser, (userClient) => {
                     handleProtocol.console(huntersDeniedReason, "white", 0, 0, userClient);
@@ -10600,7 +10622,9 @@ function Game(this: GameApi) {
                 return 0;
             }
 
-            const castleDeniedMessage = require("./clanCastles").getCastleAttackDeniedMessage(user, npc);
+            const castleDeniedMessage =
+                    require("./clanCastles").getCastleAttackDeniedMessage(user, npc) ||
+                    require("./dungeons").getNpcInvulnerableReason(npc);
             if (castleDeniedMessage) {
                 withUserClient(idUser, (userClient) => {
                     handleProtocol.console(castleDeniedMessage, "white", 1, 0, userClient);
@@ -10795,7 +10819,9 @@ function Game(this: GameApi) {
 
             const arenaCombat = isArenaCombat(user, userAttacked);
             const challengeCombatRelation = getChallengeManager().getCombatRelation(user, userAttacked);
-            const huntersDeniedReason = getHuntersGame().getAttackDeniedReason(user, userAttacked);
+            const huntersDeniedReason =
+                getHuntersGame().getAttackDeniedReason(user, userAttacked) ??
+                require("./dungeons").getAttackDeniedReason(user, userAttacked);
             if (huntersDeniedReason) {
                 withUserClient(idUser, (userClient) => {
                     handleProtocol.console(huntersDeniedReason, "white", 0, 0, userClient);

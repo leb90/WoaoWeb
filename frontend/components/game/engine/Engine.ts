@@ -38,6 +38,15 @@ import {
     loadWeaponsDB,
 } from "../../../utils/gameLoader";
 import {
+    getDungeonLift,
+    getDungeonShake,
+    isDungeonCharging,
+    updateDungeonParticles,
+    type DungeonParticle,
+} from "./dungeonMotion";
+import { updateDungeonBosses } from "./dungeonBoss";
+import { updateDungeonTools } from "./dungeonTools";
+import {
     CHARACTER_SWING_SHIELD,
     CHARACTER_SWING_WEAPON,
     type CharacterSnapshot,
@@ -589,6 +598,15 @@ export class Engine {
     hoverPointerGlobal: { x: number; y: number } | null = null;
     hoveredEntityId: number | null = null;
     canAutoEmbark = false;
+    // Mazmorras (server/src/dungeons.ts): adentro no se embarca; el agua profunda se nada con las Patas de rana.
+    inDungeon = false;
+    dungeonSwim = false;
+    // La Carrera o el salto del propio personaje (engine/dungeonMotion.ts): mientras dura no se camina ni se ataca.
+    dungeonMotionUntil = 0;
+    dungeonParticles: DungeonParticle[] = [];
+    // El Polvo de Fuego, el Gancho y la Pulsera (engine/dungeonTools.ts): efectos en curso y lo que lleva cada uno.
+    dungeonToolEffects: Array<(now: number) => boolean> = [];
+    dungeonCarried: Map<number, Container> = new Map();
     healthBarEntityIds: Set<number> = new Set();
     remoteEntities: Map<number, Container> = new Map();
     worldName = "";
@@ -1049,6 +1067,14 @@ export class Engine {
         this.movementCheckScheduledAt = 0;
     }
 
+    // Al terminar la Carrera o el salto, sigue caminando si quedó una tecla apretada.
+    resumeMovementInput(): void {
+        this.dungeonMotionUntil = 0;
+        if (this.hasQueuedMovementInput()) {
+            this.scheduleMovementCheck(0);
+        }
+    }
+
     scheduleMovementCheck(delayMs: number): void {
         if (this.isDestroyed) {
             return;
@@ -1101,7 +1127,7 @@ export class Engine {
     }
 
     shouldHoldMovementAnimation(character: Character, now: number): boolean {
-        if (character.moving) {
+        if (character.moving || isDungeonCharging(character, now)) {
             return true;
         }
 
@@ -1134,7 +1160,10 @@ export class Engine {
             character.bodyAnimationStartedAt = now;
         }
 
-        const speed = getBodyAnimationSpeed(bodyGraphicData);
+        // En la carga de la Carrera patalea al doble.
+        const speed =
+            getBodyAnimationSpeed(bodyGraphicData) /
+            (isDungeonCharging(character, now) ? 2.2 : 1);
         const elapsedFrames = Math.floor(
             Math.max(0, now - character.bodyAnimationStartedAt) / speed,
         );
@@ -1524,7 +1553,19 @@ export class Engine {
             return false;
         }
 
+        if (isWaterTile && this.inDungeon) {
+            return this.dungeonSwim && character === this.user;
+        }
+
         return !isWaterTile;
+    }
+
+    // Nadando en el agua profunda de una mazmorra el personaje se ve medio sumergido.
+    private getSwimAlpha(character: Character | null | undefined): number {
+        if (!this.inDungeon || !character || character.navegando) {
+            return 1;
+        }
+        return this.isWaterTile(character.pos.x, character.pos.y) ? 0.55 : 1;
     }
 
     private isNavigationTransitionTileWalkable(
@@ -1541,7 +1582,7 @@ export class Engine {
         }
 
         const tile = this.getWalkTileData(tX, tY);
-        if (tile?.blocked === 1) {
+        if (tile?.blocked === 1 || this.inDungeon) {
             return false;
         }
 
@@ -2034,6 +2075,10 @@ export class Engine {
     moveTo(userId: number, direccion: number): void {
         const currentTime = this.timestamp();
 
+        if (this.dungeonMotionUntil > currentTime) {
+            return;
+        }
+
         if (this.canProcessMovementInput && !this.canProcessMovementInput()) {
             return;
         }
@@ -2191,6 +2236,9 @@ export class Engine {
         this.timerTicksPerFrame = this.delta * this.engineBaseSpeed;
         this.showNextFrame(now);
         this.updateRemoteEntityMovement(now);
+        updateDungeonParticles(this, now);
+        updateDungeonBosses(this, now);
+        updateDungeonTools(this, now);
     }
 
     updateRemoteEntityMovement(now: number): void {
@@ -2200,15 +2248,12 @@ export class Engine {
             const entity = this.personajes[id];
             if (!entity) continue;
 
-            container.alpha = getCharacterRenderAlpha(
-                entity,
-                this.runtimeTiming,
-                {
+            container.alpha =
+                getCharacterRenderAlpha(entity, this.runtimeTiming, {
                     localPartyMemberIds: this.partyMemberIds,
                     localClanTag: this.user?.clan,
                     isAdminViewer: this.user?.privileges === 1,
-                },
-            );
+                }) * this.getSwimAlpha(entity);
 
             if (entity.moving) {
                 const progress = this.getCharacterMovementProgress(entity, now);
@@ -2266,7 +2311,8 @@ export class Engine {
                 : undefined;
 
             if (bodyGraphicData && this.delta > 0) {
-                const shouldAnimateBody = entity.moving;
+                const shouldAnimateBody =
+                    entity.moving || isDungeonCharging(entity, now);
 
                 if (shouldAnimateBody) {
                     entity.frameCounter = this.getBodyAnimationFrameCounter(
@@ -2278,10 +2324,14 @@ export class Engine {
             }
 
             container.x = Math.round(
-                this.tileToWorldX(entity.pos.x, entity.map) + entity.moveOffsetX,
+                this.tileToWorldX(entity.pos.x, entity.map) +
+                    entity.moveOffsetX +
+                    getDungeonShake(entity, now),
             );
             container.y = Math.round(
-                this.tileToWorldY(entity.pos.y, entity.map) + entity.moveOffsetY,
+                this.tileToWorldY(entity.pos.y, entity.map) +
+                    entity.moveOffsetY -
+                    getDungeonLift(this, entity, now),
             );
             container.zIndex = getRowZIndex(
                 entity.pos.y - entity.addtoUserPos.y,
@@ -3117,6 +3167,12 @@ export class Engine {
             this.playerContainer.x = centerX;
             this.playerContainer.y = centerY;
         }
+        // Mazmorras: el arco del salto y el sacudón al chocar corriendo.
+        const motionNow = this.timestamp();
+        this.playerContainer.x += getDungeonShake(this.user, motionNow);
+        this.playerContainer.y -= Math.round(
+            getDungeonLift(this, this.user, motionNow),
+        );
 
         const zRow = getInterpolatedCharacterRow(
             this.user,
@@ -3131,11 +3187,11 @@ export class Engine {
             zRow,
             Z_INDEX_LAYERS.CHARACTER,
         );
-        this.playerContainer.alpha = getCharacterRenderAlpha(
-            this.user,
-            this.runtimeTiming,
-            { isLocalCharacter: true, localClanTag: this.user?.clan },
-        );
+        this.playerContainer.alpha =
+            getCharacterRenderAlpha(this.user, this.runtimeTiming, {
+                isLocalCharacter: true,
+                localClanTag: this.user?.clan,
+            }) * this.getSwimAlpha(this.user);
 
         // Use actualBodySprite if we found it, otherwise use stored reference
         const spriteToUpdate = actualBodySprite || bodySprite;

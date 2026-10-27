@@ -1,4 +1,4 @@
-import { useCallback, type RefObject } from "react";
+import { useCallback, useEffect, useRef, type RefObject } from "react";
 import type { Engine } from "../engine/Engine";
 
 export type LocalPendingMove = {
@@ -271,6 +271,18 @@ export function useMovementSync({
         [localPendingMovesRef],
     );
 
+    // La reconciliación se llama a sí misma al terminar la Carrera o el salto (ver abajo).
+    const reconcileOwnPositionWithServerRef = useRef<
+        | ((engine: Engine, payload: {
+              map: number;
+              x: number;
+              y: number;
+              heading: number;
+              lastProcessedMoveId: number;
+              stateVersion: number;
+          }) => Promise<void>)
+        | null
+    >(null);
     const reconcileOwnPositionWithServer = useCallback(
         async (
             engine: Engine,
@@ -286,6 +298,16 @@ export function useMovementSync({
             const currentUser = engine.user;
 
             if (!currentUser) {
+                return;
+            }
+
+            // Mazmorras: durante la Carrera o el salto el cliente anima el movimiento entero; la posición del
+            // server se aplica cuando termina, así no corta la animación.
+            const motionLeftMs = engine.dungeonMotionUntil - engine.timestamp();
+            if (motionLeftMs > 0) {
+                window.setTimeout(() => {
+                    void reconcileOwnPositionWithServerRef.current?.(engine, payload);
+                }, motionLeftMs + 20);
                 return;
             }
 
@@ -439,6 +461,10 @@ export function useMovementSync({
             tryRebaseToMap,
         ],
     );
+
+    useEffect(() => {
+        reconcileOwnPositionWithServerRef.current = reconcileOwnPositionWithServer;
+    }, [reconcileOwnPositionWithServer]);
 
     return {
         canProcessMovementInput,

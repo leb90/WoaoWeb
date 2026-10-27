@@ -57,6 +57,7 @@ const smelting = require("./smelting");
 const challengeManager = require("./challengeManager");
 const huntersGame = require("./huntersGame") as typeof import("./huntersGame");
 const pyramid = require("./pyramid") as typeof import("./pyramid");
+const dungeons = require("./dungeons") as typeof import("./dungeons");
 const LOGOUT_CANCELLED_MESSAGE = "[Servidor] La salida se canceló porque te moviste.";
 const MAX_PENDING_MOVE_QUEUE_LENGTH = 8;
 const REVIVE_CAST_MS = 10000;
@@ -1109,11 +1110,18 @@ export type ProtocolApi = {
     handleData: (ws: RuntimeClient, packageID: number) => void;
     processPendingMovements: () => void;
     syncPendingReviveCastVisibilityForUser: (movedUserId: EntityId) => void;
+    moveUserByServer: (ws: RuntimeClient, x: number, y: number, heading: number) => void;
+    syncOwnPosition: (ws: RuntimeClient) => void;
 };
 
 const protocol = {} as ProtocolApi;
 
 protocol.syncPendingReviveCastVisibilityForUser = syncPendingReviveCastVisibilityForUser;
+protocol.moveUserByServer = (ws, x, y, heading) => moveUserByServer(ws, x, y, heading);
+protocol.syncOwnPosition = (ws) => {
+    const user = getCharacterById(ws.id!);
+    if (user) sendOwnPositionUpdate(ws, user);
+};
 
 Protocol.call(protocol);
 const AREA_RANGE_X = vars.areaVisionRangeX;
@@ -1770,6 +1778,13 @@ function updateUserAreaAfterMovement(ws: RuntimeClient, user: RuntimeCharacter, 
 
             handleProtocol.renderItem(item.objIndex, tileMap, pos, ws);
         }
+
+        // Mazmorras: puertas, cofres y bloques que cambiaron en la corrida. El cliente carga el mapa base (con las
+        // puertas cerradas), así que lo que entra a la vista caminando también tiene que llegar con su bloqueo.
+        if (tileMap === user.map) {
+            const dungeonBlocked = dungeons.getDynamicBlocked(tileMap, x, y);
+            if (dungeonBlocked !== null) handleProtocol.blockMap(tileMap, pos, dungeonBlocked, ws);
+        }
     };
 
     const leaveTile = (tileMap: number, x: number, y: number) => {
@@ -1935,6 +1950,11 @@ function processUserMovement(ws: RuntimeClient, heading: number, moveId: number,
         return;
     }
 
+    // Mazmorras: mientras carga, corre o salta (dungeonMotion.ts) el movimiento lo maneja el server.
+    if (require("./dungeonMotion").isMoving(user)) {
+        return;
+    }
+
     stopMeditation(ws, user);
 
     const oldX = user.pos.x;
@@ -1960,8 +1980,25 @@ function processUserMovement(ws: RuntimeClient, heading: number, moveId: number,
     posY = phasedDestination.y;
     const ghostMove = resolveGhostDisplacement(user, posX, posY, heading);
     const destinationIsWater = game.hayAgua(user.map, { x: posX, y: posY });
+    // Mazmorras: el agua profunda se nada con las Patas de rana, sin barca.
+    const inDungeon = dungeons.isDungeonInstanceMap(user.map);
 
-    if (!user.navegando && destinationIsWater) {
+    if (inDungeon) {
+        const oneWayDenied = dungeons.getOneWayDeniedReason(user, posX, posY);
+        if (oneWayDenied) {
+            handleProtocol.console(oneWayDenied, "white", 0, 0, ws);
+            sendOwnPositionUpdate(ws, user);
+            return;
+        }
+        const waterDenied = dungeons.getWaterStepDeniedReason(user, destinationIsWater);
+        if (waterDenied !== null) {
+            if (waterDenied) {
+                handleProtocol.console(waterDenied, "white", 0, 0, ws);
+            }
+            sendOwnPositionUpdate(ws, user);
+            return;
+        }
+    } else if (!user.navegando && destinationIsWater) {
         if (!game.legalPos(posX, posY, user.map, true, ghostMove?.ghost.id)) {
             sendOwnPositionUpdate(ws, user);
             return;
@@ -1983,7 +2020,13 @@ function processUserMovement(ws: RuntimeClient, heading: number, moveId: number,
         }
     }
 
-    const canReachTargetPosition = game.legalPos(posX, posY, user.map, Boolean(user.navegando), ghostMove?.ghost.id);
+    const canReachTargetPosition = game.legalPos(
+        posX,
+        posY,
+        user.map,
+        inDungeon ? destinationIsWater : Boolean(user.navegando),
+        ghostMove?.ghost.id,
+    );
     const deniedPortalMessage = game.getFactionPortalDeniedMessage(user, user.map, posX, posY);
 
     if (user.navegando && !game.legalPos(user.pos.x, user.pos.y, user.map, true, ws.id)) {
@@ -2014,6 +2057,11 @@ function processUserMovement(ws: RuntimeClient, heading: number, moveId: number,
 
     if (!canReachTargetPosition) {
         sendOwnPositionUpdate(ws, user);
+        return;
+    }
+
+    // Mazmorras: los pozos, el portal de salida y las escaleras entre los mapas de la misma corrida.
+    if (dungeons.handleStep(ws, user, posX, posY)) {
         return;
     }
 
@@ -2103,6 +2151,9 @@ function processUserMovement(ws: RuntimeClient, heading: number, moveId: number,
 
     cancelPendingLogout(user, ws, LOGOUT_CANCELLED_MESSAGE);
     require("./tileEvents").onWalk(String(ws.id));
+    if (inDungeon) {
+        dungeons.afterStep(ws, user);
+    }
 
     syncSafeZoneState(ws, user);
 
@@ -2134,6 +2185,40 @@ function processUserMovement(ws: RuntimeClient, heading: number, moveId: number,
     updateUserAreaAfterMovement(ws, user, heading);
     syncPendingReviveCastVisibilityForUser(ws.id!);
     schedulePendingMovement(ws.id!);
+}
+
+// Movimiento que decide el server (la Carrera y el salto de las mazmorras, dungeonMotion.ts): lleva al jugador a
+// (x, y) del mismo mapa, de a una baldosa por vez, sin el chequeo de paso. Los que miran ya lo animan con el paquete
+// dungeonMotion y el propio jugador también, así que no se avisa cada paso: solo se actualiza el área (entran y
+// salen personajes, criaturas e ítems). Al terminar, dungeonMotion manda la posición final.
+function moveUserByServer(ws: RuntimeClient, x: number, y: number, heading: number) {
+    const user = getCharacterById(ws.id!) as any;
+    if (!user || !vars.mapData[user.map]?.[y]?.[x]) {
+        return;
+    }
+
+    const now = Date.now();
+    while (user.pos.x !== x || user.pos.y !== y) {
+        const stepX = user.pos.x + Math.sign(x - user.pos.x);
+        const stepY = user.pos.x === x ? user.pos.y + Math.sign(y - user.pos.y) : user.pos.y;
+        const cell = vars.mapData[user.map][user.pos.y][user.pos.x];
+        if (cell && String(cell.id) === String(ws.id)) {
+            cell.id = 0;
+        }
+        vars.mapData[user.map][stepY][stepX].id = ws.id;
+        targetAssist.recordTileLeft(user, user.map, user.pos.x, user.pos.y, now);
+        user.pos.x = stepX;
+        user.pos.y = stepY;
+        user.heading = heading;
+        user.stateVersion = Number(user.stateVersion ?? 0) + 1;
+        updateUserAreaAfterMovement(ws, user, heading);
+    }
+
+    user.lastMovementActivityAt = now;
+    cancelPendingLogout(user, ws, LOGOUT_CANCELLED_MESSAGE);
+    syncSafeZoneState(ws, user);
+    game.syncPartyStateForMember(ws.id);
+    syncPendingReviveCastVisibilityForUser(ws.id!);
 }
 
 function buyItem(ws: RuntimeClient) {
@@ -2354,6 +2439,10 @@ function eventClick(ws: RuntimeClient) {
         }
 
         if (targetMap === user.map) {
+            if (dungeons.handleMapClick(ws, user, x, y)) {
+                return;
+            }
+
             if (fishing.handleMapClick(ws, x, y)) {
                 return;
             }
@@ -2546,6 +2635,10 @@ function eventClick(ws: RuntimeClient) {
             }
 
             if (selectedNpc && pyramid.handleNpcInteraction(ws, selectedId)) {
+                return;
+            }
+
+            if (selectedNpc && dungeons.handleNpcInteraction(ws, selectedNpc)) {
                 return;
             }
 
@@ -3314,7 +3407,7 @@ function position(ws: RuntimeClient) {
 }
 
 const UI_PANEL_COMMAND_COOLDOWN_MS = 200;
-const UI_PANEL_COMMANDS = new Set(["/transmog", "/transfigurar", "/transmogponer", "/transmogquitar", "/tienda", "/tiendacomprar"]);
+const UI_PANEL_COMMANDS = new Set(["/transmog", "/transfigurar", "/transmogponer", "/transmogquitar", "/tienda", "/tiendacomprar", "/mazmorra"]);
 
 function isUiPanelCommand(message: string): boolean {
     return UI_PANEL_COMMANDS.has(message.split(/\s+/, 1)[0]?.toLowerCase() ?? "");
@@ -3550,7 +3643,10 @@ function attackMele(ws: RuntimeClient) {
             return;
         }
 
-        const meleeBlock = elementalEffects.getActionBlockReason(user, "melee");
+        const meleeBlock =
+            elementalEffects.getActionBlockReason(user, "melee") ??
+            dungeons.getSwimBlockReason(user) ??
+            require("./dungeonMotion").getMotionBlockReason(user);
         if (meleeBlock) {
             handleProtocol.console(meleeBlock, "white", 0, 0, ws);
             return;
@@ -3763,7 +3859,10 @@ function attackRange(ws: RuntimeClient) {
             return;
         }
 
-        const rangedBlock = elementalEffects.getActionBlockReason(user, "ranged");
+        const rangedBlock =
+            elementalEffects.getActionBlockReason(user, "ranged") ??
+            dungeons.getSwimBlockReason(user) ??
+            require("./dungeonMotion").getMotionBlockReason(user);
         if (rangedBlock) {
             handleProtocol.console(rangedBlock, "white", 0, 0, ws);
             return;
@@ -4183,11 +4282,10 @@ function attackSpell(ws: RuntimeClient) {
             return;
         }
 
-        const elementalBlock = elementalEffects.getActionBlockReason(
-            user,
-            isHostileCombatSpell(datSpell) || isSummonSpell ? "spell" : "support",
-            now,
-        );
+        const elementalBlock =
+            elementalEffects.getActionBlockReason(user, isHostileCombatSpell(datSpell) || isSummonSpell ? "spell" : "support", now) ??
+            dungeons.getSwimBlockReason(user) ??
+            require("./dungeonMotion").getMotionBlockReason(user);
         if (elementalBlock) {
             handleProtocol.console(elementalBlock, "white", 0, 0, ws);
             return;

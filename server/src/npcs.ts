@@ -1423,11 +1423,16 @@ function canNpcWanderTo(npc: NpcCharacter, pos: Position, heading?: Direction) {
     return Boolean(tile && tile.map === npc.map && canNpcOccupyPosition(npc, pos, heading));
 }
 
+function getNpcWanderRadius(npc: NpcCharacter) {
+    return Number(npc.wanderRadius ?? NPC_WANDER_RADIUS_TILES);
+}
+
 function pickNpcWanderTarget(npc: NpcCharacter, home: Position): Position | null {
+    const radius = getNpcWanderRadius(npc);
     for (let attempt = 0; attempt < 10; attempt++) {
         const candidate = {
-            x: home.x + funct.randomIntFromInterval(-NPC_WANDER_RADIUS_TILES, NPC_WANDER_RADIUS_TILES),
-            y: home.y + funct.randomIntFromInterval(-NPC_WANDER_RADIUS_TILES, NPC_WANDER_RADIUS_TILES),
+            x: home.x + funct.randomIntFromInterval(-radius, radius),
+            y: home.y + funct.randomIntFromInterval(-radius, radius),
         };
         if ((candidate.x !== npc.pos.x || candidate.y !== npc.pos.y) && canNpcWanderTo(npc, candidate)) {
             return candidate;
@@ -1479,7 +1484,7 @@ function wanderNpc(npc: NpcCharacter, now: number) {
     for (const heading of getOrderedHeadings(npc.pos, destination, npc.heading)) {
         const offset = getDirectionOffset(heading);
         const candidate = { x: npc.pos.x + offset.x, y: npc.pos.y + offset.y };
-        const insideZone = getChebyshevDistance(candidate, home) <= NPC_WANDER_RADIUS_TILES;
+        const insideZone = getChebyshevDistance(candidate, home) <= getNpcWanderRadius(npc);
         const getsCloser = getChebyshevDistance(candidate, destination) < getChebyshevDistance(npc.pos, destination);
         const getsCloserToHome = getChebyshevDistance(candidate, home) < getChebyshevDistance(npc.pos, home);
         if ((insideZone || getsCloserToHome) && getsCloser && canNpcWanderTo(npc, candidate, heading)) {
@@ -2697,11 +2702,28 @@ function Npcs(this: NpcsApi) {
                     continue;
                 }
 
+                // Mazmorras: las chispas, las cuchillas, el rodillo y el Ciempiés tienen movimiento propio
+                // (dungeonHazards.ts y dungeonBoss.ts).
+                if (npc.customMotion) {
+                    continue;
+                }
+
+                // Mazmorras: las estatuas quedan quietas hasta que alguien se acerca.
+                if (npc.dormant && !require("./dungeons").wakeIfPlayerNear(npc)) {
+                    npc.nextThinkAt = now + vars.timing.npcThinkMs;
+                    continue;
+                }
+
                 if (
                     !vars.areaNpc[idNpc]?.length &&
                     !getHostileNpcCurrentSummonTarget(npc) &&
                     !getRecentSummonAggressorTarget(npc)
                 ) {
+                    // Mazmorras: aunque nadie las persiga, si alguien las ve pasean por su lugar.
+                    if (require("./dungeons").isWatchedDungeonNpc(npc)) {
+                        npc.nextThinkAt = now + vars.timing.npcThinkMs;
+                        wanderNpc(npc, now);
+                    }
                     continue;
                 }
 
@@ -2712,7 +2734,8 @@ function Npcs(this: NpcsApi) {
                     );
                 }
 
-                npc.nextThinkAt = now + vars.timing.npcThinkMs;
+                // Criaturas en pareja: la que queda sola se enfurece y piensa más rápido.
+                npc.nextThinkAt = now + vars.timing.npcThinkMs * (npc.enraged ? 0.6 : 1);
                 this.npcAttackUser(idNpc, targetPressure);
 
                 if (npc.currentTargetId) {
@@ -2779,6 +2802,13 @@ function Npcs(this: NpcsApi) {
                 } else {
                     vars.areaNpc[idNpc] = [];
                 }
+                return;
+            }
+
+            // En las mazmorras las criaturas no reaparecen y abren las salas cerradas (dungeons.ts).
+            if (require("./dungeons").onNpcDied(npc)) {
+                delete vars.npcs[idNpc];
+                delete vars.areaNpc[idNpc];
                 return;
             }
 
@@ -3055,9 +3085,11 @@ function Npcs(this: NpcsApi) {
 
                 const probExito = Math.max(10, Math.min(90, 50 + (npcPoderAtaque - userEvasion) * 0.4));
                 // Evasión de viento del chamán: el 90 % de los golpes no le entran.
+                // Mazmorras: el Escudo Espejo levantado frena los golpes que llegan de frente (dungeonTools.ts).
                 const npcImpacto =
                     funct.randomIntFromInterval(1, 100) <= probExito &&
-                    !(require("./elementalEffects") as typeof import("./elementalEffects")).rollWindEvasion(user);
+                    !(require("./elementalEffects") as typeof import("./elementalEffects")).rollWindEvasion(user) &&
+                    !require("./dungeonTools").mirrorBlocksNpcHit(user, npc);
 
                 let dmg: number | "¡Fallas!" = "¡Fallas!";
 
@@ -3190,6 +3222,9 @@ function Npcs(this: NpcsApi) {
                             });
                             break;
                     }
+
+                    // Mazmorras: los escarabajos empujan (dungeonHazards.ts).
+                    if (user.hp > 0) require("./dungeonHazards").onNpcMeleeHit(npc, user);
 
                     if (user.hp <= 0) {
                         this.deleteUserToAllNpcs(idUser);

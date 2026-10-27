@@ -29,6 +29,9 @@ type TradeModalProps = {
 
 const GRID_COLUMNS = 5;
 const MIN_GRID_SLOTS = 25;
+// Ancho máximo del modal según el alto de la ventana: el alto crece con el ancho (las casillas son cuadradas), así que
+// en ventanas bajas se angosta para entrar entero. Nunca menos de 700 px (casillas legibles) ni más de 56rem.
+const TRADE_MODAL_MAX_WIDTH = "clamp(700px, calc(200dvh - 760px), 56rem)";
 const MAX_VISIBLE_GRID_ROWS = 5;
 const GRID_GAP_PX = 6;
 
@@ -143,6 +146,9 @@ function ItemOverlayMeta({
     const primaryLabel = forceAmountLabel
         ? (amountLabel ?? null)
         : (combatLabel ?? amountLabel ?? null);
+    // En casillas chicas (ventana baja) la etiqueta de stats no entra y tapa el ícono: queda solo el precio. Los stats
+    // se ven igual arriba, al elegir el ítem.
+    const isCombatLabel = !forceAmountLabel && Boolean(combatLabel);
 
     if (!primaryLabel && !goldLabel && !stats.tier) {
         return null;
@@ -151,7 +157,11 @@ function ItemOverlayMeta({
     return (
         <>
             {primaryLabel ? (
-                <span className="pointer-events-none absolute left-1 top-1 rounded border border-white/10 bg-black/90 px-1.5 py-0.5 text-[9px] font-black uppercase leading-none tracking-[0.04em] text-stone-50 shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
+                <span
+                    className={`pointer-events-none absolute left-1 top-1 rounded border border-white/10 bg-black/90 px-1.5 py-0.5 text-[9px] font-black uppercase leading-none tracking-[0.04em] text-stone-50 shadow-[0_1px_2px_rgba(0,0,0,0.85)] ${
+                        isCombatLabel ? "@max-[60px]:hidden" : ""
+                    }`}
+                >
                     {primaryLabel}
                 </span>
             ) : null}
@@ -478,9 +488,15 @@ export default function TradeModal({
     ];
 
     return (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/55 px-4 py-6 backdrop-blur-sm">
-            <div className="w-full max-w-4xl overflow-hidden rounded-[28px] border border-[#5f4630] bg-[linear-gradient(180deg,#2b1d13_0%,#18110c_100%)] text-stone-100 shadow-[0_32px_120px_rgba(0,0,0,0.55)]">
-                <div className="border-b border-[#6a4f39] bg-[#120d09]/85 px-5 py-4">
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/55 p-2 backdrop-blur-sm sm:p-4">
+            {/* Entra entero en la ventana aunque no esté en pantalla completa: no pasa del alto disponible (si no
+                alcanza, se desplazan las grillas y el encabezado y los botones quedan a la vista) y en ventanas bajas
+                se angosta, así las casillas achican y suele entrar sin desplazar. */}
+            <div
+                className="flex max-h-full w-full max-w-4xl flex-col overflow-hidden rounded-[28px] border border-[#5f4630] bg-[linear-gradient(180deg,#2b1d13_0%,#18110c_100%)] text-stone-100 shadow-[0_32px_120px_rgba(0,0,0,0.55)]"
+                style={{ maxWidth: TRADE_MODAL_MAX_WIDTH }}
+            >
+                <div className="shrink-0 border-b border-[#6a4f39] bg-[#120d09]/85 px-5 py-4">
                     <div className="flex items-start justify-between gap-4">
                         <div className="flex min-w-0 items-center gap-3">
                             <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-300/15 bg-black/30">
@@ -540,13 +556,23 @@ export default function TradeModal({
                             </div>
                         </div>
 
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="rounded-2xl border border-stone-700 bg-stone-950/60 px-3 py-2 text-sm text-stone-300 transition hover:border-stone-500 hover:text-white"
-                        >
-                            Cerrar
-                        </button>
+                        <div className="flex shrink-0 items-center gap-2">
+                            {!isBank ? (
+                                <div className="inline-flex items-center gap-2 rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1.5 text-sm text-amber-100">
+                                    <span className="text-base">Oro:</span>
+                                    <span className="font-semibold">
+                                        {formatNumber(gold)}
+                                    </span>
+                                </div>
+                            ) : null}
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="rounded-2xl border border-stone-700 bg-stone-950/60 px-3 py-2 text-sm text-stone-300 transition hover:border-stone-500 hover:text-white"
+                            >
+                                Cerrar
+                            </button>
+                        </div>
                     </div>
 
                     {isBank ? (
@@ -569,14 +595,7 @@ export default function TradeModal({
                         </div>
                     ) : null}
 
-                    {!isBank ? (
-                        <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1.5 text-sm text-amber-100">
-                            <span className="text-base">Oro:</span>
-                            <span className="font-semibold">
-                                {formatNumber(gold)}
-                            </span>
-                        </div>
-                    ) : isSharedVault ? (
+                    {isBank && isSharedVault ? (
                         <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-stone-300">
                             <span className="inline-flex items-center gap-2 rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1.5 text-amber-100">
                                 <span>Tu oro:</span>
@@ -594,7 +613,7 @@ export default function TradeModal({
                     ) : null}
                 </div>
 
-                <div className="grid gap-4 p-4 md:grid-cols-2">
+                <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto p-4 md:grid-cols-2">
                     <section className="rounded-[22px] border border-amber-300/10 bg-black/20 p-3">
                         <div className="mb-3 flex items-center justify-between">
                             <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-stone-300">
@@ -660,7 +679,7 @@ export default function TradeModal({
                                             setSelectedMerchantSlot(item.slot);
                                             setSelectedPlayerSlot(null);
                                         }}
-                                        className={`relative flex aspect-square items-center justify-center rounded-[8px] border transition ${
+                                        className={`@container relative flex aspect-square items-center justify-center rounded-[8px] border transition ${
                                             item
                                                 ? getSlotStateClasses({
                                                       isSelected:
@@ -738,7 +757,7 @@ export default function TradeModal({
                                         setSelectedPlayerSlot(item.slot);
                                         setSelectedMerchantSlot(null);
                                     }}
-                                    className={`relative flex aspect-square items-center justify-center rounded-[8px] border transition ${
+                                    className={`@container relative flex aspect-square items-center justify-center rounded-[8px] border transition ${
                                         item
                                             ? getSlotStateClasses({
                                                   isSelected:
@@ -782,7 +801,7 @@ export default function TradeModal({
                     </section>
                 </div>
 
-                <div className="border-t border-[#6a4f39] bg-[#0f0b09]/92 px-4 py-4">
+                <div className="shrink-0 border-t border-[#6a4f39] bg-[#0f0b09]/92 px-4 py-4">
                     {isSharedVault ? (
                         <div className="mb-4 rounded-[20px] border border-amber-300/10 bg-black/20 p-3">
                             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -842,7 +861,7 @@ export default function TradeModal({
                     ) : null}
 
                     <div
-                        className={`flex flex-col items-stretch gap-3 md:flex-row md:items-center ${
+                        className={`flex flex-col items-stretch gap-3 md:flex-row md:flex-wrap md:items-center ${
                             isBank ? "md:justify-between" : "md:justify-start"
                         }`}
                     >
@@ -860,7 +879,7 @@ export default function TradeModal({
                                     );
                                 }}
                                 disabled={!selectedMerchantItem}
-                                className={`flex h-12 w-full items-center justify-center rounded-2xl px-5 text-sm font-semibold uppercase tracking-[0.14em] text-amber-50 transition hover:brightness-110 sm:w-[156px] disabled:cursor-not-allowed disabled:opacity-40 ${
+                                className={`flex h-12 w-full items-center justify-center rounded-2xl px-5 text-sm font-semibold uppercase tracking-[0.14em] text-amber-50 transition hover:brightness-110 sm:w-[140px] disabled:cursor-not-allowed disabled:opacity-40 ${
                                     isBank
                                         ? "bg-[linear-gradient(180deg,#a53a16_0%,#7a210e_100%)]"
                                         : "bg-[linear-gradient(180deg,#8c3418_0%,#661b0d_100%)]"
@@ -882,7 +901,7 @@ export default function TradeModal({
                                         );
                                     }}
                                     disabled={!selectedMerchantItem}
-                                    className="flex h-12 w-full items-center justify-center rounded-2xl border border-amber-300/30 bg-amber-300/10 px-5 text-sm font-semibold uppercase tracking-[0.14em] text-amber-100 transition hover:border-amber-200/50 hover:bg-amber-300/16 sm:w-[156px] disabled:cursor-not-allowed disabled:opacity-40"
+                                    className="flex h-12 w-full items-center justify-center rounded-2xl border border-amber-300/30 bg-amber-300/10 px-5 text-sm font-semibold uppercase tracking-[0.14em] text-amber-100 transition hover:border-amber-200/50 hover:bg-amber-300/16 sm:w-[140px] disabled:cursor-not-allowed disabled:opacity-40"
                                 >
                                     Retirar todo
                                 </button>
@@ -946,7 +965,7 @@ export default function TradeModal({
                                     );
                                 }}
                                 disabled={!selectedPlayerItem}
-                                className="flex h-12 w-full items-center justify-center rounded-2xl bg-[linear-gradient(180deg,#8c3418_0%,#661b0d_100%)] px-5 text-sm font-semibold uppercase tracking-[0.14em] text-amber-50 transition hover:brightness-110 sm:w-[156px] disabled:cursor-not-allowed disabled:opacity-40"
+                                className="flex h-12 w-full items-center justify-center rounded-2xl bg-[linear-gradient(180deg,#8c3418_0%,#661b0d_100%)] px-5 text-sm font-semibold uppercase tracking-[0.14em] text-amber-50 transition hover:brightness-110 sm:w-[140px] disabled:cursor-not-allowed disabled:opacity-40"
                             >
                                 {isBank ? "Guardar" : "Vender"}
                             </button>
@@ -963,7 +982,7 @@ export default function TradeModal({
                                     );
                                 }}
                                 disabled={!selectedPlayerItem}
-                                className="flex h-12 w-full items-center justify-center rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-5 text-sm font-semibold uppercase tracking-[0.14em] text-cyan-50 transition hover:border-cyan-200/40 hover:bg-cyan-300/16 sm:w-[156px] disabled:cursor-not-allowed disabled:opacity-40"
+                                className="flex h-12 w-full items-center justify-center rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-5 text-sm font-semibold uppercase tracking-[0.14em] text-cyan-50 transition hover:border-cyan-200/40 hover:bg-cyan-300/16 sm:w-[140px] disabled:cursor-not-allowed disabled:opacity-40"
                             >
                                 {isBank ? "Guardar todo" : "Vender todo"}
                             </button>

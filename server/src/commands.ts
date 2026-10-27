@@ -2270,6 +2270,19 @@ const command: CommandApi = {
                     break;
                 }
 
+                // Para probar en local (las pruebas en vivo de las mazmorras): vida y maná al máximo.
+                case "/devcurar": {
+                    if (process.env.NODE_ENV === "production" || user.dead) {
+                        break;
+                    }
+
+                    user.hp = Number(user.maxHp ?? user.hp);
+                    user.mana = Number(user.maxMana ?? user.mana);
+                    handleProtocol.updateHP(user.hp, ws as CommandClient);
+                    handleProtocol.updateMana(user.mana, ws as CommandClient);
+                    break;
+                }
+
                 case "/p": {
                     const error = handlePartyChat(user, nextText);
 
@@ -3567,6 +3580,11 @@ const command: CommandApi = {
                 case "/viaje": {
                     const result = require("./fastTravel").travel(String(clientId), nextText.trim());
                     handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+
+                case "/mazmorra": {
+                    require("./dungeons").handleCommand(clientId, nextText);
                     break;
                 }
 

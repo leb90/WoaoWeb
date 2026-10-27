@@ -478,6 +478,9 @@ export type HandleProtocolApi = {
     bleedState: (remainingMs: number, client: RuntimeClient) => void;
     elementalState: (payload: Record<string, unknown>, client: RuntimeClient) => void;
     areaSpellFx: (payload: Record<string, unknown>, client: RuntimeClient) => void;
+    dungeonState: (payload: Record<string, unknown>, client: RuntimeClient) => void;
+    dungeonMotion: (payload: Record<string, unknown>, client: RuntimeClient) => void;
+    dungeonBoss: (payload: Record<string, unknown>, client: RuntimeClient) => void;
     castleState: (payload: unknown, client: RuntimeClient) => void;
     factionWarState: (payload: FactionWarStatePayload, client: RuntimeClient) => void;
     rankedState: (payload: unknown, client: RuntimeClient) => void;
@@ -1616,6 +1619,27 @@ const handleServer: HandleProtocolApi = {
     // Hechizo de área (spellArea.ts): un gráfico sobre cada objetivo alcanzado, ninguno en baldosas vacías, y un solo sonido.
     areaSpellFx(payload, client) {
         pkg.setPackageID(pkg.clientPacketID.areaSpellFx);
+        pkg.writeString(JSON.stringify(payload));
+        socket.send(client);
+    },
+
+    // Mazmorras (dungeons.ts): panel de la piedra, invocación pendiente y si está adentro.
+    dungeonState(payload, client) {
+        pkg.setPackageID(pkg.clientPacketID.dungeonState);
+        pkg.writeString(JSON.stringify(payload));
+        socket.send(client);
+    },
+
+    // La Carrera y el salto de las mazmorras (dungeonMotion.ts): el cliente anima el movimiento entero.
+    dungeonMotion(payload, client) {
+        pkg.setPackageID(pkg.clientPacketID.dungeonMotion);
+        pkg.writeString(JSON.stringify(payload));
+        socket.send(client);
+    },
+
+    // El Ciempiés de la Cueva de la Cola (dungeonBoss.ts): la cabeza, el ángulo y la velocidad; el cliente arma el cuerpo.
+    dungeonBoss(payload, client) {
+        pkg.setPackageID(pkg.clientPacketID.dungeonBoss);
         pkg.writeString(JSON.stringify(payload));
         socket.send(client);
     },

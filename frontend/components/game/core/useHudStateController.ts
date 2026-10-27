@@ -192,6 +192,9 @@ export function useHudStateController({
                       ...(!hud.aggroState && previousHud?.aggroState
                           ? { aggroState: previousHud.aggroState }
                           : {}),
+                      ...(!hud.dungeonState && previousHud?.dungeonState
+                          ? { dungeonState: previousHud.dungeonState }
+                          : {}),
                       ...(hud.bleedUntil === undefined && previousHud?.bleedUntil
                           ? { bleedUntil: previousHud.bleedUntil }
                           : {}),
@@ -221,6 +224,8 @@ export function useHudStateController({
                             item.validForUser,
                     ),
                 );
+                engineRef.current.inDungeon = Boolean(nextHud?.dungeonState?.enMazmorra);
+                engineRef.current.dungeonSwim = Boolean(nextHud?.dungeonState?.enMazmorra?.patas);
                 if (engineRef.current.user) {
                     engineRef.current.user.zonaSegura = nextHud?.zonaSegura;
                 }

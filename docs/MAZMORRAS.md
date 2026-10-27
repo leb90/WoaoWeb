@@ -121,9 +121,9 @@ Todas por datos del mapa, para que las mazmorras siguientes se armen sin código
 6. **Cueva de la Cola. [hecha, en desarrollo hasta probarla en producción]** Ver la sección 9. Segunda de la serie: da la Pluma de Roc, que pide la Caverna. Diseño en [mazmorras/03-CUEVA_DE_LA_COLA.md](mazmorras/03-CUEVA_DE_LA_COLA.md).
    - Primero, las mecánicas nuevas: chispas, cuchillas, empujón, rodillo de púas, escalera y portal que aparecen, pozos con destino, cola débil, bloque con cerradura y placa que hace aparecer un cofre.
    - Después, los mapas 530-532, el jefe con su sprite nuevo, el minijefe y las recompensas. Con esto, la Caverna puede salir de desarrollo.
-7. **Roca de la Tortuga. [diseñada]** Adapta la Roca Tortuga (nivel 8 de Link's Awakening) y da el **Polvo de Fuego**. Diseño en [mazmorras/04-ROCA_DE_LA_TORTUGA.md](mazmorras/04-ROCA_DE_LA_TORTUGA.md). El orden de la serie se define al final; esta pide la pluma, el gancho y la pulsera.
+7. **Roca de la Tortuga. [diseñada]** Adapta la Roca Tortuga (nivel 8 de Link's Awakening) y da el **Polvo de Fuego**. Diseño en [mazmorras/04-ROCA_DE_LA_TORTUGA.md](mazmorras/04-ROCA_DE_LA_TORTUGA.md). El orden de la serie se define al final; esta pide la pluma, el gancho y el brazalete.
    - Es la más grande: la grilla de 8 × 8 salas en un mapa (540), los 6 pasajes y el Afuera (541) y la Guarida de la Cabeza Ardiente (542).
-   - Se construye en cuatro PR: los tres ítems (Polvo de Fuego, Gancho y Pulsera); las mecánicas de recorrido; los mapas, las criaturas, las revanchas y la música; y los jefes.
+   - Se construye en cuatro PR: los tres ítems (Polvo de Fuego, Gancho y Brazalete de Fuerza); las mecánicas de recorrido; los mapas, las criaturas, las revanchas y la música; y los jefes.
 
 ## 5. Decisiones
 
@@ -429,25 +429,31 @@ Hay una pestaña por piso, y el jugador parpadea donde está. La brújula ademá
 ### La música (`lib/dungeonMusic.ts`)
 Cada mazmorra tiene en `jsons/dungeons.json` ("musica") tres temas que suenan uno detrás del otro y vuelven a empezar, y uno de combate. El combate suena mientras el jugador está en una sala cerrada con un jefe o un minijefe vivo (`jefe` y `minijefe` en las plantillas). Al terminar, sigue con el próximo tema. No tiene un botón propio para silenciarla: sigue al volumen general del juego. Los archivos están en `frontend/public/music/mazmorras/<mazmorra>/` y los créditos, en `docs/CREDITOS_SONIDOS.md`.
 
-## 11. Polvo de Fuego, Gancho y Pulsera (Roca de la Tortuga)
+## 11. Polvo de Fuego, Gancho y Brazalete de Fuerza (Roca de la Tortuga)
 
-El diseño está en [mazmorras/04-ROCA_DE_LA_TORTUGA.md](mazmorras/04-ROCA_DE_LA_TORTUGA.md), secciones 6 y 6.2. La Roca de la Tortuga da el Polvo de Fuego y, como en el original, usa el Gancho y la Pulsera. Leandro pidió hacer los dos ahora para que queden listos para las mazmorras que los den. Hasta entonces, un GM los da con `/mazmorra item polvo_de_fuego|gancho|pulsera`.
+El diseño está en [mazmorras/04-ROCA_DE_LA_TORTUGA.md](mazmorras/04-ROCA_DE_LA_TORTUGA.md), secciones 6 y 6.2. La Roca de la Tortuga da el Polvo de Fuego y, como en el original, usa el Gancho y el Brazalete de Fuerza. Leandro pidió hacer los dos ahora para que queden listos para las mazmorras que los den. Hasta entonces, un GM los da con `/mazmorra item polvo_de_fuego|gancho|pulsera`.
 
-Son ítems de mazmorra como la Pluma y las Botas: se ponen en las teclas Z o X desde la Mochila y solo funcionan adentro. El server los resuelve en `dungeonTools.ts` y avisa en el mismo paquete que la Carrera (101), con tipos nuevos. El cliente los dibuja en `engine/dungeonTools.ts`.
+Son ítems de mazmorra como la Pluma y las Botas: se ponen en las teclas Z o X desde la Mochila y solo funcionan adentro.
+
+**Ninguno toca los atributos, los hechizos ni la defensa del personaje** (pedido de Leandro): el hechizo Fuerza es parte del meta de AO. El Brazalete no da fuerza: es la herramienta de Zelda para levantar cosas. Y el Escudo Espejo solo frena lo que pasa adentro de las mazmorras. El server los resuelve en `dungeonTools.ts` y avisa en el mismo paquete que la Carrera (101), con tipos nuevos. El cliente los dibuja en `engine/dungeonTools.ts`.
 
 | Ítem | Qué hace | Números |
 |---|---|---|
 | **Polvo de Fuego** (`fuego`) | Llamarada en línea recta hasta 6 baldosas. Al llegar: enciende una antorcha, derrite un bloque de hielo o quema a una criatura; las plantillas con `debilFuego` se queman el doble. El dibujo es el proyectil de los hechizos en colores de fuego, con chispas al llegar | 45 ms por baldosa, 0,7 s entre usos. Daño: 20 + 3 por nivel (±10 %) |
 | **Gancho** (`gancho`) | Cadena hasta 7 baldosas. Si engancha algo firme (cofre, bloque, vasija, piedra, estatua, antorcha, hielo, cristal o puerta), arrastra al personaje hasta al lado, por encima de pozos y lava. En una criatura, la aturde 1,5 s y le saca un poco. Contra la pared o sin nada, vuelve. No atraviesa a otros personajes | 40 ms por baldosa de ida, 50 por baldosa de arrastre, 0,9 s entre usos. Daño: 5 + 1 por nivel |
-| **Pulsera** (`pulsera`) | Levanta la vasija o la piedra que hay adelante y la lleva sobre la cabeza: se camina, pero no se ataca ni se usan otros ítems. Apretando otra vez la tira hasta 4 baldosas; se rompe al caer y lastima a la criatura que toque. Lo que tapaba queda a la vista (un botón). Al morir, salir o cambiar de mapa se suelta | 70 ms por baldosa del tiro. Daño: 15 + 2 por nivel |
+| **Brazalete de Fuerza** (`pulsera`) | Levanta la vasija o la piedra que hay adelante y la lleva sobre la cabeza: se camina, pero no se ataca ni se usan otros ítems. Apretando otra vez la tira hasta 4 baldosas; se rompe al caer y lastima a la criatura que toque. Lo que tapaba queda a la vista (un botón). Al morir, salir o cambiar de mapa se suelta | 70 ms por baldosa del tiro. Daño: 15 + 2 por nivel |
+| **Brazalete de Fuerza II** (`pulsera_poderosa`, la misma acción) | Todo lo del Brazalete y además las **piedras pesadas** (`]` en el plano). Con el Brazalete común la piedra pesada no se mueve: "Es demasiado pesada" | Daño de la piedra pesada tirada: 30 + 3 por nivel |
+| **Escudo Espejo** (`escudo`) | Lo levanta 3 s delante del personaje (el Escudo de Diamantes del juego, con un brillo que lo recorre). Lo que llega de frente no entra: los golpes de las criaturas, con aviso. Las trampas que tiran rayos o bolas de fuego lo consultan con `mirrorBlocks` | 3 s levantado y 1,5 s de espera |
 
 Mientras arrastra el Gancho, el personaje cuenta como en el aire, igual que saltando: la lava, el rodillo y el Ciempiés no lo tocan.
 
-| Las antorchas encendidas y el cofre que aparece | La vasija levantada con la Pulsera | El Gancho cruzando la lava |
+| Las antorchas encendidas y el cofre que aparece | La vasija levantada con el Brazalete de Fuerza | El Gancho cruzando la lava |
 |---|---|---|
 | ![Antorchas](mazmorras/herramientas/antorchas.png) | ![Vasija](mazmorras/herramientas/vasija.png) | ![Gancho](mazmorras/herramientas/gancho.png) |
 
 (En las capturas el personaje es un GM invisible: por eso se ve, con lo que lleva, medio transparente.)
+
+![El Escudo Espejo levantado frente a un esqueleto](mazmorras/herramientas/escudo.png)
 
 ### Símbolos nuevos del plano
 | Símbolo | Qué es |
@@ -456,6 +462,7 @@ Mientras arrastra el Gancho, el personaje cuenta como en el aire, igual que salt
 | `I` | Bloque de hielo: lo derrite el Polvo |
 | `U` / `V` | Vasija / vasija sobre una placa (la placa cuenta para las puertas `=`) |
 | `;` | Piedra suelta |
+| `]` | Piedra pesada: solo el Brazalete de Fuerza II |
 | `H` | Estatua para engancharse |
 
 Objetos 1852-1857 y gráficos 38215-38229 (créditos en [CREDITOS_GRAFICOS.md](CREDITOS_GRAFICOS.md)). Sonidos 222-225 (créditos en [CREDITOS_SONIDOS.md](CREDITOS_SONIDOS.md)).

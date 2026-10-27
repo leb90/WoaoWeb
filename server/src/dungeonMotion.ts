@@ -29,7 +29,7 @@ const PUSH_STEP_MS = 70;
 type Motion = { tipo: "carga" | "carrera" | "salto" | "empujon" | "gancho"; until: number };
 type MotionUser = RuntimeCharacter & {
     dungeonMotion?: Motion | null;
-    // Lo que lleva sobre la cabeza con la Pulsera (dungeonTools.ts).
+    // Lo que lleva sobre la cabeza con el Brazalete de Fuerza (dungeonTools.ts).
     dungeonCarry?: { tipo: string; objIndex: number; map: number } | null;
     nextDashAt?: number;
     nextJumpAt?: number;
@@ -96,7 +96,7 @@ export function isAirborne(user: RuntimeCharacter | undefined): boolean {
 }
 
 // Mientras carga, corre, salta, lo empujan o lo arrastra el Gancho no se ataca ni se lanzan hechizos; tampoco con
-// algo levantado con la Pulsera.
+// algo levantado con el Brazalete de Fuerza.
 export function getMotionBlockReason(user: RuntimeCharacter | undefined): string | null {
     const mover = user as MotionUser | undefined;
     const motion = mover?.dungeonMotion;

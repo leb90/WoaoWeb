@@ -1,8 +1,8 @@
 # Roca de la Tortuga
 
-Fecha: 2026-10-26. Estado: **diseño aprobado** (nombres, cuerpos, gráficos y construcción por etapas). Leandro pidió que el Gancho y la Pulsera se hagan como en el original, para que queden listos para las mazmorras que los dan, y un sprite nuevo para la Cabeza de la Tortuga. El sistema (instancias, grupo, ítems de mazmorra, mecánicas) está en [../MAZMORRAS.md](../MAZMORRAS.md); el patrón de la serie, en [00-PATRON_LINKS_AWAKENING.md](00-PATRON_LINKS_AWAKENING.md).
+Fecha: 2026-10-26. Estado: **diseño aprobado** (nombres, cuerpos, gráficos y construcción por etapas). Leandro pidió que el Gancho y el Brazalete de Fuerza se hagan como en el original, para que queden listos para las mazmorras que los dan, y un sprite nuevo para la Cabeza de la Tortuga. El sistema (instancias, grupo, ítems de mazmorra, mecánicas) está en [../MAZMORRAS.md](../MAZMORRAS.md); el patrón de la serie, en [00-PATRON_LINKS_AWAKENING.md](00-PATRON_LINKS_AWAKENING.md).
 
-**Lugar en la serie: a definir.** Leandro pasa las mazmorras sin orden y el orden se decide al final, según qué ítem pide cada una. Usa la **Pluma de Roc** (Cueva de la Cola) y, como en el original, el **Gancho** y la **Pulsera**, que en Link's Awakening dan otras mazmorras. Esos dos se hacen ahora y quedan listos para cuando se diseñen sus mazmorras; mientras tanto, un GM los da con `/mazmorra item` para probar, como se hizo con la Pluma en la Caverna. Las bombas y el arco los tiene todo el mundo desde la primera mazmorra (sección 6.3). En el original es la octava, la última antes del final.
+**Lugar en la serie: a definir.** Leandro pasa las mazmorras sin orden y el orden se decide al final, según qué ítem pide cada una. Usa la **Pluma de Roc** (Cueva de la Cola) y, como en el original, el **Gancho** y el **Brazalete de Fuerza**, que en Link's Awakening dan otras mazmorras. Esos dos se hacen ahora y quedan listos para cuando se diseñen sus mazmorras; mientras tanto, un GM los da con `/mazmorra item` para probar, como se hizo con la Pluma en la Caverna. Las bombas y el arco los tiene todo el mundo desde la primera mazmorra (sección 6.3). En el original es la octava, la última antes del final.
 
 Adaptación de la **Roca Tortuga** (*Turtle Rock*), el nivel 8 de *Link's Awakening*, que da la **Vara de Fuego**. Acá el ítem es el **Polvo de Fuego**. No se copia baldosa por baldosa; se respeta la estructura jugable:
 - **Es la más grande y laberíntica de la serie:** 45 salas, 6 pasajes y un tramo afuera.
@@ -71,19 +71,19 @@ Celdas (columna, fila) desde arriba a la izquierda, de 0 a 7. El número de sect
 | Laguna central | (4,5) | 2 | Roca rodante sobre una laguna de lava: con ella se arma el camino al norte. **Escalera A** (pasaje A ↔ B) | — | Lava |
 | Bloque cerrado | (4,4) | 2 | Bloque con cerradura **L1** al este | — | — |
 | Hélices | (3,4) | 2 | **Escalera K** (pasaje K ↔ L); antorchas encendidas | 3 hélices | — |
-| Recarga | (2,4) | 6 | Vasijas con pociones (se levantan con la Pulsera) | — | Lava |
+| Recarga | (2,4) | 6 | Vasijas con pociones (se levantan con el Brazalete de Fuerza) | — | Lava |
 
 **Sureste** (fase B)
 | Sala | Celda | Sector | Contenido | Criaturas | Trampas |
 |---|---|---|---|---|---|
-| Pico de piedra | (7,7) | 8 | **Pico de piedra**; la **escalera L** está tapada por vasijas (Pulsera); al vaciarla se abre el norte | 4 serpientes | Pozos |
-| Golem de la Bola | (7,6) | 7 | **Revancha: Golem de la Bola** (el Smasher): se le tira su propia bola con la Pulsera; abre norte, oeste y sur | Minijefe | Se cierra |
-| Búho del botón | (7,5) | 8 | Búho (pista de la roca rodante). Te encierra: el botón está bajo una vasija, que se levanta con la Pulsera. **Escalera J** | 2 babosas | Ojo de piedra, pozos |
+| Pico de piedra | (7,7) | 8 | **Pico de piedra**; la **escalera L** está tapada por vasijas (Brazalete de Fuerza); al vaciarla se abre el norte | 4 serpientes | Pozos |
+| Golem de la Bola | (7,6) | 7 | **Revancha: Golem de la Bola** (el Smasher): se le tira su propia bola con el Brazalete de Fuerza; abre norte, oeste y sur | Minijefe | Se cierra |
+| Búho del botón | (7,5) | 8 | Búho (pista de la roca rodante). Te encierra: el botón está bajo una vasija, que se levanta con el Brazalete de Fuerza. **Escalera J** | 2 babosas | Ojo de piedra, pozos |
 | Roca del pozo | (6,6) | 7 | Roca rodante sobre un pozo en diagonal: tapar todos da la **K2** | 2 babosas | Pozos |
 | Cristal | (6,5) | 7 | **Cristal**: al golpearlo suben o bajan los bloques naranjas de toda la mazmorra | — | — |
 | Escalera C | (5,5) | 11 | **Escalera C** (pasaje C ↔ D, al final) | — | — |
 | Cofre trampa | (5,6) | 7 | Cofre del que sale una babosa | — | Lava |
-| Vasijas | (4,6) | 7 | Un botón bajo una vasija (Pulsera) abre el este y el sur | Hada | 2 chispas |
+| Vasijas | (4,6) | 7 | Un botón bajo una vasija (Brazalete de Fuerza) abre el este y el sur | Hada | 2 chispas |
 | Imitadores | (4,7) | 7 | Al vencer a los imitadores aparece la **escalera I** (pasaje I ↔ J: atajo al Búho) | 2 imitadores | 2 braseros que escupen fuego |
 
 **Este y norte** (fase C)
@@ -211,7 +211,7 @@ En el original hay seis minijefes, cinco de ellos revanchas de las mazmorras ant
 | **Cabeza de la Tortuga** | La cabeza de la entrada | Entrada | Sprite nuevo: SwordTortoise (abajo) | Sale de la pared norte, se mueve de costado y estira el cuello para embestir. Abre la mazmorra |
 | **Cíclope** | Hinox (mazmorra 2) | Cíclope | Cíclope (582) | Embiste y empuja; guardián fuerte |
 | **Ogro del Rodillo** | Rolling Bones (mazmorra 1) | Ogro del Rodillo | Ogro (577), el de la Cueva | Igual que en la Cueva: el rodillo se salta |
-| **Golem de la Bola** | Smasher (mazmorra 6) | Golem de la Bola | Golem de Hierro (579) | Tira su bola de hierro, que queda un rato en el piso. Como en el original, se la levanta con la Pulsera y se le tira de vuelta: cada bolazo le saca mucha vida |
+| **Golem de la Bola** | Smasher (mazmorra 6) | Golem de la Bola | Golem de Hierro (579) | Tira su bola de hierro, que queda un rato en el piso. Como en el original, se la levanta con el Brazalete de Fuerza y se le tira de vuelta: cada bolazo le saca mucha vida |
 | **Serpientes Gemelas** | Serpientes Dodongo (mazmorra 3) | Serpientes | Serpiente (504), las de la Caverna | Como en el original: solo mueren tragando bombas (3 cada una), que se les ponen desde la cornisa alta. Como en la Caverna, hay que bajarlas juntas |
 | **Tortuga Espinosa** | Cue Ball (mazmorra 4) | Tortuga Espinosa | Tortuga gigante (539) | Como en la Gruta: da vueltas al anillo y embiste; aturdida al chocar, se le pega |
 | **Gigante Púgil** | Blaino (propio) | Gigante Púgil | Gigante (586) | Ver abajo |
@@ -284,9 +284,9 @@ Lo sacamos del código del original (`05_hot_head.asm`). La sala de Hot Head tie
   - En la fase 2: más chico.
 - **Pista del búho de la Guarida:** "Apagala en el aire con el Polvo y pegale mientras es carbón."
 
-### 6.2 Los otros ítems que usa: Gancho y Pulsera
+### 6.2 Los otros ítems que usa: Gancho y Brazalete de Fuerza
 
-En el original esta mazmorra pide el Gancho (mazmorra 5) y la Pulsera (mazmorra 2). Se hacen ahora, como ítems de mazmorra de la serie, y quedan listos para cuando se diseñen esas mazmorras. Van en sus casillas de la Mochila y en las teclas Z o X, y solo funcionan adentro.
+En el original esta mazmorra pide el Gancho (mazmorra 5) y el Brazalete de Fuerza (la Pulsera, mazmorra 2). Se hacen ahora, como ítems de mazmorra de la serie, y quedan listos para cuando se diseñen esas mazmorras. Van en sus casillas de la Mochila y en las teclas Z o X, y solo funcionan adentro.
 
 - **Gancho** (*Hookshot*):
   - **Qué hace:** tira una cadena hacia adonde mirás, hasta 7 baldosas.
@@ -294,7 +294,7 @@ En el original esta mazmorra pide el Gancho (mazmorra 5) y la Pulsera (mazmorra 
   - **Si pega en una criatura,** la aturde un momento y le saca un poco de vida.
   - **Si no encuentra nada,** vuelve.
   - **Acá:** el cofre de la Poción, el de 200 de oro de la Salida afuera, el bloque de la Oscura del medio y la gárgola del pasaje G ↔ H. Y el oro de Pozos y chispas, si no se salta.
-- **Pulsera** (*Power Bracelet*):
+- **Brazalete de Fuerza** (la *Power Bracelet*):
   - **Levantar:** levanta lo que tenés adelante (vasijas, piedras chicas, la bola del Golem) y lo llevás sobre la cabeza. Mientras lo llevás podés caminar, pero no atacar.
   - **Tirar:** apretando otra vez lo tirás hacia adonde mirás, hasta 4 baldosas. Se rompe al caer y lastima a la criatura que toque.
   - **Debajo puede haber algo:** un botón, una escalera o un objeto.
@@ -312,14 +312,14 @@ En Zelda se compran: no los da ninguna mazmorra. Acá los tiene todo el mundo de
 
 ## 7. Qué cambia respecto del original
 
-El Gancho y la Pulsera se usan como en el original (sección 6.2), y las bombas y el arco son los básicos que tiene todo el mundo (sección 6.3). Solo se reemplaza lo que es del mundo de afuera, sin cambiar el rol de cada sala:
+El Gancho y el Brazalete de Fuerza se usan como en el original (sección 6.2), y las bombas y el arco son los básicos que tiene todo el mundo (sección 6.3). Solo se reemplaza lo que es del mundo de afuera, sin cambiar el rol de cada sala:
 
 | En el original | Para qué | Acá |
 |---|---|---|
 | Canción del Alma de la Rana | Despertar la cabeza de la entrada | Despierta sola al llegar |
 | Bombas | Paredes bombeables y las Serpientes Dodongo | **Igual que en el original** (sección 6.3): las paredes rajadas se vuelan y las Serpientes se las tragan |
 | Gancho | El oro de la Salida afuera, la medicina, un bloque de la sala oscura y un pasaje | **Igual que en el original** (sección 6.2) |
-| Pulsera | Vasijas sobre botones y la bola de Smasher | **Igual que en el original** (sección 6.2) |
+| Brazalete de Fuerza | Vasijas sobre botones y la bola de Smasher | **Igual que en el original** (sección 6.2) |
 | Arco | La estatua-ojo | **Igual que en el original**: una flecha |
 | Polvo mágico | Encender las salas oscuras antes de tener la vara | Se cruzan a oscuras; con el Polvo se iluminan |
 | Pico de piedra | Que hablen los búhos | Igual: sin el pico, los búhos no dicen nada |
@@ -339,7 +339,7 @@ Faltan:
 |---|---|
 | Polvo de Fuego | El ítem: la llamarada, con su efecto que vuela (sección 6) |
 | Gancho | Cadena que engancha y arrastra, o aturde (sección 6.2) |
-| Pulsera | Levantar, llevar y tirar vasijas, piedras y la bola del Golem (sección 6.2) |
+| Brazalete de Fuerza | Levantar, llevar y tirar vasijas, piedras y la bola del Golem (sección 6.2) |
 | Antorchas | Apagadas y encendidas; al encender todas las de una sala aparece un cofre |
 | Salas oscuras | Se ve poco hasta encender las antorchas de la sala |
 | Bloques de hielo | Tapan el paso hasta derretirlos con el Polvo |
@@ -348,7 +348,7 @@ Faltan:
 | Ojo de piedra y braseros | Disparan fuego por su fila o columna: el ojo, al verte; el brasero, cada tanto |
 | Burbujas de lava | Saltan de la lava en puntos fijos |
 | Remolino | Arrastra hacia el centro, salvo al que está en el aire; el centro lleva a la Entrada |
-| Vasijas | Se levantan con la Pulsera; abajo puede haber un botón |
+| Vasijas | Se levantan con el Brazalete de Fuerza; abajo puede haber un botón |
 | Estatua-ojo | Una flecha suelta una llave |
 | Pico de piedra y búhos | Ítem de la corrida, como el mapa; sin él los búhos no hablan. Va en la Mochila |
 | Serpientes que tragan bombas | Las Serpientes Gemelas solo mueren con bombas (3 cada una) |
@@ -376,7 +376,7 @@ Faltan:
 
 Es la mazmorra más grande. Para que cada parte se pueda probar y mergear sola, se arma en cuatro PR después de este:
 1. **Los tres ítems:**
-   - Polvo de Fuego, Gancho y Pulsera, con sus efectos (la llamarada, la cadena, lo que se lleva y se tira);
+   - Polvo de Fuego, Gancho y Brazalete de Fuerza, con sus efectos (la llamarada, la cadena, lo que se lleva y se tira);
    - lo que tocan: antorchas, hielo, vasijas y postes para el Gancho;
    - probados en la mazmorra de prueba.
 2. **Mecánicas de recorrido:** salas oscuras, roca rodante, cristal y bloques naranjas, ojo de piedra y braseros, burbujas, remolino, estatua-ojo, pico y búhos, y el daño desde la cornisa.
@@ -390,7 +390,7 @@ Es la mazmorra más grande. Para que cada parte se pueda probar y mergear sola, 
 - Mapas 540-542.
 - Piedra de invocación: NPC 9723. Por ahora la invoca un GM, y el lugar fijo se define después, como las otras.
 - Plantillas de criaturas: desde 9744.
-- Va como `soloDesarrollo` y pide la pluma, el gancho y la pulsera.
+- Va como `soloDesarrollo` y pide la pluma, el gancho y el brazalete.
 
 ## 11. Decisiones
 
@@ -400,14 +400,14 @@ Aprobado por Leandro (2026-10-26):
 |---|---|
 | Nombre de la mazmorra | Roca de la Tortuga |
 | Ítem | Polvo de Fuego, en la casilla de la Vara mágica de la Mochila |
-| Otros ítems | El Gancho y la Pulsera se hacen ahora, como en el original, y quedan listos para sus mazmorras |
+| Otros ítems | El Gancho y el Brazalete de Fuerza se hacen ahora, como en el original, y quedan listos para sus mazmorras |
 | Jefe | Cabeza Ardiente, con el cuerpo del Genio Infernal |
 | Minijefe propio | Gigante Púgil, con el cuerpo del Gigante |
 | Revanchas | Cíclope, Ogro del Rodillo, Golem de la Bola, Serpientes Gemelas y Tortuga Espinosa |
 | Cabeza de la Tortuga | Sprite nuevo: SwordTortoise |
 | Trofeo | Corazón de Magma |
 | Gráficos | Roca volcánica, paredes de roca oscura y lava |
-| Orden en la serie | A definir cuando estén todas; esta pide la pluma, el gancho y la pulsera |
+| Orden en la serie | A definir cuando estén todas; esta pide la pluma, el gancho y el brazalete |
 
 ## Fuentes
 - El mapa del pedido (VinnyVideo, 2008), con la leyenda de llaves, warps y objetos.

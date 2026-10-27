@@ -36,9 +36,9 @@ Cada ítem nuestro adapta uno del original, con nombre propio cuando hace falta 
 |---|---|---|---|---|
 | 1 | Gruta del Abisal | 4 · Túnel del Pez Abisal | Patas de rana (nadar) | Diseñada ([01-GRUTA_DEL_ABISAL.md](01-GRUTA_DEL_ABISAL.md)); el motor y las mecánicas ya están |
 | 2 | Cueva de la Cola | 1 · Cueva de la Cola | Pluma de Roc (saltar) | Hecha, en desarrollo hasta probarla en producción ([03-CUEVA_DE_LA_COLA.md](03-CUEVA_DE_LA_COLA.md)) |
-| 3 | (a definir) | 2 · Gruta de la Botella | Pulsera (levantar) | — |
+| a definir | Gruta de la Botella | 2 · Gruta de la Botella | Brazalete de Fuerza (levantar) | Diseño en curso; el Brazalete ya está hecho |
 | 4 | Caverna de las Llaves | 3 · Cueva de las Llaves | Botas de Pegaso (correr) | Diseñada ([02-CAVERNA_DE_LAS_LLAVES.md](02-CAVERNA_DE_LAS_LLAVES.md)); pide la pluma |
-| 5 en adelante | — | 5 a 7 del original | Gancho, pulsera poderosa, escudo espejo | — |
+| a definir | — | 5 a 7 del original | Gancho, Brazalete de Fuerza II, Escudo Espejo | Los tres ítems ya están hechos (`dungeonTools.ts`); las mazmorras, no |
 | a definir (después de la Cueva) | Roca de la Tortuga | 8 · Roca Tortuga | Polvo de Fuego (fuego) | Diseñada ([04-ROCA_DE_LA_TORTUGA.md](04-ROCA_DE_LA_TORTUGA.md)); pide la pluma, el gancho y la pulsera, que se hacen con ella |
 
 - **Por qué la Gruta va primera:** ya estaba diseñada y con el motor hecho, y nadar no depende de los otros ítems. Del original en adelante se respeta el orden.

@@ -1,7 +1,9 @@
 // Ítems de mazmorra que se tiran o se usan con las manos (docs/mazmorras/04-ROCA_DE_LA_TORTUGA.md, secciones 6 y
-// 6.2): el Polvo de Fuego (una llamarada que vuela), el Gancho (una cadena que engancha y arrastra, o aturde) y la
-// Pulsera (levantar, llevar y tirar vasijas y piedras). Además, los básicos que tiene todo el mundo desde la primera
-// mazmorra: las Bombas (explotan a los 2 s y abren paredes rajadas) y el Arco. Solo funcionan adentro de una mazmorra.
+// 6.2): el Polvo de Fuego (una llamarada que vuela), el Gancho (una cadena que engancha y arrastra, o aturde), el
+// Brazalete de Fuerza (levantar, llevar y tirar vasijas y piedras; el II también las pesadas) y el Escudo Espejo (frena
+// lo que llega de frente). Además, los básicos que tiene todo el mundo desde la primera mazmorra: las Bombas (explotan
+// a los 2 s y abren paredes rajadas) y el Arco. Solo funcionan adentro de una mazmorra. Ninguno toca los atributos ni
+// los hechizos del personaje: son mecánicas de mazmorra.
 //
 // Como la Carrera y el salto (dungeonMotion.ts), el server decide todo de una vez y se lo manda a los que miran en el
 // mismo paquete (dungeonMotion), con tipos nuevos: el cliente anima la llamarada, la cadena y lo que se lleva y se
@@ -15,6 +17,8 @@ const vars = require("./vars");
 export const FIRE_ITEM = "polvo_de_fuego";
 export const HOOK_ITEM = "gancho";
 export const BRACELET_ITEM = "pulsera";
+export const STRONG_BRACELET_ITEM = "pulsera_poderosa";
+export const MIRROR_ITEM = "escudo_espejo";
 export const BOMB_ITEM = "bombas";
 export const BOW_ITEM = "arco";
 
@@ -30,6 +34,8 @@ const THROW_RANGE = 4;
 const THROW_STEP_MS = 70;
 const LIFT_COOLDOWN_MS = 350;
 const BOMB_FUSE_MS = 2_000;
+const MIRROR_MS = 3_000;
+const MIRROR_COOLDOWN_MS = 1_500;
 const ARROW_RANGE = 8;
 const ARROW_STEP_MS = 35;
 const ARROW_COOLDOWN_MS = 600;
@@ -44,10 +50,12 @@ export const TOOL_SOUNDS = {
     explosion: 226,
     bomba: 227,
     flecha: 228,
+    escudo: 229,
+    bloqueo: 230,
 } as const;
 
 // Lo que engancha el Gancho (como en Zelda: cofres, bloques, vasijas, estatuas y antorchas).
-const HOOKABLE = new Set(["antorcha", "antorchaEncendida", "hielo", "vasija", "piedra", "estatua", "cofre", "bloque", "cristal", "puerta"]);
+const HOOKABLE = new Set(["antorcha", "antorchaEncendida", "hielo", "vasija", "piedra", "pesada", "estatua", "cofre", "bloque", "cristal", "puerta"]);
 
 type Pos = { x: number; y: number };
 type ToolUser = RuntimeCharacter & {
@@ -57,6 +65,8 @@ type ToolUser = RuntimeCharacter & {
     nextHookAt?: number;
     nextLiftAt?: number;
     bombUntil?: number;
+    mirrorUntil?: number;
+    nextMirrorAt?: number;
     nextArrowAt?: number;
     heading?: number;
     dead?: boolean;
@@ -259,11 +269,15 @@ function stunNpc(user: ToolUser, npcId: EntityId) {
     }, HOOK_STUN_MS);
 }
 
-// --- Pulsera ---
+// --- Brazalete de Fuerza ---
 
+// Levanta lo que hay adelante (con el II, también lo pesado) o tira lo que lleva.
 export function bracelet(sessionId: EntityId) {
     const user = vars.personajes?.[sessionId] as ToolUser | undefined;
-    if (!user || !getMotion().canAct(sessionId, user, BRACELET_ITEM, "la Pulsera", true)) return;
+    if (!user) return;
+    const dungeons = getDungeons();
+    const strong = dungeons.characterHasDungeonItem(user, STRONG_BRACELET_ITEM);
+    if (!getMotion().canAct(sessionId, user, strong ? STRONG_BRACELET_ITEM : BRACELET_ITEM, "el Brazalete de Fuerza", true)) return;
     const now = Date.now();
     if (now < Number(user.nextLiftAt ?? 0)) return;
     user.nextLiftAt = now + LIFT_COOLDOWN_MS;
@@ -271,7 +285,10 @@ export function bracelet(sessionId: EntityId) {
     const heading = Number(user.heading ?? vars.direcciones.down);
     const dir = getMotion().headingOffset(heading);
     const from = { x: user.pos.x + dir.x, y: user.pos.y + dir.y };
-    const lifted = getDungeons().liftAt(Number(user.map), from.x, from.y);
+    if (dungeons.liftableKindAt(Number(user.map), from.x, from.y) === "pesada" && !strong) {
+        return tell(sessionId, "Es demasiado pesada: hace falta el Brazalete de Fuerza II.");
+    }
+    const lifted = dungeons.liftAt(Number(user.map), from.x, from.y);
     if (!lifted) return tell(sessionId, "No hay nada para levantar adelante tuyo.");
     user.dungeonCarry = { tipo: lifted.tipo, objIndex: lifted.objIndex, map: Number(user.map) };
     playSound(user, TOOL_SOUNDS.levantar);
@@ -294,7 +311,7 @@ function throwCarried(user: ToolUser) {
     broadcast(user, { id: Number(user.id), tipo: "tira", heading, ms: THROW_STEP_MS, to, golpe, obj: carry.objIndex });
     setTimeout(() => {
         playSoundAt(mapId, to, TOOL_SOUNDS.romper);
-        if (line.npcId) damageNpc(user, line.npcId, toolDamage(user, 15, 2));
+        if (line.npcId) damageNpc(user, line.npcId, carry.tipo === "pesada" ? toolDamage(user, 30, 3) : toolDamage(user, 15, 2));
     }, distance * THROW_STEP_MS);
 }
 
@@ -382,6 +399,51 @@ export function arrow(sessionId: EntityId) {
     }
 }
 
+// --- Escudo Espejo ---
+
+// Levanta el escudo 3 s: lo que llega de frente (golpes de criaturas y, en las trampas que lo consultan, rayos y bolas
+// de fuego) no entra. Solo adentro de las mazmorras.
+export function mirror(sessionId: EntityId) {
+    const user = vars.personajes?.[sessionId] as ToolUser | undefined;
+    if (!user || !getMotion().canAct(sessionId, user, MIRROR_ITEM, "el Escudo Espejo")) return;
+    const now = Date.now();
+    if (now < Number(user.nextMirrorAt ?? 0)) return;
+    user.mirrorUntil = now + MIRROR_MS;
+    user.nextMirrorAt = now + MIRROR_MS + MIRROR_COOLDOWN_MS;
+    const heading = Number(user.heading ?? vars.direcciones.down);
+    playSound(user, TOOL_SOUNDS.escudo);
+    broadcast(user, { id: Number(user.id), tipo: "escudo", heading, ms: MIRROR_MS });
+}
+
+function isMirrorUp(user: ToolUser | undefined) {
+    return Boolean(user && Number(user.mirrorUntil ?? 0) > Date.now() && getDungeons().isDungeonInstanceMap(user.map));
+}
+
+// Si algo que viaja en la dirección `dir` (de la trampa al jugador) le llega de frente a quien mira hacia `heading`.
+export function comesFromFront(heading: number, dir: Pos): boolean {
+    const facing = getMotion().headingOffset(heading);
+    return facing.x === -Math.sign(dir.x) && facing.y === -Math.sign(dir.y);
+}
+
+// Si el escudo levantado frena algo que viaja en la dirección `dir`.
+export function mirrorBlocks(user: RuntimeCharacter | undefined, dir: Pos): boolean {
+    const shielder = user as ToolUser | undefined;
+    return isMirrorUp(shielder) && comesFromFront(Number(shielder!.heading ?? vars.direcciones.down), dir);
+}
+
+// El golpe de una criatura que está adelante no entra (lo consulta npcs.ts antes de pegar).
+export function mirrorBlocksNpcHit(user: RuntimeCharacter | undefined, npc: { pos?: Pos } | undefined): boolean {
+    const shielder = user as ToolUser | undefined;
+    if (!shielder || !npc?.pos || !isMirrorUp(shielder)) return false;
+    const dx = npc.pos.x - shielder.pos.x;
+    const dy = npc.pos.y - shielder.pos.y;
+    const dir = Math.abs(dx) >= Math.abs(dy) ? { x: -Math.sign(dx), y: 0 } : { x: 0, y: -Math.sign(dy) };
+    if (!mirrorBlocks(shielder, dir)) return false;
+    playSound(shielder, TOOL_SOUNDS.bloqueo);
+    tell(shielder.id, "¡El Escudo Espejo frenó el golpe!");
+    return true;
+}
+
 // Suelta lo que lleva (se rompe a sus pies): al salir de la mazmorra, al morir o al cambiar de mapa.
 export function dropCarry(user: RuntimeCharacter | undefined) {
     const carrier = user as ToolUser | undefined;
@@ -402,6 +464,8 @@ module.exports = {
     FIRE_ITEM,
     HOOK_ITEM,
     BRACELET_ITEM,
+    STRONG_BRACELET_ITEM,
+    MIRROR_ITEM,
     BOMB_ITEM,
     BOW_ITEM,
     TOOL_SOUNDS,
@@ -409,6 +473,10 @@ module.exports = {
     fire,
     hookshot,
     bracelet,
+    mirror,
+    comesFromFront,
+    mirrorBlocks,
+    mirrorBlocksNpcHit,
     bomb,
     arrow,
     dropCarry,

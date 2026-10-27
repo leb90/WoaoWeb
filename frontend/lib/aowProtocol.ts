@@ -525,7 +525,7 @@ export type DungeonStatePayload = {
 // los mismos datos llegan el Polvo de Fuego, el Gancho y la Pulsera (server/src/dungeonTools.ts).
 export type DungeonMotionPayload = {
     id: number;
-    tipo: "carga" | "carrera" | "salto" | "empujon" | "fuego" | "gancho" | "levanta" | "tira" | "suelta" | "bomba";
+    tipo: "carga" | "carrera" | "salto" | "empujon" | "fuego" | "gancho" | "levanta" | "tira" | "suelta" | "bomba" | "escudo";
     heading?: number;
     ms: number;
     path?: Array<{ x: number; y: number }>;

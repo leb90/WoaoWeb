@@ -43,17 +43,19 @@ Para la Caverna de las Llaves se sumaron sonidos del mismo paquete de Juhani Jun
 | 220 | Salto con la Pluma | `sfx_movement_jump13.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
 | 221 | Bajan los aplastadores | `sfx_exp_shortest_hard1.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
 
-Para el Polvo de Fuego, el Gancho, la Pulsera, las Bombas y el Arco, del mismo paquete y con el mismo criterio de volumen (entre −19 y −20 dB):
+Para el Polvo de Fuego, el Gancho, el Brazalete de Fuerza, el Escudo Espejo, las Bombas y el Arco, del mismo paquete y con el mismo criterio de volumen (entre −19 y −20 dB):
 
 | Número | Uso | Original | Autor | Licencia |
 |---|---|---|---|---|
 | 222 | Llamarada del Polvo de Fuego | `sfx_exp_short_soft5.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
 | 223 | Cadena del Gancho | `sfx_movement_ladder2loop.wav` (con un corte suave al final) | Juhani Junkala (SubspaceAudio) | CC0 |
-| 224 | Se rompe una vasija o una piedra tirada con la Pulsera | `sfx_exp_shortest_soft3.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
-| 225 | La Pulsera levanta algo | `sfx_sounds_interaction5.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
+| 224 | Se rompe una vasija o una piedra tirada con el Brazalete de Fuerza | `sfx_exp_shortest_soft3.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
+| 225 | El Brazalete de Fuerza levanta algo | `sfx_sounds_interaction5.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
 | 226 | Explota una bomba | `sfx_exp_medium1.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
 | 227 | Se pone una bomba | `sfx_movement_jump10_landing.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
 | 228 | Se tira una flecha con el Arco | `sfx_wpn_sword2.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
+| 229 | Se levanta el Escudo Espejo | `sfx_sounds_high1.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
+| 230 | El Escudo Espejo frena un golpe | `sfx_sounds_impact3.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
 
 Atribución que pide la licencia CC-BY de 213 y 214: "Rock/Metal Slide" de Hansjörg Malthaner (http://opengameart.org/users/varkalandar), CC-BY 4.0, modificado (recortado, normalizado y acelerado).
 

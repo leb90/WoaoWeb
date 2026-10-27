@@ -44,7 +44,7 @@ const SERIES_ITEMS: Array<{ id: string; nombre: string; icon: LucideIcon; tone: 
     { id: "pulsera", nombre: "Brazalete de Fuerza", icon: Dumbbell, tone: "text-amber-200", uso: "Levantar, llevar y tirar vasijas y piedras", mazmorra: "Gruta de la Botella" },
     { id: "botas_de_pegaso", nombre: "Botas de Pegaso", icon: Wind, tone: "text-orange-200", uso: "La Carrera; con la Pluma, el salto largo", mazmorra: "Caverna de las Llaves" },
     { id: "gancho", nombre: "Gancho", icon: Anchor, tone: "text-stone-200", uso: "Engancharse a cofres, bloques y estatuas para cruzar; aturde criaturas", mazmorra: "Mazmorra a definir" },
-    { id: "pulsera_poderosa", nombre: "Brazalete de Fuerza II", icon: BicepsFlexed, tone: "text-rose-200", uso: "Como el Brazalete, y además levanta las piedras pesadas", mazmorra: "Mazmorra a definir" },
+    { id: "pulsera_poderosa", nombre: "Brazalete de Fuerza nivel 2", icon: BicepsFlexed, tone: "text-rose-200", uso: "Como el nivel 1, y además levanta las piedras pesadas", mazmorra: "Santuario del Rostro" },
     { id: "escudo_espejo", nombre: "Escudo Espejo", icon: Shield, tone: "text-cyan-200", uso: "Levantarlo 3 s: frena lo que llega de frente (golpes, rayos y bolas de fuego)", mazmorra: "Mazmorra a definir" },
     { id: "polvo_de_fuego", nombre: "Polvo de Fuego", icon: Flame, tone: "text-orange-300", uso: "Tirar fuego: enciende antorchas, derrite hielo y quema criaturas", mazmorra: "Roca de la Tortuga" },
 ];
@@ -69,6 +69,15 @@ const BASIC_ITEMS: typeof SERIES_ITEMS = [
 ];
 
 const itemInfo = (id: string | null | undefined) => [...BASIC_ITEMS, ...SERIES_ITEMS].find((item) => item.id === id) ?? null;
+
+// Como en Zelda, el Brazalete de Fuerza nivel 2 reemplaza al 1: ocupa su lugar en la Mochila (no tiene uno propio).
+const ITEM_UPGRADES: Record<string, string> = { pulsera: "pulsera_poderosa" };
+const UPGRADE_IDS = new Set(Object.values(ITEM_UPGRADES));
+const seriesSlots = (isOwned: (id: string) => boolean) =>
+    SERIES_ITEMS.filter((item) => !UPGRADE_IDS.has(item.id)).map((item) => {
+        const upgrade = ITEM_UPGRADES[item.id];
+        return upgrade && isOwned(upgrade) ? (itemInfo(upgrade) ?? item) : item;
+    });
 
 // Una casilla de la Mochila: el ítem (o un hueco si todavía no se tiene) y la letra de su tecla.
 function ItemSlot({
@@ -321,7 +330,7 @@ function BackpackModal({
                         ))}
                     </div>
                     <div className="grid grid-cols-4 gap-2">
-                        {SERIES_ITEMS.map((item) => (
+                        {seriesSlots(isOwned).map((item) => (
                             <ItemSlot key={item.id} item={item} has={isOwned(item.id)} selected={selected === item.id} keyLabel={keyOf(item.id)} onSelect={setSelected} />
                         ))}
                     </div>

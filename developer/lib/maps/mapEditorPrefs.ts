@@ -32,6 +32,8 @@ export type MapEditorPrefs = {
   leftWidth: number;
   rightWidth: number;
   showMinimap: boolean;
+  /** Panel inferior derecho: minimapa o preview del índice de paleta. */
+  cornerPanel: "minimap" | "palette";
   collapsed: {
     tools: boolean;
     layers: boolean;
@@ -67,6 +69,7 @@ export const DEFAULT_PREFS: MapEditorPrefs = {
   leftWidth: 220,
   rightWidth: 300,
   showMinimap: true,
+  cornerPanel: "minimap",
   collapsed: {
     tools: false,
     layers: false,
@@ -99,6 +102,10 @@ export function loadMapEditorPrefs(): MapEditorPrefs {
         opacity: parsed.layers?.opacity ?? DEFAULT_PREFS.layers.opacity,
       },
       collapsed: { ...DEFAULT_PREFS.collapsed, ...parsed.collapsed },
+      cornerPanel:
+        parsed.cornerPanel === "palette" || parsed.cornerPanel === "minimap"
+          ? parsed.cornerPanel
+          : DEFAULT_PREFS.cornerPanel,
       triggerVisibility: {
         ...DEFAULT_PREFS.triggerVisibility,
         ...parsed.triggerVisibility,

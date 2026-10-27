@@ -20,7 +20,11 @@ import {
   type MapEditorPrefs,
 } from "@/lib/maps/mapEditorPrefs";
 import { applyBorderExits, AO_BORDER } from "@/lib/maps/borderExits";
-import { cloneEditorState, floodFillLayer } from "@/lib/maps/terrain";
+import {
+  cloneEditorState,
+  floodFillLayer,
+  paintLayerWithStampPattern,
+} from "@/lib/maps/terrain";
 import {
   WOAO_TRIGGERS,
   triggerLabel,
@@ -435,18 +439,15 @@ export function MapEditor({ mapId }: { mapId: number }) {
       }
       if (mode === "fill") {
         const pattern = selectedStamp ? expandStampGrhs(selectedStamp) : undefined;
-        const fillLayer =
-          selectedStamp && selectedStamp.capa >= 1 && selectedStamp.capa <= 4
-            ? ((selectedStamp.capa - 1) as 0 | 1 | 2 | 3)
-            : layer;
-        if (prefs.layers.locked[fillLayer]) return;
+        // Siempre la capa activa del editor, no la de indices.ini.
+        if (prefs.layers.locked[layer]) return;
         floodFillLayer(
           next.tiles,
           next.width,
           next.height,
           x0,
           y0,
-          fillLayer,
+          layer,
           selectedGrh,
           pattern,
         );
@@ -460,12 +461,8 @@ export function MapEditor({ mapId }: { mapId: number }) {
             const ty = y0 + dy;
             if (tx < 0 || ty < 0 || tx >= next.width || ty >= next.height) continue;
             const t = next.tiles[ty]![tx]!;
-            const L =
-              selectedStamp.capa >= 1 && selectedStamp.capa <= 4
-                ? ((selectedStamp.capa - 1) as 0 | 1 | 2 | 3)
-                : layer;
-            if (prefs.layers.locked[L]) continue;
-            t.layers[L] = grid[dy]![dx]!;
+            if (prefs.layers.locked[layer]) continue;
+            t.layers[layer] = grid[dy]![dx]!;
             if (selectedStamp.bloquear) t.blocked = true;
           }
         }
@@ -571,7 +568,12 @@ export function MapEditor({ mapId }: { mapId: number }) {
       setState((prev) => {
         if (!prev || layerLocked) return prev;
         const next = cloneEditorState(prev);
+        const pattern = selectedStamp ? expandStampGrhs(selectedStamp) : undefined;
+        // Siempre la capa activa del editor, no la de indices.ini.
         const layer = prefs.activeLayer;
+        if (prefs.layers.locked[layer]) return prev;
+
+        const cells: Array<[number, number]> = [];
         if (asLine) {
           let x0 = x0a;
           let y0 = y0a;
@@ -583,7 +585,7 @@ export function MapEditor({ mapId }: { mapId: number }) {
           const sy = y0 < y1 ? 1 : -1;
           let err = dx - dy;
           for (;;) {
-            next.tiles[y0]![x0]!.layers[layer] = selectedGrh;
+            cells.push([x0, y0]);
             if (x0 === x1 && y0 === y1) break;
             const e2 = 2 * err;
             if (e2 > -dy) {
@@ -602,14 +604,37 @@ export function MapEditor({ mapId }: { mapId: number }) {
           const maxY = Math.max(y0a, y0b);
           for (let y = minY; y <= maxY; y++) {
             for (let x = minX; x <= maxX; x++) {
-              next.tiles[y]![x]!.layers[layer] = selectedGrh;
+              cells.push([x, y]);
             }
           }
         }
+
+        // El patrón arranca en la esquina superior-izquierda del trazo;
+        // si el área es más grande que el stamp (ej. 4x4), vuelve a empezar.
+        const originX = Math.min(x0a, x0b);
+        const originY = Math.min(y0a, y0b);
+        paintLayerWithStampPattern({
+          tiles: next.tiles,
+          width: next.width,
+          height: next.height,
+          layerIndex: layer,
+          cells,
+          fallbackGrh: selectedGrh,
+          pattern,
+          originX,
+          originY,
+          blockTiles: Boolean(selectedStamp?.bloquear),
+        });
         return next;
       });
     },
-    [layerLocked, prefs.activeLayer, selectedGrh],
+    [
+      layerLocked,
+      prefs.activeLayer,
+      prefs.layers.locked,
+      selectedGrh,
+      selectedStamp,
+    ],
   );
 
   const eraseSpecialAt = useCallback(
@@ -824,10 +849,7 @@ export function MapEditor({ mapId }: { mapId: number }) {
     }
     if (selectedStamp && (prefs.tool === "stamp" || prefs.tool === "brush")) {
       const grid = expandStampGrhs(selectedStamp);
-      const layer =
-        selectedStamp.capa >= 1 && selectedStamp.capa <= 4
-          ? selectedStamp.capa - 1
-          : prefs.activeLayer;
+      const layer = prefs.activeLayer;
       const cells: Array<{
         dx: number;
         dy: number;
@@ -966,7 +988,15 @@ export function MapEditor({ mapId }: { mapId: number }) {
   useEffect(() => {
     const mini = miniRef.current;
     const wrap = wrapRef.current;
-    if (!mini || !wrap || !state || !prefs.showMinimap) return;
+    if (
+      !mini ||
+      !wrap ||
+      !state ||
+      !prefs.showMinimap ||
+      prefs.cornerPanel !== "minimap"
+    ) {
+      return;
+    }
     const ctx = mini.getContext("2d");
     if (!ctx) return;
     const size = 200;
@@ -983,7 +1013,7 @@ export function MapEditor({ mapId }: { mapId: number }) {
       size,
       miniBaseRef.current,
     );
-  }, [state, pan, prefs.zoom, prefs.showMinimap, miniRev]);
+  }, [state, pan, prefs.zoom, prefs.showMinimap, prefs.cornerPanel, miniRev]);
 
   async function save() {
     const current = stateRef.current;
@@ -1353,7 +1383,14 @@ export function MapEditor({ mapId }: { mapId: number }) {
                   onClick={() => {
                     setPlaceMode(null);
                     setPrefs((p) => ({ ...p, tool: t.id }));
-                    if (t.id !== "stamp" && t.id !== "fill" && t.id !== "brush") {
+                    // Stamp/fill/brush/rect/line usan el índice de paleta seleccionado.
+                    if (
+                      t.id !== "stamp" &&
+                      t.id !== "fill" &&
+                      t.id !== "brush" &&
+                      t.id !== "rect" &&
+                      t.id !== "line"
+                    ) {
                       setSelectedStamp(null);
                     }
                   }}
@@ -1364,6 +1401,14 @@ export function MapEditor({ mapId }: { mapId: number }) {
                 </button>
               ))}
             </div>
+            {selectedStamp &&
+            (prefs.tool === "rect" || prefs.tool === "line" || prefs.tool === "fill") ? (
+              <div style={{ marginTop: 6, fontSize: 11, color: "var(--me-muted)" }}>
+                {selectedStamp.capa === 1
+                  ? `Índice ${selectedStamp.ancho}×${selectedStamp.alto}: el rectángulo/línea coloca cada GRH en su casilla y, al terminar el patrón, vuelve a empezar.`
+                  : "Decoración de 1 tile: el rectángulo/línea repite el mismo GRH (tamaño real del gráfico)."}
+              </div>
+            ) : null}
             {placeMode && (
               <div style={{ marginTop: 6, fontSize: 11, color: "var(--me-warn)" }}>
                 {placeMode === "erase-npc"
@@ -1885,31 +1930,104 @@ export function MapEditor({ mapId }: { mapId: number }) {
             <div className="me-minimap">
               <button
                 type="button"
+                className="me-minimap-close"
                 onClick={() =>
                   setPrefs((p) => ({ ...p, showMinimap: false }))
                 }
               >
                 ×
               </button>
-              <canvas
-                ref={miniRef}
-                onClick={(e) => {
-                  if (!wrapRef.current || !state) return;
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  const mx = (e.clientX - rect.left) / rect.width;
-                  const my = (e.clientY - rect.top) / rect.height;
-                  const tx = mx * state.width;
-                  const ty = my * state.height;
-                  setPan({
-                    x:
-                      wrapRef.current.clientWidth / 2 -
-                      tx * TILE_SIZE * prefs.zoom,
-                    y:
-                      wrapRef.current.clientHeight / 2 -
-                      ty * TILE_SIZE * prefs.zoom,
-                  });
-                }}
-              />
+              <div className="me-minimap-tabs">
+                <button
+                  type="button"
+                  className={prefs.cornerPanel === "minimap" ? "active" : ""}
+                  onClick={() =>
+                    setPrefs((p) => ({ ...p, cornerPanel: "minimap" }))
+                  }
+                >
+                  Minimapa
+                </button>
+                <button
+                  type="button"
+                  className={prefs.cornerPanel === "palette" ? "active" : ""}
+                  onClick={() =>
+                    setPrefs((p) => ({ ...p, cornerPanel: "palette" }))
+                  }
+                >
+                  Preview
+                </button>
+              </div>
+              <div className="me-minimap-body">
+                {prefs.cornerPanel === "minimap" ? (
+                  <canvas
+                    ref={miniRef}
+                    onClick={(e) => {
+                      if (!wrapRef.current || !state) return;
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const mx = (e.clientX - rect.left) / rect.width;
+                      const my = (e.clientY - rect.top) / rect.height;
+                      const tx = mx * state.width;
+                      const ty = my * state.height;
+                      setPan({
+                        x:
+                          wrapRef.current.clientWidth / 2 -
+                          tx * TILE_SIZE * prefs.zoom,
+                        y:
+                          wrapRef.current.clientHeight / 2 -
+                          ty * TILE_SIZE * prefs.zoom,
+                      });
+                    }}
+                  />
+                ) : (
+                  <div className="me-palette-preview">
+                    {selectedStamp ? (
+                      <>
+                        <div
+                          className="me-palette-preview-grid"
+                          style={{
+                            gridTemplateColumns: `repeat(${selectedStamp.ancho}, 1fr)`,
+                          }}
+                        >
+                          {expandStampGrhs(selectedStamp)
+                            .flat()
+                            .map((grh, i) => (
+                              <GrhPreview
+                                key={`${selectedStamp.id}-${grh}-${i}`}
+                                grhIndex={grh}
+                                size={Math.max(
+                                  18,
+                                  Math.min(
+                                    40,
+                                    Math.floor(160 / selectedStamp.ancho),
+                                  ),
+                                )}
+                              />
+                            ))}
+                        </div>
+                        <div className="me-palette-preview-meta">
+                          {selectedStamp.nombre}
+                          <br />
+                          GRH {selectedStamp.grhIndice} ·{" "}
+                          {selectedStamp.capa === 1
+                            ? `${selectedStamp.ancho}×${selectedStamp.alto}`
+                            : "1 tile"}
+                        </div>
+                      </>
+                    ) : selectedGrh > 0 ? (
+                      <>
+                        <GrhPreview grhIndex={selectedGrh} size={120} />
+                        <div className="me-palette-preview-meta">
+                          GRH {selectedGrh}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="me-palette-preview-meta">
+                        Seleccioná un índice en la paleta para verlo acá.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
             <button
@@ -1918,7 +2036,7 @@ export function MapEditor({ mapId }: { mapId: number }) {
               style={{ position: "absolute", right: 10, bottom: 10, zIndex: 6 }}
               onClick={() => setPrefs((p) => ({ ...p, showMinimap: true }))}
             >
-              Minimapa
+              Minimapa / Preview
             </button>
           )}
         </div>
@@ -2290,7 +2408,9 @@ export function MapEditor({ mapId }: { mapId: number }) {
                 <div style={{ fontSize: 11, marginTop: 4 }}>
                   GRH {selectedGrh}
                   {selectedStamp
-                    ? ` · stamp ${selectedStamp.ancho}×${selectedStamp.alto}`
+                    ? selectedStamp.capa === 1
+                      ? ` · stamp ${selectedStamp.ancho}×${selectedStamp.alto}`
+                      : " · 1 tile"
                     : ""}
                 </div>
               </div>
@@ -2304,7 +2424,13 @@ export function MapEditor({ mapId }: { mapId: number }) {
                       setSelectedStamp(ref);
                       setSelectedGrh(ref.grhIndice);
                       setPlaceMode(null);
-                      setPrefs((p) => ({ ...p, tool: "stamp" }));
+                      // Si ya estás en rect/línea/relleno, no cambies a stamp:
+                      // así podés mosaïquear el índice arrastrando.
+                      setPrefs((p) =>
+                        p.tool === "rect" || p.tool === "line" || p.tool === "fill"
+                          ? p
+                          : { ...p, tool: "stamp" },
+                      );
                     }}
                     onDoubleClick={() => {
                       setSelectedStamp(ref);
@@ -2317,7 +2443,8 @@ export function MapEditor({ mapId }: { mapId: number }) {
                       <strong>{ref.nombre}</strong>
                       <br />
                       <span style={{ color: "var(--me-muted)" }}>
-                        GRH {ref.grhIndice} · {ref.ancho}×{ref.alto}
+                        GRH {ref.grhIndice} ·{" "}
+                        {ref.capa === 1 ? `${ref.ancho}×${ref.alto}` : "1 tile"}
                       </span>
                     </span>
                   </button>

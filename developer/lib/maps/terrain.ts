@@ -161,6 +161,27 @@ export function buildEditorState(opts: {
   };
 }
 
+/**
+ * GRH del patrón de índice en (x,y). Se repite con módulo cuando el área
+ * es más grande que el stamp (ej. 4x4 → en la celda 5 vuelve al primer GRH).
+ * origin ancla el patrón (típicamente esquina del rectángulo).
+ */
+export function stampPatternGrhAt(
+  pattern: number[][] | undefined,
+  x: number,
+  y: number,
+  fallbackGrh: number,
+  originX = 0,
+  originY = 0,
+): number {
+  const alto = pattern?.length ?? 0;
+  const ancho = pattern?.[0]?.length ?? 0;
+  if (!pattern || alto < 1 || ancho < 1) return fallbackGrh;
+  const dy = ((y - originY) % alto + alto) % alto;
+  const dx = ((x - originX) % ancho + ancho) % ancho;
+  return pattern[dy]![dx] ?? fallbackGrh;
+}
+
 export function floodFillLayer(
   tiles: EditorTile[][],
   width: number,
@@ -184,10 +205,8 @@ export function floodFillLayer(
   }
   const alto = pattern?.length ?? 0;
   const ancho = pattern?.[0]?.length ?? 0;
-  const grhAt = (x: number, y: number) => {
-    if (alto < 1 || ancho < 1 || !pattern) return newGrh;
-    return pattern[y % alto]![x % ancho] ?? newGrh;
-  };
+  const grhAt = (x: number, y: number) =>
+    stampPatternGrhAt(pattern, x, y, newGrh, 0, 0);
   const target = tiles[startY0]![startX0]!.layers[layerIndex];
   if (alto <= 1 && ancho <= 1 && target === grhAt(startX0, startY0)) return;
 
@@ -204,5 +223,49 @@ export function floodFillLayer(
     if (tile.layers[layerIndex] !== target) continue;
     tile.layers[layerIndex] = grhAt(x, y);
     stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+  }
+}
+
+/** Pinta un rectángulo (o lista de celdas) repitiendo el patrón del índice. */
+export function paintLayerWithStampPattern(opts: {
+  tiles: EditorTile[][];
+  width: number;
+  height: number;
+  layerIndex: number;
+  cells: Array<[number, number]>;
+  fallbackGrh: number;
+  pattern?: number[][];
+  /** Ancla del mosaico; por defecto la primera celda. */
+  originX?: number;
+  originY?: number;
+  blockTiles?: boolean;
+}): void {
+  const {
+    tiles,
+    width,
+    height,
+    layerIndex,
+    cells,
+    fallbackGrh,
+    pattern,
+    blockTiles = false,
+  } = opts;
+  if (layerIndex < 0 || layerIndex > 3 || cells.length === 0) return;
+
+  const originX = opts.originX ?? cells[0]![0];
+  const originY = opts.originY ?? cells[0]![1];
+
+  for (const [x, y] of cells) {
+    if (x < 0 || y < 0 || x >= width || y >= height) continue;
+    const tile = tiles[y]![x]!;
+    tile.layers[layerIndex] = stampPatternGrhAt(
+      pattern,
+      x,
+      y,
+      fallbackGrh,
+      originX,
+      originY,
+    );
+    if (blockTiles) tile.blocked = true;
   }
 }

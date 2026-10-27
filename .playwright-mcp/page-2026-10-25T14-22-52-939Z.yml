@@ -1,0 +1,39 @@
+- generic [active] [ref=f2e1]:
+  - generic [ref=f2e2]:
+    - banner [ref=f2e3]:
+      - strong [ref=f2e4]: World of Argentum Developer Tools
+      - button "Salir" [ref=f2e5] [cursor=pointer]
+    - generic [ref=f2e6]:
+      - navigation [ref=f2e7]:
+        - link "Dashboard" [ref=f2e8] [cursor=pointer]:
+          - /url: /dashboard
+        - link "Mapas" [ref=f2e9] [cursor=pointer]:
+          - /url: /maps
+        - link "Objetos" [ref=f2e10] [cursor=pointer]:
+          - /url: /objects
+        - link "Sprites" [ref=f2e11] [cursor=pointer]:
+          - /url: /sprites
+        - link "FXs" [ref=f2e12] [cursor=pointer]:
+          - /url: /fxs
+        - link "NPCs" [ref=f2e13] [cursor=pointer]:
+          - /url: /npcs
+        - link "Hechizos" [ref=f2e14] [cursor=pointer]:
+          - /url: /spells
+        - link "Crafting" [ref=f2e15] [cursor=pointer]:
+          - /url: /crafting
+        - link "Quests" [ref=f2e16] [cursor=pointer]:
+          - /url: /quests
+        - link "Balance" [ref=f2e17] [cursor=pointer]:
+          - /url: /balance
+        - link "Validación" [ref=f2e18] [cursor=pointer]:
+          - /url: /validation
+        - link "Backups" [ref=f2e19] [cursor=pointer]:
+          - /url: /backups
+        - link "Logs" [ref=f2e20] [cursor=pointer]:
+          - /url: /logs
+        - link "Git" [ref=f2e21] [cursor=pointer]:
+          - /url: /git
+      - main [ref=f2e22]:
+        - paragraph [ref=f2e23]: Cargando mapa…
+  - button "Open Next.js Dev Tools" [ref=f2e29] [cursor=pointer]
+  - alert [ref=f2e33]

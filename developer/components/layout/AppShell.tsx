@@ -8,6 +8,8 @@ const NAV = [
   { href: "/maps", label: "Mapas" },
   { href: "/objects", label: "Objetos" },
   { href: "/sprites", label: "Sprites" },
+  { href: "/indexer", label: "Indexador" },
+  { href: "/indexations", label: "Indexaciones" },
   { href: "/fxs", label: "FXs" },
   { href: "/npcs", label: "NPCs" },
   { href: "/spells", label: "Hechizos" },
@@ -23,6 +25,10 @@ const NAV = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const isWorkspace =
+    pathname.startsWith("/maps/") ||
+    pathname.startsWith("/indexer") ||
+    pathname.startsWith("/indexations");
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -106,8 +112,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
         <main
           style={{
-            padding: pathname.startsWith("/maps/") ? 8 : 20,
-            overflow: pathname.startsWith("/maps/") ? "hidden" : "auto",
+            padding: isWorkspace ? 8 : 20,
+            overflow: isWorkspace ? "hidden" : "auto",
             minHeight: 0,
           }}
         >

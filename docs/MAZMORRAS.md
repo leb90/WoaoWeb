@@ -132,7 +132,7 @@ Todas por datos del mapa, para que las mazmorras siguientes se armen sin código
    - La grilla de 8 × 7 salas en un mapa (560), los 3 pasajes (561) y la Guarida del Rostro (562).
    - Las mecánicas están en la sección 17; los mapas, las criaturas y la música, en la 18; los jefes, en la 19.
    - Se construyó en tres PR: las mecánicas; los mapas, las criaturas y la música; y los jefes.
-10. **Fauces del Bagre. [diseño aprobado; mecánicas hechas, sección 20]** Adapta las Fauces del Bagre (nivel 5 de Link's Awakening) y da el **Gancho** (ya hecho; esta mazmorra le suma el puente del ancla, arrancar máscaras y sacar al jefe de la pared). Diseño en [mazmorras/07-FAUCES_DEL_BAGRE.md](mazmorras/07-FAUCES_DEL_BAGRE.md).
+10. **Fauces del Bagre. [mecánicas, mapas y música hechos (secciones 20 y 21); faltan los jefes]** Adapta las Fauces del Bagre (nivel 5 de Link's Awakening) y da el **Gancho** (ya hecho; esta mazmorra le suma el puente del ancla, arrancar máscaras y sacar al jefe de la pared). Diseño en [mazmorras/07-FAUCES_DEL_BAGRE.md](mazmorras/07-FAUCES_DEL_BAGRE.md).
    - La grilla de 7 × 8 salas en un mapa (570), los 4 pasajes (571) y la Guarida de la Anguila (572).
    - El Maestro Stalfos aparece cuatro veces y la cuarta suelta el Gancho; el minijefe son las dos Gohma y el jefe, la Anguila Viscosa.
    - Se construye en tres PR, como el Santuario: mecánicas y criaturas; mapas y música; jefes.
@@ -1023,3 +1023,103 @@ En el mapa 591 de la mazmorra de prueba, debajo de la sala del ojo de piedra, ha
 - el piso flojo, los esqueletos, la Máscara de Hierro y la cabeza de dragón.
 
 La prueba en vivo es `pw/run-fauces.mjs`.
+
+## 21. Fauces del Bagre: los mapas, las criaturas y la música
+
+La mazmorra entera se puede recorrer, de la Entrada a la Guarida. Los jefes (el Maestro Stalfos con sus cuatro encuentros, las Gohma y la Anguila Viscosa) van en el PR que sigue; por ahora son criaturas comunes en su lugar.
+
+![Las Fauces del Bagre enteras (mapa 570)](mazmorras/fauces/vista-fauces.png)
+
+### Mapas
+| Mapa | Qué tiene |
+|---|---|
+| **570** | Las 34 salas, en la grilla de 7 × 8 del dibujo del pedido: celdas de 11 × 9 con salas de 10 × 8. Ocupa 78 × 73 |
+| **571** | Los cuatro pasajes, con sus escaleras: A → B (islas de piso que se hunde entre pozos, con la Pluma), C → D (un túnel inundado con calamares, con las Patas de rana), E → F (una pasarela con huecos y peces que saltan) y G → H (huecos anchos que se cruzan enganchando cabezas de dragón) |
+| **572** | La Guarida de la Anguila (18 × 14) y la sala del trofeo |
+
+- **Archivos:** los planos están en `server/mazmorras/fauces/`, armados con `scratchpad/dungeon7/componer.py`.
+- **Números:** id `fauces`, piedra 9726 y plantillas 9803-9818.
+- **Requisitos:** las Patas de rana, la Pluma y el Brazalete. Va como `soloDesarrollo`.
+- **Gráficos:**
+  - **Pared 34062:** arcos azules con cortinas de agua, de un templo del juego (archivo 18450) que no usa ninguna otra mazmorra.
+  - **Piso 9731:** losas gris azuladas (archivo 18072). Se probó también el piso azul del mismo templo (34254), pero se confundía con el agua profunda: con las losas grises se distinguen bien el piso, el agua profunda, el agua baja y los pozos.
+- **Mochila:** la casilla "Quinta mazmorra" pasa a ser el **Colmillo de la Anguila**, y el Gancho dice que sale de las Fauces del Bagre.
+
+### Lo que cambió respecto del diseño
+Lo encontró el simulador de recorrido (`scratchpad/dungeon7/simular.py`, ver más abajo):
+- **Antesala:** después de cruzar los pozos con el Gancho hacia la puerta del jefe no había vuelta. Quien cruzara sin la Llave del jefe quedaba trabado. Ahora una estatua en la cornisa del este permite volver enganchándola por la fila de arriba.
+- **Columna de vasijas:** la K2 se alcanzaba caminando desde abajo, y en el original pide el Gancho. La plataforma quedó encerrada y se baja por un paso de un solo sentido.
+
+Y al armar las salas:
+- **El Cruce:** el botón abre una reja adentro de la sala (el pasillo del este), no la puerta del Maestro Stalfos 2. Así esa sala se sigue cerrando al entrar.
+- **Las persianas sin forma de abrirse en el original:**
+  - las de las Antorchas de fuego y la Estatua de fuego son salas que se cierran y se abren al vencer a todos;
+  - la de los Carriles de cuchillas queda abierta.
+- **Las Gohma:** la puerta hacia la mitad de arriba de "Antes de Gohma" se abre al vencerlas, no tirándole algo.
+- **Las pesas de balanza del pasaje A → B:** son islas de dos baldosas de piso que se hunde. Hay que saltar a la isla y moverse entre sus dos baldosas mientras la Pluma se recarga.
+- **Diez pares de escaleras:** cuatro pasajes, la Guarida y el portal de las Gohma. Como pasan de nueve, el generador acepta símbolos de escalera extra (`escalerasExtra` en `leyenda.json`); el portal es `Ⅰ`.
+
+### El simulador
+`scratchpad/dungeon7/simular.py <repo> fauces [--sin-item]`, adaptado del del Santuario. Modela:
+- el Gancho (recién después del cofre del Maestro Stalfos 4), sus anclas y los puentes;
+- el nado siempre, porque las Patas son requisito;
+- el salto de un pozo con la Pluma;
+- el agua baja, los cristales de golpe, los bloques y el piso flojo.
+
+Lo que da:
+- **Con el Gancho:** llega a las 34 salas, a los pasajes, a la Guarida y a todos los cofres. No queda ningún lugar sin vuelta.
+- **Sin el Gancho:** hay una cerradura para una llave (la puerta de los Murciélagos con la K1). La K2, la K3, la Llave del jefe y el oro de las cornisas piden el Gancho, como en el original.
+
+### Criaturas
+| Letra | Plantilla | Qué es |
+|---|---|---|
+| m | 9803 Máscara de Hierro | Se cubre de frente; el Gancho le arranca la máscara (cuerpos 582 y 583) |
+| s, d | 9804 y 9805 Esqueletos | El saltarín y el esquivo (con el cuerpo del Esqueleto Guerrero) |
+| b | 9806 Murciélago | Sobre las estatuas de los Murciélagos |
+| a, o | 9807 y 9808 Orcos | Arquero y espadachín, en las Cornisas y las Antorchas de fuego |
+| y, z | 9809 y 9810 Mocos | Escondidos y comunes |
+| v | 9811 Estrella | Rebota en diagonal |
+| p | 9812 Pulga de agua | Patina por el agua (cuerpo 579) |
+| k | 9813 Calamar | Solo nada (cuerpo 580), en el pasaje C → D |
+| q, c | 9814 y 9815 | Chispa y cuchilla |
+| t | 9816 Maestro Stalfos | Provisorio: uno en cada una de sus cuatro salas (minijefe) |
+| g | 9817 Gohma | Provisorio: dos en su sala (minijefe), con el cuerpo de la Araña gigante |
+| e | 9818 Anguila Viscosa | Provisorio: el jefe |
+
+### Música
+Cuatro temas de Kevin MacLeod (CC-BY 4.0) a −18 LUFS, con sus créditos en [CREDITOS_SONIDOS.md](CREDITOS_SONIDOS.md). Están en `music/mazmorras/fauces`:
+1. Water Prelude (un colchón que flota; recortado con un fundido de salida);
+2. Floating Cities (sintes y percusión pareja, melancólico);
+3. Immersed (piano y cuerdas, "sumergido");
+4. de combate, Eternal Terminal (oscuro, con tambores y un waterphone).
+
+![Los pasajes (mapa 571)](mazmorras/fauces/vista-pasajes.png)
+
+| La Entrada | La Sala del agua (la zambullida, en el medio) | El pasaje inundado C → D |
+|---|---|---|
+| ![Entrada](mazmorras/fauces/mapas-01-entrada.png) | ![Sala del agua](mazmorras/fauces/mapas-02-sala-del-agua.png) | ![Pasaje](mazmorras/fauces/mapas-03-pasaje-inundado.png) |
+
+| El puente del ancla hasta la Llave del jefe | La cornisa del ancla, en las Cornisas | El Gancho cruza los Carriles de cuchillas |
+|---|---|---|
+| ![Puente](mazmorras/fauces/mapas-04-puente.png) | ![Cornisa](mazmorras/fauces/mapas-05-cornisa.png) | ![Carriles](mazmorras/fauces/mapas-06-carriles.png) |
+
+| El Río de cristales | El Cruce | La Guarida (jefe provisorio) |
+|---|---|---|
+| ![Río](mazmorras/fauces/mapas-07-rio.png) | ![Cruce](mazmorras/fauces/mapas-08-cruce.png) | ![Guarida](mazmorras/fauces/mapas-09-guarida.png) |
+
+### Para probarla
+Con un GM:
+1. `/mazmorra item patas_de_rana`, `/mazmorra item pluma` y `/mazmorra item pulsera`. El Gancho sale del cofre del Maestro Stalfos 4, o con `/mazmorra item gancho`.
+2. `/invocarnpc 9726`.
+3. Entrar por la piedra.
+
+La prueba en vivo es `pw/run-fauces-mapas.mjs` (12 controles):
+- la piedra pide los ítems;
+- se entra y suena la música;
+- el portal de las Gohma está escondido;
+- la zambullida lleva al pasaje inundado;
+- el ancla del Puente arma el puente hasta la Llave del jefe;
+- la cornisa del ancla y su cofre de 50;
+- el Gancho cruza los Carriles de cuchillas;
+- el cofre de 200;
+- la Guarida.

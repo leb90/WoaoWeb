@@ -671,3 +671,74 @@ test("las mecánicas de las Fauces del Bagre en la mazmorra de prueba: agua baja
     const flea = placed.find(([, id]) => npcs[id]?.pulga);
     assert.ok(flea && Array.isArray(cell(flea[0]).graphics), "la pulga en el agua baja");
 });
+
+test("las Fauces del Bagre: el Gancho, los cuatro Maestro Stalfos, las Gohma, las anclas, la zambullida y los pasajes", () => {
+    const specials = (map: number) => readJson(`server/mapas_source/mapa_${map}/specials.json`);
+    const npcs = readJson("server/jsons/npcs.json");
+    const def = (readJson("server/jsons/dungeons.json") as Array<Record<string, any>>).find((entry) => entry.id === "fauces")!;
+    assert.deepEqual(def.mapas, [570, 571, 572]);
+    assert.equal(def.itemMazmorra.id, "gancho");
+    assert.deepEqual(def.requiere.map((item: { id: string }) => item.id), ["patas_de_rana", "pluma", "pulsera"]);
+    const maw = specials(570);
+    const mech = maw.dungeon;
+    const closing = new Set(mech.rooms.filter((room: { cierra: boolean }) => room.cierra).map((room: { id: number }) => room.id));
+    const placed = (name: string) => Object.entries(maw.npcs as Record<string, number>).filter(([, id]) => npcs[id]?.name === name).map(([key]) => key);
+    // El Maestro Stalfos: cuatro salas que se cierran; en una de ellas, el cofre del Gancho (oculto hasta vencerlo).
+    const stalfos = placed("Maestro Stalfos");
+    assert.equal(stalfos.length, 4);
+    assert.ok(stalfos.every((key) => closing.has(mech.roomOf[key])));
+    const item = mech.chests.find((chest: { contenido: string }) => chest.contenido === "premio");
+    assert.ok(item && item.oculto && stalfos.some((key) => mech.roomOf[key] === item.sala));
+    // Las Gohma: dos en una sala que se cierra, con el portal-atajo a la Entrada escondido hasta vencerlas.
+    const gohma = placed("Gohma");
+    assert.equal(gohma.length, 2);
+    const gohmaRoom = mech.roomOf[gohma[0]];
+    assert.ok(closing.has(gohmaRoom));
+    assert.ok(mech.hiddenExits.some((h: { revela: { sala: number } }) => h.revela.sala === gohmaRoom));
+    // Llaves: tres chicas para tres cerraduras (una puerta y dos bloques) y la del jefe para la puerta del jefe.
+    const doors = (tipo: string) => mech.barriers.filter((b: { tipo: string }) => b.tipo === tipo);
+    assert.equal(mech.chests.filter((chest: { contenido: string }) => chest.contenido === "llave").length, 3);
+    assert.equal(doors("llave").length, 3);
+    assert.equal(doors("jefe").length, 1);
+    assert.equal(mech.chests.filter((chest: { contenido: string }) => chest.contenido === "jefe").length, 1);
+    // Tres anclas, cada una al lado de una columna de pozos; la zambullida en el agua profunda de la Sala del agua.
+    assert.equal(mech.fauces.anclas.length, 3);
+    for (const key of mech.fauces.anclas) {
+        const [x, y] = key.split(",").map(Number);
+        assert.ok([[0, 1], [0, -1], [1, 0], [-1, 0]].some(([dx, dy]) => mech.pits.includes(`${x + dx},${y + dy}`)), `ancla ${key}`);
+    }
+    assert.ok(mech.fauces.aguaBaja.length >= 80, "agua baja en la Sala del agua, el Canal, los Murciélagos y el Río");
+    const terrain = readJson("server/mapas_source/mapa_570/terrain.json");
+    const underwater = Object.keys(maw.exits).filter((key) => {
+        const [x, y] = key.split(",").map(Number);
+        const graphics = terrain.palette[String(terrain.rows[y - 1][x - 1])].graphics;
+        return !Array.isArray(graphics) && graphics >= 1505 && graphics <= 1520;
+    });
+    assert.equal(underwater.length, 1, "la zambullida");
+    // El cofre con la nota, los búhos, el pico, el mapa y la brújula, y el oro.
+    assert.ok(/Vení a buscarlo/.test(mech.chests.find((chest: { contenido: string }) => chest.contenido === "nota")?.texto ?? ""));
+    assert.equal(mech.owls.length, 3);
+    for (const contenido of ["pico", "mapa", "brujula", "oroGrande"]) assert.ok(mech.chests.some((chest: { contenido: string }) => chest.contenido === contenido), contenido);
+    assert.equal(mech.chests.filter((chest: { contenido: string }) => chest.contenido === "oro").length, 2);
+    // Los bloques que se juntan (la K1) y la reja del Cruce que abre el botón.
+    assert.equal(mech.fauces.salasJuntar.length, 1);
+    assert.ok(doors("placa").some((b: { salas: number[] }) => b.salas.some((sala) => mech.plates.some((key: string) => mech.roomOf[key] === sala))));
+    // Los pasajes: cuatro pares de escaleras, el túnel inundado con calamares, los peces y las cabezas de dragón.
+    const passages = specials(571);
+    assert.equal(Object.keys(passages.exits).length, 8);
+    assert.ok(passages.dungeon.fauces.peces.length >= 3);
+    assert.ok(passages.dungeon.hookPosts.length >= 6);
+    assert.ok(Object.values(passages.npcs as Record<string, number>).some((id) => npcs[id]?.tierraInvalida));
+    // Las criaturas con sus marcas; el jefe se ataca.
+    for (const flag of ["mascara", "saltarin", "esquiva", "pulga", "escondido", "estrella"]) {
+        assert.ok(Object.values(maw.npcs as Record<string, number>).some((id) => npcs[id]?.[flag]), flag);
+    }
+    const eel = Object.values(specials(572).npcs as Record<string, number>).map((id) => npcs[id]).find((npc) => npc?.jefe);
+    assert.ok(eel && Number(eel.attackable) === 1 && Number(eel.hostile) === 1);
+    // La música: tres temas y el de combate, con sus créditos.
+    const credits = fs.readFileSync(path.join(root, "docs/CREDITOS_SONIDOS.md"), "utf8");
+    for (const file of [...def.musica.pistas, def.musica.combate]) {
+        assert.ok(fs.existsSync(path.join(root, "frontend/public", file)), file);
+        assert.ok(credits.includes(file.replace("/music/mazmorras/", "")), `créditos de ${file}`);
+    }
+});

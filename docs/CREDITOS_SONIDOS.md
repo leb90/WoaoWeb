@@ -86,6 +86,10 @@ Cada mazmorra tiene tres temas que suenan uno detrás del otro y uno de combate,
 | `rostro/2.mp3` | Santuario del Rostro, tema 2 | "Vulcan", https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100525 | Kevin MacLeod (incompetech.com) | CC-BY 4.0 |
 | `rostro/3.mp3` | Santuario del Rostro, tema 3 | "Shamanistic", https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100353 | Kevin MacLeod (incompetech.com) | CC-BY 4.0 |
 | `rostro/combate.mp3` | Santuario del Rostro, combate | "Grim Idol", https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1700043 | Kevin MacLeod (incompetech.com) | CC-BY 4.0 |
+| `fauces/1.mp3` | Fauces del Bagre, tema 1 | "Water Prelude", https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100017 | Kevin MacLeod (incompetech.com) | CC-BY 4.0 |
+| `fauces/2.mp3` | Fauces del Bagre, tema 2 | "Floating Cities", https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1600018 | Kevin MacLeod (incompetech.com) | CC-BY 4.0 |
+| `fauces/3.mp3` | Fauces del Bagre, tema 3 | "Immersed", https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1600010 | Kevin MacLeod (incompetech.com) | CC-BY 4.0 |
+| `fauces/combate.mp3` | Fauces del Bagre, combate | "Eternal Terminal", https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1700047 | Kevin MacLeod (incompetech.com) | CC-BY 4.0 |
 
 Atribución que piden las licencias CC-BY:
 - "RPG Exploration - (The Black Temple)", de Hitctrl, CC-BY 3.0, convertido y nivelado.
@@ -93,3 +97,4 @@ Atribución que piden las licencias CC-BY:
 - "Dubious Dungeon", de Bogart VGM, CC-BY 4.0, convertido y nivelado.
 - "Mirage", "Mystery Bazaar", "Hidden Wonders" e "Ibn Al-Noor", de Kevin MacLeod (incompetech.com), con licencia Creative Commons: By Attribution 4.0 (http://creativecommons.org/licenses/by/4.0/), convertidos, nivelados y con los silencios de las puntas recortados.
 - "Temple of the Manes", "Vulcan", "Shamanistic" y "Grim Idol", de Kevin MacLeod (incompetech.com), con licencia Creative Commons: By Attribution 4.0 (http://creativecommons.org/licenses/by/4.0/), recortados, normalizados y recodificados a MP3 (a "Shamanistic" también se le limitaron los picos).
+- "Water Prelude", "Floating Cities", "Immersed" y "Eternal Terminal", de Kevin MacLeod (incompetech.com), con licencia Creative Commons: By Attribution 4.0 (http://creativecommons.org/licenses/by/4.0/), recortados, normalizados y recodificados a MP3 ("Water Prelude" se cortó en 4:37 con un fundido de salida, porque el original termina de golpe, y a "Immersed" se le limitaron los picos).

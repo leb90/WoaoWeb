@@ -247,7 +247,7 @@ test("la mazmorra de prueba trae lo que tocan el Polvo de Fuego, el Gancho y el 
     const OBJ = (dungeons as unknown as { DUNGEON_OBJ: Record<string, number> }).DUNGEON_OBJ;
     // Antorchas apagadas que tapan el paso y un cofre que aparece al encenderlas.
     const torches = mech.torches as Array<{ x: number; y: number; encendida: boolean; sala: number }>;
-    assert.equal(torches.filter((torch) => !torch.encendida).length, 2);
+    assert.ok(torches.filter((torch) => !torch.encendida).length >= 2);
     for (const torch of torches) {
         assert.equal(objectAt(`${torch.x},${torch.y}`), torch.encendida ? OBJ.antorchaEncendida : OBJ.antorchaApagada);
         assert.ok(blocked(`${torch.x},${torch.y}`), "la antorcha tapa el paso");
@@ -294,3 +294,40 @@ test("el Escudo Espejo solo frena lo que llega de frente, y solo adentro de una 
     const outside = { id: 1, _id: "x", map: 34, pos: { x: 50, y: 50 }, heading: right, mirrorUntil: Date.now() + 2_000 } as never;
     assert.equal(tools.mirrorBlocks(outside, { x: -1, y: 0 }), false);
 });
+
+test("la mazmorra de prueba trae búho, pico, cristal, bloques de color, remolino e imitadores", () => {
+    const specials = readJson("server/mapas_source/mapa_591/specials.json");
+    const mech = specials.dungeon;
+    const terrain = readJson("server/mapas_source/mapa_591/terrain.json");
+    const blocked = (key: string) => {
+        const [x, y] = key.split(",").map(Number);
+        return Boolean(terrain.palette[String(terrain.rows[y - 1][x - 1])]?.blocked);
+    };
+    const objectAt = (key: string) => specials.objects?.[key]?.objIndex;
+    const OBJ = (dungeons as unknown as { DUNGEON_OBJ: Record<string, number> }).DUNGEON_OBJ;
+    // El búho habla con el pico; el pico está en un cofre de la sala oscura (aparece al encender las antorchas).
+    assert.equal(mech.owls.length, 1);
+    assert.equal(objectAt(`${mech.owls[0].x},${mech.owls[0].y}`), OBJ.buho);
+    assert.ok(mech.owls[0].texto.length > 10);
+    const beak = mech.chests.find((chest: { contenido: string }) => chest.contenido === "pico");
+    assert.ok(beak?.oculto, "el pico aparece con las antorchas");
+    // Los azules arrancan levantados y los naranjas bajados; el cristal tapa el paso.
+    for (const key of mech.colorBlocks.azul) {
+        assert.equal(objectAt(key), OBJ.bloqueAzul);
+        assert.ok(blocked(key));
+    }
+    for (const key of mech.colorBlocks.naranja) {
+        assert.equal(objectAt(key), OBJ.bloqueNaranjaBajo);
+        assert.ok(!blocked(key));
+    }
+    for (const key of mech.switches) assert.equal(objectAt(key), OBJ.cristalAzul);
+    // El remolino es piso (no tapa el paso) y las criaturas no lo pisan.
+    for (const key of mech.vortexes) {
+        assert.equal(objectAt(key), OBJ.remolino);
+        assert.ok(!blocked(key));
+        assert.equal(specials.triggers?.[key], 2);
+    }
+    const npcs = readJson("server/jsons/npcs.json");
+    assert.ok(Object.values(specials.npcs).some((id) => npcs[String(id)]?.imitador), "hay imitadores");
+});
+

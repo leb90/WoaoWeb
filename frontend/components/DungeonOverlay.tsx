@@ -32,6 +32,15 @@ export default function DungeonOverlay({ state, onSendCommand }: DungeonOverlayP
 
     const panel = state?.panel && state.panelSeq !== closedPanelSeq ? state.panel : null;
     const losa = state?.losa && state.losa.seq !== closedLosaSeq ? state.losa : null;
+    // El cartel de la losa (o del búho) también se cierra con Escape.
+    React.useEffect(() => {
+        if (!losa) return;
+        const onKey = (event: KeyboardEvent) => {
+            if (event.key === "Escape") setClosedLosaSeq(losa.seq);
+        };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    }, [losa]);
     const inside = state?.enMazmorra ?? null;
     const inviteSecondsLeft = invite ? Math.max(0, Math.ceil((inviteReceivedAt + invite.expiraEnMs - now) / 1000)) : 0;
     const send = (command: string) => onSendCommand?.(command);
@@ -116,7 +125,7 @@ export default function DungeonOverlay({ state, onSendCommand }: DungeonOverlayP
                     >
                         <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.26em] text-stone-400">
                             <ScrollText className="h-4 w-4" />
-                            Losa de piedra
+                            {losa.titulo ?? "Losa de piedra"}
                         </div>
                         <p className="mt-3 font-serif text-[15px] italic leading-relaxed text-stone-100">“{losa.texto}”</p>
                         <button

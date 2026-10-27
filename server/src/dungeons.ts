@@ -54,6 +54,14 @@ const OBJ = {
     paredBombeable: 1858,
     rocas: 1859,
     piedraPesada: 1860,
+    buho: 1861,
+    bloqueAzul: 1862,
+    bloqueAzulBajo: 1863,
+    bloqueNaranja: 1864,
+    bloqueNaranjaBajo: 1865,
+    cristalAzul: 1866,
+    cristalNaranja: 1867,
+    remolino: 1868,
 } as const;
 // Portal azul (escaleras que se ven como portal: el atajo de la Cueva de la Cola).
 const PORTAL_OBJ = 378;
@@ -177,6 +185,11 @@ type MapMechanics = {
     ice?: string[];
     liftables?: Array<{ x: number; y: number; tipo: LiftableKind; placa: boolean }>;
     hookPosts?: string[];
+    // Mecánicas compartidas de la Roca de la Tortuga y la Gruta de la Botella.
+    owls?: Array<{ x: number; y: number; texto: string }>;
+    colorBlocks?: { azul: string[]; naranja: string[] };
+    switches?: string[];
+    vortexes?: string[];
 };
 type Torch = { x: number; y: number; encendida: boolean; sala: number };
 // La piedra pesada solo la levanta el Brazalete de Fuerza II.
@@ -205,6 +218,14 @@ type MapIndex = {
     ice: Set<string>;
     liftables: Map<string, { tipo: LiftableKind; placa: boolean }>;
     hookPosts: Set<string>;
+    owls: Map<string, { x: number; y: number; texto: string }>;
+    // Bloques de color: los azules arrancan levantados y los naranjas bajados; un cristal los invierte en toda la corrida.
+    blueBlocks: Set<string>;
+    orangeBlocks: Set<string>;
+    switches: Set<string>;
+    vortexes: Set<string>;
+    // Todas las antorchas de cada sala: la sala está a oscuras mientras quede alguna apagada.
+    torchesInRoom: Map<number, string[]>;
     // Baldosas cuyo bloqueo cambia durante la corrida (puertas, cofres, bloques y cristales): van en la foto del área.
     dynamic: Set<string>;
 };
@@ -235,6 +256,8 @@ type MapState = {
     meltedIce: Set<string>;
     // Vasijas y piedras que ya se levantaron (no vuelven en la corrida).
     lifted: Set<string>;
+    // Bloques de color que tienen que subir pero tienen a alguien encima: suben apenas quede libre.
+    pendingColor: Set<string>;
 };
 
 type DungeonRun = {
@@ -274,6 +297,13 @@ type DungeonRun = {
     // Escaleras ocultas de la corrida ("mapa:x,y"), con lo que se les sacó hasta que aparezcan.
     hiddenExits: Map<string, { mapId: number; x: number; y: number; exit: unknown; objIndex: number; revela: { map: number; sala: number } }>;
     fastTimer: ReturnType<typeof setInterval> | null;
+    // Bloques de color invertidos (por un cristal) y el pico de piedra (los búhos hablan).
+    colorFlipped: boolean;
+    nextSwitchAt: number;
+    hasBeak: boolean;
+    nextVortexPullAt: number;
+    // Dónde estaba cada jugador en su último paso (los imitadores copian el movimiento al revés).
+    lastStep: Map<string, { map: number; x: number; y: number }>;
 };
 
 type Invite = { runId: string; from: string; expiresAt: number; timer: ReturnType<typeof setTimeout> };
@@ -433,7 +463,7 @@ function buildMinimap(run: DungeonRun, base: number) {
     };
 }
 
-function buildState(user: RuntimeCharacter, panel: Record<string, unknown> | null, losa: { texto: string } | null = null) {
+function buildState(user: RuntimeCharacter, panel: Record<string, unknown> | null, losa: { texto: string; titulo?: string } | null = null) {
     const key = characterKey(user);
     const invite = key ? invites.get(key) : undefined;
     const inviteRun = invite ? runs.get(invite.runId) : undefined;
@@ -487,9 +517,15 @@ function buildState(user: RuntimeCharacter, panel: Record<string, unknown> | nul
                       })),
                       musica: insideDef.musica ?? null,
                       combate: inBossFight(user),
+                      // El pico de piedra (los búhos hablan) y las salas a oscuras del piso donde está.
+                      pico: insideRun.hasBeak,
+                      oscuras: (() => {
+                          const ctx = contextOf(Number(user.map));
+                          return ctx ? darkRoomsOf(ctx) : [];
+                      })(),
                   }
                 : null,
-        losa: losa ? { seq: ++losaSeq, texto: losa.texto } : null,
+        losa: losa ? { seq: ++losaSeq, texto: losa.texto, titulo: losa.titulo ?? null } : null,
     };
 }
 
@@ -557,7 +593,7 @@ function setButtonCommand(sessionId: EntityId, slot: string, itemId: string) {
     sendState(sessionId);
 }
 
-function sendState(sessionId: EntityId, panel: Record<string, unknown> | null = null, losa: { texto: string } | null = null) {
+function sendState(sessionId: EntityId, panel: Record<string, unknown> | null = null, losa: { texto: string; titulo?: string } | null = null) {
     const user = vars.personajes?.[sessionId] as RuntimeCharacter | undefined;
     const client = vars.clients?.[sessionId] as RuntimeClient | undefined;
     if (!user || !client) return;
@@ -744,6 +780,11 @@ function createRun(def: DungeonDef, group: boolean, playerCount: number): Dungeo
         names: new Map(),
         hasMap: false,
         hasCompass: false,
+        colorFlipped: false,
+        nextSwitchAt: 0,
+        hasBeak: false,
+        nextVortexPullAt: 0,
+        lastStep: new Map(),
         mapState: {},
         playerRoom: new Map(),
         nextBurnAt: new Map(),
@@ -1019,6 +1060,8 @@ export function handleCommand(sessionId: EntityId, text: string) {
             return require("./dungeonTools").bracelet(sessionId);
         case "escudo":
             return require("./dungeonTools").mirror(sessionId);
+        case "polvo":
+            return require("./dungeonTools").powder(sessionId);
         case "bomba":
             return require("./dungeonTools").bomb(sessionId);
         case "flecha":
@@ -1078,7 +1121,15 @@ function mechanicsOf(baseMap: number): MapIndex | null {
                     ice: new Set(mech.ice ?? []),
                     liftables,
                     hookPosts: new Set(mech.hookPosts ?? []),
+                    owls: new Map((mech.owls ?? []).map((owl) => [coordKey(owl.x, owl.y), owl])),
+                    blueBlocks: new Set(mech.colorBlocks?.azul ?? []),
+                    orangeBlocks: new Set(mech.colorBlocks?.naranja ?? []),
+                    switches: new Set(mech.switches ?? []),
+                    vortexes: new Set(mech.vortexes ?? []),
+                    torchesInRoom: groupAllTorchesByRoom(mech),
                     dynamic: new Set([
+                        ...(mech.colorBlocks?.azul ?? []),
+                        ...(mech.colorBlocks?.naranja ?? []),
                         ...barriers.keys(),
                         ...chests.keys(),
                         ...mech.blocks,
@@ -1115,6 +1166,12 @@ function groupTorchesByRoom(mech: MapMechanics): Map<number, string[]> {
     return byRoom;
 }
 
+function groupAllTorchesByRoom(mech: MapMechanics): Map<number, string[]> {
+    const byRoom = new Map<number, string[]>();
+    for (const torch of mech.torches ?? []) byRoom.set(torch.sala, [...(byRoom.get(torch.sala) ?? []), coordKey(torch.x, torch.y)]);
+    return byRoom;
+}
+
 function createMapState(index: MapIndex): MapState {
     return {
         rooms: new Map(index.mech.rooms.map((room) => [room.id, { locked: false, cleared: false }])),
@@ -1138,6 +1195,7 @@ function createMapState(index: MapIndex): MapState {
         solvedTorchRooms: new Set(),
         meltedIce: new Set(),
         lifted: new Set(),
+        pendingColor: new Set(),
     };
 }
 
@@ -1458,6 +1516,7 @@ function openChest(sessionId: EntityId, user: RuntimeCharacter, ctx: MapContext,
         jefe: DUNGEON_SOUNDS.objeto,
         mapa: DUNGEON_SOUNDS.objeto,
         brujula: DUNGEON_SOUNDS.objeto,
+        pico: DUNGEON_SOUNDS.objeto,
         oro: DUNGEON_SOUNDS.oro,
         oroGrande: DUNGEON_SOUNDS.oro,
         premio: DUNGEON_SOUNDS.itemMazmorra,
@@ -1508,6 +1567,12 @@ function openChest(sessionId: EntityId, user: RuntimeCharacter, ctx: MapContext,
         }
         case "trofeo":
             claimBossReward(run);
+            break;
+        // Pico de piedra: como el mapa, vale para todo el grupo; con él hablan los búhos.
+        case "pico":
+            run.hasBeak = true;
+            tellRun(run, `¡${name} encontró el Pico de piedra! Ahora los búhos hablan.`, "#FFD24A");
+            refreshRun(run);
             break;
         // Caracola secreta: un coleccionable de la serie, una por mazmorra, para cada uno del grupo.
         case "caracola": {
@@ -1623,6 +1688,7 @@ function pushBlock(sessionId: EntityId, user: RuntimeCharacter, ctx: MapContext,
 type ClickTarget =
     | { kind: "cofre"; chest: Chest }
     | { kind: "losa"; texto: string; x: number; y: number }
+    | { kind: "buho"; texto: string; x: number; y: number }
     | { kind: "puerta"; barrier: Barrier }
     | { kind: "bloque"; x: number; y: number };
 
@@ -1633,6 +1699,8 @@ function clickTargetAt(ctx: MapContext, x: number, y: number): ClickTarget | nul
     if (chest && isChestVisible(ctx, chest) && !ctx.state.openedChests.has(key)) return { kind: "cofre", chest };
     const slab = ctx.index.slabs.get(key);
     if (slab) return { kind: "losa", texto: slab.texto, x, y };
+    const owl = ctx.index.owls.get(key);
+    if (owl) return { kind: "buho", texto: owl.texto, x, y };
     const barrier = ctx.index.barriers.get(key);
     if (barrier && !ctx.state.openBarriers.has(key)) return { kind: "puerta", barrier };
     if (ctx.state.blocks.has(key)) return { kind: "bloque", x, y };
@@ -1666,6 +1734,11 @@ export function handleMapClick(ws: RuntimeClient, user: RuntimeCharacter, x: num
         case "losa":
             if (chebyshev(user.pos, target) > READ_RANGE) tell(sessionId, "Acercate a la losa para leerla.", "white");
             else sendState(sessionId, null, { texto: target.texto });
+            return true;
+        case "buho":
+            if (chebyshev(user.pos, target) > READ_RANGE) tell(sessionId, "Acercate al búho.", "white");
+            else if (!ctx.run.hasBeak) tell(sessionId, "El búho quiere decir algo, pero sin el Pico de piedra no se le entiende.", "white");
+            else sendState(sessionId, null, { texto: target.texto, titulo: "Estatua búho" });
             return true;
         case "puerta":
             if (chebyshev(user.pos, target.barrier) > DOOR_RANGE) tell(sessionId, "Acercate a la puerta.", "white");
@@ -1704,6 +1777,16 @@ export function afterStep(ws: RuntimeClient, user: RuntimeCharacter) {
     crumbleLater(ctx, tileKey);
     if (ctx.index.timedPlates.has(tileKey)) pressTimedPlate(ctx, tileKey);
     updatePlates(ctx);
+    // Los imitadores de la sala copian el paso, al revés.
+    const last = ctx.run.lastStep.get(key);
+    ctx.run.lastStep.set(key, { map: ctx.mapId, x: user.pos.x, y: user.pos.y });
+    // Solo un paso de una baldosa (un salto o un teletransporte no se copian).
+    if (last && last.map === ctx.mapId) {
+        const dx = user.pos.x - last.x;
+        const dy = user.pos.y - last.y;
+        if (Math.abs(dx) + Math.abs(dy) === 1) require("./dungeonHazards").onPlayerStep(user, dx, dy);
+    }
+    if (ctx.index.vortexes.has(tileKey)) enterVortex(user, ctx);
 }
 
 // La brújula, como en Link's Awakening: al entrar a una sala con una llave sin agarrar, suena.
@@ -1789,6 +1872,13 @@ function tickRun(run: DungeonRun) {
             else setBarrier(ctx, barrier, false);
         }
         if (ctx.state.timedUntil && now >= ctx.state.timedUntil) closeTimedDoors(ctx);
+        // Bloques de color que tenían a alguien encima cuando tenían que subir.
+        for (const key of [...ctx.state.pendingColor]) {
+            const { x, y } = parseCoord(key);
+            if (isOccupied(ctx.mapId, x, y)) continue;
+            const color = ctx.index.blueBlocks.has(key) ? "azul" : "naranja";
+            setColorBlock(ctx, key, color, isColorRaised(run, color));
+        }
         for (const [key, restoreAt] of [...ctx.state.collapsed]) {
             if (now < restoreAt || isOccupied(ctx.mapId, parseCoord(key).x, parseCoord(key).y)) continue;
             ctx.state.collapsed.delete(key);
@@ -1798,6 +1888,7 @@ function tickRun(run: DungeonRun) {
     }
     updateCrushers(run, now);
     updateFloatingBoss(run, now);
+    pullTowardVortexes(run, now);
     const tools = require("./dungeonTools");
     for (const user of playersInside(run)) {
         tools.checkCarry(user);
@@ -1939,7 +2030,19 @@ export function onDashImpact(ws: RuntimeClient, user: RuntimeCharacter, x: numbe
 // El jefe que flota no recibe daño hasta que lo bajan. Una estatua dormida se despierta al primer golpe.
 // --- Lo que tocan el Polvo de Fuego, el Gancho y el Brazalete de Fuerza (dungeonTools.ts) ---
 
-export type ToolTarget = "antorcha" | "antorchaEncendida" | "hielo" | "vasija" | "piedra" | "pesada" | "estatua" | "cofre" | "bloque" | "cristal" | "puerta";
+export type ToolTarget =
+    | "antorcha"
+    | "antorchaEncendida"
+    | "hielo"
+    | "vasija"
+    | "piedra"
+    | "pesada"
+    | "estatua"
+    | "cofre"
+    | "bloque"
+    | "cristal"
+    | "puerta"
+    | "interruptor";
 
 // Lo que hay en una baldosa para los ítems que se tiran: null si no hay nada de la mazmorra (piso, pared, criatura).
 export function toolTargetAt(mapId: number, x: number, y: number): ToolTarget | null {
@@ -1951,6 +2054,7 @@ export function toolTargetAt(mapId: number, x: number, y: number): ToolTarget | 
     const liftable = ctx.index.liftables.get(key);
     if (liftable && !ctx.state.lifted.has(key)) return liftable.tipo;
     if (ctx.index.hookPosts.has(key)) return "estatua";
+    if (ctx.index.switches.has(key)) return "interruptor";
     const chest = ctx.index.chests.get(key);
     if (chest && isChestVisible(ctx, chest)) return "cofre";
     if (ctx.state.blocks.has(key)) return "bloque";
@@ -1967,6 +2071,8 @@ export function lightTorch(mapId: number, x: number, y: number): boolean {
     if (!ctx || !torch || ctx.state.litTorches.has(key)) return false;
     ctx.state.litTorches.add(key);
     setObject(mapId, x, y, OBJ.antorchaEncendida);
+    // La sala se aclara de a poco (el estado lleva la luz de cada sala oscura).
+    refreshRun(ctx.run);
     const roomTorches = ctx.index.torchesByRoom.get(torch.sala) ?? [];
     if (!ctx.state.solvedTorchRooms.has(torch.sala) && roomTorches.every((torchKey) => ctx.state.litTorches.has(torchKey))) {
         ctx.state.solvedTorchRooms.add(torch.sala);
@@ -2013,6 +2119,105 @@ export function liftableKindAt(mapId: number, x: number, y: number): LiftableKin
     return ctx && liftable && !ctx.state.lifted.has(key) ? liftable.tipo : null;
 }
 
+// --- Mecánicas compartidas: bloques de color, cristales, salas oscuras y remolinos ---
+
+// Si los bloques de un color están levantados: los azules arrancan arriba y los naranjas abajo; un cristal los invierte.
+function isColorRaised(run: DungeonRun, color: "azul" | "naranja") {
+    return color === "azul" ? !run.colorFlipped : run.colorFlipped;
+}
+
+function setColorBlock(ctx: MapContext, key: string, color: "azul" | "naranja", raised: boolean) {
+    const { x, y } = parseCoord(key);
+    if (raised && isOccupied(ctx.mapId, x, y)) {
+        // Con alguien encima no sube: sube apenas quede libre (como las puertas que se cierran).
+        ctx.state.pendingColor.add(key);
+        raised = false;
+    } else {
+        ctx.state.pendingColor.delete(key);
+    }
+    const objIndex = color === "azul" ? (raised ? OBJ.bloqueAzul : OBJ.bloqueAzulBajo) : raised ? OBJ.bloqueNaranja : OBJ.bloqueNaranjaBajo;
+    setObject(ctx.mapId, x, y, objIndex);
+    setBlocked(ctx.mapId, x, y, raised);
+}
+
+function applyColorBlocks(run: DungeonRun) {
+    for (const mapId of Object.values(run.maps)) {
+        const ctx = contextOf(mapId);
+        if (!ctx) continue;
+        for (const key of ctx.index.blueBlocks) setColorBlock(ctx, key, "azul", isColorRaised(run, "azul"));
+        for (const key of ctx.index.orangeBlocks) setColorBlock(ctx, key, "naranja", isColorRaised(run, "naranja"));
+        // El cristal muestra el color de los bloques que están levantados.
+        for (const key of ctx.index.switches) {
+            const { x, y } = parseCoord(key);
+            setObject(mapId, x, y, run.colorFlipped ? OBJ.cristalNaranja : OBJ.cristalAzul);
+        }
+    }
+}
+
+// Golpe (de lo que sea) a un cristal: invierte los bloques de color de toda la corrida. Devuelve si había uno.
+export function hitSwitch(mapId: number, x: number, y: number): boolean {
+    const ctx = contextOf(mapId);
+    if (!ctx || !ctx.index.switches.has(coordKey(x, y))) return false;
+    const now = Date.now();
+    // Un golpe que llega por dos lados a la vez (la explosión, la llamarada) cuenta una vez.
+    if (now < ctx.run.nextSwitchAt) return true;
+    ctx.run.nextSwitchAt = now + 500;
+    ctx.run.colorFlipped = !ctx.run.colorFlipped;
+    applyColorBlocks(ctx.run);
+    playSoundAt(mapId, { x, y }, DUNGEON_SOUNDS.cristal);
+    return true;
+}
+
+// Un golpe al aire (sin criatura adelante): si adelante hay un cristal, le pega.
+export function onAirSwing(user: RuntimeCharacter, x: number, y: number) {
+    if (!isDungeonInstanceMap(user.map)) return;
+    hitSwitch(Number(user.map), x, y);
+}
+
+// Las salas a oscuras del mapa: las que tienen alguna antorcha apagada. "luz" va de 0 (todas apagadas) a casi 1.
+function darkRoomsOf(ctx: MapContext) {
+    const rooms: Array<{ x1: number; y1: number; x2: number; y2: number; luz: number; antorchas: Array<{ x: number; y: number }> }> = [];
+    for (const [roomId, keys] of ctx.index.torchesInRoom) {
+        const lit = keys.filter((key) => ctx.state.litTorches.has(key));
+        const room = ctx.index.rooms.get(roomId);
+        if (!room || lit.length === keys.length) continue;
+        rooms.push({ x1: room.x1, y1: room.y1, x2: room.x2, y2: room.y2, luz: lit.length / keys.length, antorchas: lit.map(parseCoord) });
+    }
+    return rooms;
+}
+
+// El remolino arrastra de a ratos una baldosa hacia él a los que están en su sala (salvo en el aire).
+const VORTEX_PULL_MS = 600;
+
+function pullTowardVortexes(run: DungeonRun, now: number) {
+    if (now < run.nextVortexPullAt) return;
+    run.nextVortexPullAt = now + VORTEX_PULL_MS;
+    const motion = require("./dungeonMotion");
+    for (const user of playersInside(run)) {
+        const ctx = contextOf(Number(user.map));
+        if (!ctx || !ctx.index.vortexes.size || (user as { dead?: boolean }).dead || motion.isMoving(user)) continue;
+        const room = ctx.index.mech.roomOf[coordKey(user.pos.x, user.pos.y)];
+        for (const key of ctx.index.vortexes) {
+            const vortex = parseCoord(key);
+            if (room === undefined || ctx.index.mech.roomOf[key] !== room) continue;
+            const dx = vortex.x - user.pos.x;
+            const dy = vortex.y - user.pos.y;
+            if (!dx && !dy) continue;
+            const dir = Math.abs(dx) >= Math.abs(dy) ? { x: Math.sign(dx), y: 0 } : { x: 0, y: Math.sign(dy) };
+            motion.push(user, dir, 1);
+            break;
+        }
+    }
+}
+
+// Caer en el remolino: de vuelta a la entrada de la mazmorra.
+function enterVortex(user: RuntimeCharacter, ctx: MapContext) {
+    const def = getDefinition(ctx.run.dungeonId);
+    if (!def) return;
+    tell(user.id, "El remolino te tragó: volviste a la entrada.", "white");
+    teleportInto(user.id, ctx.run, def);
+}
+
 // Una bomba explota en (x, y): se abren las paredes rajadas de las 3 × 3 baldosas. Devuelve cuántas se abrieron.
 export function bombBlast(mapId: number, x: number, y: number): number {
     const ctx = contextOf(mapId);
@@ -2040,8 +2245,14 @@ export function canToolHitNpc(npc: { id?: EntityId; map?: number; hp?: number; a
     return !getNpcInvulnerableReason(npc);
 }
 
-export function getNpcInvulnerableReason(npc: { id?: EntityId; map?: number; dormant?: boolean; nameCharacter?: string } | undefined): string | null {
+export function getNpcInvulnerableReason(
+    npc: { id?: EntityId; map?: number; dormant?: boolean; nameCharacter?: string } | undefined,
+    attacker?: RuntimeCharacter,
+): string | null {
     if (!npc || !isDungeonInstanceMap(npc.map)) return null;
+    // Los imitadores se cubren de frente: hay que pegarles por la espalda o de costado.
+    const frontal = attacker ? require("./dungeonHazards").frontalBlockReason(npc, attacker) : null;
+    if (frontal) return frontal;
     if (npc.dormant) npc.dormant = false;
     const boss = runOfMap(Number(npc.map))?.floatingBoss;
     if (boss && boss.npcId === String(npc.id) && Date.now() >= boss.stunnedUntil) {
@@ -2373,12 +2584,14 @@ function claimBossReward(run: DungeonRun) {
 }
 
 // Ítems de mazmorra que conoce el juego, para la franja y el comando de GM.
-// Las bombas y el arco los tiene todo el mundo desde la primera mazmorra (en Zelda se compran: no los da ninguna).
-const DEFAULT_DUNGEON_ITEMS = ["bombas", "arco"];
+// Las bombas, el arco y el polvo mágico los tiene todo el mundo desde la primera mazmorra (en Zelda se consiguen
+// afuera: no los da ninguna).
+const DEFAULT_DUNGEON_ITEMS = ["bombas", "arco", "polvo_magico"];
 
-const DUNGEON_ITEMS: Record<string, { nombre: string; accion: "carrera" | "salto" | "fuego" | "gancho" | "pulsera" | "bomba" | "flecha" | "escudo" | null }> = {
+const DUNGEON_ITEMS: Record<string, { nombre: string; accion: "carrera" | "salto" | "fuego" | "gancho" | "pulsera" | "bomba" | "flecha" | "escudo" | "polvo" | null }> = {
     bombas: { nombre: "Bombas", accion: "bomba" },
     arco: { nombre: "Arco", accion: "flecha" },
+    polvo_magico: { nombre: "Polvo mágico", accion: "polvo" },
     patas_de_rana: { nombre: "Patas de rana", accion: null },
     pluma: { nombre: "Pluma de Roc", accion: "salto" },
     botas_de_pegaso: { nombre: "Botas de Pegaso", accion: "carrera" },
@@ -2600,5 +2813,7 @@ module.exports = {
     liftableKindAt,
     canToolHitNpc,
     bombBlast,
+    hitSwitch,
+    onAirSwing,
     _resetForTests,
 };

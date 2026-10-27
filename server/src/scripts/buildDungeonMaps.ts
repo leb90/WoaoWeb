@@ -34,6 +34,11 @@
 //   A  antorcha encendida      I  bloque de hielo (lo derrite el Polvo)      H  estatua (se engancha con el Gancho)
 //   U  vasija    V  vasija sobre una placa    ;  piedra suelta (se levantan y se tiran con el Brazalete de Fuerza)
 //   ]  piedra pesada (solo con el Brazalete de Fuerza II)
+// Mecánicas compartidas (Roca de la Tortuga y Gruta de la Botella):
+//   0  cofre del pico de piedra      /  estatua búho: habla (texto en "buhos" de leyenda.json) si el grupo tiene el pico
+//   (  bloque azul (arranca levantado)      )  bloque naranja (arranca bajado)      |  cristal: al golpearlo se
+//      invierten los bloques de color de toda la corrida      "  remolino: arrastra hacia el centro y lleva a la entrada
+//   Las salas con antorchas (F o A) están a oscuras mientras quede alguna apagada.
 // Bombas (los básicos que tiene todo el mundo):
 //   @  pared rajada: un paso tapado que se abre con una bomba (arco tapiado en una pared horizontal, rocas en una vertical)
 // Lo que aparece: los cofres de una sala que se cierra (!), que tiene placas o antorchas apagadas aparecen al vaciarla,
@@ -95,6 +100,15 @@ export const DUNGEON_OBJECTS = {
     rocas: { id: 1859, name: "Rocas sueltas", grh: 38231 },
     // Piedra pesada: solo la levanta el Brazalete de Fuerza II.
     piedraPesada: { id: 1860, name: "Piedra pesada", grh: 38232 },
+    // Mecánicas compartidas de la Roca de la Tortuga y la Gruta de la Botella.
+    buho: { id: 1861, name: "Estatua búho", grh: 42253 },
+    bloqueAzul: { id: 1862, name: "Bloque azul", grh: 42249 },
+    bloqueAzulBajo: { id: 1863, name: "Bloque azul bajado", grh: 42250 },
+    bloqueNaranja: { id: 1864, name: "Bloque naranja", grh: 42251 },
+    bloqueNaranjaBajo: { id: 1865, name: "Bloque naranja bajado", grh: 42252 },
+    cristalAzul: { id: 1866, name: "Cristal azul", grh: 18543 },
+    cristalNaranja: { id: 1867, name: "Cristal naranja", grh: 18544 },
+    remolino: { id: 1868, name: "Remolino", grh: 42266 },
 } as const;
 const CHEST_CONTENT: Record<string, string> = {
     K: "llave",
@@ -107,6 +121,7 @@ const CHEST_CONTENT: Record<string, string> = {
     T: "trampa",
     Y: "trofeo",
     C: "caracola",
+    "0": "pico",
 };
 const BARRIER_TYPE: Record<string, string> = {
     L: "llave",
@@ -138,6 +153,8 @@ type Legend = {
     criaturas?: Record<string, number | { npc: number; movimiento?: number }>;
     // Textos de las losas de cada mapa, en orden de lectura (de arriba abajo y de izquierda a derecha).
     losas?: Record<string, string[]>;
+    // Lo que dice cada búho de cada mapa, en orden de lectura (solo con el pico de piedra).
+    buhos?: Record<string, string[]>;
     // Oro de cada cofre de oro y de cada cofre de oro grande.
     oro?: number;
     oroGrande?: number;
@@ -311,6 +328,7 @@ for (const ends of stairs.values()) {
 function buildMechanics(plan: Plan) {
     const { rooms, roomOf } = roomsByMap.get(plan.mapId)!;
     const slabTexts = legend.losas?.[String(plan.mapId)] ?? [];
+    const owlTexts = legend.buhos?.[String(plan.mapId)] ?? [];
     const data = {
         rooms: rooms.map(({ id, x1, y1, x2, y2, cierra }) => ({ id, x1, y1, x2, y2, cierra })),
         roomOf: Object.fromEntries(roomOf),
@@ -337,6 +355,11 @@ function buildMechanics(plan: Plan) {
         ice: [] as string[],
         liftables: [] as Array<{ x: number; y: number; tipo: "vasija" | "piedra" | "pesada"; placa: boolean }>,
         hookPosts: [] as string[],
+        // Mecánicas compartidas: búhos, bloques de color, cristales y remolinos.
+        owls: [] as Array<{ x: number; y: number; texto: string }>,
+        colorBlocks: { azul: [] as string[], naranja: [] as string[] },
+        switches: [] as string[],
+        vortexes: [] as string[],
     };
     if (plan.meta.caida) {
         const caida = markers.caidas.get(Number(plan.meta.caida));
@@ -377,6 +400,11 @@ function buildMechanics(plan: Plan) {
                 data.liftables.push({ x, y, tipo: c === ";" ? "piedra" : c === "]" ? "pesada" : "vasija", placa: c === "V" });
             }
             if (c === "H") data.hookPosts.push(key);
+            if (c === "/") data.owls.push({ x, y, texto: owlTexts[data.owls.length] ?? "El búho no dice nada." });
+            if (c === "(") data.colorBlocks.azul.push(key);
+            if (c === ")") data.colorBlocks.naranja.push(key);
+            if (c === "|") data.switches.push(key);
+            if (c === '"') data.vortexes.push(key);
             if (c in CHEST_CONTENT) {
                 data.chests.push({ x, y, contenido: CHEST_CONTENT[c], oculto: hiddenChests.has(`${plan.mapId}:${key}`), sala: roomOf.get(key) ?? 0 });
             }
@@ -460,6 +488,28 @@ function buildTile(plan: Plan, x: number, y: number): Tile {
     if (c in tortoiseObject) {
         tile.object = tortoiseObject[c];
         tile.blocked = true;
+    }
+    // Búhos, bloques de color (los azules arrancan levantados), cristales y remolinos.
+    if (c === "/") {
+        tile.object = DUNGEON_OBJECTS.buho.id;
+        tile.blocked = true;
+    }
+    if (c === "(") {
+        tile.object = DUNGEON_OBJECTS.bloqueAzul.id;
+        tile.blocked = true;
+        tile.trigger = NO_NPC_TRIGGER;
+    }
+    if (c === ")") {
+        tile.object = DUNGEON_OBJECTS.bloqueNaranjaBajo.id;
+        tile.trigger = NO_NPC_TRIGGER;
+    }
+    if (c === "|") {
+        tile.object = DUNGEON_OBJECTS.cristalAzul.id;
+        tile.blocked = true;
+    }
+    if (c === '"') {
+        tile.object = DUNGEON_OBJECTS.remolino.id;
+        tile.trigger = NO_NPC_TRIGGER;
     }
     if (c in CHEST_CONTENT && !hiddenChests.has(`${plan.mapId}:${x},${y}`)) {
         tile.object = c === "Y" ? DUNGEON_OBJECTS.cofreJefe.id : DUNGEON_OBJECTS.cofre.id;

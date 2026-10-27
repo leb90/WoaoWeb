@@ -1,6 +1,6 @@
 # Gruta de la Botella
 
-Fecha: 2026-10-27. Estado: **diseño, para confirmar**. El sistema (instancias, grupo, ítems de mazmorra, mecánicas) está en [../MAZMORRAS.md](../MAZMORRAS.md); el patrón de la serie, en [00-PATRON_LINKS_AWAKENING.md](00-PATRON_LINKS_AWAKENING.md).
+Fecha: 2026-10-27. Estado: **diseño aprobado** (Leandro aprobó todo, también el Polvo mágico como tercer básico); en construcción. El sistema (instancias, grupo, ítems de mazmorra, mecánicas) está en [../MAZMORRAS.md](../MAZMORRAS.md); el patrón de la serie, en [00-PATRON_LINKS_AWAKENING.md](00-PATRON_LINKS_AWAKENING.md).
 
 **Lugar en la serie: a definir.** Leandro pasa las mazmorras sin orden y el orden se decide cuando estén todas. Esta da el **Brazalete de Fuerza** (la *Power Bracelet*), que ya está hecho; la Roca de la Tortuga lo pide. Usa la **Pluma de Roc** (Cueva de la Cola), las bombas y el arco (los básicos) y, como en el original, el **Polvo mágico** para las antorchas (sección 6.2). En el original es la segunda.
 
@@ -307,7 +307,7 @@ En el original la segunda sala pide **encender dos antorchas con el polvo mágic
 ## 10. Cómo se construye
 
 Muchas mecánicas son las mismas que pide la Roca de la Tortuga, así que se arman juntas:
-1. **Mecánicas compartidas** (un PR para las dos mazmorras):
+1. **Mecánicas compartidas** (un PR para las dos mazmorras; **hecho**, ver [../MAZMORRAS.md](../MAZMORRAS.md), sección 13):
    - salas oscuras y antorchas;
    - cristales y bloques de color;
    - remolino, imitadores, pico de piedra y búhos;

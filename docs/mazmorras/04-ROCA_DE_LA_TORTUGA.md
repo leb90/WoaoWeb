@@ -80,7 +80,7 @@ Celdas (columna, fila) desde arriba a la izquierda, de 0 a 7. El número de sect
 | Golem de la Bola | (7,6) | 7 | **Revancha: Golem de la Bola** (el Smasher): se le tira su propia bola con el Brazalete de Fuerza; abre norte, oeste y sur | Minijefe | Se cierra |
 | Búho del botón | (7,5) | 8 | Búho (pista de la roca rodante). Te encierra: el botón está bajo una vasija, que se levanta con el Brazalete de Fuerza. **Escalera J** | 2 babosas | Ojo de piedra, pozos |
 | Roca del pozo | (6,6) | 7 | Roca rodante sobre un pozo en diagonal: tapar todos da la **K2** | 2 babosas | Pozos |
-| Cristal | (6,5) | 7 | **Cristal**: al golpearlo suben o bajan los bloques naranjas de toda la mazmorra | — | — |
+| Cristal | (6,5) | 7 | **Cristal**: al golpearlo se invierten los bloques de color de toda la mazmorra (los azules bajan y los naranjas suben, o al revés) | — | — |
 | Escalera C | (5,5) | 11 | **Escalera C** (pasaje C ↔ D, al final) | — | — |
 | Cofre trampa | (5,6) | 7 | Cofre del que sale una babosa | — | Lava |
 | Vasijas | (4,6) | 7 | Un botón bajo una vasija (Brazalete de Fuerza) abre el este y el sur | Hada | 2 chispas |
@@ -113,7 +113,7 @@ Celdas (columna, fila) desde arriba a la izquierda, de 0 a 7. El número de sect
 **Norte, el ítem y el final** (fases D a F)
 | Sala | Celda | Sector | Contenido | Criaturas | Trampas |
 |---|---|---|---|---|---|
-| Sala del Polvo | (7,1) | 4 | Llega la **escalera F**. Cofre del **Polvo de Fuego** detrás de **bloques naranjas** (tienen que estar bajados con el cristal) | — | — |
+| Sala del Polvo | (7,1) | 4 | Llega la **escalera F**. Cofre del **Polvo de Fuego** detrás de **bloques azules** (arrancan levantados: hay que bajarlos con el cristal) | — | — |
 | Gigante Púgil | (7,2) | 10 | **Minijefe: Gigante Púgil**. Al vencerlo se abre el norte y aparece el **portal-atajo** a la Entrada | Minijefe | Se cierra |
 | Escalera B | (1,2) | 11 | **Escalera B** (pasaje A ↔ B); puerta **L7** al oeste | — | — |
 | Tortuga Espinosa | (0,2) | 11 | **Revancha: Tortuga Espinosa** en un anillo de piso alrededor de lava; al vencerla se abre el norte | Minijefe | Lava; se cierra |
@@ -153,7 +153,7 @@ Celdas (columna, fila) desde arriba a la izquierda, de 0 a 7. El número de sect
 4. **Fase D, salas oscuras y el Polvo:**
    - Babosas → Oscura este: **L4** → Oscura del medio → Oscura oeste: **L5** → parte alta de la Oscura del medio: **L6** → escalera E → pasaje de lava → Sala del Polvo.
    - Del lado de abajo, el **Gigante Púgil**. Al vencerlo se abre el paso y queda el portal-atajo a la Entrada.
-   - **Polvo de Fuego**, si los bloques naranjas están abajo. Si no, hay que volver al cristal: con el portal y el remolino la vuelta es corta.
+   - **Polvo de Fuego**, si los bloques azules están abajo. Si no, hay que volver al cristal: con el portal y el remolino la vuelta es corta.
 5. **Fase E, con el Polvo** (K7 y llave del jefe):
    - Portal a la Entrada → Roca rodante → Antorchas: encender las dos (**K7**).
    - Laguna central → escalera A → pasaje con hielo → Escalera B: **L7** → **Tortuga Espinosa** → Roca de la llave del jefe (**llave del jefe**).
@@ -162,7 +162,7 @@ Celdas (columna, fila) desde arriba a la izquierda, de 0 a 7. El número de sect
 **No hay forma de trabarse:**
 - Las llaves K1 a K6 salen antes de las cerraduras L1 a L6, y la K7 sale con el Polvo, para la L7.
 - Una llave chica abre cualquier cerradura, así que el orden de arriba es el natural, no el único.
-- Si alguien sube los bloques naranjas después de haberlos bajado, alcanza con volver a golpear el cristal.
+- Si alguien sube los bloques azules después de haberlos bajado, alcanza con volver a golpear el cristal.
 
 ## 5. Ubicaciones
 
@@ -240,7 +240,7 @@ En el original hay seis minijefes, cinco de ellos revanchas de las mazmorras ant
 | Piso que se desmorona | Momias | Si te quedás quieto, se hunde (el de la Caverna) |
 | Remolino | Brújula | Te arrastra; si llegás al centro, volvés a la Entrada |
 | Burbujas de lava | Pasajes | Saltan de la lava y queman |
-| Bloques naranjas | Sala del Polvo | Suben y bajan con el cristal |
+| Bloques de color | Sala del Polvo | Los azules arrancan levantados y los naranjas bajados; el cristal los invierte |
 
 ### Criaturas
 Son plantillas nuevas con cuerpos de AO. Cumplen los roles del original:
@@ -344,7 +344,7 @@ Faltan:
 | Salas oscuras | Se ve poco hasta encender las antorchas de la sala |
 | Bloques de hielo | Tapan el paso hasta derretirlos con el Polvo |
 | Roca rodante | Se la empuja y rueda sola mientras haya pozo o lava, y el jugador la dirige con las flechas. Cada baldosa que pisa queda como piso. Al tapar todo, premio; si alguien se equivoca, se reinicia al salir todos de la sala |
-| Cristal y bloques naranjas | Golpear el cristal sube o baja los bloques de toda la corrida |
+| Cristal y bloques de color | Golpear el cristal invierte los bloques de toda la corrida (hecho, ver ../MAZMORRAS.md sección 13) |
 | Ojo de piedra y braseros | Disparan fuego por su fila o columna: el ojo, al verte; el brasero, cada tanto |
 | Burbujas de lava | Saltan de la lava en puntos fijos |
 | Remolino | Arrastra hacia el centro, salvo al que está en el aire; el centro lleva a la Entrada |
@@ -379,7 +379,7 @@ Es la mazmorra más grande. Para que cada parte se pueda probar y mergear sola, 
    - Polvo de Fuego, Gancho y Brazalete de Fuerza, con sus efectos (la llamarada, la cadena, lo que se lleva y se tira);
    - lo que tocan: antorchas, hielo, vasijas y postes para el Gancho;
    - probados en la mazmorra de prueba.
-2. **Mecánicas de recorrido:** salas oscuras, roca rodante, cristal y bloques naranjas, ojo de piedra y braseros, burbujas, remolino, estatua-ojo, pico y búhos, y el daño desde la cornisa.
+2. **Mecánicas de recorrido.** Las compartidas con la Gruta de la Botella ya están hechas ([../MAZMORRAS.md](../MAZMORRAS.md), sección 13): salas oscuras, cristal y bloques de color, remolino, imitadores, pico y búhos. Faltan las propias: roca rodante, ojo de piedra y braseros (que consultan el Escudo Espejo), burbujas de lava, estatua-ojo (con flecha) y las Serpientes que tragan bombas.
 3. **Mapas 540-542, criaturas, revanchas y música:**
    - el recorrido completo hasta la puerta del jefe;
    - las revanchas, con los minijefes de la Cueva y de la Caverna;

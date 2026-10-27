@@ -1,15 +1,41 @@
 {
     "criaturas": {
         "z": 502,
-        "k": 503
+        "k": 503,
+        "i": 9799
     },
     "losas": {
         "590": [
             "Dos runas esperan peso: una piedra y un pie.",
             "Las puertas de cristal ceden cuando la sala queda en silencio. Las de piedra, solo con su llave."
         ],
-        "591": ["El fuego duerme dos latidos y despierta en el tercero."]
+        "591": [
+            "El fuego duerme dos latidos y despierta en el tercero."
+        ]
     },
     "oro": 300,
-    "trampa": [503, 503]
+    "trampa": [
+        503,
+        503
+    ],
+    "plantillas": {
+        "9799": {
+            "base": 503,
+            "name": "Imitador",
+            "hp": 120,
+            "maxHp": 120,
+            "minHit": 10,
+            "maxHit": 18,
+            "exp": 120,
+            "gold": 10,
+            "drop": [],
+            "desc": "Copia cada paso tuyo, al revés. Se cubre de frente.",
+            "imitador": true
+        }
+    },
+    "buhos": {
+        "591": [
+            "Golpeá el cristal: los bloques azules bajan y los naranjas suben."
+        ]
+    }
 }

@@ -517,15 +517,19 @@ export type DungeonStatePayload = {
         // Los tres temas que suenan en bucle y el de la pelea con un jefe o un minijefe.
         musica?: { pistas: string[]; combate?: string } | null;
         combate?: boolean;
+        // El pico de piedra (los búhos hablan) y las salas a oscuras del piso: luz de 0 a 1 y las antorchas encendidas.
+        pico?: boolean;
+        oscuras?: DungeonDarkRoom[];
     } | null;
-    // Texto de una losa que se acaba de leer (seq cambia en cada lectura).
-    losa: { seq: number; texto: string } | null;
+    // Texto de una losa (o de un búho, con su título) que se acaba de leer (seq cambia en cada lectura).
+    losa: { seq: number; texto: string; titulo?: string | null } | null;
 };
+export type DungeonDarkRoom = { x1: number; y1: number; x2: number; y2: number; luz: number; antorchas: Array<{ x: number; y: number }> };
 // La Carrera y el salto de las mazmorras (server/src/dungeonMotion.ts): el movimiento entero, para animarlo. Con
 // los mismos datos llegan el Polvo de Fuego, el Gancho y la Pulsera (server/src/dungeonTools.ts).
 export type DungeonMotionPayload = {
     id: number;
-    tipo: "carga" | "carrera" | "salto" | "empujon" | "fuego" | "gancho" | "levanta" | "tira" | "suelta" | "bomba" | "escudo";
+    tipo: "carga" | "carrera" | "salto" | "empujon" | "fuego" | "gancho" | "levanta" | "tira" | "suelta" | "bomba" | "escudo" | "polvo";
     heading?: number;
     ms: number;
     path?: Array<{ x: number; y: number }>;

@@ -32,6 +32,9 @@ const MIMIC_DAMAGE = 0.08;
 const MIMIC_COOLDOWN_MS = 900;
 // Un mismo jugador no se quema dos veces seguidas con la misma trampa.
 const HIT_COOLDOWN_MS = 700;
+// El escarabajo de casco: cuánto lo tira un golpe y cuánto queda quieto.
+const BEETLE_KNOCKBACK_TILES = 2;
+const BEETLE_STUN_MS = 1_200;
 
 type Pos = { x: number; y: number };
 // Arriba, derecha, abajo, izquierda: girar a la derecha es sumar 1.
@@ -224,20 +227,30 @@ export function onPlayerStep(user: RuntimeCharacter, dx: number, dy: number) {
 
 // --- Escarabajo que retrocede (el Hardhat Beetle de la Gruta de la Botella) ---
 
-// Un golpe lo corre una baldosa, lejos del que le pegó; si cae en un pozo o en la lava, muere. No recibe daño.
+// Un golpe lo tira hasta BEETLE_KNOCKBACK_TILES baldosas lejos del que le pegó (como en Zelda) y lo deja quieto un
+// momento, para encadenar otro golpe antes de que vuelva; si pasa por un pozo o la lava, cae. No recibe daño.
 export function strikeBeetle(npc: any, attacker: RuntimeCharacter) {
     const dx = npc.pos.x - attacker.pos.x;
     const dy = npc.pos.y - attacker.pos.y;
     const dir = Math.abs(dx) >= Math.abs(dy) ? { x: Math.sign(dx), y: 0 } : { x: 0, y: Math.sign(dy) };
-    const to = { x: npc.pos.x + dir.x, y: npc.pos.y + dir.y };
     const mapId = Number(npc.map);
-    const tile = vars.mapa[mapId]?.[to.y]?.[to.x];
-    if (!tile || tile.blocked || vars.mapData[mapId]?.[to.y]?.[to.x]?.id) return;
-    placeNpc(npc, to);
-    if (!getDungeons().isHazard(mapId, to.x, to.y)) return;
-    npc.hp = 0;
-    const ws = vars.clients?.[attacker.id];
-    if (ws) require("./respawn").muere(ws, npc.id);
+    for (let i = 0; i < BEETLE_KNOCKBACK_TILES; i++) {
+        const to = { x: npc.pos.x + dir.x, y: npc.pos.y + dir.y };
+        const tile = vars.mapa[mapId]?.[to.y]?.[to.x];
+        if (!tile || tile.blocked || vars.mapData[mapId]?.[to.y]?.[to.x]?.id) break;
+        placeNpc(npc, to);
+        if (getDungeons().isHazard(mapId, to.x, to.y)) {
+            npc.hp = 0;
+            const ws = vars.clients?.[attacker.id];
+            if (ws) require("./respawn").muere(ws, npc.id);
+            return;
+        }
+    }
+    npc.paralizado = 1;
+    npc.wanderPauseUntil = Date.now() + BEETLE_STUN_MS;
+    setTimeout(() => {
+        if (vars.npcs?.[npc.id] === npc) npc.paralizado = 0;
+    }, BEETLE_STUN_MS);
 }
 
 // Si el golpe le llega de frente a una criatura que se cubre (los imitadores), por qué no entra.

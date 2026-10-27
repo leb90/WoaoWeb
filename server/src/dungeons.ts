@@ -2091,7 +2091,8 @@ export function toolTargetAt(mapId: number, x: number, y: number): ToolTarget | 
     return null;
 }
 
-// Enciende una antorcha. Si era la última apagada de su sala, la sala se resuelve: aparecen sus cofres.
+// Enciende una antorcha. Si era la última apagada de su sala, la sala se resuelve: se abren sus puertas "=" y aparecen
+// sus cofres. En una sala que se cierra, los cofres esperan a que se vacíe (los fantasmas que guardan el Brazalete).
 export function lightTorch(mapId: number, x: number, y: number): boolean {
     const ctx = contextOf(mapId);
     const key = coordKey(x, y);
@@ -2105,7 +2106,16 @@ export function lightTorch(mapId: number, x: number, y: number): boolean {
     if (!ctx.state.solvedTorchRooms.has(torch.sala) && roomTorches.every((torchKey) => ctx.state.litTorches.has(torchKey))) {
         ctx.state.solvedTorchRooms.add(torch.sala);
         playSoundAt(mapId, { x, y }, DUNGEON_SOUNDS.secreto);
-        const revealed = revealChests(ctx, torch.sala);
+        let opened = 0;
+        for (const barrier of ctx.index.mech.barriers) {
+            if (barrier.tipo !== "placa" || !barrier.salas.includes(torch.sala)) continue;
+            setBarrier(ctx, barrier, true);
+            playSoundAt(mapId, barrier, DUNGEON_SOUNDS.puertaAbre);
+            opened++;
+        }
+        if (opened) tellRun(ctx.run, "Las antorchas se encendieron: se abrió una puerta.");
+        const guarded = ctx.index.rooms.get(torch.sala)?.cierra && roomCreatures(ctx, torch.sala).length > 0;
+        const revealed = guarded ? 0 : revealChests(ctx, torch.sala);
         if (revealed) {
             tellRun(ctx.run, revealed === 1 ? "¡Las antorchas se encendieron y apareció un cofre!" : `¡Aparecieron ${revealed} cofres!`);
             refreshRun(ctx.run);
@@ -2462,7 +2472,8 @@ function updateCrushers(run: DungeonRun, now: number) {
 // --- Criaturas especiales (las marca su plantilla en npcs.json) ---
 // despierta: quieta hasta que alguien se acerca. pareja: grupo; si muere una y otra sigue viva, la revive a los
 // revivirMs. flota: el jefe que flota hasta que lo bajan con la Carrera; al llegar a la mitad de la vida se divide
-// en `divide.cantidad` criaturas `divide.npc`.
+// en `divide.cantidad` criaturas `divide.npc`. Una criatura con `divide` que no flota se parte al morir (el moco de la
+// Gruta de la Botella, el Zol de Zelda).
 type SpecialTemplate = {
     // Jefe o minijefe: con uno vivo en la sala cerrada suena la música de combate.
     jefe?: boolean;
@@ -2579,6 +2590,13 @@ function splitFloatingBoss(ctx: MapContext, npc: any, divide: { npc: number; can
     ctx.run.floatingBoss = null;
     playSoundAt(ctx.mapId, at, DUNGEON_SOUNDS.secreto);
     tellRun(ctx.run, `¡${npc.nameCharacter} se partió en ${divide.cantidad}! Bajalos juntos: el que queda revive al otro.`, "#FF6B3D");
+}
+
+// Una criatura común que se parte al morir: las chicas salen donde cayó (cuentan para la sala que se cierra).
+function splitOnDeath(ctx: MapContext, npc: any, divide: { npc: number; cantidad: number }) {
+    const at = { x: Number(npc.pos?.x), y: Number(npc.pos?.y) };
+    const roomId = ctx.index.mech.roomOf[coordKey(at.x, at.y)];
+    for (let i = 0; i < divide.cantidad; i++) spawnDungeonNpc(ctx, divide.npc, at, roomId);
 }
 
 // Muere una criatura en pareja: si queda otra viva, a los revivirMs la revive (salvo que caigan todas antes).
@@ -2810,6 +2828,8 @@ export function onNpcDied(npc: { id?: EntityId; map?: number; templateNpcIndex?:
         ctx.run.floatingBoss = null;
         const divide = templateOf(npc).divide;
         if (divide && !boss.split) splitFloatingBoss(ctx, npc, divide);
+    } else if (templateOf(npc).divide && !templateOf(npc).flota) {
+        splitOnDeath(ctx, npc, templateOf(npc).divide!);
     }
     for (const [roomId, roomState] of ctx.state.rooms) {
         if (roomState.locked && roomCreatures(ctx, roomId, npc.id).length === 0) clearRoom(ctx, roomId);

@@ -13,7 +13,8 @@
 //   minúsculas: criaturas, según "criaturas" en leyenda.json
 // Mecánicas (dungeons.ts). Las salas se detectan solas: cada zona de piso cerrada por paredes y puertas.
 //   L  puerta con llave chica     J  puerta de la llave del jefe
-//   +  puerta de sala: abierta, se cierra cuando la sala se cierra      =  puerta que abren las placas del mapa
+//   +  puerta de sala: abierta, se cierra cuando la sala se cierra
+//   =  puerta que se abre al resolver una de las salas que separa: apretar sus placas o encender sus antorchas
 //   !  esta sala se cierra al entrar hasta matar a sus criaturas (sus cofres aparecen al vaciarla)
 //   O  pozo          ^  lava (quema al pisarla)          %  lava que erupciona cada tanto
 //   _  placa (se aprieta con un jugador o un bloque encima)          B  bloque que se empuja con un clic

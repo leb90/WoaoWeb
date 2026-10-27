@@ -71,3 +71,13 @@ Hechos con gráficos del propio juego:
 - **`graphics/330005.png` a `330008.png`, los bloques de color:** levantados, el bloque de piedra (grh 8623) pasado a azul o a naranja; bajados, una baldosa con el borde del color.
 - **Los cristales que los invierten:** los íconos de cristal azul y naranja del juego (grh 18543 y 18544).
 
+## Gruta de la Botella
+
+| Archivo | Uso en el juego | Original | Autor | Licencia |
+|---|---|---|---|---|
+| `graphics/330011.png` | Orejudo (cuerpo 577): el salto en 4 direcciones, 4 cuadros de 36 × 36 cada una | "Bunny Rabbit LPC style for PixelFarm", https://opengameart.org/content/bunny-rabbit-lpc-style-for-pixelfarm, en el reacomodo "Reorganised LPC rabbit" de Evert (https://opengameart.org/content/reorganised-lpc-rabbit), con cada cuadro centrado y apoyado abajo | Stephen "Redshrike" Challener, encargo de Tebruno99 para PixelFarm | [CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/) / [OGA-BY 3.0](https://static.opengameart.org/OGA-BY-3.0.txt) (también CC-BY-SA 3.0) |
+
+Atribución que pide el autor: PixelFarm (https://bitbucket.org/tebruno99/pixelfarm) Stephen "Redshrike" Challener.
+
+Hechos con gráficos del propio juego: el piso (bloque de grh 33847) y la cara de las paredes (bloque de grh 9683).
+

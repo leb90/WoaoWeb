@@ -575,7 +575,7 @@ Son las que pide solo la Gruta de la Botella ([mazmorras/05-GRUTA_DE_LA_BOTELLA.
 |---|---|---|
 | **Fantasmas** | En una sala con todas sus antorchas apagadas no les entra nada: ni golpes, ni hechizos, ni ítems ("se escurre en la oscuridad"). Con una antorcha encendida (Polvo mágico o Polvo de Fuego) ya se los puede lastimar | plantilla con `fantasma` |
 | **Orejudos** | Solo les entra lo tirado: una vasija o una piedra con el Brazalete, una bomba o una flecha. Los golpes, los hechizos, el fuego, el Gancho y el polvo no les hacen nada | plantilla con `orejudo` |
-| **Escarabajo de casco** | No recibe daño de nada. Cada golpe cuerpo a cuerpo lo corre una baldosa hacia atrás; si cae a un pozo, muere | plantilla con `retrocede` |
+| **Escarabajo de casco** | No recibe daño de nada. Cada golpe cuerpo a cuerpo lo tira hasta dos baldosas hacia atrás y lo deja quieto 1,2 s, para encadenar el siguiente; si pasa por un pozo, cae y muere | plantilla con `retrocede` |
 | **Matar en orden** | Las criaturas de la sala llevan un número. Si cae una antes que otra de número menor, todas las vencidas vuelven a aparecer a los 1,5 s. Si caen todas en orden, aparece el cofre de la sala | plantilla con `orden: 1, 2, 3…` |
 | **Bloques que abren la escalera** | Las escaleras de una sala con placas quedan ocultas (las dos puntas) hasta que se apriete la última placa. Las placas se aprietan con bloques empujados o parándose encima | `_` placa, `B` bloque |
 | **Placa de peso** | Una placa que no baja con un jugador solo: hay que pararse encima con algo levantado (una vasija o una piedra) o correrle un bloque. Si te parás sin nada, avisa que le falta peso | `-` |
@@ -613,3 +613,92 @@ La prueba en vivo es `pw/run-gruta.mjs`.
 - `server/src/dungeonHazards.ts`: `strikeBeetle`, el empujón del escarabajo y la caída al pozo.
 - `server/src/dungeonTools.ts`: cada ítem le dice a `damageNpc` con qué pega (`fuego`, `gancho`, `tiro`, `bomba`, `flecha`, `polvo`).
 - `server/src/scripts/buildDungeonMaps.ts`: el símbolo `-`, los cofres ocultos de las salas de orden y las escaleras ocultas de las salas con placas.
+
+## 15. Gruta de la Botella: los mapas, las criaturas y la música
+
+El diseño está en [mazmorras/05-GRUTA_DE_LA_BOTELLA.md](mazmorras/05-GRUTA_DE_LA_BOTELLA.md). Da el Brazalete de Fuerza, pide la Pluma de Roc y está marcada `soloDesarrollo`. La piedra es el NPC 9724.
+
+**Los jefes todavía son provisorios.** El Cíclope y el Genio de la Botella ya están en sus salas, pero pelean como criaturas comunes: la embestida, el agarre y las bombas del Cíclope, y la botella que salta, se aturde y se estrella, van en el PR de los jefes.
+
+### Mapas
+| Mapa | Qué tiene |
+|---|---|
+| 550 | La gruta: la grilla del original, 6 × 7 celdas de 16 × 12 con 24 salas, más el nicho de la caracola y el de la escalera a la Guarida |
+| 551 | Los tres pasajes: A → B (islas cortadas por pozos, con chispas), C ↔ D (pozos y criaturas) y E → F (la placa que abre la puerta y la placa de peso) |
+| 552 | La Guarida: la arena de 20 × 15 con paredes, la sala del trofeo y la llegada |
+
+- **Gráficos:**
+  - piso de losas claras verdosas (bloque de grh 33847);
+  - paredes de piedra oliva con musgo (bloque de grh 9683).
+- **Compositor:** los planos salen de `scratchpad/dungeon5/componer.py`.
+- **Simulador:** `scratchpad/dungeon5/simular.py` recorre los planos baldosa por baldosa. Usa la pluma, las llaves, las vasijas, los bloques de color, las escaleras que aparecen y las antorchas, y confirma tres cosas:
+  - se llega a todas las salas y a todos los cofres;
+  - antes del Brazalete hay 4 cerraduras para 4 llaves;
+  - desde ningún lugar, con ningún estado de los bloques, se queda uno trabado.
+
+### Lo que cambió respecto del diseño
+- **Anillo azul:**
+  - la K2 queda dentro de un anillo de bloques **naranjas**, y el cristal es parte del anillo;
+  - se entra con los azules bajados, así que el anillo está arriba; el cristal lo baja, pero también sube los azules de la entrada.
+- **Esqueletos:** tiene un cristal. Si alguien deja el bloque naranja de la puerta del Cristal central levantado, del lado de la entrada también se puede volver a bajar.
+- **Isla oscura:** en vez del corazón hay un cofre de oro, que aparece al encender la antorcha.
+- **Matar en orden:** un bloque tapa la salida del corral del orejudo. Se lo corre y se le tira desde abajo.
+- **Pozos azules:** dos caminos alrededor de un pozo grande, uno cortado por un bloque azul y otro por uno naranja.
+- **Caracola secreta:** detrás de una pared rajada al norte de los Esqueletos.
+- **Puente:** la escalera F llega a un costado. Al pie del puente, pisarla para subir te devolvía al pasaje.
+- **Cuchillas:**
+  - no van en las esquinas: barren las filas 1 y 8 y las columnas 3 y 10;
+  - en las esquinas, la puerta norte dejaba al jugador en la fila de dos cuchillas, que lo empujaban de una a otra sin salida.
+
+### Lo nuevo del motor
+- **Puerta `=` con antorchas:** encender todas las antorchas de una sala abre sus puertas `=` (en la Gruta, la de las Antorchas al este).
+- **Cofres de una sala oscura que se cierra:** no aparecen al encender la antorcha, sino al vencer a las criaturas. Es el caso del Brazalete, que lo guardan los fantasmas.
+- **`divide` en una criatura que no flota:** se parte al morir. El Moco de la gruta suelta dos moquitos, que cuentan para la sala que se cierra.
+
+### Criaturas
+| Id | Criatura | Cuerpo |
+|---|---|---|
+| 9760 | Murciélago | El de AO |
+| 9761 | Esqueleto | El de AO |
+| 9762 | Chispa | La de la Cueva |
+| 9763 | Cuchilla | La de la Cueva |
+| 9764 | Moco de la gruta (se parte al morir) | Moco de Pantano |
+| 9765 | Moquito | Quark |
+| 9766 | Escarabajo de púas | El de la Cueva |
+| 9767 | Imitador | Asesino |
+| 9768 | Fantasma | El de AO |
+| 9769 | Orejudo | **Nuevo:** el conejo LPC de Redshrike (cuerpo 577) |
+| 9770 | Orejudo preso (orden 1) | El conejo |
+| 9771 | Murciélago (orden 2) | El de AO |
+| 9772 | Esqueleto (orden 3) | El de AO |
+| 9773 | Escarabajo de casco | La tortuga de la Cueva |
+| 9774 | Cíclope (minijefe) | El de AO |
+| 9775 | Genio de la Botella (jefe) | El de AO |
+
+Todas pisan los hechizos y las estadísticas de su base, porque algunas bases no sirven tal cual:
+- el Cíclope de AO pega 400-600;
+- el Fantasma tira hechizos;
+- el Genio es un NPC amistoso que no se ataca. Si la plantilla no lo vuelve atacable y hostil, su sala no lo cuenta, no se cierra y no suena el combate. Un test controla que todo jefe o minijefe se pueda atacar.
+
+**El orejudo:** el sprite está en `graphics/330011.png`, con los cuadros 42267-42282 y las animaciones 42283-42286. El crédito está en [CREDITOS_GRAFICOS.md](CREDITOS_GRAFICOS.md).
+
+### Música
+Son cuatro temas de Kevin MacLeod (CC-BY 4.0), igualados a −18 LUFS:
+1. Mirage (cueva húmeda y fantasmal);
+2. Mystery Bazaar;
+3. Hidden Wonders;
+4. de combate, Ibn Al-Noor, con tambores y aire árabe para el Genio.
+
+Los créditos están en [CREDITOS_SONIDOS.md](CREDITOS_SONIDOS.md).
+
+| Veinte vasijas: los orejudos y el moco | Las Antorchas, a oscuras | Los bloques en las placas: aparece la escalera A |
+|---|---|---|
+| ![Orejudos](mazmorras/botella/orejudos.png) | ![Antorchas](mazmorras/botella/antorchas.png) | ![Bloques](mazmorras/botella/bloques.png) |
+
+### Para probarla
+Con un GM:
+1. `/mazmorra item pluma`.
+2. `/invocarnpc 9724`.
+3. Entrar por la piedra.
+
+La prueba en vivo es `pw/run-botella.mjs` (72 controles). Recorre la Gruta por el camino del diseño, de la Entrada al trofeo.

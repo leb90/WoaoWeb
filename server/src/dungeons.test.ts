@@ -123,7 +123,14 @@ test("las mecánicas de cada mapa están bien armadas y la mazmorra se puede res
                 assert.equal(objIndex, expected, `${at}: objeto de la puerta ${barrier.tipo}`);
                 if (barrier.tipo === "llave") counts.puertasConLlave++;
                 if (barrier.tipo === "jefe") counts.puertaJefe++;
-                if (barrier.tipo === "placa") assert.ok(mech.plates.length > 0, `${at}: la puerta de placas tiene placas en su mapa`);
+                if (barrier.tipo === "placa") {
+                    // La abren las placas o las antorchas de una de las salas que separa.
+                    const solvable = barrier.salas.some((sala: number) =>
+                        mech.plates.some((key: string) => mech.roomOf[key] === sala) ||
+                        (mech.torches ?? []).some((torch: { sala: number }) => torch.sala === sala),
+                    );
+                    assert.ok(solvable, `${at}: la puerta "=" da a una sala con placas o antorchas`);
+                }
             }
             for (const chest of mech.chests) {
                 const at = `${def.id} ${map} cofre (${chest.x},${chest.y})`;
@@ -153,6 +160,14 @@ test("las mecánicas de cada mapa están bien armadas y la mazmorra se puede res
                 assert.equal(specials.triggers?.[`${barrier.x},${barrier.y}`], 2, `${def.id} ${map} (${barrier.x},${barrier.y}): las criaturas no salen de su sala`);
             }
             for (const slab of mech.slabs) assert.ok(slab.texto, `${def.id} ${map}: la losa tiene texto`);
+        }
+        // Los jefes y minijefes se atacan: si no, su sala no los cuenta, no se cierra y no suena la música de combate (el
+        // Genio de AO, por ejemplo, es un NPC amistoso).
+        for (const map of def.mapas) {
+            for (const id of Object.values((readJson(`server/mapas_source/mapa_${map}/specials.json`).npcs ?? {}) as Record<string, number>)) {
+                const npc = allNpcs[String(id)];
+                if (npc?.jefe || npc?.minijefe) assert.ok(Number(npc.attackable ?? 1) !== 0, `${def.id}: ${npc.name} (${id}) se puede atacar`);
+            }
         }
         assert.ok(counts.llaves >= counts.puertasConLlave, `${def.id}: alcanzan las llaves chicas`);
         if (counts.puertaJefe) assert.ok(counts.llaveJefe > 0, `${def.id}: hay llave del jefe`);
@@ -356,3 +371,67 @@ test("la mazmorra de prueba trae fantasmas, orejudos, el escarabajo, matar en or
     assert.equal(mech.hiddenExits.filter((exit: { revela: { sala: number } }) => exit.revela.sala === plateRoom).length, 2);
 });
 
+test("la Gruta de la Botella: antorchas que abren, fantasmas con el Brazalete, matar en orden y las escaleras que aparecen", () => {
+    const specials = (map: number) => readJson(`server/mapas_source/mapa_${map}/specials.json`);
+    const npcs = readJson("server/jsons/npcs.json");
+    const def = (readJson("server/jsons/dungeons.json") as Array<Record<string, any>>).find((entry) => entry.id === "botella")!;
+    assert.deepEqual(def.mapas, [550, 551, 552]);
+    assert.equal(def.itemMazmorra.id, "pulsera");
+    assert.ok(def.requiere.some((item: { id: string }) => item.id === "pluma"), "pide la pluma");
+    const gruta = specials(550);
+    const mech = gruta.dungeon;
+    const roomsWith = (flag: string) =>
+        new Set(Object.entries(gruta.npcs as Record<string, number>).filter(([, id]) => npcs[id]?.[flag]).map(([key]) => mech.roomOf[key]));
+    const torchRooms = new Set(mech.torches.map((torch: { sala: number }) => torch.sala));
+    const closing = new Set(mech.rooms.filter((room: { cierra: boolean }) => room.cierra).map((room: { id: number }) => room.id));
+    // Las antorchas de la segunda sala abren la puerta del este.
+    assert.ok(mech.barriers.some((b: { tipo: string; salas: number[] }) => b.tipo === "placa" && b.salas.some((s) => torchRooms.has(s))));
+    // El Brazalete: en una sala oscura que se cierra, con los fantasmas.
+    const item = mech.chests.find((chest: { contenido: string }) => chest.contenido === "premio");
+    assert.ok(item.oculto && closing.has(item.sala) && torchRooms.has(item.sala) && roomsWith("fantasma").has(item.sala));
+    // La llave del jefe: matando en orden al orejudo, al murciélago y al esqueleto.
+    const bossKey = mech.chests.find((chest: { contenido: string }) => chest.contenido === "jefe");
+    const order = Object.entries(gruta.npcs as Record<string, number>)
+        .filter(([key]) => mech.roomOf[key] === bossKey.sala)
+        .map(([, id]) => npcs[id])
+        .sort((a, b) => a.orden - b.orden);
+    assert.deepEqual(order.map((npc) => [npc.orden, npc.name]), [[1, "Orejudo preso"], [2, "Murciélago"], [3, "Esqueleto"]]);
+    assert.ok(order[0].orejudo);
+    // Cinco llaves chicas para cinco cerraduras; bloques de los dos colores y varios cristales.
+    assert.equal(mech.chests.filter((chest: { contenido: string }) => chest.contenido === "llave").length, 5);
+    assert.equal(mech.barriers.filter((b: { tipo: string }) => b.tipo === "llave").length, 5);
+    assert.ok(mech.colorBlocks.azul.length > 0 && mech.colorBlocks.naranja.length > 0 && mech.switches.length >= 5);
+    // Escaleras que aparecen: la A con los bloques, la E al vencer a los orejudos, la F con la placa de peso del pasaje
+    // y el portal-atajo al vencer al Cíclope.
+    const hiddenAt = new Map<string, { map: number; sala: number }>(
+        mech.hiddenExits.map((h: { x: number; y: number; revela: { map: number; sala: number } }) => [`${h.x},${h.y}`, h.revela]),
+    );
+    const revealers = Object.entries(gruta.exits as Record<string, { map: number }>)
+        .filter(([, exit]) => exit.map === 551)
+        .map(([key]) => hiddenAt.get(key))
+        .filter((revela): revela is { map: number; sala: number } => Boolean(revela));
+    const plateRooms = new Set(mech.plates.map((key: string) => mech.roomOf[key]));
+    assert.ok(revealers.some((r) => r.map === 550 && plateRooms.has(r.sala)), "la escalera A la revelan los bloques");
+    assert.ok(revealers.some((r) => r.map === 550 && closing.has(r.sala) && roomsWith("orejudo").has(r.sala)), "la E, los orejudos");
+    const passages = specials(551).dungeon;
+    assert.deepEqual(passages.weightPlates.length, 1);
+    const weightRoom = passages.roomOf[passages.weightPlates[0]];
+    assert.ok(revealers.some((r) => r.map === 551 && r.sala === weightRoom), "la F, la placa de peso");
+    const portals = mech.hiddenExits.filter((h: { x: number; y: number }) => gruta.exits[`${h.x},${h.y}`]?.map === 550);
+    assert.equal(portals.length, 2);
+    assert.ok(portals.every((h: { revela: { sala: number } }) => roomsWith("minijefe").has(h.revela.sala)), "el portal, el Cíclope");
+    // El orejudo usa el sprite nuevo (el conejo LPC), indexado en el cliente.
+    const bodies = readJson("frontend/public/init/bodies.json");
+    const graficos = readJson("frontend/public/init/graficos_optimized.json");
+    for (const id of [9769, 9770]) {
+        const body = bodies[String(npcs[id].idBody)];
+        assert.ok(body, `cuerpo del orejudo ${id}`);
+        for (const dir of ["1", "2", "3", "4"]) assert.ok(graficos[String(body[dir])]?.f === 4, `animación ${dir}`);
+    }
+    // La música: tres temas y el de combate, con sus créditos.
+    const credits = fs.readFileSync(path.join(root, "docs/CREDITOS_SONIDOS.md"), "utf8");
+    for (const file of [...def.musica.pistas, def.musica.combate]) {
+        assert.ok(fs.existsSync(path.join(root, "frontend/public", file)), file);
+        assert.ok(credits.includes(file.replace("/music/mazmorras/", "")), `créditos de ${file}`);
+    }
+});

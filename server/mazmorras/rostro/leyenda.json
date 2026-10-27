@@ -174,12 +174,13 @@
             "maxHit": 55,
             "exp": 6500,
             "gold": 300,
-            "desc": "Un bruto con una bola de hierro.",
+            "desc": "Un bruto con una bola de hierro. Solo lo lastima su propia bola: levantala con el Brazalete y tirásela.",
             "def": 15,
             "poderAtaque": 90,
             "poderEvasion": 30,
             "movement": 3,
-            "minijefe": true
+            "minijefe": true,
+   "machacador": true
         },
         "9785": {
             "drop": [],
@@ -195,12 +196,13 @@
             "maxHit": 40,
             "exp": 3000,
             "gold": 150,
-            "desc": "Una serpiente que se traga lo que le tiren.",
+            "desc": "Se traga las bombas que le pongan cerca. Los golpes no le hacen nada.",
             "def": 12,
             "poderAtaque": 80,
             "poderEvasion": 30,
             "movement": 3,
-            "minijefe": true
+            "minijefe": true,
+   "glotona": true
         },
         "9786": {
             "drop": [],
@@ -221,7 +223,8 @@
             "poderAtaque": 100,
             "poderEvasion": 40,
             "movement": 3,
-            "jefe": true
+            "jefe": true,
+   "rostro": true
         }
     },
     "graficos": {

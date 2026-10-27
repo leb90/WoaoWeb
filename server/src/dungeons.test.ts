@@ -575,3 +575,42 @@ test("el Santuario del Rostro: el Brazalete nivel 2, estatuas, cabezas, baldosas
         assert.ok(credits.includes(file.replace("/music/mazmorras/", "")), `créditos de ${file}`);
     }
 });
+
+test("los jefes del Santuario del Rostro: el Machacador, las Serpientes Glotonas y el Rostro de Piedra", () => {
+    const specials = (map: number) => readJson(`server/mapas_source/mapa_${map}/specials.json`);
+    const npcs = readJson("server/jsons/npcs.json");
+    const shrine = specials(560);
+    const placed = (flag: string) =>
+        Object.entries(shrine.npcs as Record<string, number>).filter(([, id]) => npcs[id]?.[flag]).map(([key]) => key);
+    // Cada uno lo mueve dungeonShrineBosses.ts según la marca de su plantilla.
+    assert.equal(placed("machacador").length, 1);
+    const snakes = placed("glotona");
+    assert.equal(snakes.length, 2);
+    assert.equal(new Set(snakes.map((key) => shrine.dungeon.roomOf[key])).size, 1, "las dos serpientes en la misma sala");
+    // El Rostro de Piedra: tira las 20 baldosas y las 4 vasijas de su sala, y abre los pozos en el anillo a dos baldosas
+    // de la cara, que tiene que ser piso de la sala.
+    const lair = specials(562);
+    const terrain = readJson("server/mapas_source/mapa_562/terrain.json");
+    const blocked = (x: number, y: number) => Boolean(terrain.palette[String(terrain.rows[y - 1][x - 1])]?.blocked);
+    const [faceKey] = Object.entries(lair.npcs as Record<string, number>).find(([, id]) => npcs[id]?.rostro)!;
+    const [fx, fy] = faceKey.split(",").map(Number);
+    const room = lair.dungeon.roomOf[faceKey];
+    assert.ok(lair.dungeon.santuario.baldosas.every((tile: { sala: number }) => tile.sala === room));
+    const vases = lair.dungeon.liftables.filter((item: { tipo: string; x: number; y: number }) => item.tipo === "vasija" && lair.dungeon.roomOf[`${item.x},${item.y}`] === room);
+    assert.equal(vases.length, 4);
+    let ring = 0;
+    for (let dy = -2; dy <= 2; dy++) {
+        for (let dx = -2; dx <= 2; dx++) {
+            if (Math.max(Math.abs(dx), Math.abs(dy)) !== 2) continue;
+            const key = `${fx + dx},${fy + dy}`;
+            assert.ok(!blocked(fx + dx, fy + dy) && lair.dungeon.roomOf[key] === room && !lair.exits?.[key], `pozo en ${key}`);
+            ring++;
+        }
+    }
+    assert.equal(ring, 16);
+    // La bola de hierro es la 1881, que no puede usarla otro objeto de mazmorra.
+    const OBJ = (dungeons as unknown as { DUNGEON_OBJ: Record<string, number> }).DUNGEON_OBJ;
+    assert.equal(OBJ.bolaDeHierro, 1881);
+    assert.equal(Object.values(OBJ).filter((id) => id === 1881).length, 1);
+    assert.ok(!readJson("frontend/public/init/objs.json")["1881"], "1881 no está en objs.json");
+});

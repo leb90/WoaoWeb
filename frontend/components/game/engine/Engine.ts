@@ -47,6 +47,7 @@ import {
 import { updateDungeonBosses } from "./dungeonBoss";
 import { updateDungeonGrotto } from "./dungeonGrotto";
 import { updateDungeonShrine } from "./dungeonShrine";
+import { updateDungeonShrineBosses } from "./dungeonShrineBosses";
 import { updateDungeonDarkness } from "./dungeonDarkness";
 import { updateDungeonTools } from "./dungeonTools";
 import {
@@ -2247,6 +2248,7 @@ export class Engine {
         updateDungeonBosses(this, now);
         updateDungeonGrotto(this, now);
         updateDungeonShrine(this, now);
+        updateDungeonShrineBosses(this, now);
         updateDungeonTools(this, now);
         updateDungeonDarkness(this);
     }

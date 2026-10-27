@@ -96,10 +96,11 @@ Todos se pasaron a la paleta de piedra de "[LPC] Jungle Ruins", con alfa limpio 
 | `graphics/330018.png` | Lanzallamas | La cabeza con la boca abierta de "[LPC] Jungle Ruins" | bluecarrot16 | OGA-BY 3.0+ / CC-BY 3.0+ |
 | `graphics/330019.png` | Ojo de piedra (cerrado, abierto, mirando y brillando) | "Jade Cyclops", https://opengameart.org/content/jade-cyclops, en piedra y sobre el pedestal de Jungle Ruins | IndigoFenix | CC0 / CC-BY 3.0 / CC-BY 4.0 |
 | `graphics/330020.png` | Estrella (cuerpo 578, gira) | "Spinning heart and star trinkets items collectables", https://opengameart.org/node/125344, al doble | Haley Halcyon | CC0 |
+| `graphics/330021.png` | Rostro de Piedra, el jefe (serena, con la boca abierta y enojada) | Tres cabezas de ídolo de "[LPC] Jungle Ruins", al triple | bluecarrot16 | OGA-BY 3.0+ / CC-BY 3.0+ |
 
 Atribución que piden:
 - "[LPC] Jungle Ruins" by bluecarrot16. Commissioned by Pierre Vigier (pvigier). Licenses: OGA-BY 3.0+, CC-BY 3.0+, GPL 2.0+. http://opengameart.org/content/lpc-jungle-ruins
 - Master484 (https://opengameart.org/users/master484), "M484 Chess Set".
 - IndigoFenix, "Jade Cyclops".
 
-Hecho con gráficos propios: el pozo que deja una baldosa (`graphics/330016.png`).
+Hecho con gráficos propios: el pozo que deja una baldosa (`graphics/330016.png`) y la bola de hierro del Machacador (`graphics/330022.png`, una esfera sombreada).

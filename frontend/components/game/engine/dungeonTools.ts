@@ -4,6 +4,7 @@ import type { SpellData } from "../../../types/game";
 import { createSpellProjectileVisual } from "../rendering/effectsRenderer";
 import { getEntityFXRowContainer, syncDisplayObjectToEntityFXRow } from "../rendering/rowLayerContainers";
 import { GENIE_BOTTLE_OBJ, genieBottleTexture } from "./dungeonGrotto";
+import { IRON_BALL_OBJ, ironBallTexture } from "./dungeonShrineBosses";
 import type { Engine } from "./Engine";
 
 // Mazmorras: el Polvo de Fuego, el Gancho y la Pulsera (server/src/dungeonTools.ts). Llegan en el mismo paquete que
@@ -107,13 +108,17 @@ function textureOfObject(engine: Engine, objIndex: number) {
 
 // Lo que se lleva: la textura del objeto o, si todavía no está cargada, una vasija dibujada.
 function carriedNode(engine: Engine, objIndex: number): Container {
-    const texture = textureOfObject(engine, objIndex) ?? (objIndex === GENIE_BOTTLE_OBJ ? genieBottleTexture() : null);
+    const texture =
+        textureOfObject(engine, objIndex) ??
+        (objIndex === GENIE_BOTTLE_OBJ ? genieBottleTexture() : objIndex === IRON_BALL_OBJ ? ironBallTexture() : null);
     if (texture) {
         const sprite = new Sprite(texture);
         sprite.anchor.set(0.5, 1);
+        sprite.label = String(objIndex);
         return sprite;
     }
     const fallback = new Graphics();
+    fallback.label = String(objIndex);
     fallback.ellipse(0, -11, 11, 11).fill({ color: 0x9a5b2e }).stroke({ color: 0x4a2a12, width: 1.5 });
     return fallback;
 }
@@ -283,8 +288,19 @@ function syncCarried(engine: Engine) {
     }
 }
 
+// Las bombas en el piso, por baldosa: una Serpiente Glotona se la puede tragar antes de que explote.
+const bombsOnFloor = new Map<string, { eaten: boolean }>();
+
 async function playBomb(engine: Engine, payload: DungeonMotionPayload) {
     if (!payload.to) return;
+    const key = `${payload.to.x},${payload.to.y}`;
+    if (payload.comida) {
+        const eaten = bombsOnFloor.get(key);
+        if (eaten) eaten.eaten = true;
+        return;
+    }
+    const fuse = { eaten: false };
+    bombsOnFloor.set(key, fuse);
     const startedAt = engine.timestamp();
     await loadBombTextures();
     const at = tileCenter(engine, payload.id, payload.to);
@@ -299,6 +315,11 @@ async function playBomb(engine: Engine, payload: DungeonMotionPayload) {
     let explosion: Sprite | null = null;
     engine.dungeonToolEffects.push((now) => {
         const elapsed = now - startedAt;
+        if (fuse.eaten) {
+            bomb.destroy();
+            if (bombsOnFloor.get(key) === fuse) bombsOnFloor.delete(key);
+            return false;
+        }
         if (elapsed < payload.ms) {
             if (bomb.destroyed) return false;
             if (thrownFrom) {
@@ -317,6 +338,7 @@ async function playBomb(engine: Engine, payload: DungeonMotionPayload) {
         }
         if (!bomb.destroyed) {
             bomb.destroy();
+            if (bombsOnFloor.get(key) === fuse) bombsOnFloor.delete(key);
             burst(engine, at, [0xffe08a, 0xff8c1a, 0x6b6b6b], 18, 0.14);
             if (textures) {
                 explosion = new Sprite(textures.explosion[0]);
@@ -398,8 +420,10 @@ export function playDungeonTool(engine: Engine, payload: DungeonMotionPayload) {
     if (payload.tipo === "escudo") return void playMirror(engine, payload);
     if (payload.tipo === "polvo") return playPowder(engine, payload);
     if (payload.tipo === "suelta") {
-        const at = characterCenter(engine, payload.id);
-        dropCarried(engine, payload.id, at);
+        // La botella del Genio y la bola del Machacador caen enteras (el server las vuelve a mostrar en el piso).
+        const obj = Number(engine.dungeonCarried.get(payload.id)?.label);
+        const whole = obj === GENIE_BOTTLE_OBJ || obj === IRON_BALL_OBJ;
+        dropCarried(engine, payload.id, whole ? null : characterCenter(engine, payload.id));
     }
 }
 

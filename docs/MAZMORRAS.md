@@ -128,10 +128,10 @@ Todas por datos del mapa, para que las mazmorras siguientes se armen sin código
    - La grilla de 6 × 7 salas en un mapa (550), los 3 pasajes (551) y la Guarida del Genio (552).
    - Comparte con la Roca de la Tortuga las salas oscuras, las antorchas, los cristales, el remolino, los imitadores y los búhos: esas mecánicas se arman juntas, en un PR para las dos.
    - Propone el **Polvo mágico** como tercer básico (para las antorchas), para que no quede un círculo con la Roca.
-9. **Santuario del Rostro. [mapas hechos; faltan los jefes]** Adapta el Santuario del Rostro (nivel 6 de Link's Awakening) y da el **Brazalete de Fuerza nivel 2**. Diseño en [mazmorras/06-SANTUARIO_DEL_ROSTRO.md](mazmorras/06-SANTUARIO_DEL_ROSTRO.md).
+9. **Santuario del Rostro. [hecho, en desarrollo hasta probarlo en producción]** Adapta el Santuario del Rostro (nivel 6 de Link's Awakening) y da el **Brazalete de Fuerza nivel 2**. Diseño en [mazmorras/06-SANTUARIO_DEL_ROSTRO.md](mazmorras/06-SANTUARIO_DEL_ROSTRO.md).
    - La grilla de 8 × 7 salas en un mapa (560), los 3 pasajes (561) y la Guarida del Rostro (562).
-   - Las mecánicas están en la sección 17; los mapas, las criaturas y la música, en la 18.
-   - Se construye en tres PR: las mecánicas; los mapas, las criaturas y la música; y los jefes.
+   - Las mecánicas están en la sección 17; los mapas, las criaturas y la música, en la 18; los jefes, en la 19.
+   - Se construyó en tres PR: las mecánicas; los mapas, las criaturas y la música; y los jefes.
 
 ## 5. Decisiones
 
@@ -894,3 +894,86 @@ La prueba en vivo es `pw/run-rostro.mjs`, con 15 controles:
 - el cofre trabado del Anillo;
 - el pasaje de los aplastadores;
 - la Guarida.
+
+## 19. Santuario del Rostro: el Machacador, las Serpientes Glotonas y el Rostro de Piedra
+
+Los tres salen del código del original (zladx/LADX-Disassembly) y los mueve el server (`server/src/dungeonShrineBosses.ts`, con `customMotion`). En la plantilla se marcan con `machacador`, `glotona` y `rostro`. Lo que se dibuja aparte llega por el paquete `dungeonBoss` con `tipo` (`bola`, `glotona`, `rostro` y `pozo`) y lo dibuja `engine/dungeonShrineBosses.ts`.
+
+### El Machacador (minijefe; el Smasher, `06_smasher.asm`)
+| Qué hace | Cómo |
+|---|---|
+| Busca la bola | Va hasta su **bola de hierro** y la levanta (0,55 s) |
+| Se acerca y la tira | Da dos pasos hacia el jugador más cercano y se la tira. La bola vuela en arco hasta donde estaba (hasta 5 baldosas) y le pega al primero que encuentra (15 %, con empujón). El Escudo Espejo la frena de frente |
+| Deambula | Mientras un jugador tiene la bola, camina al azar sin perseguir |
+| Pisotón | Si camina contra alguien, le pega (8 %) y lo empuja |
+
+- **La bola en el piso** es sólida. Se levanta con el **Brazalete** (alcanza el nivel 1), mirándola, y se tira hacia adonde mira el personaje.
+- **Cómo se le gana:** solo lo lastima su propia bola, **4 bolazos** de un cuarto de la vida cada uno. Con cada uno retrocede y queda atontado 0,9 s, y la bola rebota.
+- **Lo demás no le entra:** golpes, hechizos, flechas, bombas ni el Gancho ("Al Machacador no le entran golpes...").
+- **La bola en las manos** se dibuja con lo de las herramientas, como el objeto de mazmorra 1881. No está en `objs.json`: el cliente la reconoce por ese número.
+
+### Las Serpientes Glotonas (minijefes; las Dodongo Snakes, `05_dodongo_snake.asm`)
+- **Cómo andan:** en línea recta, 2 a 4 baldosas, y siempre giran 90°. Cada cuatro giros encaran al jugador más cercano. No caen a los pozos y muerden (8 %) al que se les cruza.
+- **Las bombas:**
+  - Se tragan una bomba recién puesta (de menos de 1,7 s) que esté al lado de la cabeza.
+  - Si la ven en su línea, a 3 baldosas o menos, van a buscarla.
+  - Tragada, la bomba no explota afuera y el que la puso puede poner otra.
+- **La digestión:**
+  1. Quedan quietas 2,3 s.
+  2. Al segundo les explota adentro y se inflan.
+  3. Después eructan humo.
+- **Cómo se les gana:** con la **tercera bomba** revientan. Son seis para las dos.
+- **Lo demás no les entra:** los golpes, los hechizos y las explosiones de afuera.
+
+### El Rostro de Piedra (jefe; Facade, `04_facade.asm`)
+- **La cara:** está tallada en el piso de la Guarida. La criatura de AO no se ve. No se mueve y tocarla no lastima.
+- **Al entrar:** a los 1,5 s aparece de a poco (2,5 s) y da la pista por el chat: «¡Eh, tonto! ¿Querés una pista? Mi punto débil es... ¡Uy! ¡Casi!».
+- **Las baldosas:** tira las **20 baldosas** del borde de a parejas opuestas, girando alrededor de la cara, una cada 1,07 s. Suben, flotan y salen hacia el jugador más cercano (10 %); el Escudo Espejo las frena. Las de esta sala no salen solas, como las de las otras: las tira él.
+- **Las vasijas:** después tira las **4 vasijas** de las esquinas, en cruz (15 %). Si alguien ya levantó una, la saltea.
+- **Los pozos:** después abre pozos en el **anillo a dos baldosas de la cara** (16 lugares), uno cada 1,6 a 2,6 s, como mucho dos a la vez y nunca dos seguidos en el mismo lugar. Cada uno:
+  1. se raja (0,65 s);
+  2. se abre (0,27 s);
+  3. queda abierto 0,8 s, chupando cada 0,4 s al que esté a dos baldosas o menos;
+  4. se cierra solo.
+
+  Caer saca el 10 % y te devuelve a la entrada de la sala.
+- **Cómo se le gana:** solo con **bombas** que exploten a dos baldosas o menos de la cara: **5**, un quinto de la vida cada una.
+- **Después de cada bomba:** se enoja, se hunde en el piso y vuelve a aparecer. Durante 4,6 s las bombas no le hacen nada ("La cara se cerró...").
+- **Sin nadie en la sala:** no tira nada.
+- **Al morir:** dice su última frase, cierra los pozos y se abre la sala del trofeo.
+
+**Los sprites:**
+- **La cara:** tres cabezas de "[LPC] Jungle Ruins" de bluecarrot16 (serena, con la boca abierta y enojada), en `graphics/330021.png`.
+- **La bola de hierro:** dibujada para el juego, en `graphics/330022.png`.
+- **Los pozos:** se dibujan con formas.
+
+Los créditos están en [CREDITOS_GRAFICOS.md](CREDITOS_GRAFICOS.md).
+
+| El Machacador levanta su bola | Con el Brazalete, la bola es tuya | Las Serpientes Glotonas |
+|---|---|---|
+| ![Machacador](mazmorras/rostro/jefes-01-machacador.png) | ![Bola](mazmorras/rostro/jefes-02-bola.png) | ![Serpientes](mazmorras/rostro/jefes-03-serpientes.png) |
+
+| El Rostro de Piedra aparece | Las baldosas del borde vuelan | Una bomba en la cara |
+|---|---|---|
+| ![Rostro](mazmorras/rostro/jefes-04-rostro.png) | ![Baldosas](mazmorras/rostro/jefes-05-baldosas.png) | ![Bomba](mazmorras/rostro/jefes-06-bomba.png) |
+
+| Un pozo que chupa, al lado de la cara | Vencido: se abre la puerta del trofeo |
+|---|---|
+| ![Pozo](mazmorras/rostro/jefes-07-pozo.png) | ![Vencido](mazmorras/rostro/jefes-08-vencido.png) |
+
+### Para probarlos
+Con un GM:
+1. `/mazmorra item pulsera`, `/mazmorra item pluma`, `/mazmorra item botas_de_pegaso` y `/mazmorra item gancho`. Para la bola del Machacador sirve también `/mazmorra item pulsera_poderosa`.
+2. `/invocarnpc 9725`.
+3. Entrar por la piedra.
+
+La prueba en vivo es `pw/run-rostro-jefes.mjs` (17 controles). Pelea con los tres:
+- **El Machacador:** la bola en el piso, la que tira y los bolazos con el Brazalete.
+- **Las Serpientes:** los golpes no les entran y se tragan las bombas hasta reventar.
+- **El Rostro de Piedra:**
+  - aparece y da la pista, y la criatura de AO no se ve;
+  - las baldosas;
+  - los hechizos no le entran;
+  - las bombas en la cara;
+  - los pozos que chupan;
+  - la quinta bomba y la puerta del trofeo.

@@ -62,6 +62,8 @@ const OBJ = {
     cristalAzul: 1866,
     cristalNaranja: 1867,
     remolino: 1868,
+    // La botella del Genio de la Gruta de la Botella: no está en el mapa, es lo que se ve al levantarla y tirarla.
+    botellaGenio: 1869,
 } as const;
 // Portal azul (escaleras que se ven como portal: el atajo de la Cueva de la Cola).
 const PORTAL_OBJ = 378;
@@ -841,6 +843,7 @@ function destroyRun(run: DungeonRun) {
     for (const mapId of Object.values(run.maps)) {
         require("./dungeonHazards").forgetMap(mapId);
         require("./dungeonBoss").forgetMap(mapId);
+        require("./dungeonGrotto").forgetMap(mapId);
         for (const npcId of Object.keys(vars.npcs ?? {})) {
             if (vars.npcs[npcId]?.map === mapId) {
                 delete vars.npcs[npcId];
@@ -1945,6 +1948,7 @@ function fastTickRun(run: DungeonRun) {
         if (!watched.has(mapId)) continue;
         require("./dungeonHazards").tick(mapId, now);
         require("./dungeonBoss").tick(mapId, now);
+        require("./dungeonGrotto").tick(mapId, now);
     }
 }
 
@@ -1966,6 +1970,12 @@ export function isRoomLocked(mapId: number, roomId: number): boolean {
 
 export function hurtPlayer(user: RuntimeCharacter, fraction: number, message: string) {
     hurt(user, fraction, message);
+}
+
+// Bloquea o libera una baldosa de una corrida (la botella vacía del Genio, dungeonGrotto.ts).
+export function setDungeonBlocked(mapId: number, x: number, y: number, blocked: boolean) {
+    if (!isDungeonInstanceMap(mapId)) return;
+    setBlocked(mapId, x, y, blocked);
 }
 
 export function setDungeonObject(mapId: number, x: number, y: number, objIndex: number) {
@@ -2210,6 +2220,8 @@ export function hitSwitch(mapId: number, x: number, y: number): boolean {
 export function onAirSwing(user: RuntimeCharacter, x: number, y: number) {
     if (!isDungeonInstanceMap(user.map)) return;
     hitSwitch(Number(user.map), x, y);
+    const emptyBottle = require("./dungeonGrotto").onAirSwing(Number(user.map), { x, y });
+    if (emptyBottle) tell(user.id, emptyBottle);
 }
 
 // Las salas a oscuras del mapa: las que tienen alguna antorcha apagada. "luz" va de 0 (todas apagadas) a casi 1.
@@ -2298,7 +2310,10 @@ function isRoomDarkAt(mapId: number, pos: { x: number; y: number }): boolean {
 // Un golpe cuerpo a cuerpo (o la Carrera) a una criatura que no recibe daño pero se corre (el escarabajo que
 // retrocede): la empuja. Devuelve true si el golpe ya quedó resuelto así.
 export function onNpcStruck(npc: any, attacker: RuntimeCharacter): boolean {
-    if (!npc || !isDungeonInstanceMap(npc.map) || !templateOf(npc).retrocede) return false;
+    if (!npc || !isDungeonInstanceMap(npc.map)) return false;
+    // El Genio metido en la botella: el golpe aturde la botella.
+    if (require("./dungeonGrotto").onNpcStruck(npc)) return true;
+    if (!templateOf(npc).retrocede) return false;
     require("./dungeonHazards").strikeBeetle(npc, attacker);
     return true;
 }
@@ -2315,6 +2330,8 @@ export function getNpcInvulnerableReason(
         return "Al orejudo no le entran golpes ni hechizos: tirale algo (una vasija, una bomba o una flecha).";
     }
     if (template.retrocede) return "No le hace nada: empujalo a un pozo.";
+    const genie = require("./dungeonGrotto").invulnerableReason(npc);
+    if (genie) return genie;
     // Los imitadores se cubren de frente: hay que pegarles por la espalda o de costado.
     const frontal = attacker ? require("./dungeonHazards").frontalBlockReason(npc, attacker) : null;
     if (frontal) return frontal;
@@ -2499,7 +2516,7 @@ function templateOf(npc: { templateNpcIndex?: number } | undefined): SpecialTemp
 }
 
 function registerSpecialNpc(run: DungeonRun, npc: any) {
-    if (require("./dungeonHazards").register(npc) || require("./dungeonBoss").register(npc)) return;
+    if (require("./dungeonHazards").register(npc) || require("./dungeonBoss").register(npc) || require("./dungeonGrotto").register(npc)) return;
     const template = templateOf(npc);
     if (template.despierta) npc.dormant = true;
     if (template.pareja) {
@@ -2823,6 +2840,7 @@ export function onNpcDied(npc: { id?: EntityId; map?: number; templateNpcIndex?:
     onOrderDied(ctx, npc);
     require("./dungeonHazards").onNpcDied(npc);
     require("./dungeonBoss").onNpcDied(npc);
+    require("./dungeonGrotto").onNpcDied(npc);
     const boss = ctx.run.floatingBoss;
     if (boss?.npcId === String(npc.id)) {
         ctx.run.floatingBoss = null;
@@ -2921,6 +2939,7 @@ module.exports = {
     isRoomLocked,
     hurtPlayer,
     setDungeonObject,
+    setDungeonBlocked,
     broadcastNpcVitals,
     fallIfHazard,
     toolTargetAt,

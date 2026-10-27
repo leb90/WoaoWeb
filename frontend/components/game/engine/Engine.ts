@@ -45,6 +45,7 @@ import {
     type DungeonParticle,
 } from "./dungeonMotion";
 import { updateDungeonBosses } from "./dungeonBoss";
+import { updateDungeonGrotto } from "./dungeonGrotto";
 import { updateDungeonDarkness } from "./dungeonDarkness";
 import { updateDungeonTools } from "./dungeonTools";
 import {
@@ -2243,6 +2244,7 @@ export class Engine {
         this.updateRemoteEntityMovement(now);
         updateDungeonParticles(this, now);
         updateDungeonBosses(this, now);
+        updateDungeonGrotto(this, now);
         updateDungeonTools(this, now);
         updateDungeonDarkness(this);
     }

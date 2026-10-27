@@ -160,6 +160,8 @@ function damageNpc(user: ToolUser, npcId: EntityId, amount: number, source: stri
     const npc = vars.npcs?.[npcId];
     const ws = vars.clients?.[user.id] as RuntimeClient | undefined;
     if (!npc || !ws) return false;
+    // Una flecha, una bomba o algo tirado a la botella con el Genio adentro también la aturde.
+    if (require("./dungeonGrotto").onNpcStruck(npc)) return false;
     if (!getDungeons().canToolHitNpc(npc, source)) {
         const reason = getDungeons().getNpcInvulnerableReason(npc, undefined, source);
         if (reason) tell(user.id, reason);
@@ -299,6 +301,13 @@ export function bracelet(sessionId: EntityId) {
     if (dungeons.liftableKindAt(Number(user.map), from.x, from.y) === "pesada" && !strong) {
         return tell(sessionId, "Es demasiado pesada: hace falta el Brazalete de Fuerza II.");
     }
+    // La botella aturdida del Genio de la Gruta de la Botella.
+    if (require("./dungeonGrotto").liftBottle(user, from)) {
+        const obj = dungeons.DUNGEON_OBJ.botellaGenio;
+        user.dungeonCarry = { tipo: "botella", objIndex: obj, map: Number(user.map) };
+        playSound(user, TOOL_SOUNDS.levantar);
+        return broadcast(user, { id: Number(user.id), tipo: "levanta", heading, ms: 150, from, obj });
+    }
     const lifted = dungeons.liftAt(Number(user.map), from.x, from.y);
     if (!lifted) return tell(sessionId, "No hay nada para levantar adelante tuyo.");
     user.dungeonCarry = { tipo: lifted.tipo, objIndex: lifted.objIndex, map: Number(user.map) };
@@ -315,6 +324,7 @@ function throwCarried(user: ToolUser) {
     const mapId = Number(user.map);
     const heading = Number(user.heading ?? vars.direcciones.down);
     const dir = getMotion().headingOffset(heading);
+    if (carry.tipo === "botella") return require("./dungeonGrotto").throwBottle(user, heading, dir);
     const line = traceLine(mapId, user.pos, dir, THROW_RANGE, false);
     const golpe: Hit = line.npcId ? "criatura" : line.target || line.blocked ? "pared" : null;
     const to = line.npcId ? line.end! : (line.end ?? { x: user.pos.x, y: user.pos.y });
@@ -490,8 +500,10 @@ export function mirrorBlocksNpcHit(user: RuntimeCharacter | undefined, npc: { po
 export function dropCarry(user: RuntimeCharacter | undefined) {
     const carrier = user as ToolUser | undefined;
     if (!carrier?.dungeonCarry) return;
+    const bottle = carrier.dungeonCarry.tipo === "botella";
     carrier.dungeonCarry = null;
     broadcast(carrier, { id: Number(carrier.id), tipo: "suelta", ms: 0 });
+    if (bottle) require("./dungeonGrotto").dropBottle(carrier);
 }
 
 // Lo revisa el tic de la mazmorra: si murió o cambió de mapa con algo levantado, lo suelta.

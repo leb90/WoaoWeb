@@ -554,8 +554,8 @@ export async function loadGraphicsDB(): Promise<GraphicsDB> {
     try {
         const optimizedGraphicsDb =
             await fetchJsonWithFallback<CompactGraphicsDB>(
-                "/init/graficos_optimized.json?v=3.41",
-                "/init/graficos_optimized.json?v=3.41",
+                "/init/graficos_optimized.json?v=3.42",
+                "/init/graficos_optimized.json?v=3.42",
                 "optimized graphics database",
                 { preferLocal: PREFER_LOCAL_GRAPHICS },
             );
@@ -589,8 +589,8 @@ export async function loadGraphicsDB(): Promise<GraphicsDB> {
 export async function loadObjectsDB(): Promise<ObjectsDB> {
     try {
         return await fetchJsonWithFallback<ObjectsDB>(
-            "/init/objs.json?v=3.14",
-            "/init/objs.json?v=3.14",
+            "/init/objs.json?v=3.15",
+            "/init/objs.json?v=3.15",
             "objects database",
         );
     } catch (error) {
@@ -846,8 +846,8 @@ export function getTileAt(
 export async function loadNPCsDB(): Promise<NPCsDB> {
     try {
         return await fetchJsonWithFallback<NPCsDB>(
-            "/init/npcs_optimized.json?v=3.2",
-            "/init/npcs_optimized.json?v=3.2",
+            "/init/npcs_optimized.json?v=3.3",
+            "/init/npcs_optimized.json?v=3.3",
             "NPCs database",
             { preferLocal: PREFER_LOCAL_NPCS },
         );

@@ -618,7 +618,7 @@ La prueba en vivo es `pw/run-gruta.mjs`.
 
 El diseño está en [mazmorras/05-GRUTA_DE_LA_BOTELLA.md](mazmorras/05-GRUTA_DE_LA_BOTELLA.md). Da el Brazalete de Fuerza, pide la Pluma de Roc y está marcada `soloDesarrollo`. La piedra es el NPC 9724.
 
-**Los jefes todavía son provisorios.** El Cíclope y el Genio de la Botella ya están en sus salas, pero pelean como criaturas comunes: la embestida, el agarre y las bombas del Cíclope, y la botella que salta, se aturde y se estrella, van en el PR de los jefes.
+Los jefes (el Cíclope y el Genio de la Botella) están en la sección 16.
 
 ### Mapas
 | Mapa | Qué tiene |
@@ -702,3 +702,50 @@ Con un GM:
 3. Entrar por la piedra.
 
 La prueba en vivo es `pw/run-botella.mjs` (72 controles). Recorre la Gruta por el camino del diseño, de la Entrada al trofeo.
+
+## 16. Gruta de la Botella: el Cíclope y el Genio de la Botella
+
+Los dos salen del código del original (zladx/LADX-Disassembly) y los mueve el server (`server/src/dungeonGrotto.ts`, con `customMotion`), como el Ciempiés. En la plantilla se marcan con `ciclope` y `genio`.
+
+### El Cíclope (minijefe; el Hinox, `06_hinox.asm`)
+| Qué hace | Cómo |
+|---|---|
+| Camina | 2 a 4 baldosas en una dirección al azar (una de cada cuatro veces, hacia el jugador más cercano) y se para un momento |
+| Embiste | Si tiene a alguien en su fila o columna (hasta 8 baldosas, sin paredes en el medio), a veces corre hacia él después de un amague de 0,35 s. Contra la pared queda un momento quieto |
+| Agarra y tira | Si la embestida alcanza a alguien, lo levanta (15 %) y lo tira contra el centro de la sala |
+| Represalia | Cada golpe que recibe lo frena y le tira una bomba en arco al que tiene más cerca: explota a los 1,5 s en 3 × 3 (12 %). Hay que moverse |
+| Pisotón | Si camina contra alguien, le pega (8 %) y lo empuja |
+
+### El Genio de la Botella (jefe; el Genie, `04_genie.asm`)
+**Fase 1, con la botella:**
+- **La botella:** salta de baldosa en baldosa, en arco y con su sombra. Primero va hacia el centro y después persigue. Al lado de alguien se queda quieta: es cuando se le puede pegar.
+- **El Genio sale y vuelve:** a los 4 s sale en una nube de humo, flota y tira **8 bolas de fuego** (una cada 0,8 s, alternando las manos). Las bolas van en arco hacia donde estaba el jugador y queman el 10 %; el Escudo Espejo las frena de frente. Después vuelve a la botella en otra nube. Afuera, la botella vacía queda sólida en su lugar.
+- **Invulnerable:** mientras tenga la botella no se lo puede lastimar ("¡No me podés lastimar mientras tenga mi botella!").
+- **Aturdir la botella:** un golpe (cuerpo a cuerpo, flecha, bomba o algo tirado) a la botella con el Genio adentro la aturde 3 s; queda torcida y en el último segundo tiembla.
+- **Levantarla y estrellarla:** aturdida, se levanta con el **Brazalete** y se tira contra una pared. Si no llega a una pared, cae entera y vuelve a saltar. Con **3 golpes contra la pared se rompe**.
+
+**Fase 2, sin la botella:**
+- El Genio persigue y pega (10 %).
+- Cada golpe que recibe lo hace huir 2 s, y a veces aparece del otro lado de la sala (con humo) y tira una bola de fuego.
+- Cada 5 a 7 s tira otra bola de fuego.
+
+**Cómo se dibuja (`engine/dungeonGrotto.ts`):**
+- **El Genio:** es la criatura de AO (cuerpo 235). Adentro de la botella no se lo ve; afuera, flota meciéndose.
+- **Lo que se dibuja aparte:** la botella, su sombra, el humo, las bolas de fuego y los pedazos. Llegan por el paquete `dungeonBoss` con `tipo` (`botella`, `humo`, `fuego`).
+- **La botella en las manos y al tirarla:** se dibuja con lo de las herramientas, porque es el objeto de mazmorra 1869 ("Botella del Genio").
+- **La bomba del Cíclope:** es la de las herramientas, con un vuelo en arco desde él (`from`).
+
+**El sprite de la botella:** un ánfora de "Free ceramic jars" de Clodo (CC-BY 4.0), pasada a violeta y achicada, con su versión rota. Está en `graphics/330012.png`, cuadros 42287 (entera) y 42288 (rota); el crédito está en [CREDITOS_GRAFICOS.md](CREDITOS_GRAFICOS.md).
+
+| La botella salta, con su sombra | El Genio afuera, tirando fuego | Levantada con el Brazalete |
+|---|---|---|
+| ![Salto](mazmorras/botella/salto.png) | ![Genio](mazmorras/botella/genio.png) | ![Levantada](mazmorras/botella/levantada.png) |
+
+### Para probarlos
+La prueba en vivo es `pw/run-botella-jefes.mjs`. Prueba lo siguiente:
+- **El Cíclope:** la embestida que agarra y tira, la bomba al recibir un flechazo y el portal al vencerlo.
+- **El Genio, fase 1:** la botella que salta, la música de combate, las bolas de fuego, la invulnerabilidad con la botella y las tres vueltas de aturdir, levantar y estrellar contra la pared.
+- **El Genio, fase 2:** el rayo que le entra y el trofeo.
+
+El recorrido completo, `pw/run-botella.mjs`, también pelea con los dos.
+

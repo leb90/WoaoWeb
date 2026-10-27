@@ -428,6 +428,18 @@ test("la Gruta de la Botella: antorchas que abren, fantasmas con el Brazalete, m
         assert.ok(body, `cuerpo del orejudo ${id}`);
         for (const dir of ["1", "2", "3", "4"]) assert.ok(graficos[String(body[dir])]?.f === 4, `animación ${dir}`);
     }
+    // Los jefes: el Cíclope y el Genio, con su comportamiento (dungeonGrotto.ts); la botella es un objeto de mazmorra con
+    // el sprite nuevo, para verla al levantarla y tirarla.
+    const cyclops = Object.values(gruta.npcs as Record<string, number>).map((id) => npcs[id]).find((npc) => npc?.ciclope);
+    assert.ok(cyclops?.minijefe, "el Cíclope es el minijefe");
+    const genie = Object.values(specials(552).npcs as Record<string, number>).map((id) => npcs[id]).find((npc) => npc?.genio);
+    assert.ok(genie?.jefe && Number(genie.attackable) === 1, "el Genio es el jefe y se ataca");
+    const objs = readJson("server/jsons/objs.json");
+    const clientObjs = readJson("frontend/public/init/objs.json");
+    assert.equal(objs[1869]?.name, "Botella del Genio");
+    assert.equal(Number(objs[1869].objType), 0);
+    assert.equal(clientObjs[1869]?.name, "Botella del Genio");
+    assert.ok(graficos[String(objs[1869].grhIndex)], "el gráfico de la botella está en el cliente");
     // La música: tres temas y el de combate, con sus créditos.
     const credits = fs.readFileSync(path.join(root, "docs/CREDITOS_SONIDOS.md"), "utf8");
     for (const file of [...def.musica.pistas, def.musica.combate]) {

@@ -2,7 +2,12 @@
     "criaturas": {
         "z": 502,
         "k": 503,
-        "i": 9799
+        "i": 9799,
+        "f": 9798,
+        "p": 9793,
+        "q": 9795,
+        "r": 9794,
+        "e": 9796
     },
     "losas": {
         "590": [
@@ -31,6 +36,73 @@
             "drop": [],
             "desc": "Copia cada paso tuyo, al revés. Se cubre de frente.",
             "imitador": true
+        },
+        "9798": {
+            "base": 607,
+            "name": "Fantasma",
+            "hp": 60,
+            "maxHp": 60,
+            "minHit": 6,
+            "maxHit": 12,
+            "exp": 80,
+            "gold": 5,
+            "drop": [],
+            "desc": "A oscuras no se deja tocar.",
+            "fantasma": true
+        },
+        "9793": {
+            "base": 9735,
+            "name": "Orejudo",
+            "hp": 40,
+            "maxHp": 40,
+            "minHit": 5,
+            "maxHit": 9,
+            "exp": 60,
+            "gold": 5,
+            "drop": [],
+            "desc": "Solo le entra algo tirado.",
+            "orejudo": true,
+            "orden": 1
+        },
+        "9795": {
+            "base": 566,
+            "name": "Murciélago",
+            "hp": 30,
+            "maxHp": 30,
+            "minHit": 4,
+            "maxHit": 8,
+            "exp": 40,
+            "gold": 3,
+            "drop": [],
+            "desc": "El segundo.",
+            "orden": 2
+        },
+        "9794": {
+            "base": 503,
+            "name": "Esqueleto",
+            "hp": 45,
+            "maxHp": 45,
+            "minHit": 8,
+            "maxHit": 14,
+            "exp": 60,
+            "gold": 5,
+            "drop": [],
+            "desc": "El último.",
+            "orden": 3
+        },
+        "9796": {
+            "base": 9734,
+            "name": "Escarabajo de casco",
+            "hp": 999,
+            "maxHp": 999,
+            "minHit": 6,
+            "maxHit": 10,
+            "exp": 50,
+            "gold": 5,
+            "drop": [],
+            "desc": "No le entra nada: hay que empujarlo a un pozo.",
+            "retrocede": true,
+            "empuja": 1
         }
     },
     "buhos": {

@@ -1,6 +1,6 @@
 # Gruta de la Botella
 
-Fecha: 2026-10-27. Estado: **diseño aprobado** (Leandro aprobó todo, también el Polvo mágico como tercer básico); en construcción. El sistema (instancias, grupo, ítems de mazmorra, mecánicas) está en [../MAZMORRAS.md](../MAZMORRAS.md); el patrón de la serie, en [00-PATRON_LINKS_AWAKENING.md](00-PATRON_LINKS_AWAKENING.md).
+Fecha: 2026-10-27. Estado: **diseño aprobado** (Leandro aprobó todo, también el Polvo mágico como tercer básico); en construcción. Listas: las mecánicas compartidas con la Roca de la Tortuga (sección 13 de MAZMORRAS.md) y las propias (fantasmas, orejudos, escarabajo, matar en orden, bloques que abren la escalera y placa de peso; sección 14). Faltan los mapas, la música y los jefes. El sistema (instancias, grupo, ítems de mazmorra, mecánicas) está en [../MAZMORRAS.md](../MAZMORRAS.md); el patrón de la serie, en [00-PATRON_LINKS_AWAKENING.md](00-PATRON_LINKS_AWAKENING.md).
 
 **Lugar en la serie: a definir.** Leandro pasa las mazmorras sin orden y el orden se decide cuando estén todas. Esta da el **Brazalete de Fuerza** (la *Power Bracelet*), que ya está hecho; la Roca de la Tortuga lo pide. Usa la **Pluma de Roc** (Cueva de la Cola), las bombas y el arco (los básicos) y, como en el original, el **Polvo mágico** para las antorchas (sección 6.2). En el original es la segunda.
 
@@ -312,7 +312,7 @@ Muchas mecánicas son las mismas que pide la Roca de la Tortuga, así que se arm
    - cristales y bloques de color;
    - remolino, imitadores, pico de piedra y búhos;
    - el Polvo mágico.
-2. **Mecánicas propias de esta mazmorra:** fantasmas, orejudos, escarabajo que se empuja, matar en orden, bloques que abren una escalera y placa de peso.
+2. **Mecánicas propias de esta mazmorra** (**hecho**, ver [../MAZMORRAS.md](../MAZMORRAS.md), sección 14): fantasmas, orejudos, escarabajo que se empuja, matar en orden, bloques que abren una escalera y placa de peso. La placa de peso también baja con un bloque corrido encima.
 3. **Mapas 550-552, criaturas y música:** tres temas y uno de combate, a buscar libres y adecuados (cueva húmeda y misteriosa).
 4. **Jefes:** el Cíclope y el Genio de la Botella, con la botella. La prueba completa en vivo va acá.
 

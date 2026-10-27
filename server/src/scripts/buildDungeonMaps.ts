@@ -39,6 +39,10 @@
 //   (  bloque azul (arranca levantado)      )  bloque naranja (arranca bajado)      |  cristal: al golpearlo se
 //      invierten los bloques de color de toda la corrida      "  remolino: arrastra hacia el centro y lleva a la entrada
 //   Las salas con antorchas (F o A) están a oscuras mientras quede alguna apagada.
+// Gruta de la Botella:
+//   -  placa de peso: solo se aprieta si el que la pisa carga algo con el Brazalete (cuenta para las puertas =)
+//   Las escaleras de una sala con placas aparecen al apretarlas todas (los bloques que abren la escalera A), y los
+//   cofres de una sala con criaturas "orden" aparecen al matarlas en orden.
 // Bombas (los básicos que tiene todo el mundo):
 //   @  pared rajada: un paso tapado que se abre con una bomba (arco tapiado en una pared horizontal, rocas en una vertical)
 // Lo que aparece: los cofres de una sala que se cierra (!), que tiene placas o antorchas apagadas aparecen al vaciarla,
@@ -280,7 +284,25 @@ for (const plan of plans) {
     const { roomOf } = roomsByMap.get(plan.mapId)!;
     for (let y = 1; y <= SIZE; y++) {
         for (let x = 1; x <= SIZE; x++) {
-            if (charAt(plan, x, y) === "_" && roomOf.has(`${x},${y}`)) plateRooms.add(`${plan.mapId}:${roomOf.get(`${x},${y}`)}`);
+            const plate = charAt(plan, x, y);
+            if ((plate === "_" || plate === "V" || plate === "-") && roomOf.has(`${x},${y}`)) plateRooms.add(`${plan.mapId}:${roomOf.get(`${x},${y}`)}`);
+        }
+    }
+}
+// Salas con criaturas que se matan en orden (plantillas con "orden"): sus cofres aparecen al terminar.
+const orderRooms = new Set<string>();
+{
+    const serverNpcs = JSON.parse(fs.readFileSync(path.join(ROOT, "server/jsons/npcs.json"), "utf8"));
+    const hasOrder = (id: number) => Boolean((legend.plantillas?.[String(id)] as { orden?: number } | undefined)?.orden ?? serverNpcs[String(id)]?.orden);
+    for (const plan of plans) {
+        const { roomOf } = roomsByMap.get(plan.mapId)!;
+        for (let y = 1; y <= SIZE; y++) {
+            for (let x = 1; x <= SIZE; x++) {
+                const c = charAt(plan, x, y);
+                const entry = /[a-z]/.test(c) ? legend.criaturas?.[c] : undefined;
+                const id = typeof entry === "number" ? entry : entry?.npc;
+                if (id && hasOrder(id) && roomOf.has(`${x},${y}`)) orderRooms.add(`${plan.mapId}:${roomOf.get(`${x},${y}`)}`);
+            }
         }
     }
 }
@@ -305,7 +327,9 @@ for (const plan of plans) {
             const roomId = roomOf.get(`${x},${y}`);
             const room = rooms.find((r) => r.id === roomId);
             const roomKey = `${plan.mapId}:${roomId}`;
-            if (room?.cierra || plateRooms.has(roomKey) || torchRooms.has(roomKey)) hiddenChests.add(`${plan.mapId}:${x},${y}`);
+            if (room?.cierra || plateRooms.has(roomKey) || torchRooms.has(roomKey) || orderRooms.has(roomKey)) {
+                hiddenChests.add(`${plan.mapId}:${x},${y}`);
+            }
         }
     }
 }
@@ -317,7 +341,8 @@ for (const ends of stairs.values()) {
         const roomId = roomOf.get(`${end.x},${end.y}`) ?? [[0, 1], [1, 0], [-1, 0], [0, -1]]
             .map(([dx, dy]) => roomOf.get(`${end.x + dx},${end.y + dy}`))
             .find((id) => id !== undefined);
-        if (!rooms.find((r) => r.id === roomId)?.cierra) continue;
+        // Aparecen al vaciar una sala que se cierra o al apretar todas las placas de su sala.
+        if (!rooms.find((r) => r.id === roomId)?.cierra && !plateRooms.has(`${end.mapId}:${roomId}`)) continue;
         for (const other of ends) {
             hiddenExits.set(other.mapId, [...(hiddenExits.get(other.mapId) ?? []), { x: other.x, y: other.y, revela: { map: end.mapId, sala: roomId! } }]);
         }
@@ -360,6 +385,7 @@ function buildMechanics(plan: Plan) {
         colorBlocks: { azul: [] as string[], naranja: [] as string[] },
         switches: [] as string[],
         vortexes: [] as string[],
+        weightPlates: [] as string[],
     };
     if (plan.meta.caida) {
         const caida = markers.caidas.get(Number(plan.meta.caida));
@@ -392,7 +418,8 @@ function buildMechanics(plan: Plan) {
             if (c === "O") data.pits.push(key);
             if (c === "^") data.lava.push(key);
             if (c === "%") data.lavaPeriodica.push(key);
-            if (c === "_" || c === "V") data.plates.push(key);
+            if (c === "_" || c === "V" || c === "-") data.plates.push(key);
+            if (c === "-") data.weightPlates.push(key);
             if (c === "B") data.blocks.push(key);
             if (c === "F" || c === "A") data.torches.push({ x, y, encendida: c === "A", sala: roomOf.get(key) ?? 0 });
             if (c === "I") data.ice.push(key);
@@ -449,7 +476,7 @@ function buildTile(plan: Plan, x: number, y: number): Tile {
         tile.blocked = !open;
         tile.trigger = NO_NPC_TRIGGER;
     }
-    if (c === "_") tile.object = DUNGEON_OBJECTS.placa.id;
+    if (c === "_" || c === "-") tile.object = DUNGEON_OBJECTS.placa.id;
     if (c === "P") tile.object = DUNGEON_OBJECTS.runaTiempo.id;
     if (c === "*") {
         tile.object = DUNGEON_OBJECTS.cristal.id;

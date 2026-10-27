@@ -10622,6 +10622,11 @@ function Game(this: GameApi) {
                 return 0;
             }
 
+            // Mazmorras: el escarabajo que retrocede no recibe daño, se corre (y puede caer a un pozo).
+            if (require("./dungeons").onNpcStruck(npc, user)) {
+                return 0;
+            }
+
             const castleDeniedMessage =
                     require("./clanCastles").getCastleAttackDeniedMessage(user, npc) ||
                     require("./dungeons").getNpcInvulnerableReason(npc, user);

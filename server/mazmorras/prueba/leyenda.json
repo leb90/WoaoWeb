@@ -7,7 +7,10 @@
         "p": 9793,
         "q": 9795,
         "r": 9794,
-        "e": 9796
+        "e": 9796,
+        "w": 9800,
+        "y": 9801,
+        "v": 9802
     },
     "losas": {
         "590": [
@@ -103,6 +106,56 @@
             "desc": "No le entra nada: hay que empujarlo a un pozo.",
             "retrocede": true,
             "empuja": 1
+        },
+        "9800": {
+            "base": 551,
+            "name": "Hechicero",
+            "hp": 120,
+            "maxHp": 120,
+            "minHit": 8,
+            "maxHit": 14,
+            "exp": 60,
+            "gold": 5,
+            "drop": [],
+            "spells": [],
+            "attackable": 1,
+            "hostile": 1,
+            "desc": "Aparece, tira un rayo y desaparece.",
+            "hechicero": true
+        },
+        "9801": {
+            "base": 768,
+            "name": "Moco escondido",
+            "hp": 60,
+            "maxHp": 60,
+            "minHit": 6,
+            "maxHit": 10,
+            "exp": 60,
+            "gold": 5,
+            "drop": [],
+            "spells": [],
+            "attackable": 1,
+            "hostile": 1,
+            "desc": "No se ve hasta que te acercás.",
+            "escondido": true,
+            "idBody": 146
+        },
+        "9802": {
+            "base": 684,
+            "name": "Estrella",
+            "hp": 40,
+            "maxHp": 40,
+            "minHit": 5,
+            "maxHit": 9,
+            "exp": 60,
+            "gold": 5,
+            "drop": [],
+            "spells": [],
+            "attackable": 1,
+            "hostile": 1,
+            "desc": "Rebota en diagonal contra las paredes.",
+            "estrella": true,
+            "idBody": 578
         }
     },
     "buhos": {

@@ -62,6 +62,10 @@ const OBJ = {
     cristalAzul: 1866,
     cristalNaranja: 1867,
     remolino: 1868,
+    estatuaPesada: 1870,
+    cabezaParada: 1871,
+    cabezaAcostada: 1872,
+    pozoAbierto: 1874,
     // La botella del Genio de la Gruta de la Botella: no está en el mapa, es lo que se ve al levantarla y tirarla.
     botellaGenio: 1869,
 } as const;
@@ -148,7 +152,7 @@ export type DungeonDef = {
 type Barrier = {
     x: number;
     y: number;
-    tipo: "llave" | "jefe" | "sala" | "placa" | "tiempo" | "unica" | "bomba";
+    tipo: "llave" | "jefe" | "sala" | "placa" | "tiempo" | "unica" | "bomba" | "golpe";
     horizontal: boolean;
     salas: number[];
     // Puertas de un solo sentido: hacia dónde se pasa.
@@ -158,7 +162,8 @@ type Barrier = {
 };
 // Escaleras y portales que aparecen al vaciar una sala (la propia o la de la otra punta).
 type HiddenExit = { x: number; y: number; revela: { map: number; sala: number } };
-type Chest = { x: number; y: number; contenido: string; oculto: boolean; sala: number };
+// golpe: el cofre trabado del Santuario del Rostro, que se abre tirándole algo.
+type Chest = { x: number; y: number; contenido: string; oculto: boolean; sala: number; golpe?: boolean };
 type MapMechanics = {
     rooms: Array<{ id: number; x1: number; y1: number; x2: number; y2: number; cierra: boolean }>;
     roomOf: Record<string, number>;
@@ -194,10 +199,19 @@ type MapMechanics = {
     vortexes?: string[];
     // Placas que solo se aprietan si el que las pisa carga algo con el Brazalete (la plataforma de peso del original).
     weightPlates?: string[];
+    // Santuario del Rostro: cabezas de caballo, baldosas voladoras, cintas, lanzallamas y ojos (dungeonShrine.ts).
+    santuario?: {
+        cabezas: Array<{ x: number; y: number; sala: number }>;
+        baldosas: Array<{ x: number; y: number; pozo: boolean; sala: number }>;
+        cintas: Array<{ x: number; y: number; dir: string }>;
+        lanzallamas: Array<{ x: number; y: number; dir: string; sala: number }>;
+        ojos: Array<{ x: number; y: number; sala: number }>;
+    };
 };
 type Torch = { x: number; y: number; encendida: boolean; sala: number };
-// La piedra pesada solo la levanta el Brazalete de Fuerza II.
-type LiftableKind = "vasija" | "piedra" | "pesada";
+// La piedra pesada y la estatua pesada solo las levanta el Brazalete de Fuerza nivel 2. La cabeza de caballo del
+// Santuario del Rostro se levanta y se tira sin romperse (dungeonShrine.ts).
+type LiftableKind = "vasija" | "piedra" | "pesada" | "estatua" | "cabeza";
 
 type MapIndex = {
     mech: MapMechanics;
@@ -267,6 +281,8 @@ type MapState = {
     orderDead: Map<number, Array<{ index: number; at: { x: number; y: number } }>>;
     // Cuándo se le avisó a cada jugador que a la placa de peso le falta peso.
     weightHintAt: Map<string, number>;
+    // Pozos que se abrieron en la corrida (las baldosas voladoras del Santuario del Rostro).
+    openedPits: Set<string>;
 };
 
 type DungeonRun = {
@@ -852,6 +868,7 @@ function destroyRun(run: DungeonRun) {
         require("./dungeonHazards").forgetMap(mapId);
         require("./dungeonBoss").forgetMap(mapId);
         require("./dungeonGrotto").forgetMap(mapId);
+        require("./dungeonShrine").forgetMap(mapId);
         for (const npcId of Object.keys(vars.npcs ?? {})) {
             if (vars.npcs[npcId]?.map === mapId) {
                 delete vars.npcs[npcId];
@@ -1217,6 +1234,7 @@ function createMapState(index: MapIndex): MapState {
         pendingColor: new Set(),
         orderDead: new Map(),
         weightHintAt: new Map(),
+        openedPits: new Set(),
     };
 }
 
@@ -1675,6 +1693,28 @@ function useBarrier(sessionId: EntityId, user: RuntimeCharacter, ctx: MapContext
             return tell(sessionId, "La reja no tiene cerradura: una runa la abre por unos segundos.", "white");
         case "unica":
             return tell(sessionId, "Esta puerta solo se pasa desde el otro lado.", "white");
+        case "golpe":
+            return tell(sessionId, "La persiana no tiene cerradura: tirale algo pesado para abrirla.", "white");
+    }
+}
+
+// Algo tirado con el Brazalete llegó a una puerta o a un cofre (dungeonTools.ts): la persiana se abre y el cofre trabado
+// se abre para el que tiró.
+export function onThrowHit(user: RuntimeCharacter, mapId: number, tile: { x: number; y: number }, target: string) {
+    const ctx = contextOf(mapId);
+    if (!ctx) return;
+    const key = coordKey(tile.x, tile.y);
+    if (target === "puerta") {
+        const barrier = ctx.index.barriers.get(key);
+        if (!barrier || barrier.tipo !== "golpe" || ctx.state.openBarriers.has(key)) return;
+        setBarrier(ctx, barrier, true);
+        playSoundAt(mapId, barrier, DUNGEON_SOUNDS.puertaAbre);
+        tellRun(ctx.run, "¡El golpe abrió la persiana!");
+        refreshRun(ctx.run);
+    } else if (target === "cofre") {
+        const chest = ctx.index.chests.get(key);
+        if (!chest?.golpe || ctx.state.openedChests.has(key) || !isChestVisible(ctx, chest)) return;
+        openChest(user.id, user, ctx, chest);
     }
 }
 
@@ -1754,6 +1794,7 @@ export function handleMapClick(ws: RuntimeClient, user: RuntimeCharacter, x: num
     switch (target.kind) {
         case "cofre":
             if (chebyshev(user.pos, target.chest) > CHEST_RANGE) tell(sessionId, "Acercate al cofre para abrirlo.", "white");
+            else if (target.chest.golpe) tell(sessionId, "El cofre está trabado: tirale algo para que se abra.", "white");
             else openChest(sessionId, user, ctx, target.chest);
             return true;
         case "losa":
@@ -1834,7 +1875,7 @@ function compassChime(ws: RuntimeClient, ctx: MapContext, roomId: number) {
 // Caer a un pozo: daño y vuelta a la entrada de la sala. Devuelve true si el paso terminó ahí.
 function stepIntoPit(ws: RuntimeClient, user: RuntimeCharacter, ctx: MapContext, x: number, y: number): boolean {
     const key = coordKey(x, y);
-    if ((!ctx.index.pits.has(key) && !ctx.state.collapsed.has(key)) || (user as { dead?: boolean }).dead) return false;
+    if ((!ctx.index.pits.has(key) && !ctx.state.collapsed.has(key) && !ctx.state.openedPits.has(key)) || (user as { dead?: boolean }).dead) return false;
     fallIntoPit(ws, user, ctx);
     return true;
 }
@@ -1876,7 +1917,7 @@ export function getDynamicBlocked(mapId: number, x: number, y: number): number |
     const ctx = contextOf(mapId);
     if (!ctx) return null;
     const key = coordKey(x, y);
-    if (!ctx.index.dynamic.has(key) && !ctx.state.blockTrail.has(key)) return null;
+    if (!ctx.index.dynamic.has(key) && !ctx.state.blockTrail.has(key) && !require("./dungeonShrine").isTouchedTile(mapId, x, y)) return null;
     return vars.mapa[mapId]?.[y]?.[x]?.blocked ? 1 : 0;
 }
 
@@ -1957,6 +1998,7 @@ function fastTickRun(run: DungeonRun) {
         require("./dungeonHazards").tick(mapId, now);
         require("./dungeonBoss").tick(mapId, now);
         require("./dungeonGrotto").tick(mapId, now);
+        require("./dungeonShrine").tick(mapId, now);
     }
 }
 
@@ -1978,6 +2020,53 @@ export function isRoomLocked(mapId: number, roomId: number): boolean {
 
 export function hurtPlayer(user: RuntimeCharacter, fraction: number, message: string) {
     hurt(user, fraction, message);
+}
+
+// --- Ayudas para dungeonShrine.ts (Santuario del Rostro) ---
+
+// Lo del Santuario de un mapa de corrida: los datos del plano y la sala de cada baldosa.
+export function shrineDataOf(mapId: number): { santuario: NonNullable<MapMechanics["santuario"]>; roomOf: Record<string, number> } | null {
+    const ctx = contextOf(mapId);
+    if (!ctx?.index.mech.santuario) return null;
+    return { santuario: ctx.index.mech.santuario, roomOf: ctx.index.mech.roomOf };
+}
+
+// Se resolvió el acertijo de una sala (las cabezas paradas, las baldosas rotas): se abren sus puertas "=" y aparecen sus
+// cofres y escaleras ocultas.
+export function solveRoomPuzzle(mapId: number, roomId: number, message: string) {
+    const ctx = contextOf(mapId);
+    if (!ctx) return;
+    let opened = 0;
+    for (const barrier of ctx.index.mech.barriers) {
+        if (barrier.tipo !== "placa" || !barrier.salas.includes(roomId) || ctx.state.openBarriers.has(coordKey(barrier.x, barrier.y))) continue;
+        setBarrier(ctx, barrier, true);
+        playSoundAt(ctx.mapId, barrier, DUNGEON_SOUNDS.puertaAbre);
+        opened++;
+    }
+    const revealed = revealChests(ctx, roomId);
+    const exits = revealExits(ctx.run, ctx.base, roomId);
+    const center = roomCenter(ctx, roomId);
+    if (center) playSoundAt(ctx.mapId, center, DUNGEON_SOUNDS.secreto);
+    tellRun(ctx.run, message);
+    if (opened) tellRun(ctx.run, "Se oye un mecanismo de piedra: una puerta se abrió.");
+    if (revealed) tellRun(ctx.run, revealed === 1 ? "¡Apareció un cofre!" : `¡Aparecieron ${revealed} cofres!`);
+    if (exits) tellRun(ctx.run, "¡Apareció una escalera!");
+    refreshRun(ctx.run);
+}
+
+// Una baldosa voladora que se despegó dejó un pozo.
+export function openPitAt(mapId: number, x: number, y: number) {
+    const ctx = contextOf(mapId);
+    if (!ctx) return;
+    ctx.state.openedPits.add(coordKey(x, y));
+    setObject(mapId, x, y, OBJ.pozoAbierto);
+}
+
+// Pone o saca un objeto de la corrida (las cabezas de caballo, las baldosas), con su bloqueo.
+export function setShrineObject(mapId: number, x: number, y: number, objIndex: number, blocked: boolean) {
+    if (!contextOf(mapId)) return;
+    setObject(mapId, x, y, objIndex);
+    setBlocked(mapId, x, y, blocked);
 }
 
 // Bloquea o libera una baldosa de una corrida (la botella vacía del Genio, dungeonGrotto.ts).
@@ -2024,7 +2113,8 @@ export function isHazard(mapId: number, x: number, y: number): boolean {
         ctx.index.lava.has(key) ||
         ctx.index.lavaPeriodica.has(key) ||
         ctx.index.crushers.has(key) ||
-        ctx.state.collapsed.has(key)
+        ctx.state.collapsed.has(key) ||
+        ctx.state.openedPits.has(key)
     );
 }
 
@@ -2084,6 +2174,7 @@ export type ToolTarget =
     | "piedra"
     | "pesada"
     | "estatua"
+    | "cabeza"
     | "cofre"
     | "bloque"
     | "cristal"
@@ -2099,6 +2190,7 @@ export function toolTargetAt(mapId: number, x: number, y: number): ToolTarget | 
     if (ctx.index.ice.has(key) && !ctx.state.meltedIce.has(key)) return "hielo";
     const liftable = ctx.index.liftables.get(key);
     if (liftable && !ctx.state.lifted.has(key)) return liftable.tipo;
+    if (require("./dungeonShrine").headAt(mapId, x, y)) return "cabeza";
     if (ctx.index.hookPosts.has(key)) return "estatua";
     if (ctx.index.switches.has(key)) return "interruptor";
     const chest = ctx.index.chests.get(key);
@@ -2154,6 +2246,7 @@ export function meltIce(mapId: number, x: number, y: number): boolean {
 
 // Levanta una vasija o una piedra: libera la baldosa y deja a la vista lo que tapaba (un botón).
 export function liftAt(mapId: number, x: number, y: number): { tipo: LiftableKind; objIndex: number } | null {
+    if (require("./dungeonShrine").liftHead(mapId, x, y)) return { tipo: "cabeza", objIndex: OBJ.cabezaParada };
     const ctx = contextOf(mapId);
     const key = coordKey(x, y);
     const liftable = ctx?.index.liftables.get(key);
@@ -2165,10 +2258,17 @@ export function liftAt(mapId: number, x: number, y: number): { tipo: LiftableKin
     return { tipo: liftable.tipo, objIndex: LIFTABLE_OBJECT[liftable.tipo] };
 }
 
-const LIFTABLE_OBJECT: Record<LiftableKind, number> = { vasija: OBJ.vasija, piedra: OBJ.piedra, pesada: OBJ.piedraPesada };
+const LIFTABLE_OBJECT: Record<LiftableKind, number> = {
+    vasija: OBJ.vasija,
+    piedra: OBJ.piedra,
+    pesada: OBJ.piedraPesada,
+    estatua: OBJ.estatuaPesada,
+    cabeza: OBJ.cabezaParada,
+};
 
 // Qué se puede levantar en una baldosa (sin levantarlo): el Brazalete se fija si es pesado antes de intentarlo.
 export function liftableKindAt(mapId: number, x: number, y: number): LiftableKind | null {
+    if (require("./dungeonShrine").headAt(mapId, x, y)) return "cabeza";
     const ctx = contextOf(mapId);
     const key = coordKey(x, y);
     const liftable = ctx?.index.liftables.get(key);
@@ -2321,6 +2421,8 @@ export function onNpcStruck(npc: any, attacker: RuntimeCharacter): boolean {
     if (!npc || !isDungeonInstanceMap(npc.map)) return false;
     // El Genio metido en la botella: el golpe aturde la botella.
     if (require("./dungeonGrotto").onNpcStruck(npc)) return true;
+    // Los hechiceros del Santuario del Rostro: el golpe solo los empuja.
+    if (require("./dungeonShrine").onNpcStruck(npc, attacker)) return true;
     if (!templateOf(npc).retrocede) return false;
     require("./dungeonHazards").strikeBeetle(npc, attacker);
     return true;
@@ -2340,6 +2442,8 @@ export function getNpcInvulnerableReason(
     if (template.retrocede) return "No le hace nada: empujalo a un pozo.";
     const genie = require("./dungeonGrotto").invulnerableReason(npc);
     if (genie) return genie;
+    const shrine = require("./dungeonShrine").invulnerableReason(npc);
+    if (shrine) return shrine;
     // Los imitadores se cubren de frente: hay que pegarles por la espalda o de costado.
     const frontal = attacker ? require("./dungeonHazards").frontalBlockReason(npc, attacker) : null;
     if (frontal) return frontal;
@@ -2524,7 +2628,7 @@ function templateOf(npc: { templateNpcIndex?: number } | undefined): SpecialTemp
 }
 
 function registerSpecialNpc(run: DungeonRun, npc: any) {
-    if (require("./dungeonHazards").register(npc) || require("./dungeonBoss").register(npc) || require("./dungeonGrotto").register(npc)) return;
+    if (require("./dungeonHazards").register(npc) || require("./dungeonBoss").register(npc) || require("./dungeonGrotto").register(npc) || require("./dungeonShrine").register(npc)) return;
     const template = templateOf(npc);
     if (template.despierta) npc.dormant = true;
     if (template.pareja) {
@@ -2854,6 +2958,7 @@ export function onNpcDied(npc: { id?: EntityId; map?: number; templateNpcIndex?:
     require("./dungeonHazards").onNpcDied(npc);
     require("./dungeonBoss").onNpcDied(npc);
     require("./dungeonGrotto").onNpcDied(npc);
+    require("./dungeonShrine").onNpcDied(npc);
     const boss = ctx.run.floatingBoss;
     if (boss?.npcId === String(npc.id)) {
         ctx.run.floatingBoss = null;
@@ -2954,6 +3059,11 @@ module.exports = {
     setDungeonObject,
     setDungeonBlocked,
     ownedDungeonItems,
+    onThrowHit,
+    shrineDataOf,
+    solveRoomPuzzle,
+    openPitAt,
+    setShrineObject,
     broadcastNpcVitals,
     fallIfHazard,
     toolTargetAt,

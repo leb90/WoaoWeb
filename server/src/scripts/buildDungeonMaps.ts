@@ -44,6 +44,12 @@
 //   -  placa de peso: solo se aprieta si el que la pisa carga algo con el Brazalete (cuenta para las puertas =)
 //   Las escaleras de una sala con placas aparecen al apretarlas todas (los bloques que abren la escalera A), y los
 //   cofres de una sala con criaturas "orden" aparecen al matarlas en orden.
+// Santuario del Rostro:
+//   ♜  estatua pesada (solo con el Brazalete nivel 2)      ♞  cabeza de caballo: se tira y cae parada o acostada; con
+//      todas las de la sala paradas, la sala se resuelve (abre sus puertas =)      [  persiana: se abre tirándole algo
+//   Ñ  cofre de la llave del jefe trabado: se abre tirándole algo
+//   ▦  baldosa voladora (se despega y vuela hacia el jugador)      ▩  la que deja un pozo; romperlas todas resuelve la sala
+//   → ← ↑ ↓  cinta transportadora      ♨  lanzallamas (escupe fuego hacia la sala)      ◉  ojo de piedra (rayo)
 // Bombas (los básicos que tiene todo el mundo):
 //   @  pared rajada: un paso tapado que se abre con una bomba (arco tapiado en una pared horizontal, rocas en una vertical)
 // Lo que aparece: los cofres de una sala que se cierra (!), que tiene placas o antorchas apagadas aparecen al vaciarla,
@@ -116,7 +122,20 @@ export const DUNGEON_OBJECTS = {
     remolino: { id: 1868, name: "Remolino", grh: 42266 },
     // La botella del Genio (dungeonGrotto.ts): no va en el plano; es lo que se ve al levantarla y tirarla.
     botellaGenio: { id: 1869, name: "Botella del Genio", grh: 42287 },
+    // Santuario del Rostro (dungeonShrine.ts).
+    estatuaPesada: { id: 1870, name: "Estatua pesada", grh: 42289 },
+    cabezaParada: { id: 1871, name: "Cabeza de caballo (parada)", grh: 42290 },
+    cabezaAcostada: { id: 1872, name: "Cabeza de caballo (acostada)", grh: 42291 },
+    baldosaVoladora: { id: 1873, name: "Baldosa con dibujo", grh: 42292 },
+    pozoAbierto: { id: 1874, name: "Pozo", grh: 42293 },
+    cintaNorte: { id: 1875, name: "Cinta transportadora", grh: 42294 },
+    cintaSur: { id: 1876, name: "Cinta transportadora", grh: 42295 },
+    cintaEste: { id: 1877, name: "Cinta transportadora", grh: 42296 },
+    cintaOeste: { id: 1878, name: "Cinta transportadora", grh: 42297 },
+    lanzallamas: { id: 1879, name: "Lanzallamas", grh: 42298 },
+    ojoDePiedra: { id: 1880, name: "Ojo de piedra", grh: 42299 },
 } as const;
+const CONVEYOR_DIR: Record<string, string> = { "↑": "norte", "↓": "sur", "→": "este", "←": "oeste" };
 const CHEST_CONTENT: Record<string, string> = {
     K: "llave",
     N: "jefe",
@@ -129,6 +148,8 @@ const CHEST_CONTENT: Record<string, string> = {
     Y: "trofeo",
     C: "caracola",
     "0": "pico",
+    // La llave del jefe del Santuario del Rostro, en un cofre trabado que se abre tirándole algo.
+    Ñ: "jefe",
 };
 const BARRIER_TYPE: Record<string, string> = {
     L: "llave",
@@ -142,6 +163,7 @@ const BARRIER_TYPE: Record<string, string> = {
     "}": "unica",
     "&": "llave",
     "@": "bomba",
+    "[": "golpe",
 };
 const ONE_WAY_DIR: Record<string, string> = { "<": "oeste", ">": "este", "{": "norte", "}": "sur" };
 // Puertas que arrancan abiertas (no bloquean).
@@ -319,8 +341,38 @@ for (const plan of plans) {
         }
     }
 }
+// Salas con baldosas voladoras (sus cofres aparecen al romperlas todas).
+const flyingTileRooms = new Set<string>();
+for (const plan of plans) {
+    const { roomOf } = roomsByMap.get(plan.mapId)!;
+    for (let y = 1; y <= SIZE; y++) {
+        for (let x = 1; x <= SIZE; x++) {
+            const c = charAt(plan, x, y);
+            if ((c === "▦" || c === "▩") && roomOf.has(`${x},${y}`)) flyingTileRooms.add(`${plan.mapId}:${roomOf.get(`${x},${y}`)}`);
+        }
+    }
+}
+// Hacia dónde escupe un lanzallamas: hacia la sala, del lado contrario a la pared que tiene pegada (si no, hacia donde
+// hay más piso libre en línea).
+function shooterDir(plan: Plan, x: number, y: number): string {
+    const dirs: Array<[string, number, number]> = [["norte", 0, -1], ["sur", 0, 1], ["este", 1, 0], ["oeste", -1, 0]];
+    for (const [name, dx, dy] of dirs) {
+        if (isWall(charAt(plan, x - dx, y - dy)) && isOpen(charAt(plan, x + dx, y + dy))) return name;
+    }
+    let best = "sur";
+    let bestRun = -1;
+    for (const [name, dx, dy] of dirs) {
+        let run = 0;
+        while (run < 20 && isOpen(charAt(plan, x + dx * (run + 1), y + dy * (run + 1)))) run++;
+        if (run > bestRun) {
+            best = name;
+            bestRun = run;
+        }
+    }
+    return best;
+}
 // Los cofres de las salas que se cierran no se ven hasta vaciarlas; los de las salas con placas, hasta apretarlas;
-// los de las salas con antorchas apagadas, hasta encenderlas.
+// los de las salas con antorchas apagadas, hasta encenderlas; los de las salas con baldosas voladoras, hasta romperlas.
 const hiddenChests = new Set<string>();
 for (const plan of plans) {
     const { rooms, roomOf } = roomsByMap.get(plan.mapId)!;
@@ -330,7 +382,7 @@ for (const plan of plans) {
             const roomId = roomOf.get(`${x},${y}`);
             const room = rooms.find((r) => r.id === roomId);
             const roomKey = `${plan.mapId}:${roomId}`;
-            if (room?.cierra || plateRooms.has(roomKey) || torchRooms.has(roomKey) || orderRooms.has(roomKey)) {
+            if (room?.cierra || plateRooms.has(roomKey) || torchRooms.has(roomKey) || orderRooms.has(roomKey) || flyingTileRooms.has(roomKey)) {
                 hiddenChests.add(`${plan.mapId}:${x},${y}`);
             }
         }
@@ -381,7 +433,7 @@ function buildMechanics(plan: Plan) {
         // Roca de la Tortuga: antorchas, hielo, lo que se levanta con el Brazalete y las estatuas del Gancho.
         torches: [] as Array<{ x: number; y: number; encendida: boolean; sala: number }>,
         ice: [] as string[],
-        liftables: [] as Array<{ x: number; y: number; tipo: "vasija" | "piedra" | "pesada"; placa: boolean }>,
+        liftables: [] as Array<{ x: number; y: number; tipo: "vasija" | "piedra" | "pesada" | "estatua"; placa: boolean }>,
         hookPosts: [] as string[],
         // Mecánicas compartidas: búhos, bloques de color, cristales y remolinos.
         owls: [] as Array<{ x: number; y: number; texto: string }>,
@@ -389,6 +441,14 @@ function buildMechanics(plan: Plan) {
         switches: [] as string[],
         vortexes: [] as string[],
         weightPlates: [] as string[],
+        // Santuario del Rostro (dungeonShrine.ts).
+        santuario: {
+            cabezas: [] as Array<{ x: number; y: number; sala: number }>,
+            baldosas: [] as Array<{ x: number; y: number; pozo: boolean; sala: number }>,
+            cintas: [] as Array<{ x: number; y: number; dir: string }>,
+            lanzallamas: [] as Array<{ x: number; y: number; dir: string; sala: number }>,
+            ojos: [] as Array<{ x: number; y: number; sala: number }>,
+        },
     };
     if (plan.meta.caida) {
         const caida = markers.caidas.get(Number(plan.meta.caida));
@@ -426,9 +486,15 @@ function buildMechanics(plan: Plan) {
             if (c === "B") data.blocks.push(key);
             if (c === "F" || c === "A") data.torches.push({ x, y, encendida: c === "A", sala: roomOf.get(key) ?? 0 });
             if (c === "I") data.ice.push(key);
-            if (c === "U" || c === "V" || c === ";" || c === "]") {
-                data.liftables.push({ x, y, tipo: c === ";" ? "piedra" : c === "]" ? "pesada" : "vasija", placa: c === "V" });
+            if (c === "U" || c === "V" || c === ";" || c === "]" || c === "♜") {
+                data.liftables.push({ x, y, tipo: c === ";" ? "piedra" : c === "]" ? "pesada" : c === "♜" ? "estatua" : "vasija", placa: c === "V" });
             }
+            const sala = roomOf.get(key) ?? 0;
+            if (c === "♞") data.santuario.cabezas.push({ x, y, sala });
+            if (c === "▦" || c === "▩") data.santuario.baldosas.push({ x, y, pozo: c === "▩", sala });
+            if (c in CONVEYOR_DIR) data.santuario.cintas.push({ x, y, dir: CONVEYOR_DIR[c] });
+            if (c === "♨") data.santuario.lanzallamas.push({ x, y, dir: shooterDir(plan, x, y), sala });
+            if (c === "◉") data.santuario.ojos.push({ x, y, sala });
             if (c === "H") data.hookPosts.push(key);
             if (c === "/") data.owls.push({ x, y, texto: owlTexts[data.owls.length] ?? "El búho no dice nada." });
             if (c === "(") data.colorBlocks.azul.push(key);
@@ -436,7 +502,14 @@ function buildMechanics(plan: Plan) {
             if (c === "|") data.switches.push(key);
             if (c === '"') data.vortexes.push(key);
             if (c in CHEST_CONTENT) {
-                data.chests.push({ x, y, contenido: CHEST_CONTENT[c], oculto: hiddenChests.has(`${plan.mapId}:${key}`), sala: roomOf.get(key) ?? 0 });
+                data.chests.push({
+                    x,
+                    y,
+                    contenido: CHEST_CONTENT[c],
+                    oculto: hiddenChests.has(`${plan.mapId}:${key}`),
+                    sala: roomOf.get(key) ?? 0,
+                    ...(c === "Ñ" ? { golpe: true } : {}),
+                });
             }
             if (c === "?") data.slabs.push({ x, y, texto: slabTexts[data.slabs.length] ?? "La losa está gastada: no se puede leer." });
         }
@@ -514,6 +587,11 @@ function buildTile(plan: Plan, x: number, y: number): Tile {
         ";": DUNGEON_OBJECTS.piedra.id,
         "]": DUNGEON_OBJECTS.piedraPesada.id,
         H: DUNGEON_OBJECTS.poste.id,
+        // Santuario del Rostro: la estatua pesada, la cabeza de caballo (arranca acostada), el lanzallamas y el ojo.
+        "♜": DUNGEON_OBJECTS.estatuaPesada.id,
+        "♞": DUNGEON_OBJECTS.cabezaAcostada.id,
+        "♨": DUNGEON_OBJECTS.lanzallamas.id,
+        "◉": DUNGEON_OBJECTS.ojoDePiedra.id,
     };
     if (c in tortoiseObject) {
         tile.object = tortoiseObject[c];
@@ -541,6 +619,15 @@ function buildTile(plan: Plan, x: number, y: number): Tile {
         tile.object = DUNGEON_OBJECTS.remolino.id;
         tile.trigger = NO_NPC_TRIGGER;
     }
+    // Baldosas voladoras y cintas: se pisan.
+    if (c === "▦" || c === "▩") tile.object = DUNGEON_OBJECTS.baldosaVoladora.id;
+    const conveyor: Record<string, number> = {
+        "↑": DUNGEON_OBJECTS.cintaNorte.id,
+        "↓": DUNGEON_OBJECTS.cintaSur.id,
+        "→": DUNGEON_OBJECTS.cintaEste.id,
+        "←": DUNGEON_OBJECTS.cintaOeste.id,
+    };
+    if (c in conveyor) tile.object = conveyor[c];
     if (c in CHEST_CONTENT && !hiddenChests.has(`${plan.mapId}:${x},${y}`)) {
         tile.object = c === "Y" ? DUNGEON_OBJECTS.cofreJefe.id : DUNGEON_OBJECTS.cofre.id;
         tile.blocked = true;

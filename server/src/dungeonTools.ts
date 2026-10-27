@@ -63,7 +63,7 @@ const HOOKABLE = new Set(["antorcha", "antorchaEncendida", "hielo", "vasija", "p
 type Pos = { x: number; y: number };
 type ToolUser = RuntimeCharacter & {
     dungeonMotion?: { tipo: string; until: number } | null;
-    dungeonCarry?: { tipo: string; objIndex: number; map: number } | null;
+    dungeonCarry?: { tipo: string; objIndex: number; map: number; sala?: number } | null;
     nextFireAt?: number;
     nextHookAt?: number;
     nextLiftAt?: number;
@@ -162,6 +162,8 @@ function damageNpc(user: ToolUser, npcId: EntityId, amount: number, source: stri
     if (!npc || !ws) return false;
     // Una flecha, una bomba o algo tirado a la botella con el Genio adentro también la aturde.
     if (require("./dungeonGrotto").onNpcStruck(npc)) return false;
+    // Una bomba o algo tirado mata a un hechicero de una (Santuario del Rostro).
+    amount = require("./dungeonShrine").damageFor(npc, source, amount);
     if (!getDungeons().canToolHitNpc(npc, source)) {
         const reason = getDungeons().getNpcInvulnerableReason(npc, undefined, source);
         if (reason) tell(user.id, reason);
@@ -298,9 +300,12 @@ export function bracelet(sessionId: EntityId) {
     const heading = Number(user.heading ?? vars.direcciones.down);
     const dir = getMotion().headingOffset(heading);
     const from = { x: user.pos.x + dir.x, y: user.pos.y + dir.y };
-    if (dungeons.liftableKindAt(Number(user.map), from.x, from.y) === "pesada" && !strong) {
-        return tell(sessionId, "Es demasiado pesada: hace falta el Brazalete de Fuerza II.");
+    const kind = dungeons.liftableKindAt(Number(user.map), from.x, from.y);
+    if ((kind === "pesada" || kind === "estatua") && !strong) {
+        return tell(sessionId, "Es demasiado pesada: hace falta el Brazalete de Fuerza nivel 2.");
     }
+    // La cabeza de caballo cuenta para la sala de la que salió aunque la tiren a otra.
+    const headRoom = kind === "cabeza" ? require("./dungeonShrine").headRoomAt(Number(user.map), from.x, from.y) : undefined;
     // La botella aturdida del Genio de la Gruta de la Botella.
     if (require("./dungeonGrotto").liftBottle(user, from)) {
         const obj = dungeons.DUNGEON_OBJ.botellaGenio;
@@ -310,7 +315,7 @@ export function bracelet(sessionId: EntityId) {
     }
     const lifted = dungeons.liftAt(Number(user.map), from.x, from.y);
     if (!lifted) return tell(sessionId, "No hay nada para levantar adelante tuyo.");
-    user.dungeonCarry = { tipo: lifted.tipo, objIndex: lifted.objIndex, map: Number(user.map) };
+    user.dungeonCarry = { tipo: lifted.tipo, objIndex: lifted.objIndex, map: Number(user.map), ...(headRoom !== undefined ? { sala: headRoom } : {}) };
     playSound(user, TOOL_SOUNDS.levantar);
     broadcast(user, { id: Number(user.id), tipo: "levanta", heading, ms: 150, from, obj: lifted.objIndex });
 }
@@ -329,10 +334,19 @@ function throwCarried(user: ToolUser) {
     const golpe: Hit = line.npcId ? "criatura" : line.target || line.blocked ? "pared" : null;
     const to = line.npcId ? line.end! : (line.end ?? { x: user.pos.x, y: user.pos.y });
     const distance = Math.max(1, Math.abs(to.x - user.pos.x) + Math.abs(to.y - user.pos.y));
-    broadcast(user, { id: Number(user.id), tipo: "tira", heading, ms: THROW_STEP_MS, to, golpe, obj: carry.objIndex });
+    // La cabeza de caballo del Santuario del Rostro no se rompe: cae en la última baldosa libre del vuelo.
+    const head = carry.tipo === "cabeza";
+    broadcast(user, { id: Number(user.id), tipo: "tira", heading, ms: THROW_STEP_MS, to, golpe, obj: carry.objIndex, ...(head ? { entera: true } : {}) });
     setTimeout(() => {
         playSoundAt(mapId, to, TOOL_SOUNDS.romper);
-        if (line.npcId) damageNpc(user, line.npcId, carry.tipo === "pesada" ? toolDamage(user, 30, 3) : toolDamage(user, 15, 2), "tiro");
+        const heavy = carry.tipo === "pesada" || carry.tipo === "estatua";
+        if (line.npcId) damageNpc(user, line.npcId, heavy ? toolDamage(user, 30, 3) : toolDamage(user, 15, 2), "tiro");
+        // Lo tirado contra una persiana la abre; contra el cofre trabado, lo abre (Santuario del Rostro).
+        if (line.target && line.end) getDungeons().onThrowHit(user, mapId, line.end, line.target);
+        if (head) {
+            const landing = line.npcId || line.target ? (line.path.at(-1) ?? { x: user.pos.x, y: user.pos.y }) : to;
+            require("./dungeonShrine").landHead(user, mapId, landing, carry.sala);
+        }
     }, distance * THROW_STEP_MS);
 }
 

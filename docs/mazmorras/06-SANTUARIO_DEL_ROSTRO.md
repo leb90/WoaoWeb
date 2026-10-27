@@ -1,11 +1,11 @@
 # Santuario del Rostro
 
-Fecha: 2026-10-27. Estado: **diseño para aprobar**. El sistema (instancias, grupo, ítems de mazmorra, mecánicas) está en [../MAZMORRAS.md](../MAZMORRAS.md); el patrón de la serie, en [00-PATRON_LINKS_AWAKENING.md](00-PATRON_LINKS_AWAKENING.md).
+Fecha: 2026-10-27. Estado: **diseño aprobado** (Leandro aprobó todo y pidió el gancho como en el original); en construcción. El sistema (instancias, grupo, ítems de mazmorra, mecánicas) está en [../MAZMORRAS.md](../MAZMORRAS.md); el patrón de la serie, en [00-PATRON_LINKS_AWAKENING.md](00-PATRON_LINKS_AWAKENING.md).
 
 **Lugar en la serie: a definir.** Leandro pasa las mazmorras sin orden y el orden se decide cuando estén todas. En el original es la sexta.
 - **Ítem:** da el **Brazalete de Fuerza nivel 2**.
 - **Para entrar:** pide el **Brazalete de Fuerza**, porque las vasijas, las cabezas de caballo y la bola del minijefe se levantan con el nivel 1.
-- **Otros ítems que usa:** la Pluma de Roc, las Botas de Pegaso y los básicos (bombas, arco y polvo mágico).
+- **Otros ítems que usa:** como en el original, la Pluma de Roc, las Botas de Pegaso, el **Gancho** (lo da la mazmorra que sigue) y los básicos (bombas, arco y polvo mágico).
 
 Adaptación del **Santuario del Rostro** (*Face Shrine*), el nivel 6 de *Link's Awakening*. No se copia baldosa por baldosa; se respeta la estructura jugable:
 - **Un laberinto grande:** 40 salas en una grilla de 8 × 7 y tres pasajes, con cristales que cambian los bloques de toda la mazmorra.
@@ -101,7 +101,7 @@ Celdas (columna, fila) desde arriba a la izquierda, de 0 a 7 y de 0 a 6. El núm
 | Estatuas de la puerta | (5,5) | 8 | **Puerta con llave** al norte; se tiran 2 estatuas contra la persiana este | — | Estatuas, lanzallamas |
 | Hechiceros del bolsillo | (6,5) | 8 | Un bolsillo con un cofre de **oro**, al que se llega desde los Saltos | 4 hechiceros | — |
 | Canal sur | (6,4) | 8 | Un canal de agua; el borde lleva al Canal | Chispa, estrella | — |
-| Canal | (6,3) | 8 | Bolsillo con un **bloque cerradura** hacia el Anillo de vasijas, al que se llega con un **salto largo** (Botas + Pluma) | — | Agua |
+| Canal | (6,3) | 8 | Bolsillo con un **bloque cerradura** hacia el Anillo de vasijas, al que se llega con el **Gancho** (se engancha a un bloque del otro lado del agua) | — | Agua |
 | Serpientes | (7,3) | 11 | **Las Serpientes Glotonas** (solo mueren comiendo bombas) | 2 serpientes | Pozos |
 | Anillo de vasijas | (6,1)-(6,2) | 11 | Sala de dos celdas. Arriba, 22 vasijas rodean el cofre de la **llave del jefe**, que solo se abre **tirándole una vasija**. Abajo, cofre de la **K2** junto a un canal. Búho | — | Vasijas, agua |
 | Orejudos | (7,2) | 8 | Llega la **escalera F**; la sala se abre al vencer a los orejudos | 3 orejudos | Se cierra |
@@ -147,7 +147,7 @@ Celdas (columna, fila) desde arriba a la izquierda, de 0 a 7 y de 0 a 6. El núm
    - Escalera C (estatua) → pasaje C → D con la pluma → Baldosas del pozo: **K3**.
 4. **La llave del jefe:**
    - Pasarela: **escalera E** → pasaje E → F con las botas → Orejudos → Laberinto → Cabezas del este: **200 de oro**.
-   - Serpientes: dar de comer bombas → Canal: salto largo → **bloque cerradura** → Anillo de vasijas: tirarle una vasija al cofre (**llave del jefe**).
+   - Serpientes: dar de comer bombas → Canal: **Gancho** → **bloque cerradura** → Anillo de vasijas: tirarle una vasija al cofre (**llave del jefe**).
 5. **El final:**
    - Baldosas del pozo → Aspiradora → Ojo de piedra → Antesala → **puerta del jefe** → Guarida.
    - Opcional, en cualquier momento después del paso 1: Saltos → el cofre de oro del bolsillo.
@@ -245,7 +245,6 @@ Ver la sección 5. Lo nuevo para construir: la cara en el piso, las baldosas que
 |---|---|
 | Espada | Cualquier golpe (los cristales, empujar a los hechiceros) |
 | Bumerán y vara de fuego | No hacen falta: el cristal se golpea con una flecha o una bomba, y a los hechiceros los matan las bombas, lo tirado o las flechas |
-| El gancho en el Canal | Un **salto largo** (Botas + Pluma), para no pedir un ítem que todavía no se consigue |
 | La Balada del Pez del Viento para los Pols Voice | Algo tirado, bombas o flechas (los orejudos) |
 | El atajo raro de la Escalera C a la sala de los lanzallamas | No va: alcanza con el portal-atajo |
 | El cofre de Medicina del bolsillo | Oro |
@@ -260,7 +259,7 @@ Ver la sección 5. Lo nuevo para construir: la cara en el piso, las baldosas que
 - puertas de un solo sentido, paredes rajadas, portal-atajo, remolino;
 - salas oscuras, cristales y bloques de color, imitadores, orejudos, búhos y pico;
 - mocos que despiertan, chispas, cuchillas y aplastadores;
-- la pluma, las botas, el salto largo, las bombas, el arco y el Brazalete con su nivel 2.
+- la pluma, las botas, el Gancho, las bombas, el arco y el Brazalete con su nivel 2.
 
 **Nuevas:**
 
@@ -300,7 +299,7 @@ El ojo de piedra también lo pide la Roca de la Tortuga: se hace una vez para la
 ## 10. Cómo se construye
 
 Para que no tarde tanto, en tres PR seguidos:
-1. **Mecánicas nuevas** (sección 8, menos los jefes) y los hechiceros.
+1. **Mecánicas nuevas** (sección 8, menos los jefes) y los hechiceros (**hecho**, ver [../MAZMORRAS.md](../MAZMORRAS.md), sección 17).
 2. **Mapas 560-562, criaturas y música:** tres temas y uno de combate, libres. Incluye el recorrido completo en vivo con el simulador de recorrido.
 3. **Jefes:** el Machacador, las Serpientes Glotonas y el Rostro de Piedra.
 
@@ -310,7 +309,7 @@ Para que no tarde tanto, en tres PR seguidos:
 - Plantillas de criaturas: desde 9776.
 - Objetos de mazmorra: desde el 1870.
 - Gráficos: desde el grh 42289 y el archivo 330013.
-- Va como `soloDesarrollo`. Pide el Brazalete de Fuerza, la Pluma y las Botas.
+- Va como `soloDesarrollo`. Pide el Brazalete de Fuerza, la Pluma, las Botas y el Gancho, como el original.
 
 ## 11. Para confirmar
 
@@ -321,8 +320,8 @@ Para que no tarde tanto, en tres PR seguidos:
 | Minijefes | Machacador y Serpientes Glotonas |
 | Trofeo | Máscara de Piedra |
 | Salas de 10 × 8 | Como en Zelda, para que las 40 entren en un mapa |
-| El gancho del Canal | Un salto largo (Botas + Pluma) |
-| Requisitos | El Brazalete de Fuerza (pedido) y, como los pasajes los usan, la Pluma y las Botas |
+| El gancho del Canal | **Decidido:** el Gancho, como en el original. Lo da la mazmorra que sigue |
+| Requisitos | **Decidido:** el Brazalete de Fuerza, la Pluma, las Botas y el Gancho |
 
 ## Fuentes
 - El mapa del pedido (VinnyVideo, 2008), con la leyenda de llaves, warps y objetos.

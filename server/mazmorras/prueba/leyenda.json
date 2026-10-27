@@ -1,166 +1,279 @@
 {
-    "criaturas": {
-        "z": 502,
-        "k": 503,
-        "i": 9799,
-        "f": 9798,
-        "p": 9793,
-        "q": 9795,
-        "r": 9794,
-        "e": 9796,
-        "w": 9800,
-        "y": 9801,
-        "v": 9802
-    },
-    "losas": {
-        "590": [
-            "Dos runas esperan peso: una piedra y un pie.",
-            "Las puertas de cristal ceden cuando la sala queda en silencio. Las de piedra, solo con su llave."
-        ],
-        "591": [
-            "El fuego duerme dos latidos y despierta en el tercero."
-        ]
-    },
-    "oro": 300,
-    "trampa": [
-        503,
-        503
-    ],
-    "plantillas": {
-        "9799": {
-            "base": 503,
-            "name": "Imitador",
-            "hp": 120,
-            "maxHp": 120,
-            "minHit": 10,
-            "maxHit": 18,
-            "exp": 120,
-            "gold": 10,
-            "drop": [],
-            "desc": "Copia cada paso tuyo, al revés. Se cubre de frente.",
-            "imitador": true
-        },
-        "9798": {
-            "base": 607,
-            "name": "Fantasma",
-            "hp": 60,
-            "maxHp": 60,
-            "minHit": 6,
-            "maxHit": 12,
-            "exp": 80,
-            "gold": 5,
-            "drop": [],
-            "desc": "A oscuras no se deja tocar.",
-            "fantasma": true
-        },
-        "9793": {
-            "base": 9735,
-            "name": "Orejudo",
-            "hp": 40,
-            "maxHp": 40,
-            "minHit": 5,
-            "maxHit": 9,
-            "exp": 60,
-            "gold": 5,
-            "drop": [],
-            "desc": "Solo le entra algo tirado.",
-            "orejudo": true,
-            "orden": 1
-        },
-        "9795": {
-            "base": 566,
-            "name": "Murciélago",
-            "hp": 30,
-            "maxHp": 30,
-            "minHit": 4,
-            "maxHit": 8,
-            "exp": 40,
-            "gold": 3,
-            "drop": [],
-            "desc": "El segundo.",
-            "orden": 2
-        },
-        "9794": {
-            "base": 503,
-            "name": "Esqueleto",
-            "hp": 45,
-            "maxHp": 45,
-            "minHit": 8,
-            "maxHit": 14,
-            "exp": 60,
-            "gold": 5,
-            "drop": [],
-            "desc": "El último.",
-            "orden": 3
-        },
-        "9796": {
-            "base": 9734,
-            "name": "Escarabajo de casco",
-            "hp": 999,
-            "maxHp": 999,
-            "minHit": 6,
-            "maxHit": 10,
-            "exp": 50,
-            "gold": 5,
-            "drop": [],
-            "desc": "No le entra nada: hay que empujarlo a un pozo.",
-            "retrocede": true,
-            "empuja": 1
-        },
-        "9800": {
-            "base": 551,
-            "name": "Hechicero",
-            "hp": 120,
-            "maxHp": 120,
-            "minHit": 8,
-            "maxHit": 14,
-            "exp": 60,
-            "gold": 5,
-            "drop": [],
-            "spells": [],
-            "attackable": 1,
-            "hostile": 1,
-            "desc": "Aparece, tira un rayo y desaparece.",
-            "hechicero": true
-        },
-        "9801": {
-            "base": 768,
-            "name": "Moco escondido",
-            "hp": 60,
-            "maxHp": 60,
-            "minHit": 6,
-            "maxHit": 10,
-            "exp": 60,
-            "gold": 5,
-            "drop": [],
-            "spells": [],
-            "attackable": 1,
-            "hostile": 1,
-            "desc": "No se ve hasta que te acercás.",
-            "escondido": true,
-            "idBody": 146
-        },
-        "9802": {
-            "base": 684,
-            "name": "Estrella",
-            "hp": 40,
-            "maxHp": 40,
-            "minHit": 5,
-            "maxHit": 9,
-            "exp": 60,
-            "gold": 5,
-            "drop": [],
-            "spells": [],
-            "attackable": 1,
-            "hostile": 1,
-            "desc": "Rebota en diagonal contra las paredes.",
-            "estrella": true,
-            "idBody": 578
-        }
-    },
-    "buhos": {
-        "591": [
-            "Golpeá el cristal: los bloques azules bajan y los naranjas suben."
-        ]
-    }
+ "criaturas": {
+  "z": 502,
+  "k": 503,
+  "i": 9799,
+  "f": 9798,
+  "p": 9793,
+  "q": 9795,
+  "r": 9794,
+  "e": 9796,
+  "w": 9800,
+  "y": 9801,
+  "v": 9802,
+  "m": 9840,
+  "s": 9841,
+  "d": 9842,
+  "g": 9843,
+  "c": 9844
+ },
+ "losas": {
+  "590": [
+   "Dos runas esperan peso: una piedra y un pie.",
+   "Las puertas de cristal ceden cuando la sala queda en silencio. Las de piedra, solo con su llave."
+  ],
+  "591": [
+   "El fuego duerme dos latidos y despierta en el tercero."
+  ]
+ },
+ "oro": 300,
+ "trampa": [
+  503,
+  503
+ ],
+ "plantillas": {
+  "9799": {
+   "base": 503,
+   "name": "Imitador",
+   "hp": 120,
+   "maxHp": 120,
+   "minHit": 10,
+   "maxHit": 18,
+   "exp": 120,
+   "gold": 10,
+   "drop": [],
+   "desc": "Copia cada paso tuyo, al revés. Se cubre de frente.",
+   "imitador": true
+  },
+  "9798": {
+   "base": 607,
+   "name": "Fantasma",
+   "hp": 60,
+   "maxHp": 60,
+   "minHit": 6,
+   "maxHit": 12,
+   "exp": 80,
+   "gold": 5,
+   "drop": [],
+   "desc": "A oscuras no se deja tocar.",
+   "fantasma": true
+  },
+  "9793": {
+   "base": 9735,
+   "name": "Orejudo",
+   "hp": 40,
+   "maxHp": 40,
+   "minHit": 5,
+   "maxHit": 9,
+   "exp": 60,
+   "gold": 5,
+   "drop": [],
+   "desc": "Solo le entra algo tirado.",
+   "orejudo": true,
+   "orden": 1
+  },
+  "9795": {
+   "base": 566,
+   "name": "Murciélago",
+   "hp": 30,
+   "maxHp": 30,
+   "minHit": 4,
+   "maxHit": 8,
+   "exp": 40,
+   "gold": 3,
+   "drop": [],
+   "desc": "El segundo.",
+   "orden": 2
+  },
+  "9794": {
+   "base": 503,
+   "name": "Esqueleto",
+   "hp": 45,
+   "maxHp": 45,
+   "minHit": 8,
+   "maxHit": 14,
+   "exp": 60,
+   "gold": 5,
+   "drop": [],
+   "desc": "El último.",
+   "orden": 3
+  },
+  "9796": {
+   "base": 9734,
+   "name": "Escarabajo de casco",
+   "hp": 999,
+   "maxHp": 999,
+   "minHit": 6,
+   "maxHit": 10,
+   "exp": 50,
+   "gold": 5,
+   "drop": [],
+   "desc": "No le entra nada: hay que empujarlo a un pozo.",
+   "retrocede": true,
+   "empuja": 1
+  },
+  "9800": {
+   "base": 551,
+   "name": "Hechicero",
+   "hp": 120,
+   "maxHp": 120,
+   "minHit": 8,
+   "maxHit": 14,
+   "exp": 60,
+   "gold": 5,
+   "drop": [],
+   "spells": [],
+   "attackable": 1,
+   "hostile": 1,
+   "desc": "Aparece, tira un rayo y desaparece.",
+   "hechicero": true
+  },
+  "9801": {
+   "base": 768,
+   "name": "Moco escondido",
+   "hp": 60,
+   "maxHp": 60,
+   "minHit": 6,
+   "maxHit": 10,
+   "exp": 60,
+   "gold": 5,
+   "drop": [],
+   "spells": [],
+   "attackable": 1,
+   "hostile": 1,
+   "desc": "No se ve hasta que te acercás.",
+   "escondido": true,
+   "idBody": 146
+  },
+  "9802": {
+   "base": 684,
+   "name": "Estrella",
+   "hp": 40,
+   "maxHp": 40,
+   "minHit": 5,
+   "maxHit": 9,
+   "exp": 60,
+   "gold": 5,
+   "drop": [],
+   "spells": [],
+   "attackable": 1,
+   "hostile": 1,
+   "desc": "Rebota en diagonal contra las paredes.",
+   "estrella": true,
+   "idBody": 578
+  },
+  "9840": {
+   "base": 503,
+   "drop": [],
+   "spells": [],
+   "attackable": 1,
+   "hostile": 1,
+   "exp": 60,
+   "gold": 5,
+   "def": 4,
+   "poderAtaque": 50,
+   "poderEvasion": 30,
+   "name": "Máscara de Hierro",
+   "idBody": 582,
+   "hp": 160,
+   "maxHp": 160,
+   "minHit": 8,
+   "maxHit": 14,
+   "desc": "De frente se cubre: pegale de costado o por la espalda, o arrancale la máscara con el Gancho.",
+   "mascara": true,
+   "cuerpoSinMascara": 583
+  },
+  "9841": {
+   "base": 503,
+   "drop": [],
+   "spells": [],
+   "attackable": 1,
+   "hostile": 1,
+   "exp": 60,
+   "gold": 5,
+   "def": 4,
+   "poderAtaque": 50,
+   "poderEvasion": 30,
+   "name": "Esqueleto saltarín",
+   "hp": 120,
+   "maxHp": 120,
+   "minHit": 8,
+   "maxHit": 14,
+   "desc": "Si te acercás, te salta encima.",
+   "saltarin": true
+  },
+  "9842": {
+   "base": 503,
+   "drop": [],
+   "spells": [],
+   "attackable": 1,
+   "hostile": 1,
+   "exp": 60,
+   "gold": 5,
+   "def": 4,
+   "poderAtaque": 50,
+   "poderEvasion": 30,
+   "name": "Esqueleto esquivo",
+   "hp": 120,
+   "maxHp": 120,
+   "minHit": 8,
+   "maxHit": 14,
+   "desc": "Salta para atrás y te tira un hueso.",
+   "esquiva": true
+  },
+  "9843": {
+   "base": 503,
+   "drop": [],
+   "spells": [],
+   "attackable": 1,
+   "hostile": 1,
+   "exp": 60,
+   "gold": 5,
+   "def": 4,
+   "poderAtaque": 50,
+   "poderEvasion": 30,
+   "name": "Pulga de agua",
+   "idBody": 579,
+   "hp": 80,
+   "maxHp": 80,
+   "minHit": 6,
+   "maxHit": 10,
+   "desc": "Patina por el agua.",
+   "pulga": true
+  },
+  "9844": {
+   "base": 503,
+   "drop": [],
+   "spells": [],
+   "attackable": 1,
+   "hostile": 1,
+   "exp": 60,
+   "gold": 5,
+   "def": 4,
+   "poderAtaque": 50,
+   "poderEvasion": 30,
+   "name": "Calamar",
+   "idBody": 580,
+   "hp": 100,
+   "maxHp": 100,
+   "minHit": 6,
+   "maxHit": 12,
+   "desc": "Nada hacia vos.",
+   "aguaValida": 1,
+   "tierraInvalida": 1
+  }
+ },
+ "buhos": {
+  "591": [
+   "Golpeá el cristal: los bloques azules bajan y los naranjas suben."
+  ]
+ },
+ "bajoElAgua": [
+  "6"
+ ],
+ "notas": {
+  "591": [
+   "Lo que había en este cofre lo tengo yo. ¡Vení a buscarlo, si podés! — El Maestro"
+  ]
+ }
 }

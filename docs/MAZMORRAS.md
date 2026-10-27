@@ -132,7 +132,7 @@ Todas por datos del mapa, para que las mazmorras siguientes se armen sin código
    - La grilla de 8 × 7 salas en un mapa (560), los 3 pasajes (561) y la Guarida del Rostro (562).
    - Las mecánicas están en la sección 17; los mapas, las criaturas y la música, en la 18; los jefes, en la 19.
    - Se construyó en tres PR: las mecánicas; los mapas, las criaturas y la música; y los jefes.
-10. **Fauces del Bagre. [diseño para confirmar]** Adapta las Fauces del Bagre (nivel 5 de Link's Awakening) y da el **Gancho** (ya hecho; esta mazmorra le suma el puente del ancla, arrancar máscaras y sacar al jefe de la pared). Diseño en [mazmorras/07-FAUCES_DEL_BAGRE.md](mazmorras/07-FAUCES_DEL_BAGRE.md).
+10. **Fauces del Bagre. [diseño aprobado; mecánicas hechas, sección 20]** Adapta las Fauces del Bagre (nivel 5 de Link's Awakening) y da el **Gancho** (ya hecho; esta mazmorra le suma el puente del ancla, arrancar máscaras y sacar al jefe de la pared). Diseño en [mazmorras/07-FAUCES_DEL_BAGRE.md](mazmorras/07-FAUCES_DEL_BAGRE.md).
    - La grilla de 7 × 8 salas en un mapa (570), los 4 pasajes (571) y la Guarida de la Anguila (572).
    - El Maestro Stalfos aparece cuatro veces y la cuarta suelta el Gancho; el minijefe son las dos Gohma y el jefe, la Anguila Viscosa.
    - Se construye en tres PR, como el Santuario: mecánicas y criaturas; mapas y música; jefes.
@@ -981,3 +981,45 @@ La prueba en vivo es `pw/run-rostro-jefes.mjs` (17 controles). Pelea con los tre
   - las bombas en la cara;
   - los pozos que chupan;
   - la quinta bomba y la puerta del trofeo.
+
+## 20. Fauces del Bagre: las mecánicas propias
+
+El diseño está en [mazmorras/07-FAUCES_DEL_BAGRE.md](mazmorras/07-FAUCES_DEL_BAGRE.md). Como el resto, salen del original. Las nuevas están en `server/src/dungeonMaw.ts` y lo que se ve aparte, en `engine/dungeonMaw.ts`. Los enganches con los pozos, los bloques, los cofres y el Gancho están en `dungeons.ts` y `dungeonTools.ts`.
+
+| Mecánica | Cómo funciona | Plano |
+|---|---|---|
+| **Agua baja** | Es agua con un reflejo encima, en la capa 2. Con algo en la capa 2, ni el server ni el cliente la toman como agua: se camina sin las Patas de rana | `≈` |
+| **Escalera bajo el agua** | La zambullida. Es la punta de una escalera que tiene agua profunda al lado: no se ve y solo se llega nadando. La otra punta es una escalera común | número en `bajoElAgua` de `leyenda.json` |
+| **Ancla del Gancho** | Si la cadena pasa por encima, nace un puente que vuelve hacia el jugador por la columna de pozos hasta el piso firme. El puente se pisa sin caer y queda toda la corrida | `⚓` |
+| **Piso que se hunde** | Quieto encima 0,65 s, se cae (como un pozo) y vuelve a los 5 s. Caminando o saltando no pasa nada. Las criaturas no lo pisan | `▾` |
+| **Cristal de golpe** | Tapa el paso; lo rompe un golpe cuerpo a cuerpo de frente o una bomba | `◇` |
+| **Bloques que se juntan** | Se empujan como los otros. Con dos de la sala pegados en la misma fila, la sala se resuelve: aparecen sus cofres (que arrancan ocultos) | `■` |
+| **Cofre con nota** | Está vacío; al abrirlo se lee una nota, como una losa | `✉` (texto en `notas` de `leyenda.json`) |
+| **Cabeza de dragón** | Un poste del Gancho con otro dibujo | `Ψ` |
+| **Peces que saltan** | Cada 2,6 s (más o menos) un pez salta del hueco y muerde (8 %) al que está encima o al lado | `∿` |
+| **Máscaras de Hierro** | De frente se cubren de los golpes, las flechas y lo que se tira; las bombas les entran siempre. El Gancho de frente les arranca la máscara (sin daño) y desde ahí se las lastima de cualquier lado | plantilla con `mascara` |
+| **Esqueleto saltarín** | Si alguien está a 2 baldosas, le salta al lado en arco y le pega al caer (8 %) | plantilla con `saltarin` |
+| **Esqueleto esquivo** | Si alguien se le pega, salta para atrás y le tira un hueso que vuela girando (6 %; el Escudo Espejo lo frena) | plantilla con `esquiva` |
+| **Pulgas de agua** | Patinan en diagonal y rebotan, solo por el agua (baja o profunda). Muerden al tocar | plantilla con `pulga` |
+| **Calamares** | Criaturas comunes que solo andan por el agua profunda (`aguaValida` y `tierraInvalida`). Nacen en el agua | plantilla con esas marcas |
+
+**El generador:** las criaturas de agua nacen sobre agua profunda y las pulgas sobre agua baja, aunque la letra ocupe la baldosa. La paleta del terreno acepta las dos capas (`graphics: [capa 1, capa 2]`).
+
+**Gráficos:** archivos 330023 a 330036, con las criaturas como cuerpos 579 (pulga de agua), 580 (calamar), 581 (pez), 582 (Máscara de Hierro) y 583 (sin máscara). El ancla tiene una versión por dirección (apunta hacia donde avanza el puente) y el puente, una vertical y una horizontal. Los créditos están en [CREDITOS_GRAFICOS.md](CREDITOS_GRAFICOS.md).
+
+| El agua baja se camina; la profunda pide las Patas | El Gancho pasa sobre el ancla | Y queda el puente |
+|---|---|---|
+| ![Agua baja](mazmorras/fauces/agua-baja.png) | ![Ancla](mazmorras/fauces/ancla.png) | ![Puente](mazmorras/fauces/puente.png) |
+
+| Cristales de golpe y bloques que se juntan | El cofre con la nota del Maestro | La cabeza de dragón |
+|---|---|---|
+| ![Bloques](mazmorras/fauces/bloques.png) | ![Nota](mazmorras/fauces/nota.png) | ![Dragón](mazmorras/fauces/dragon.png) |
+
+### Para probarlas
+En el mapa 591 de la mazmorra de prueba, debajo de la sala del ojo de piedra, hay cuatro salas (se llega con `/telepme`):
+- el agua baja, la zambullida, la pulga, el calamar y el pez;
+- el ancla con su campo de pozos, y el cofre con la nota;
+- los cristales y los bloques que se juntan;
+- el piso flojo, los esqueletos, la Máscara de Hierro y la cabeza de dragón.
+
+La prueba en vivo es `pw/run-fauces.mjs`.

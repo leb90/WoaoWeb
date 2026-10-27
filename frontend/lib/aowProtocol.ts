@@ -557,7 +557,7 @@ export type DungeonBossPayload = {
     fin?: boolean;
     // Gruta de la Botella (server/src/dungeonGrotto.ts): la botella del Genio (dónde está, si salta, si el Genio está
     // adentro, si está aturdida, tiembla, la llevan o se rompió), el humo y las bolas de fuego.
-    tipo?: "botella" | "humo" | "fuego" | "oculto" | "baldosa" | "rayo" | "bola" | "rostro" | "pozo" | "glotona";
+    tipo?: "botella" | "humo" | "fuego" | "oculto" | "baldosa" | "rayo" | "bola" | "rostro" | "pozo" | "glotona" | "salto" | "hueso" | "pez" | "mascara";
     dentro?: boolean;
     estado?: string;
     tiembla?: boolean;
@@ -582,6 +582,8 @@ export type DungeonBossPayload = {
     alto?: boolean;
     sync?: boolean;
     fases?: { aviso: number; abre: number; abierto: number; cierra: number };
+    // Fauces del Bagre (server/src/dungeonMaw.ts): el salto de un esqueleto, el hueso, el pez y la máscara arrancada.
+    puesta?: boolean;
 };
 // Salas visitadas (con el mapa, todas) y, con la brújula, los cofres y la puerta del jefe.
 export type DungeonMinimapState = {

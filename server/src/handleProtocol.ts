@@ -518,6 +518,7 @@ export type HandleProtocolApi = {
     closeForce: (idUser: EntityId) => void;
     nameMap: (idUser: EntityId) => void;
     changeBody: (idUser: EntityId, client: RuntimeClient) => void;
+    changeNpcBody: (npc: { id: EntityId; idHead?: number; idBody?: number }, client: RuntimeClient) => void;
     navegando: (idUser: EntityId, client: RuntimeClient) => void;
     actColorName: (idUser: EntityId, color: string, client: RuntimeClient) => void;
     openBail: (
@@ -2058,6 +2059,18 @@ const handleServer: HandleProtocolApi = {
         pkg.writeShort(appearance.helmet);
         pkg.writeShort(appearance.weapon);
         pkg.writeShort(appearance.shield);
+        socket.send(client);
+    },
+
+    // El cuerpo nuevo de una criatura (la Máscara de Hierro sin máscara, dungeonMaw.ts), con el mismo paquete.
+    changeNpcBody(npc, client) {
+        pkg.setPackageID(pkg.clientPacketID.changeBody);
+        pkg.writeDouble(Number(npc.id));
+        pkg.writeShort(Number(npc.idHead ?? 0));
+        pkg.writeShort(Number(npc.idBody ?? 0));
+        pkg.writeShort(0);
+        pkg.writeShort(0);
+        pkg.writeShort(0);
         socket.send(client);
     },
 

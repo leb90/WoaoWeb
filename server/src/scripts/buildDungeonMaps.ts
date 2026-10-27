@@ -50,6 +50,14 @@
 //   Ñ  cofre de la llave del jefe trabado: se abre tirándole algo
 //   ▦  baldosa voladora (se despega y vuela hacia el jugador)      ▩  la que deja un pozo; romperlas todas resuelve la sala
 //   → ← ↑ ↓  cinta transportadora      ♨  lanzallamas (escupe fuego hacia la sala)      ◉  ojo de piedra (rayo)
+// Fauces del Bagre (dungeonMaw.ts):
+//   ≈  agua baja: se camina (es agua con un reflejo encima)      ∿  agua profunda donde salta un pez
+//   ⚓  ancla: si el Gancho pasa por encima, arma un puente sobre la columna de pozos que vuelve hacia el jugador
+//   ▾  piso que se hunde si te quedás quieto encima      ◇  cristal que se rompe de un golpe (o con una bomba)
+//   ■  bloque que se empuja y se junta: con dos pegados en la misma fila, aparecen los cofres de la sala
+//   ✉  cofre con una nota (texto en "notas" de leyenda.json, en orden de lectura)      Ψ  cabeza de dragón (se engancha)
+//   Las escaleras de "bajoElAgua" (por número) quedan bajo el agua profunda en la punta que tiene agua al lado: solo se
+//   llega nadando (la otra punta es una escalera común).
 // Bombas (los básicos que tiene todo el mundo):
 //   @  pared rajada: un paso tapado que se abre con una bomba (arco tapiado en una pared horizontal, rocas en una vertical)
 // Lo que aparece: los cofres de una sala que se cierra (!), que tiene placas o antorchas apagadas aparecen al vaciarla,
@@ -73,6 +81,10 @@ const DEFAULT_FLOOR_GRH = 9428; // bloque de 4×4 del piso verde del mapa 116
 const DEFAULT_WALL_FACE_GRH = 9412; // bloque de 4×4 de la cara de las paredes
 const VOID_GRH = 1; // negro
 const WATER_GRH = 1505; // bloque de 4×4 de agua (waterTiles.ts)
+// Gráficos de las Fauces del Bagre (docs/CREDITOS_GRAFICOS.md). El agua baja es un bloque de 4 × 4, como el agua.
+const MAW_GRH = { aguaBaja: 42326, anclaNorte: 42342, anclaSur: 42343, anclaEste: 42344, anclaOeste: 42345, pisoFlojo: 42346, cristalGolpe: 42348, cabezaDragon: 42349, puente: 42350, puenteHorizontal: 42351 };
+// El reflejo del agua baja (capa 2): con algo en la capa 2, el juego no la toma como agua y se camina.
+const SHALLOW_WATER_GRH = MAW_GRH.aguaBaja;
 const PORTAL_OBJ = 378; // Teleport (portal azul, no se puede levantar)
 const STAIRS_OBJ = 1198; // Escalera Grande
 const LAVA_GRHS = [9487, 9488, 9489, 9490, 9491, 9492, 9493, 9494, 9495]; // piso de lava del mapa 162
@@ -135,6 +147,17 @@ export const DUNGEON_OBJECTS = {
     cintaOeste: { id: 1878, name: "Cinta transportadora", grh: 42297 },
     lanzallamas: { id: 1879, name: "Lanzallamas", grh: 42298 },
     ojoDePiedra: { id: 1880, name: "Ojo de piedra", grh: 42299 },
+    // Fauces del Bagre (dungeonMaw.ts).
+    // El ancla apunta hacia donde avanza el puente (hacia los pozos).
+    ancla: { id: 1882, name: "Ancla del Gancho", grh: MAW_GRH.anclaNorte },
+    pisoFlojo: { id: 1883, name: "Piso flojo", grh: MAW_GRH.pisoFlojo },
+    cristalGolpe: { id: 1884, name: "Cristal", grh: MAW_GRH.cristalGolpe },
+    cabezaDragon: { id: 1885, name: "Cabeza de dragón", grh: MAW_GRH.cabezaDragon },
+    puente: { id: 1886, name: "Puente", grh: MAW_GRH.puente },
+    anclaSur: { id: 1887, name: "Ancla del Gancho", grh: MAW_GRH.anclaSur },
+    anclaEste: { id: 1888, name: "Ancla del Gancho", grh: MAW_GRH.anclaEste },
+    anclaOeste: { id: 1889, name: "Ancla del Gancho", grh: MAW_GRH.anclaOeste },
+    puenteHorizontal: { id: 1890, name: "Puente", grh: MAW_GRH.puenteHorizontal },
 } as const;
 const CONVEYOR_DIR: Record<string, string> = { "↑": "norte", "↓": "sur", "→": "este", "←": "oeste" };
 const CHEST_CONTENT: Record<string, string> = {
@@ -151,6 +174,8 @@ const CHEST_CONTENT: Record<string, string> = {
     "0": "pico",
     // La llave del jefe del Santuario del Rostro, en un cofre trabado que se abre tirándole algo.
     Ñ: "jefe",
+    // El cofre vacío con la nota del Maestro Stalfos (Fauces del Bagre).
+    "✉": "nota",
 };
 const BARRIER_TYPE: Record<string, string> = {
     L: "llave",
@@ -172,6 +197,8 @@ const OPEN_BARRIERS = new Set(["+", "<", ">", "{", "}"]);
 
 type Tile = {
     graphics: number;
+    // Capa 2 (el reflejo del agua baja).
+    graphics2?: number;
     blocked?: boolean;
     trigger?: number;
     object?: number;
@@ -199,6 +226,10 @@ type Legend = {
     // Escaleras (por número) que llegan a una sala que se cierra y se ven siempre: se llega por ellas y la sala se
     // cierra hasta vaciarla (la F del Santuario del Rostro).
     siempreVisibles?: string[];
+    // Escaleras (por número) bajo el agua profunda: solo se llega nadando (la zambullida de las Fauces del Bagre).
+    bajoElAgua?: string[];
+    // Lo que dice cada cofre con nota de cada mapa, en orden de lectura.
+    notas?: Record<string, string[]>;
 };
 
 const dungeonId = process.argv[2];
@@ -213,6 +244,7 @@ const legend: Legend = fs.existsSync(path.join(planDir, "leyenda.json"))
 const FLOOR_GRH = Number(legend.graficos?.piso ?? DEFAULT_FLOOR_GRH);
 const WALL_FACE_GRH = Number(legend.graficos?.pared ?? DEFAULT_WALL_FACE_GRH);
 const portalDigits = new Set(legend.portales ?? []);
+const underwaterDigits = new Set(legend.bajoElAgua ?? []);
 
 function readPlan(file: string): Plan {
     const mapId = Number(/mapa_(\d+)\.txt$/.exec(file)?.[1]);
@@ -243,6 +275,13 @@ const isBarrier = (c: string) => c in BARRIER_TYPE;
 const isRoomTile = (c: string) => isOpen(c) && !isBarrier(c);
 const block4 = (base: number, x: number, y: number, row?: number) => base + (row ?? (y - 1) % 4) * 4 + ((x - 1) % 4);
 
+// Una escalera de "bajoElAgua" está bajo el agua en la punta que tiene agua profunda al lado (la otra es común).
+function isUnderwaterStair(plan: Plan, x: number, y: number): boolean {
+    const c = charAt(plan, x, y);
+    if (!/[1-9]/.test(c) || !underwaterDigits.has(c)) return false;
+    return [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => ["~", "∿"].includes(charAt(plan, x + dx, y + dy)));
+}
+
 // Escaleras: dónde está cada número en cada mapa.
 const stairs = new Map<string, Array<{ mapId: number; x: number; y: number }>>();
 const markers: {
@@ -268,7 +307,10 @@ function arrivalNextTo(target: { mapId: number; x: number; y: number }) {
     const plan = plans.find((p) => p.mapId === target.mapId)!;
     for (const [dx, dy] of [[0, 1], [1, 0], [-1, 0], [0, -1]]) {
         const c = charAt(plan, target.x + dx, target.y + dy);
-        if (c === "." || c === "E" || c === "D" || c === ",") return { map: target.mapId, x: target.x + dx, y: target.y + dy };
+        const underwater = isUnderwaterStair(plan, target.x, target.y);
+        if (c === "." || c === "E" || c === "D" || c === "," || c === "≈" || (underwater && c === "~")) {
+            return { map: target.mapId, x: target.x + dx, y: target.y + dy };
+        }
     }
     throw new Error(`La escalera de ${target.mapId} (${target.x},${target.y}) no tiene piso al lado.`);
 }
@@ -356,6 +398,16 @@ for (const plan of plans) {
         }
     }
 }
+// Salas con bloques que se juntan (sus cofres aparecen al juntarlos).
+const joinRooms = new Set<string>();
+for (const plan of plans) {
+    const { roomOf } = roomsByMap.get(plan.mapId)!;
+    for (let y = 1; y <= SIZE; y++) {
+        for (let x = 1; x <= SIZE; x++) {
+            if (charAt(plan, x, y) === "■" && roomOf.has(`${x},${y}`)) joinRooms.add(`${plan.mapId}:${roomOf.get(`${x},${y}`)}`);
+        }
+    }
+}
 // Hacia dónde escupe un lanzallamas: hacia la sala, del lado contrario a la pared que tiene pegada (si no, hacia donde
 // hay más piso libre en línea).
 function shooterDir(plan: Plan, x: number, y: number): string {
@@ -386,7 +438,7 @@ for (const plan of plans) {
             const roomId = roomOf.get(`${x},${y}`);
             const room = rooms.find((r) => r.id === roomId);
             const roomKey = `${plan.mapId}:${roomId}`;
-            if (room?.cierra || plateRooms.has(roomKey) || torchRooms.has(roomKey) || orderRooms.has(roomKey) || flyingTileRooms.has(roomKey)) {
+            if (room?.cierra || plateRooms.has(roomKey) || torchRooms.has(roomKey) || orderRooms.has(roomKey) || flyingTileRooms.has(roomKey) || joinRooms.has(roomKey)) {
                 hiddenChests.add(`${plan.mapId}:${x},${y}`);
             }
         }
@@ -415,6 +467,8 @@ function buildMechanics(plan: Plan) {
     const { rooms, roomOf } = roomsByMap.get(plan.mapId)!;
     const slabTexts = legend.losas?.[String(plan.mapId)] ?? [];
     const owlTexts = legend.buhos?.[String(plan.mapId)] ?? [];
+    const noteTexts = legend.notas?.[String(plan.mapId)] ?? [];
+    let notes = 0;
     const data = {
         rooms: rooms.map(({ id, x1, y1, x2, y2, cierra }) => ({ id, x1, y1, x2, y2, cierra })),
         roomOf: Object.fromEntries(roomOf),
@@ -455,6 +509,15 @@ function buildMechanics(plan: Plan) {
             lanzallamas: [] as Array<{ x: number; y: number; dir: string; sala: number }>,
             ojos: [] as Array<{ x: number; y: number; sala: number }>,
         },
+        // Fauces del Bagre (dungeonMaw.ts).
+        fauces: {
+            anclas: [] as string[],
+            pisoFlojo: [] as string[],
+            cristalesGolpe: [] as string[],
+            salasJuntar: [...joinRooms].filter((key) => key.startsWith(`${plan.mapId}:`)).map((key) => Number(key.split(":")[1])),
+            peces: [] as Array<{ x: number; y: number; sala: number }>,
+            aguaBaja: [] as string[],
+        },
     };
     if (plan.meta.caida) {
         const caida = markers.caidas.get(Number(plan.meta.caida));
@@ -489,7 +552,11 @@ function buildMechanics(plan: Plan) {
             if (c === "%") data.lavaPeriodica.push(key);
             if (c === "_" || c === "V" || c === "-") data.plates.push(key);
             if (c === "-") data.weightPlates.push(key);
-            if (c === "B") data.blocks.push(key);
+            if (c === "B" || c === "■") data.blocks.push(key);
+            if (c === "⚓") data.fauces.anclas.push(key);
+            if (c === "▾") data.fauces.pisoFlojo.push(key);
+            if (c === "◇") data.fauces.cristalesGolpe.push(key);
+            if (c === "≈") data.fauces.aguaBaja.push(key);
             if (c === "F" || c === "A") data.torches.push({ x, y, encendida: c === "A", sala: roomOf.get(key) ?? 0 });
             if (c === "I") data.ice.push(key);
             if (c === "U" || c === "V" || c === ";" || c === "]" || c === "♜") {
@@ -501,7 +568,8 @@ function buildMechanics(plan: Plan) {
             if (c in CONVEYOR_DIR) data.santuario.cintas.push({ x, y, dir: CONVEYOR_DIR[c] });
             if (c === "♨") data.santuario.lanzallamas.push({ x, y, dir: shooterDir(plan, x, y), sala });
             if (c === "◉") data.santuario.ojos.push({ x, y, sala });
-            if (c === "H") data.hookPosts.push(key);
+            if (c === "H" || c === "Ψ") data.hookPosts.push(key);
+            if (c === "∿") data.fauces.peces.push({ x, y, sala });
             if (c === "/") data.owls.push({ x, y, texto: owlTexts[data.owls.length] ?? "El búho no dice nada." });
             if (c === "(") data.colorBlocks.azul.push(key);
             if (c === ")") data.colorBlocks.naranja.push(key);
@@ -515,6 +583,7 @@ function buildMechanics(plan: Plan) {
                     oculto: hiddenChests.has(`${plan.mapId}:${key}`),
                     sala: roomOf.get(key) ?? 0,
                     ...(c === "Ñ" ? { golpe: true } : {}),
+                    ...(c === "✉" ? { texto: noteTexts[notes++] ?? "La nota está borrosa." } : {}),
                 });
             }
             if (c === "?") data.slabs.push({ x, y, texto: slabTexts[data.slabs.length] ?? "La losa está gastada: no se puede leer." });
@@ -536,7 +605,13 @@ function buildTile(plan: Plan, x: number, y: number): Tile {
         }
         return { graphics: VOID_GRH, blocked: true, object };
     }
-    if (c === "~") return { graphics: block4(WATER_GRH, x, y) };
+    if (c === "~" || c === "∿" || isUnderwaterStair(plan, x, y)) {
+        // La escalera bajo el agua no se ve: es la zambullida.
+        const exit = /[1-9]/.test(c) ? stairExit(plan, c, x, y) : undefined;
+        return { graphics: block4(WATER_GRH, x, y), ...(exit ? { exit } : {}) };
+    }
+    // El agua baja es agua con un reflejo encima (capa 2): así el juego no la toma como agua y se camina.
+    if (c === "≈") return { graphics: block4(WATER_GRH, x, y), graphics2: block4(SHALLOW_WATER_GRH, x, y) };
     if (c === "O") return { graphics: VOID_GRH, trigger: NO_NPC_TRIGGER };
     if (c === "^" || c === "%") return { graphics: LAVA_GRHS[(x * 7 + y * 3) % LAVA_GRHS.length], trigger: NO_NPC_TRIGGER };
     const tile: Tile = { graphics: block4(FLOOR_GRH, x, y) };
@@ -574,8 +649,19 @@ function buildTile(plan: Plan, x: number, y: number): Tile {
         tile.trigger = NO_NPC_TRIGGER;
     }
     if (c === ",") tile.trigger = NO_NPC_TRIGGER;
-    if (c === "B") {
+    if (c === "B" || c === "■") {
         tile.object = DUNGEON_OBJECTS.bloque.id;
+        tile.blocked = true;
+    }
+    // Fauces del Bagre: el ancla y el piso flojo se pisan (las criaturas no pisan el piso flojo); el cristal de golpe y
+    // la cabeza de dragón tapan el paso.
+    if (c === "⚓") tile.object = anchorObject(plan, x, y);
+    if (c === "▾") {
+        tile.object = DUNGEON_OBJECTS.pisoFlojo.id;
+        tile.trigger = NO_NPC_TRIGGER;
+    }
+    if (c === "◇" || c === "Ψ") {
+        tile.object = c === "◇" ? DUNGEON_OBJECTS.cristalGolpe.id : DUNGEON_OBJECTS.cabezaDragon.id;
         tile.blocked = true;
     }
     if (c === "?") {
@@ -639,17 +725,46 @@ function buildTile(plan: Plan, x: number, y: number): Tile {
         tile.blocked = true;
     }
     if (/[1-9]/.test(c)) {
-        const pair = (stairs.get(c) ?? []).filter((s) => !(s.mapId === plan.mapId && s.x === x && s.y === y));
-        if (pair.length !== 1) throw new Error(`La escalera ${c} tiene que estar en dos lugares (está en ${pair.length + 1}).`);
         tile.object = portalDigits.has(c) ? PORTAL_OBJ : STAIRS_OBJ;
-        tile.exit = arrivalNextTo(pair[0]);
+        tile.exit = stairExit(plan, c, x, y);
     }
     if (/[a-z]/.test(c)) {
         const entry = legend.criaturas?.[c];
         if (!entry) throw new Error(`La letra "${c}" del mapa ${plan.mapId} no está en criaturas de leyenda.json.`);
         tile.npc = typeof entry === "number" ? entry : entry.npc;
+        // Las criaturas de agua nacen en el agua profunda; las pulgas, en el agua baja.
+        if (templateFlag(tile.npc, "tierraInvalida")) tile.graphics = block4(WATER_GRH, x, y);
+        if (templateFlag(tile.npc, "pulga")) {
+            tile.graphics = block4(WATER_GRH, x, y);
+            tile.graphics2 = block4(SHALLOW_WATER_GRH, x, y);
+        }
     }
     return tile;
+}
+
+// Una marca de la plantilla de una criatura (de leyenda.json o de npcs.json).
+const serverNpcsForFlags = JSON.parse(fs.readFileSync(path.join(ROOT, "server/jsons/npcs.json"), "utf8"));
+function templateFlag(id: number, flag: string): boolean {
+    const custom = legend.plantillas?.[String(id)] as Record<string, unknown> | undefined;
+    return Boolean(custom?.[flag] ?? serverNpcsForFlags[String(id)]?.[flag]);
+}
+
+// El ancla apunta hacia el pozo que tiene al lado: por ahí avanza el puente.
+function anchorObject(plan: Plan, x: number, y: number): number {
+    const sides: Array<[number, number, number]> = [
+        [0, -1, DUNGEON_OBJECTS.ancla.id],
+        [0, 1, DUNGEON_OBJECTS.anclaSur.id],
+        [1, 0, DUNGEON_OBJECTS.anclaEste.id],
+        [-1, 0, DUNGEON_OBJECTS.anclaOeste.id],
+    ];
+    return sides.find(([dx, dy]) => charAt(plan, x + dx, y + dy) === "O")?.[2] ?? DUNGEON_OBJECTS.ancla.id;
+}
+
+// Adonde lleva la escalera `c` de (x, y): al lado de la otra punta.
+function stairExit(plan: Plan, c: string, x: number, y: number) {
+    const pair = (stairs.get(c) ?? []).filter((s) => !(s.mapId === plan.mapId && s.x === x && s.y === y));
+    if (pair.length !== 1) throw new Error(`La escalera ${c} tiene que estar en dos lugares (está en ${pair.length + 1}).`);
+    return arrivalNextTo(pair[0]);
 }
 
 // Minimapa (frontend/public/imgs_maps/<N>.png): un píxel por baldosa, con los colores del minimapa del mapa 116.
@@ -658,6 +773,7 @@ const MINIMAP_COLORS = {
     wall: [34, 30, 6],
     void: [17, 17, 17],
     water: [40, 70, 110],
+    shallow: [70, 110, 140],
     portal: [70, 150, 230],
     stairs: [150, 110, 60],
     lava: [150, 50, 20],
@@ -723,7 +839,8 @@ function minimapColor(plan: Plan, tile: Tile, x: number, y: number) {
     if (c === ":") return MINIMAP_COLORS.fragile;
     if (c === "Z") return MINIMAP_COLORS.crusher;
     if (c === "W") return MINIMAP_COLORS.crackedWall;
-    if (c === "~") return MINIMAP_COLORS.water;
+    if (c === "~" || c === "∿" || isUnderwaterStair(plan, x, y)) return MINIMAP_COLORS.water;
+    if (c === "≈") return MINIMAP_COLORS.shallow;
     if (c === " " || c === "O") return MINIMAP_COLORS.void;
     if (c === "^" || c === "%") return MINIMAP_COLORS.lava;
     // Los cofres ocultos no se delatan en el minimapa.
@@ -740,7 +857,7 @@ function writeJson(relativePath: string, data: unknown) {
 }
 
 for (const plan of plans) {
-    const palette: Record<string, { graphics: number; blocked?: boolean }> = {};
+    const palette: Record<string, { graphics: number | number[]; blocked?: boolean }> = {};
     const paletteIds = new Map<string, number>();
     const rows: number[][] = [];
     const specials = {
@@ -759,18 +876,19 @@ for (const plan of plans) {
         const expandedRow: Record<string, Record<string, unknown>> = {};
         for (let x = 1; x <= SIZE; x++) {
             const tile = buildTile(plan, x, y);
-            const key = `${tile.graphics}|${tile.blocked ? 1 : 0}`;
+            const key = `${tile.graphics}|${tile.graphics2 ?? 0}|${tile.blocked ? 1 : 0}`;
             let paletteId = paletteIds.get(key);
             if (!paletteId) {
                 paletteId = paletteIds.size + 1;
                 paletteIds.set(key, paletteId);
-                palette[String(paletteId)] = tile.blocked ? { graphics: tile.graphics, blocked: true } : { graphics: tile.graphics };
+                const graphics = tile.graphics2 ? [tile.graphics, tile.graphics2] : tile.graphics;
+                palette[String(paletteId)] = tile.blocked ? { graphics, blocked: true } : { graphics };
             }
             row.push(paletteId);
             const coord = `${x},${y}`;
             const cell: Record<string, unknown> = {};
             if (tile.blocked) cell.blocked = 1;
-            cell.graphics = { "1": tile.graphics };
+            cell.graphics = tile.graphics2 ? { "1": tile.graphics, "2": tile.graphics2 } : { "1": tile.graphics };
             if (tile.trigger) {
                 specials.triggers[coord] = tile.trigger;
                 cell.trigger = tile.trigger;

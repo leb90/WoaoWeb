@@ -56,7 +56,7 @@ const SERIES_TROPHIES: Array<{ id: string | null; nombre: string }> = [
     { id: "lampara_del_genio", nombre: "Lámpara del Genio" },
     { id: "iris_del_ojo", nombre: "Iris del Ojo" },
     { id: null, nombre: "Quinta mazmorra" },
-    { id: null, nombre: "Sexta mazmorra" },
+    { id: "mascara_de_piedra", nombre: "Máscara de Piedra" },
     { id: null, nombre: "Séptima mazmorra" },
     { id: null, nombre: "Octava mazmorra" },
 ];

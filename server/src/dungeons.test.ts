@@ -496,3 +496,82 @@ test("la mazmorra de prueba trae lo del Santuario del Rostro", () => {
     assert.ok(kinds.some((npc) => npc?.hechicero) && kinds.some((npc) => npc?.escondido) && kinds.some((npc) => npc?.estrella));
 });
 
+
+test("el Santuario del Rostro: el Brazalete nivel 2, estatuas, cabezas, baldosas, el Gancho y las escaleras", () => {
+    const specials = (map: number) => readJson(`server/mapas_source/mapa_${map}/specials.json`);
+    const npcs = readJson("server/jsons/npcs.json");
+    const def = (readJson("server/jsons/dungeons.json") as Array<Record<string, any>>).find((entry) => entry.id === "rostro")!;
+    assert.deepEqual(def.mapas, [560, 561, 562]);
+    assert.equal(def.itemMazmorra.id, "pulsera_poderosa");
+    assert.deepEqual(
+        def.requiere.map((item: { id: string }) => item.id),
+        ["pulsera", "pluma", "botas_de_pegaso", "gancho"],
+    );
+    const shrine = specials(560);
+    const mech = shrine.dungeon;
+    const roomsWith = (flag: string) =>
+        new Set(Object.entries(shrine.npcs as Record<string, number>).filter(([, id]) => npcs[id]?.[flag]).map(([key]) => mech.roomOf[key]));
+    const closing = new Set(mech.rooms.filter((room: { cierra: boolean }) => room.cierra).map((room: { id: number }) => room.id));
+    const doorsOf = (tipo: string) => mech.barriers.filter((b: { tipo: string }) => b.tipo === tipo);
+    // El Brazalete nivel 2 a la vista, con la pared giratoria (un solo sentido) que vuelve al Cristal central.
+    const item = mech.chests.find((chest: { contenido: string }) => chest.contenido === "premio");
+    assert.ok(item && !item.oculto);
+    assert.ok(doorsOf("unica").some((b: { salas: number[] }) => b.salas.includes(item.sala)));
+    // Estatuas pesadas y cinco persianas que se abren tirándoles algo.
+    assert.ok(mech.liftables.filter((l: { tipo: string }) => l.tipo === "estatua").length >= 10);
+    assert.equal(doorsOf("golpe").length, 5);
+    // Tres llaves para tres cerraduras (una puerta y dos bloques) y la llave del jefe en el cofre trabado.
+    assert.equal(mech.chests.filter((chest: { contenido: string }) => chest.contenido === "llave").length, 3);
+    assert.equal(doorsOf("llave").length, 3);
+    assert.ok(mech.chests.find((chest: { contenido: string }) => chest.contenido === "jefe")?.golpe);
+    // Tres pares de cabezas de caballo, cada uno con su puerta "=".
+    const headRooms = new Set<number>(mech.santuario.cabezas.map((head: { sala: number }) => head.sala));
+    assert.equal(mech.santuario.cabezas.length, 6);
+    assert.equal(headRooms.size, 3);
+    for (const room of headRooms) assert.ok(doorsOf("placa").some((b: { salas: number[] }) => b.salas.includes(room)), `puerta de la sala ${room}`);
+    // Baldosas voladoras: en una sala abren la puerta norte; en la otra dejan pozos y esconden la K3.
+    const tiles = (pozo: boolean) => mech.santuario.baldosas.filter((tile: { pozo: boolean }) => tile.pozo === pozo);
+    assert.equal(tiles(false).length, 8);
+    assert.equal(tiles(true).length, 8);
+    assert.ok(doorsOf("placa").some((b: { salas: number[] }) => b.salas.includes(tiles(false)[0].sala)));
+    assert.ok(mech.chests.some((c: { contenido: string; oculto: boolean; sala: number }) => c.contenido === "llave" && c.oculto && c.sala === tiles(true)[0].sala));
+    // Cintas, lanzallamas y el ojo de piedra.
+    assert.equal(mech.santuario.cintas.length, 20);
+    assert.equal(mech.santuario.lanzallamas.length, 4);
+    assert.equal(mech.santuario.ojos.length, 1);
+    // El Gancho: dos postes en el Canal; debajo del de arriba, tres filas de pozos (el salto en carrera cruza dos).
+    assert.equal(mech.hookPosts.length, 2);
+    const [hx, hy] = mech.hookPosts[0].split(",").map(Number);
+    for (const dy of [2, 3, 4]) assert.ok(mech.pits.includes(`${hx},${hy + dy}`), `pozo debajo del poste (${hx},${hy + dy})`);
+    // Las criaturas: el Machacador y las Serpientes Glotonas son minijefes; el Rostro de Piedra, el jefe, y se lo ataca.
+    for (const flag of ["hechicero", "escondido", "estrella", "orejudo", "imitador"]) assert.ok(roomsWith(flag).size > 0, flag);
+    const minibosses = Object.values(shrine.npcs as Record<string, number>).map((id) => npcs[id]).filter((npc) => npc?.minijefe);
+    assert.deepEqual([...new Set(minibosses.map((npc) => npc.name))].sort(), ["Machacador", "Serpiente Glotona"]);
+    const face = Object.values(specials(562).npcs as Record<string, number>).map((id) => npcs[id]).find((npc) => npc?.jefe);
+    assert.ok(face && Number(face.attackable) === 1 && Number(face.hostile) === 1, "el Rostro es el jefe y se ataca");
+    // El portal-atajo aparece al vencer al Machacador.
+    const portals = mech.hiddenExits.filter((h: { x: number; y: number }) => shrine.exits[`${h.x},${h.y}`]?.map === 560);
+    assert.equal(portals.length, 2);
+    const smasherRoom = Object.entries(shrine.npcs as Record<string, number>).find(([, id]) => npcs[id]?.name === "Machacador")!;
+    assert.ok(portals.every((h: { revela: { sala: number } }) => h.revela.sala === mech.roomOf[smasherRoom[0]]));
+    // La F llega a la sala de los Orejudos, que se cierra, pero se ve siempre: si no, el pasaje E → F sería un callejón.
+    const passages = specials(561);
+    const orejudos = [...roomsWith("orejudo")][0];
+    assert.ok(closing.has(orejudos));
+    const toOrejudos = Object.entries(passages.exits as Record<string, { map: number; x: number; y: number }>).filter(
+        ([, exit]) => exit.map === 560 && mech.roomOf[`${exit.x},${exit.y}`] === orejudos,
+    );
+    assert.equal(toOrejudos.length, 1);
+    assert.ok(!passages.dungeon.hiddenExits.some((h: { x: number; y: number }) => `${h.x},${h.y}` === toOrejudos[0][0]));
+    assert.equal(new Set(passages.dungeon.crushers.map((key: string) => key.split(",")[0])).size, 7, "siete aplastadores");
+    // La Guarida: el borde de baldosas voladoras y una vasija en cada esquina.
+    const lair = specials(562).dungeon;
+    assert.equal(lair.santuario.baldosas.length, 20);
+    assert.equal(lair.liftables.length, 4);
+    // La música: tres temas y el de combate, con sus créditos.
+    const credits = fs.readFileSync(path.join(root, "docs/CREDITOS_SONIDOS.md"), "utf8");
+    for (const file of [...def.musica.pistas, def.musica.combate]) {
+        assert.ok(fs.existsSync(path.join(root, "frontend/public", file)), file);
+        assert.ok(credits.includes(file.replace("/music/mazmorras/", "")), `créditos de ${file}`);
+    }
+});

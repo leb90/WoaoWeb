@@ -60,7 +60,8 @@
 // leyenda.json puede traer "plantillas": criaturas propias de la mazmorra, armadas sobre una de AO ("base") con sus
 // cambios (nombre, cuerpo, vida y las marcas de dungeons.ts: despierta, pareja, revivirMs, flota, divide; de
 // dungeonHazards.ts: chispa, cuchilla, rodillo, empuja; de dungeonBoss.ts: ciempies). También "graficos" (piso y pared
-// propios, bloques de 4 × 4) y "portales" (escaleras que se ven como portal, por número).
+// propios, bloques de 4 × 4), "portales" (escaleras que se ven como portal, por número) y "siempreVisibles" (escaleras
+// que no se esconden aunque lleguen a una sala que se cierra).
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
@@ -195,6 +196,9 @@ type Legend = {
     graficos?: { piso?: number; pared?: number };
     // Escaleras (por número) que se ven como portal: el atajo de la Cueva de la Cola.
     portales?: string[];
+    // Escaleras (por número) que llegan a una sala que se cierra y se ven siempre: se llega por ellas y la sala se
+    // cierra hasta vaciarla (la F del Santuario del Rostro).
+    siempreVisibles?: string[];
 };
 
 const dungeonId = process.argv[2];
@@ -390,7 +394,9 @@ for (const plan of plans) {
 }
 // Las escaleras de una sala que se cierra aparecen al vaciarla, y su otra punta también.
 const hiddenExits = new Map<number, Array<{ x: number; y: number; revela: { map: number; sala: number } }>>();
-for (const ends of stairs.values()) {
+const alwaysVisible = new Set(legend.siempreVisibles ?? []);
+for (const [digit, ends] of stairs) {
+    if (alwaysVisible.has(digit)) continue;
     for (const end of ends) {
         const { rooms, roomOf } = roomsByMap.get(end.mapId)!;
         const roomId = roomOf.get(`${end.x},${end.y}`) ?? [[0, 1], [1, 0], [-1, 0], [0, -1]]

@@ -82,9 +82,14 @@ Cada mazmorra tiene tres temas que suenan uno detrás del otro y uno de combate,
 | `botella/2.mp3` | Gruta de la Botella, tema 2 | "Mystery Bazaar", https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1700005 | Kevin MacLeod (incompetech.com) | CC-BY 4.0 |
 | `botella/3.mp3` | Gruta de la Botella, tema 3 | "Hidden Wonders", https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1700006 | Kevin MacLeod (incompetech.com) | CC-BY 4.0 |
 | `botella/combate.mp3` | Gruta de la Botella, combate | "Ibn Al-Noor", https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100706 | Kevin MacLeod (incompetech.com) | CC-BY 4.0 |
+| `rostro/1.mp3` | Santuario del Rostro, tema 1 | "Temple of the Manes", https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100053 | Kevin MacLeod (incompetech.com) | CC-BY 4.0 |
+| `rostro/2.mp3` | Santuario del Rostro, tema 2 | "Vulcan", https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100525 | Kevin MacLeod (incompetech.com) | CC-BY 4.0 |
+| `rostro/3.mp3` | Santuario del Rostro, tema 3 | "Shamanistic", https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100353 | Kevin MacLeod (incompetech.com) | CC-BY 4.0 |
+| `rostro/combate.mp3` | Santuario del Rostro, combate | "Grim Idol", https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1700043 | Kevin MacLeod (incompetech.com) | CC-BY 4.0 |
 
 Atribución que piden las licencias CC-BY:
 - "RPG Exploration - (The Black Temple)", de Hitctrl, CC-BY 3.0, convertido y nivelado.
 - "8bit Dungeon Level" y "Video Dungeon Crawl", de Kevin MacLeod (incompetech.com), con licencia Creative Commons: By Attribution 4.0 (http://creativecommons.org/licenses/by/4.0/), convertidos y nivelados.
 - "Dubious Dungeon", de Bogart VGM, CC-BY 4.0, convertido y nivelado.
 - "Mirage", "Mystery Bazaar", "Hidden Wonders" e "Ibn Al-Noor", de Kevin MacLeod (incompetech.com), con licencia Creative Commons: By Attribution 4.0 (http://creativecommons.org/licenses/by/4.0/), convertidos, nivelados y con los silencios de las puntas recortados.
+- "Temple of the Manes", "Vulcan", "Shamanistic" y "Grim Idol", de Kevin MacLeod (incompetech.com), con licencia Creative Commons: By Attribution 4.0 (http://creativecommons.org/licenses/by/4.0/), recortados, normalizados y recodificados a MP3 (a "Shamanistic" también se le limitaron los picos).

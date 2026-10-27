@@ -132,6 +132,10 @@ Todas por datos del mapa, para que las mazmorras siguientes se armen sin código
    - La grilla de 8 × 7 salas en un mapa (560), los 3 pasajes (561) y la Guarida del Rostro (562).
    - Las mecánicas están en la sección 17; los mapas, las criaturas y la música, en la 18; los jefes, en la 19.
    - Se construyó en tres PR: las mecánicas; los mapas, las criaturas y la música; y los jefes.
+10. **Fauces del Bagre. [diseño para confirmar]** Adapta las Fauces del Bagre (nivel 5 de Link's Awakening) y da el **Gancho** (ya hecho; esta mazmorra le suma el puente del ancla, arrancar máscaras y sacar al jefe de la pared). Diseño en [mazmorras/07-FAUCES_DEL_BAGRE.md](mazmorras/07-FAUCES_DEL_BAGRE.md).
+   - La grilla de 7 × 8 salas en un mapa (570), los 4 pasajes (571) y la Guarida de la Anguila (572).
+   - El Maestro Stalfos aparece cuatro veces y la cuarta suelta el Gancho; el minijefe son las dos Gohma y el jefe, la Anguila Viscosa.
+   - Se construye en tres PR, como el Santuario: mecánicas y criaturas; mapas y música; jefes.
 
 ## 5. Decisiones
 

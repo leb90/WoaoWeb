@@ -124,6 +124,10 @@ Todas por datos del mapa, para que las mazmorras siguientes se armen sin código
 7. **Roca de la Tortuga. [diseñada]** Adapta la Roca Tortuga (nivel 8 de Link's Awakening) y da el **Polvo de Fuego**. Diseño en [mazmorras/04-ROCA_DE_LA_TORTUGA.md](mazmorras/04-ROCA_DE_LA_TORTUGA.md). El orden de la serie se define al final; esta pide la pluma, el gancho y el brazalete.
    - Es la más grande: la grilla de 8 × 8 salas en un mapa (540), los 6 pasajes y el Afuera (541) y la Guarida de la Cabeza Ardiente (542).
    - Se construye en cuatro PR: los tres ítems (Polvo de Fuego, Gancho y Brazalete de Fuerza); las mecánicas de recorrido; los mapas, las criaturas, las revanchas y la música; y los jefes.
+8. **Gruta de la Botella. [diseño para confirmar]** Adapta la Gruta de la Botella (nivel 2 de Link's Awakening) y da el **Brazalete de Fuerza** (ya hecho). Diseño en [mazmorras/05-GRUTA_DE_LA_BOTELLA.md](mazmorras/05-GRUTA_DE_LA_BOTELLA.md).
+   - La grilla de 6 × 7 salas en un mapa (550), los 3 pasajes (551) y la Guarida del Genio (552).
+   - Comparte con la Roca de la Tortuga las salas oscuras, las antorchas, los cristales, el remolino, los imitadores y los búhos: esas mecánicas se arman juntas, en un PR para las dos.
+   - Propone el **Polvo mágico** como tercer básico (para las antorchas), para que no quede un círculo con la Roca.
 
 ## 5. Decisiones
 

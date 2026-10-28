@@ -557,7 +557,7 @@ export type DungeonBossPayload = {
     fin?: boolean;
     // Gruta de la Botella (server/src/dungeonGrotto.ts): la botella del Genio (dónde está, si salta, si el Genio está
     // adentro, si está aturdida, tiembla, la llevan o se rompió), el humo y las bolas de fuego.
-    tipo?: "botella" | "humo" | "fuego" | "oculto" | "baldosa" | "rayo" | "bola" | "rostro" | "pozo" | "glotona" | "salto" | "hueso" | "pez" | "mascara";
+    tipo?: "botella" | "humo" | "fuego" | "oculto" | "baldosa" | "rayo" | "bola" | "rostro" | "pozo" | "glotona" | "salto" | "hueso" | "pez" | "mascara" | "stalfos" | "gohma" | "anguila";
     dentro?: boolean;
     estado?: string;
     tiembla?: boolean;
@@ -584,6 +584,24 @@ export type DungeonBossPayload = {
     fases?: { aviso: number; abre: number; abierto: number; cierra: number };
     // Fauces del Bagre (server/src/dungeonMaw.ts): el salto de un esqueleto, el hueso, el pez y la máscara arrancada.
     puesta?: boolean;
+    // Los jefes de las Fauces (server/src/dungeonMawBosses.ts): de la Anguila, los agujeros, el pozo, la cola (centro,
+    // ángulo y velocidad en radianes por ms, con la hora del server `t`), la cabeza, cuándo se rompe el piso y dónde
+    // explota.
+    agujeros?: Array<{ x: number; y: number; dir: number }>;
+    pozo?: Array<{ x: number; y: number }>;
+    cola?: { cx: number; cy: number; angulo: number; vel: number };
+    cabeza?: {
+        estado: string;
+        x: number;
+        y: number;
+        dir: { x: number; y: number };
+        corazon: { x: number; y: number };
+        cuerpo: Array<{ x: number; y: number }>;
+        agujero: { x: number; y: number };
+    } | null;
+    rompe?: number;
+    explota?: { x: number; y: number };
+    t?: number;
 };
 // Salas visitadas (con el mapa, todas) y, con la brújula, los cofres y la puerta del jefe.
 export type DungeonMinimapState = {

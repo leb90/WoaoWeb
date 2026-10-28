@@ -132,7 +132,7 @@ Todas por datos del mapa, para que las mazmorras siguientes se armen sin código
    - La grilla de 8 × 7 salas en un mapa (560), los 3 pasajes (561) y la Guarida del Rostro (562).
    - Las mecánicas están en la sección 17; los mapas, las criaturas y la música, en la 18; los jefes, en la 19.
    - Se construyó en tres PR: las mecánicas; los mapas, las criaturas y la música; y los jefes.
-10. **Fauces del Bagre. [mecánicas, mapas y música hechos (secciones 20 y 21); faltan los jefes]** Adapta las Fauces del Bagre (nivel 5 de Link's Awakening) y da el **Gancho** (ya hecho; esta mazmorra le suma el puente del ancla, arrancar máscaras y sacar al jefe de la pared). Diseño en [mazmorras/07-FAUCES_DEL_BAGRE.md](mazmorras/07-FAUCES_DEL_BAGRE.md).
+10. **Fauces del Bagre. [hecha, en desarrollo hasta probarla en producción: secciones 20, 21 y 22]** Adapta las Fauces del Bagre (nivel 5 de Link's Awakening) y da el **Gancho** (ya hecho; esta mazmorra le suma el puente del ancla, arrancar máscaras y sacar al jefe de la pared). Diseño en [mazmorras/07-FAUCES_DEL_BAGRE.md](mazmorras/07-FAUCES_DEL_BAGRE.md).
    - La grilla de 7 × 8 salas en un mapa (570), los 4 pasajes (571) y la Guarida de la Anguila (572).
    - El Maestro Stalfos aparece cuatro veces y la cuarta suelta el Gancho; el minijefe son las dos Gohma y el jefe, la Anguila Viscosa.
    - Se construye en tres PR, como el Santuario: mecánicas y criaturas; mapas y música; jefes.
@@ -1123,3 +1123,66 @@ La prueba en vivo es `pw/run-fauces-mapas.mjs` (12 controles):
 - el Gancho cruza los Carriles de cuchillas;
 - el cofre de 200;
 - la Guarida.
+
+## 22. Fauces del Bagre: el Maestro Stalfos, las Gohma y la Anguila Viscosa
+
+Los tres salen del código del original (zladx/LADX-Disassembly) y los mueve el server (`server/src/dungeonMawBosses.ts`, con `customMotion`). Lo que se ve aparte llega por el paquete `dungeonBoss` con `tipo` (`stalfos`, `gohma` y `anguila`) y lo dibuja `engine/dungeonMawBosses.ts`. Los saltos del Maestro usan los de los esqueletos (`salto`) y las bolas de fuego de las Gohma, las del Genio.
+
+### El Maestro Stalfos (minijefe; Master Stalfos, `07_master_stalfos.asm`)
+Hay una plantilla por encuentro, con `maestroStalfos: 1-4` y `bombazos` (3, 2, 2 y 3). Usa el cuerpo del Caballero Muerto (482): un esqueleto grande con espada y escudo redondo, para que no se confunda con los esqueletos comunes.
+
+**Los cuatro encuentros:**
+- **El orden:** cada encuentro aparece solo si huyó el anterior. Al crear la corrida, el 2, el 3 y el 4 se sacan y el que sigue aparece en su sala cuando el anterior huye.
+- **Si alguien entra antes a una de sus salas:** la sala queda vacía y abierta, como en el original. Cuando aparece el Maestro, la sala vuelve a cerrarse al entrar.
+- **El cofre del Gancho:** está en la sala del cuarto y es `trasJefe` (`cofresTrasJefe` en la leyenda). No aparece al vaciar la sala: aparece cuando muere el cuarto.
+
+**Cómo pelea:**
+- Camina hacia el jugador más cercano y, si está a 4 baldosas o más, salta hacia él.
+- Al lado, carga un espadazo (0,45 s) que pega 15 % y empuja. **El Escudo Espejo no lo frena**; saltando con la Pluma se esquiva.
+- Al aparecer dice su frase (los encuentros 2 a 4).
+
+**Cómo se le gana:**
+1. **Desarmarlo:** de frente frena los golpes con el escudo, salvo justo después de un espadazo o al caer de un salto: ahí queda abierto 1 s y un golpe lo desarma. De costado o por la espalda, cualquier golpe lo desarma.
+2. **Bombas:** desarmado queda 4,5 s como un montón de huesos que tiembla al final. En ese tiempo solo le entran las **bombas**; armado, no.
+3. **Huye o muere:** al rearmarse, si ya recibió sus bombazos, dice "¡Arrgh! ¡No te puedo ganar! ¡Me voy de acá!" y se va volando. El cuarto no huye: muere al tercer bombazo.
+
+### Las Gohma (minijefe; Gohma, `05_ghoma.asm`)
+- **Cómo se mueven:** caminan de lado a lado por su fila. Si el jugador está en su fila, tiemblan 0,8 s y arremeten hasta la pared o hasta él (10 % y empujón).
+- **El ojo:** cada 2,6 a 4,2 s, al pasar por la columna de un jugador, se frenan, lo miran y abren el ojo **1,2 s** (en el original 0,8; se alargó por la latencia). Si nadie se pone en su columna, lo abren igual a los 2,5 s. A la mitad escupen una bola de fuego (8 %; el Escudo Espejo la frena).
+- **Cómo se les gana:** solo con el ojo abierto. Una **flecha** o una bomba saca un tercio y el **Gancho** un sexto. Los golpes no les hacen nada.
+- **Al vencer a las dos:** aparece el portal-atajo a la Entrada.
+
+### La Anguila Viscosa (jefe; Slime Eel, `05_slime_eel.asm`)
+**Cómo empieza:**
+- A los 2 s de entrar dice su frase y **se rompe el piso**: se abre un pozo de 2 × 2 en el medio.
+- Se abren **cuatro agujeros** en las paredes de arriba y de abajo, a cuatro baldosas de cada esquina.
+
+**La pelea:**
+- **La cola:** cinco segmentos giran desde el pozo (una vuelta cada 4,3 s), meneándose. Al que pisa le pega (6 %) y lo empuja hacia afuera.
+- **La cabeza:** cada 2,9 s asoma por un agujero al azar. Primero sale la punta y después la cabeza entera, durante 1 s. Ese es el momento de engancharla: con el Gancho, **en la columna del agujero** y mirando hacia él.
+- **El enganche:** la saca de la pared. La cabeza queda al lado del jugador y el cuerpo, hasta el agujero; la cabeza y el cuerpo tapan el paso. El segmento de atrás de la cabeza es **el corazón**, que titila: se le pega de costado.
+- **Después del enganche:** la cola se frena, cambia de sentido, y la anguila vuelve a la pared a los 2,2 s.
+- **La anguila suelta:** desde el cuarto enganche, la mitad de las veces se suelta. Vuela invulnerable por la sala 1,8 s (pega 15 % al chocar) y explota (12 % alrededor).
+
+**Cómo se le gana:**
+- Hacen falta **8 golpes al corazón**, 2 más por cada jugador extra.
+- Al morir dice su última frase, se cierra el pozo y se abre la sala del trofeo.
+
+**Cómo se dibuja:** la criatura de AO no se ve. El cliente dibuja con formas los agujeros, el pozo, la cola, la cabeza (ojos amarillos y dientes), el cuerpo y el corazón. Metida en la pared, la criatura vuelve al medio de la sala sin ocupar baldosa. Por eso, cada vez que asoma, se la presenta entera a los que están en la sala, como hace el Santuario con sus criaturas escondidas.
+
+| El Maestro Stalfos (el caballero esqueleto) | El último bombazo al cuarto | Una Gohma con el ojo abierto |
+|---|---|---|
+| ![Maestro Stalfos](mazmorras/fauces/jefes-01-maestro.png) | ![Bombazo](mazmorras/fauces/jefes-02-bombazo.png) | ![Gohma](mazmorras/fauces/jefes-03-gohma.png) |
+
+| La Anguila: el pozo y la cola | Sacada de la pared: cuerpo, corazón y cabeza | Vencida: se cierra el pozo y se abre la salida |
+|---|---|---|
+| ![Cola](mazmorras/fauces/jefes-04-anguila-cola.png) | ![Afuera](mazmorras/fauces/jefes-05-anguila-afuera.png) | ![Vencida](mazmorras/fauces/jefes-06-anguila-vencida.png) |
+
+### Para probarlos
+La prueba en vivo es `pw/run-fauces-jefes.mjs`. Hace esto:
+- **Maestro Stalfos:**
+  - la sala del cuarto está vacía y sin el cofre antes de tiempo;
+  - los cuatro encuentros: desarmarlo justo después del espadazo, las bombas, las huidas;
+  - el cofre del Gancho al vencer al cuarto.
+- **Gohma:** los golpes no les entran; con flechas y el Gancho con el ojo abierto mueren las dos, y aparece el portal.
+- **Anguila:** la presentación, el enganche, los golpes al corazón y la muerte.

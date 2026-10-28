@@ -174,7 +174,9 @@ type Barrier = {
 type HiddenExit = { x: number; y: number; revela: { map: number; sala: number } };
 // golpe: el cofre trabado del Santuario del Rostro, que se abre tirándole algo.
 // `texto`: lo que dice la nota de un cofre con nota (el del Maestro Stalfos de las Fauces del Bagre).
-type Chest = { x: number; y: number; contenido: string; oculto: boolean; sala: number; golpe?: boolean; texto?: string };
+// `trasJefe`: no aparece al vaciar la sala sino cuando lo dice el módulo del jefe (el cofre del Gancho, al vencer al
+// cuarto Maestro Stalfos de las Fauces del Bagre).
+type Chest = { x: number; y: number; contenido: string; oculto: boolean; sala: number; golpe?: boolean; texto?: string; trasJefe?: boolean };
 type MapMechanics = {
     rooms: Array<{ id: number; x1: number; y1: number; x2: number; y2: number; cierra: boolean }>;
     roomOf: Record<string, number>;
@@ -894,6 +896,7 @@ function destroyRun(run: DungeonRun) {
         require("./dungeonShrine").forgetMap(mapId);
         require("./dungeonShrineBosses").forgetMap(mapId);
         require("./dungeonMaw").forgetMap(mapId);
+        require("./dungeonMawBosses").forgetMap(mapId);
         for (const npcId of Object.keys(vars.npcs ?? {})) {
             if (vars.npcs[npcId]?.map === mapId) {
                 delete vars.npcs[npcId];
@@ -1517,11 +1520,12 @@ function solvePlates(ctx: MapContext, room: number, plates: string[]) {
 }
 
 // Los cofres ocultos de una sala aparecen (al vaciarla o al resolver sus placas). Devuelve cuántos.
-function revealChests(ctx: MapContext, room: number): number {
+function revealChests(ctx: MapContext, room: number, bossChests = false): number {
     let revealed = 0;
     for (const chest of ctx.index.mech.chests) {
         const key = coordKey(chest.x, chest.y);
         if (chest.sala !== room || !chest.oculto || ctx.state.revealedChests.has(key)) continue;
+        if (Boolean(chest.trasJefe) !== bossChests) continue;
         ctx.state.revealedChests.add(key);
         setObject(ctx.mapId, chest.x, chest.y, OBJ.cofre);
         setBlocked(ctx.mapId, chest.x, chest.y, true);
@@ -2035,6 +2039,7 @@ function fastTickRun(run: DungeonRun) {
         require("./dungeonShrine").tick(mapId, now);
         require("./dungeonShrineBosses").tick(mapId, now);
         require("./dungeonMaw").tick(mapId, now);
+        require("./dungeonMawBosses").tick(mapId, now);
     }
 }
 
@@ -2138,6 +2143,44 @@ export function bridgePit(mapId: number, x: number, y: number, horizontal = fals
     if (!ctx) return;
     ctx.state.bridged.add(coordKey(x, y));
     setObject(mapId, x, y, horizontal ? OBJ.puenteHorizontal : OBJ.puente);
+}
+
+// --- Ayudas para dungeonMawBosses.ts (los jefes de las Fauces del Bagre) ---
+
+// Saca una criatura de la corrida sin que cuente como muerta (el Maestro Stalfos que huye o que todavía no llegó).
+export function despawnRunNpc(npc: any) {
+    if (npc && vars.npcs?.[npc.id]) despawnNpc(npc);
+}
+
+// Pone una criatura en una sala de la corrida (el Maestro Stalfos que sigue). Si la sala ya se había vaciado, vuelve a
+// estar sin resolver: se cierra al entrar (o enseguida, si ya hay alguien adentro).
+export function spawnRunNpc(mapId: number, npcIndex: number, near: { x: number; y: number }, roomId: number) {
+    const ctx = contextOf(mapId);
+    if (!ctx) return null;
+    const npc = spawnDungeonNpc(ctx, npcIndex, near, roomId);
+    const roomState = ctx.state.rooms.get(roomId);
+    if (npc && roomState) {
+        roomState.cleared = false;
+        const inside = playersInside(ctx.run).some((user) => Number(user.map) === mapId && ctx.index.mech.roomOf[coordKey(user.pos.x, user.pos.y)] === roomId);
+        if (inside && ctx.index.rooms.get(roomId)?.cierra) lockRoom(ctx, roomId);
+    }
+    return npc;
+}
+
+// Si la sala quedó sin criaturas (el jefe huyó), se abre como si las hubieran vencido.
+export function releaseRoomIfEmpty(mapId: number, roomId: number) {
+    const ctx = contextOf(mapId);
+    if (ctx && roomCreatures(ctx, roomId).length === 0) clearRoom(ctx, roomId);
+}
+
+// Aparecen los cofres de la sala que esperaban al jefe (el del Gancho).
+export function revealBossChests(mapId: number, roomId: number) {
+    const ctx = contextOf(mapId);
+    if (!ctx || !revealChests(ctx, roomId, true)) return;
+    const center = roomCenter(ctx, roomId);
+    if (center) playSoundAt(mapId, center, DUNGEON_SOUNDS.secreto);
+    tellRun(ctx.run, "¡Apareció un cofre!");
+    refreshRun(ctx.run);
 }
 
 // Los bloques que se empujan de una sala, donde están ahora.
@@ -2511,6 +2554,8 @@ export function onNpcStruck(npc: any, attacker: RuntimeCharacter): boolean {
     if (require("./dungeonGrotto").onNpcStruck(npc)) return true;
     // Los hechiceros del Santuario del Rostro: el golpe solo los empuja.
     if (require("./dungeonShrine").onNpcStruck(npc, attacker)) return true;
+    // Los jefes de las Fauces del Bagre: el golpe desarma al Maestro Stalfos o le pega al corazón de la Anguila.
+    if (require("./dungeonMawBosses").onNpcStruck(npc, attacker)) return true;
     if (!templateOf(npc).retrocede) return false;
     require("./dungeonHazards").strikeBeetle(npc, attacker);
     return true;
@@ -2538,6 +2583,9 @@ export function getNpcInvulnerableReason(
     // Las Máscaras de Hierro de las Fauces del Bagre se cubren de frente.
     const masked = require("./dungeonMaw").invulnerableReason(npc, attacker, source);
     if (masked) return masked;
+    // Los jefes de las Fauces: a cada uno le entra una sola cosa.
+    const mawBoss = require("./dungeonMawBosses").invulnerableReason(npc, source);
+    if (mawBoss) return mawBoss;
     // Los imitadores se cubren de frente: hay que pegarles por la espalda o de costado.
     const frontal = attacker ? require("./dungeonHazards").frontalBlockReason(npc, attacker) : null;
     if (frontal) return frontal;
@@ -2722,7 +2770,7 @@ function templateOf(npc: { templateNpcIndex?: number } | undefined): SpecialTemp
 }
 
 function registerSpecialNpc(run: DungeonRun, npc: any) {
-    if (require("./dungeonHazards").register(npc) || require("./dungeonBoss").register(npc) || require("./dungeonGrotto").register(npc) || require("./dungeonShrine").register(npc) || require("./dungeonShrineBosses").register(npc) || require("./dungeonMaw").register(npc)) return;
+    if (require("./dungeonHazards").register(npc) || require("./dungeonBoss").register(npc) || require("./dungeonGrotto").register(npc) || require("./dungeonShrine").register(npc) || require("./dungeonShrineBosses").register(npc) || require("./dungeonMaw").register(npc) || require("./dungeonMawBosses").register(npc)) return;
     const template = templateOf(npc);
     if (template.despierta) npc.dormant = true;
     if (template.pareja) {
@@ -3055,6 +3103,7 @@ export function onNpcDied(npc: { id?: EntityId; map?: number; templateNpcIndex?:
     require("./dungeonShrine").onNpcDied(npc);
     require("./dungeonShrineBosses").onNpcDied(npc);
     require("./dungeonMaw").onNpcDied(npc);
+    require("./dungeonMawBosses").onNpcDied(npc);
     const boss = ctx.run.floatingBoss;
     if (boss?.npcId === String(npc.id)) {
         ctx.run.floatingBoss = null;
@@ -3161,6 +3210,10 @@ module.exports = {
     openPitAt,
     setBossPit,
     mawDataOf,
+    despawnRunNpc,
+    spawnRunNpc,
+    releaseRoomIfEmpty,
+    revealBossChests,
     isPitAt,
     bridgePit,
     blocksInRoom,

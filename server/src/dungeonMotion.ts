@@ -26,7 +26,7 @@ const JUMP_GAP = 1;
 const LONG_JUMP_GAP = 2;
 const PUSH_STEP_MS = 70;
 
-type Motion = { tipo: "carga" | "carrera" | "salto" | "empujon" | "gancho"; until: number };
+type Motion = { tipo: "carga" | "carrera" | "salto" | "empujon" | "gancho" | "tragado"; until: number };
 type MotionUser = RuntimeCharacter & {
     dungeonMotion?: Motion | null;
     // Lo que lleva sobre la cabeza con el Brazalete de Fuerza (dungeonTools.ts).
@@ -102,6 +102,7 @@ export function getMotionBlockReason(user: RuntimeCharacter | undefined): string
     const motion = mover?.dungeonMotion;
     if (!motion || motion.until <= Date.now()) return mover?.dungeonCarry ? "Tenés las manos ocupadas." : null;
     if (motion.tipo === "salto") return "No podés atacar en el aire.";
+    if (motion.tipo === "tragado") return "¡Te tragó un Tragón!";
     if (motion.tipo === "gancho") return "No podés atacar colgado del gancho.";
     return motion.tipo === "empujon" ? "No podés atacar mientras te empujan." : "No podés atacar mientras corrés.";
 }

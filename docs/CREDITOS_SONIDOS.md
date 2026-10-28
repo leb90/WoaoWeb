@@ -43,7 +43,7 @@ Para la Caverna de las Llaves se sumaron sonidos del mismo paquete de Juhani Jun
 | 220 | Salto con la Pluma | `sfx_movement_jump13.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
 | 221 | Bajan los aplastadores | `sfx_exp_shortest_hard1.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
 
-Para el Polvo de Fuego, el Gancho, el Brazalete de Fuerza, el Escudo Espejo, las Bombas y el Arco, del mismo paquete y con el mismo criterio de volumen (entre −19 y −20 dB):
+Para el Polvo de Fuego, el Gancho, el Brazalete de Fuerza, el Campo de Protección, las Bombas y el Arco, del mismo paquete y con el mismo criterio de volumen (entre −19 y −20 dB):
 
 | Número | Uso | Original | Autor | Licencia |
 |---|---|---|---|---|
@@ -54,8 +54,8 @@ Para el Polvo de Fuego, el Gancho, el Brazalete de Fuerza, el Escudo Espejo, las
 | 226 | Explota una bomba | `sfx_exp_medium1.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
 | 227 | Se pone una bomba | `sfx_movement_jump10_landing.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
 | 228 | Se tira una flecha con el Arco | `sfx_wpn_sword2.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
-| 229 | Se levanta el Escudo Espejo | `sfx_sounds_high1.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
-| 230 | El Escudo Espejo frena un golpe | `sfx_sounds_impact3.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
+| 229 | Se levanta el Campo de Protección | `sfx_sounds_high1.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
+| 230 | El Campo de Protección frena un golpe | `sfx_sounds_impact3.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
 | 231 | El Polvo mágico | `sfx_sounds_high3.wav` | Juhani Junkala (SubspaceAudio) | CC0 |
 
 Atribución que pide la licencia CC-BY de 213 y 214: "Rock/Metal Slide" de Hansjörg Malthaner (http://opengameart.org/users/varkalandar), CC-BY 4.0, modificado (recortado, normalizado y acelerado).
@@ -90,6 +90,10 @@ Cada mazmorra tiene tres temas que suenan uno detrás del otro y uno de combate,
 | `fauces/2.mp3` | Fauces del Bagre, tema 2 | "Floating Cities", https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1600018 | Kevin MacLeod (incompetech.com) | CC-BY 4.0 |
 | `fauces/3.mp3` | Fauces del Bagre, tema 3 | "Immersed", https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1600010 | Kevin MacLeod (incompetech.com) | CC-BY 4.0 |
 | `fauces/combate.mp3` | Fauces del Bagre, combate | "Eternal Terminal", https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1700047 | Kevin MacLeod (incompetech.com) | CC-BY 4.0 |
+| `torre/1.mp3` | Torre del Águila, tema 1 | "Thunderbird", https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1600017 | Kevin MacLeod (incompetech.com) | CC-BY 4.0 |
+| `torre/2.mp3` | Torre del Águila, tema 2 | "Ascending the Vale", https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1600064 | Kevin MacLeod (incompetech.com) | CC-BY 4.0 |
+| `torre/3.mp3` | Torre del Águila, tema 3 | "The Sky of our Ancestors", https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1700056 | Kevin MacLeod (incompetech.com) | CC-BY 4.0 |
+| `torre/combate.mp3` | Torre del Águila, combate | "Crossing the Chasm", https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1700026 | Kevin MacLeod (incompetech.com) | CC-BY 4.0 |
 
 Atribución que piden las licencias CC-BY:
 - "RPG Exploration - (The Black Temple)", de Hitctrl, CC-BY 3.0, convertido y nivelado.

@@ -6,7 +6,7 @@
 //   más cercano; las marcadas dejan un pozo. Rotas todas, la sala se resuelve (aparecen sus cofres);
 // - cintas transportadoras: corren una baldosa al que está encima;
 // - lanzallamas: escupen una bola de fuego hacia la sala cada tanto;
-// - ojo de piedra (el Beamos): gira y, si ve a alguien en línea, le tira un rayo; el Escudo Espejo lo frena;
+// - ojo de piedra (el Beamos): gira y, si ve a alguien en línea, le tira un rayo; el Campo de Protección lo frena;
 // - hechiceros (los Wizrobes): aparecen, tiran un rayo y desaparecen. Solo se los lastima mientras se ven; el golpe
 //   solo los empuja y una bomba o algo tirado los mata de una;
 // - mocos escondidos (los Zoles): no se ven hasta que alguien se les acerca;
@@ -202,16 +202,21 @@ function isFree(mapId: number, tile: Pos): boolean {
 }
 
 // Lo que viaja en línea recta (fuego, baldosa, rayo) le pega al que esté cerca de donde llega, salvo que lo frene el
-// Escudo Espejo de frente o que esté en el aire.
-function hitAt(mapId: number, at: Pos, travel: Pos, fraction: number, message: string): Player | null {
+// Campo de Protección de frente o que esté en el aire. Con `onReflect`, el Campo además lo rebota (el rayo del ojo, la
+// bola del hechicero) y el que llama decide qué pasa con lo rebotado.
+function hitAt(mapId: number, at: Pos, travel: Pos, fraction: number, message: string, onReflect?: (user: Player) => void): Player | null {
     const tools = getTools();
     const motion = getMotion();
     const dir = Math.abs(travel.x) >= Math.abs(travel.y) ? { x: Math.sign(travel.x), y: 0 } : { x: 0, y: Math.sign(travel.y) };
     for (const user of playersOf(mapId)) {
         if (Math.hypot(user.pos.x - at.x, user.pos.y - at.y) > HIT_RADIUS || motion.isAirborne(user)) continue;
+        if (onReflect && tools.mirrorReflects(user, dir)) {
+            onReflect(user);
+            return user;
+        }
         if (tools.mirrorBlocks(user, dir)) {
             sound(mapId, user.pos, tools.TOOL_SOUNDS.bloqueo);
-            tell(user, "¡El Escudo Espejo lo frenó!");
+            tell(user, "¡El Campo de Protección lo frenó!");
             return user;
         }
         getDungeons().hurtPlayer(user, fraction, message);
@@ -376,7 +381,7 @@ function tickConveyors(state: ShrineMap, players: Player[], now: number) {
 }
 
 // Una bola de fuego en línea recta hasta la pared: quema al primero que encuentra en el camino.
-function fireLine(mapId: number, from: Pos, dir: Pos, tileMs: number, damage: number, message: string, color?: string) {
+function fireLine(mapId: number, from: Pos, dir: Pos, tileMs: number, damage: number, message: string, color?: string, onReflect?: (user: Player) => void) {
     const path: Pos[] = [];
     for (let step = 1; step <= 14; step++) {
         const tile = { x: from.x + dir.x * step, y: from.y + dir.y * step };
@@ -399,7 +404,7 @@ function fireLine(mapId: number, from: Pos, dir: Pos, tileMs: number, damage: nu
     path.forEach((tile, index) => {
         setTimeout(() => {
             if (done) return;
-            if (hitAt(mapId, tile, dir, damage, message)) done = true;
+            if (hitAt(mapId, tile, dir, damage, message, onReflect)) done = true;
         }, (index + 1) * tileMs);
     });
 }
@@ -443,9 +448,26 @@ function tickEyes(state: ShrineMap, players: Player[], now: number) {
             if (maps.get(state.mapId) !== state) return;
             packet(state.mapId, eye, { id: 0, tipo: "rayo", desde: { x: eye.x, y: eye.y - 0.4 }, hasta: to, ms: 260 });
             sound(state.mapId, eye, getTools().TOOL_SOUNDS.fuego);
-            hitAt(state.mapId, to, { x: to.x - eye.x, y: to.y - eye.y }, EYE_DAMAGE, "Te quemó el rayo del ojo de piedra:");
+            hitAt(state.mapId, to, { x: to.x - eye.x, y: to.y - eye.y }, EYE_DAMAGE, "Te quemó el rayo del ojo de piedra:", (user) => reflectToEye(state, eye, user));
         }, EYE_AIM_MS);
     }
+}
+
+// El rayo rebotado por el Campo de Protección vuelve al ojo y lo rompe: queda como piedra rota (sigue tapando el paso)
+// y no tira más. La Torre del Águila abre puertas al romper todos los de una sala (dungeonTower.ts).
+function reflectToEye(state: ShrineMap, eye: ShrineMap["eyes"][number], user: Player) {
+    const from = { x: user.pos.x, y: user.pos.y };
+    const ms = Math.max(120, Math.round(Math.hypot(eye.x - from.x, eye.y - from.y) * 40));
+    packet(state.mapId, from, { id: 0, tipo: "rayo", desde: from, hasta: { x: eye.x, y: eye.y - 0.4 }, ms });
+    setTimeout(() => {
+        if (maps.get(state.mapId) !== state || !state.eyes.includes(eye)) return;
+        state.eyes = state.eyes.filter((other) => other !== eye);
+        getDungeons().setDungeonObject(state.mapId, eye.x, eye.y, getDungeons().DUNGEON_OBJ.ojoRoto);
+        sound(state.mapId, eye, getTools().TOOL_SOUNDS.romper);
+        packet(state.mapId, eye, { id: 0, tipo: "humo", x: eye.x, y: eye.y });
+        tell(user, "¡El rayo rebotado rompió el ojo de piedra!");
+        require("./dungeonTower").onEyeBroken(state.mapId, eye.sala, state.eyes.filter((other) => other.sala === eye.sala).length);
+    }, ms);
 }
 
 // --- Criaturas: hechiceros, mocos escondidos y estrellas ---
@@ -547,12 +569,34 @@ function tickWizrobe(creature: Creature, npc: any, players: Player[], now: numbe
         setTimeout(() => {
             const alive = vars.npcs?.[creature.npcId];
             if (!alive || creature.hidden || !creatures.has(creature.npcId)) return;
-            fireLine(creature.mapId, alive.pos, headingDir(alive), BOLT_TILE_MS, BOLT_DAMAGE, "Te pegó el rayo de un hechicero:", "magia");
+            fireLine(creature.mapId, alive.pos, headingDir(alive), BOLT_TILE_MS, BOLT_DAMAGE, "Te pegó el rayo de un hechicero:", "magia", (user) => reflectToWizard(creature, user));
         }, WIZROBE_FIRE_AFTER_MS);
         return;
     }
     hide(creature, npc);
     creature.nextAt = now + randomBetween(WIZROBE_HIDDEN_MIN_MS, WIZROBE_HIDDEN_MAX_MS);
+}
+
+// El rayo rebotado por el Campo de Protección vuelve al hechicero y le saca la mitad de la vida (si sigue a la vista).
+function reflectToWizard(creature: Creature, user: Player) {
+    const npc = vars.npcs?.[creature.npcId];
+    if (!npc || creature.hidden) return;
+    const from = { x: user.pos.x, y: user.pos.y };
+    const to = { x: npc.pos.x, y: npc.pos.y };
+    const ms = Math.max(120, Math.round(Math.hypot(to.x - from.x, to.y - from.y) * BOLT_TILE_MS));
+    packet(creature.mapId, from, { id: 0, tipo: "fuego", desde: from, hasta: to, ms, recto: true, color: "magia" });
+    setTimeout(() => {
+        const alive = vars.npcs?.[creature.npcId];
+        if (!alive || creature.hidden || !creatures.has(creature.npcId)) return;
+        const amount = Math.max(1, Math.ceil(Number(alive.maxHp ?? alive.hp ?? 1) / 2));
+        alive.hp = Math.max(0, Number(alive.hp ?? 0) - amount);
+        const handleProtocol = getHandleProtocol();
+        eachClientNear(creature.mapId, alive.pos, (client) => handleProtocol.dialog(alive.id, `${amount}`, "", "red", 0, client));
+        getDungeons().broadcastNpcVitals(alive);
+        if (alive.hp > 0) return;
+        const killer = vars.clients?.[user.id];
+        if (killer) require("./respawn").muere(killer, alive.id);
+    }, ms);
 }
 
 function tickHidden(creature: Creature, npc: any, players: Player[]) {

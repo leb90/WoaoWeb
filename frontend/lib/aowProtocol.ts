@@ -529,7 +529,7 @@ export type DungeonDarkRoom = { x1: number; y1: number; x2: number; y2: number; 
 // los mismos datos llegan el Polvo de Fuego, el Gancho y la Pulsera (server/src/dungeonTools.ts).
 export type DungeonMotionPayload = {
     id: number;
-    tipo: "carga" | "carrera" | "salto" | "empujon" | "fuego" | "gancho" | "levanta" | "tira" | "suelta" | "bomba" | "escudo" | "polvo";
+    tipo: "carga" | "carrera" | "salto" | "empujon" | "fuego" | "gancho" | "levanta" | "tira" | "suelta" | "bomba" | "escudo" | "rebote" | "polvo";
     heading?: number;
     ms: number;
     path?: Array<{ x: number; y: number }>;
@@ -557,7 +557,7 @@ export type DungeonBossPayload = {
     fin?: boolean;
     // Gruta de la Botella (server/src/dungeonGrotto.ts): la botella del Genio (dónde está, si salta, si el Genio está
     // adentro, si está aturdida, tiembla, la llevan o se rompió), el humo y las bolas de fuego.
-    tipo?: "botella" | "humo" | "fuego" | "oculto" | "baldosa" | "rayo" | "bola" | "rostro" | "pozo" | "glotona" | "salto" | "hueso" | "pez" | "mascara" | "stalfos" | "gohma" | "anguila";
+    tipo?: "botella" | "humo" | "fuego" | "oculto" | "baldosa" | "rayo" | "bola" | "rostro" | "pozo" | "glotona" | "salto" | "hueso" | "pez" | "mascara" | "stalfos" | "gohma" | "anguila" | "torre" | "flautista" | "aguila";
     dentro?: boolean;
     estado?: string;
     tiembla?: boolean;
@@ -587,6 +587,10 @@ export type DungeonBossPayload = {
     // Los jefes de las Fauces (server/src/dungeonMawBosses.ts): de la Anguila, los agujeros, el pozo, la cola (centro,
     // ángulo y velocidad en radianes por ms, con la hora del server `t`), la cabeza, cuándo se rompe el piso y dónde
     // explota.
+    // Torre del Águila (server/src/dungeonTower.ts y dungeonTowerBosses.ts): qué pasa (`estado`), si el Águila vuela
+    // alto (`alto`, el mismo campo de la bola del Machacador), hacia dónde sopla el viento y si la pluma vuelve rebotada.
+    dir?: number;
+    rebote?: boolean;
     agujeros?: Array<{ x: number; y: number; dir: number }>;
     pozo?: Array<{ x: number; y: number }>;
     cola?: { cx: number; cy: number; angulo: number; vel: number };

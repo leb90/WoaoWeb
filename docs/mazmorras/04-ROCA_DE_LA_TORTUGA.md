@@ -379,7 +379,7 @@ Es la mazmorra más grande. Para que cada parte se pueda probar y mergear sola, 
    - Polvo de Fuego, Gancho y Brazalete de Fuerza, con sus efectos (la llamarada, la cadena, lo que se lleva y se tira);
    - lo que tocan: antorchas, hielo, vasijas y postes para el Gancho;
    - probados en la mazmorra de prueba.
-2. **Mecánicas de recorrido.** Las compartidas con la Gruta de la Botella ya están hechas ([../MAZMORRAS.md](../MAZMORRAS.md), sección 13): salas oscuras, cristal y bloques de color, remolino, imitadores, pico y búhos. Faltan las propias: roca rodante, ojo de piedra y braseros (que consultan el Escudo Espejo), burbujas de lava, estatua-ojo (con flecha) y las Serpientes que tragan bombas.
+2. **Mecánicas de recorrido.** Las compartidas con la Gruta de la Botella ya están hechas ([../MAZMORRAS.md](../MAZMORRAS.md), sección 13): salas oscuras, cristal y bloques de color, remolino, imitadores, pico y búhos. Faltan las propias: roca rodante, ojo de piedra y braseros (que consultan el Campo de Protección), burbujas de lava, estatua-ojo (con flecha) y las Serpientes que tragan bombas.
 3. **Mapas 540-542, criaturas, revanchas y música:**
    - el recorrido completo hasta la puerta del jefe;
    - las revanchas, con los minijefes de la Cueva y de la Caverna;

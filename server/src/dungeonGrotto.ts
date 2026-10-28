@@ -449,7 +449,7 @@ function smoke(genie: Genie, at: Pos) {
     sound(genie.mapId, at, getTools().TOOL_SOUNDS.polvo);
 }
 
-// Una bola de fuego hacia donde está el jugador ahora: si sigue ahí cuando llega, quema (salvo que el Escudo Espejo la
+// Una bola de fuego hacia donde está el jugador ahora: si sigue ahí cuando llega, quema (salvo que el Campo de Protección la
 // frene de frente).
 function fireball(genie: Genie, npc: any, target: Player) {
     const from = { x: npc.pos.x + 0.35 * genie.hand, y: npc.pos.y - 0.6 };
@@ -469,7 +469,7 @@ function fireball(genie: Genie, npc: any, target: Player) {
             if (tools.mirrorBlocks(user, dir)) {
                 sound(genie.mapId, user.pos, tools.TOOL_SOUNDS.bloqueo);
                 const client = vars.clients?.[user.id] as RuntimeClient | undefined;
-                if (client) getHandleProtocol().console("¡El Escudo Espejo frenó la bola de fuego!", "#FFD24A", 1, 0, client);
+                if (client) getHandleProtocol().console("¡El Campo de Protección frenó la bola de fuego!", "#FFD24A", 1, 0, client);
                 continue;
             }
             hurt(user, FIRE_DAMAGE, "Te quemó una bola de fuego:");

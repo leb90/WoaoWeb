@@ -206,14 +206,14 @@ function headingFrom(from: Pos, toward: Pos): number {
     return Math.abs(dx) >= Math.abs(dy) ? (dx > 0 ? d.right : d.left) : dy > 0 ? d.down : d.up;
 }
 
-// Lo que viaja hacia el jugador (el hueso, el salto): con el Escudo Espejo de frente no entra.
+// Lo que viaja hacia el jugador (el hueso, el salto): con el Campo de Protección de frente no entra.
 function hurtUnlessShield(user: Player, travel: Pos, fraction: number, message: string): boolean {
     const tools = getTools();
     const dir = Math.abs(travel.x) >= Math.abs(travel.y) ? { x: Math.sign(travel.x), y: 0 } : { x: 0, y: Math.sign(travel.y) };
     if (getMotion().isAirborne(user)) return false;
     if (tools.mirrorBlocks(user, dir)) {
         sound(Number(user.map), user.pos, tools.TOOL_SOUNDS.bloqueo);
-        tell(user, "¡El Escudo Espejo lo frenó!");
+        tell(user, "¡El Campo de Protección lo frenó!");
         return true;
     }
     getDungeons().hurtPlayer(user, fraction, message);

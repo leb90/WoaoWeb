@@ -1,7 +1,7 @@
 // Ítems de mazmorra que se tiran o se usan con las manos (docs/mazmorras/04-ROCA_DE_LA_TORTUGA.md, secciones 6 y
 // 6.2): el Polvo de Fuego (una llamarada que vuela), el Gancho (una cadena que engancha y arrastra, o aturde), el
-// Brazalete de Fuerza (levantar, llevar y tirar vasijas y piedras; el II también las pesadas) y el Escudo Espejo (frena
-// lo que llega de frente). Además, los básicos que tiene todo el mundo desde la primera mazmorra: las Bombas (explotan
+// Brazalete de Fuerza (levantar, llevar y tirar vasijas y piedras; el II también las pesadas) y el Campo de Protección (el
+// Escudo Espejo de Zelda: frena lo que llega de frente y rebota los rayos, las bolas de fuego y las plumas). Además, los básicos que tiene todo el mundo desde la primera mazmorra: las Bombas (explotan
 // a los 2 s y abren paredes rajadas), el Arco y el Polvo mágico (enciende la antorcha de adelante). Solo funcionan adentro de una mazmorra. Ninguno toca los atributos ni
 // los hechizos del personaje: son mecánicas de mazmorra.
 //
@@ -18,7 +18,7 @@ export const FIRE_ITEM = "polvo_de_fuego";
 export const HOOK_ITEM = "gancho";
 export const BRACELET_ITEM = "pulsera";
 export const STRONG_BRACELET_ITEM = "pulsera_poderosa";
-export const MIRROR_ITEM = "escudo_espejo";
+export const MIRROR_ITEM = "campo_de_proteccion";
 export const BOMB_ITEM = "bombas";
 export const BOW_ITEM = "arco";
 export const POWDER_ITEM = "polvo_magico";
@@ -70,6 +70,7 @@ type ToolUser = RuntimeCharacter & {
     bombUntil?: number;
     mirrorUntil?: number;
     nextMirrorAt?: number;
+    fieldEatenUntil?: number;
     nextArrowAt?: number;
     nextPowderAt?: number;
     heading?: number;
@@ -170,6 +171,8 @@ function damageNpc(user: ToolUser, npcId: EntityId, amount: number, source: stri
     amount = require("./dungeonShrine").damageFor(npc, source, amount);
     // Las Gohma (Fauces del Bagre): con el ojo abierto, una flecha saca un tercio y el Gancho, un sexto.
     amount = require("./dungeonMawBosses").damageFor(npc, source, amount);
+    // El Águila Malvada (Torre del Águila): una flecha, el Gancho o algo tirado, con ella baja, es un golpe.
+    amount = require("./dungeonTowerBosses").damageFor(npc, source, amount);
     // Las Máscaras de Hierro (Fauces del Bagre) se cubren de frente de todo menos de las bombas.
     const masked = require("./dungeonMaw").invulnerableReason(npc, user, source);
     if (masked) {
@@ -325,6 +328,13 @@ export function bracelet(sessionId: EntityId) {
     }
     // La cabeza de caballo cuenta para la sala de la que salió aunque la tiren a otra.
     const headRoom = kind === "cabeza" ? require("./dungeonShrine").headRoomAt(Number(user.map), from.x, from.y) : undefined;
+    // El Orbe de la Torre del Águila: se lleva y se tira contra los pilares.
+    if (require("./dungeonTower").liftOrb(user, from)) {
+        const obj = dungeons.DUNGEON_OBJ.orbe;
+        user.dungeonCarry = { tipo: "orbe", objIndex: obj, map: Number(user.map) };
+        playSound(user, TOOL_SOUNDS.levantar);
+        return broadcast(user, { id: Number(user.id), tipo: "levanta", heading, ms: 150, from, obj });
+    }
     // La bola de hierro del Machacador del Santuario del Rostro.
     if (require("./dungeonShrineBosses").liftBall(user, from)) {
         const obj = dungeons.DUNGEON_OBJ.bolaDeHierro;
@@ -357,6 +367,7 @@ function throwCarried(user: ToolUser) {
     const dir = getMotion().headingOffset(heading);
     if (carry.tipo === "botella") return require("./dungeonGrotto").throwBottle(user, heading, dir);
     if (carry.tipo === "bola") return require("./dungeonShrineBosses").throwBall(user, heading, dir);
+    if (carry.tipo === "orbe") return require("./dungeonTower").throwOrb(user, heading, dir);
     const line = traceLine(mapId, user.pos, dir, THROW_RANGE, false);
     const golpe: Hit = line.npcId ? "criatura" : line.target || line.blocked ? "pared" : null;
     const to = line.npcId ? line.end! : (line.end ?? { x: user.pos.x, y: user.pos.y });
@@ -518,15 +529,16 @@ export function powder(sessionId: EntityId) {
     }
 }
 
-// --- Escudo Espejo ---
+// --- Campo de Protección ---
 
-// Levanta el escudo 3 s: lo que llega de frente (golpes de criaturas y, en las trampas que lo consultan, rayos y bolas
-// de fuego) no entra. Solo adentro de las mazmorras.
+// Levanta el Campo 3 s: lo que llega de frente (golpes de criaturas y, en las trampas que lo consultan, rayos y bolas
+// de fuego) no entra, y lo que lo consulta con `mirrorReflects` rebota hacia donde vino. Solo adentro de las mazmorras.
 export function mirror(sessionId: EntityId) {
     const user = vars.personajes?.[sessionId] as ToolUser | undefined;
-    if (!user || !getMotion().canAct(sessionId, user, MIRROR_ITEM, "el Escudo Espejo")) return;
+    if (!user || !getMotion().canAct(sessionId, user, MIRROR_ITEM, "el Campo de Protección")) return;
     const now = Date.now();
     if (now < Number(user.nextMirrorAt ?? 0)) return;
+    if (now < Number(user.fieldEatenUntil ?? 0)) return tell(sessionId, `Un Tragón se comió tu Campo: vuelve en ${Math.ceil((Number(user.fieldEatenUntil) - now) / 1000)} s.`);
     user.mirrorUntil = now + MIRROR_MS;
     user.nextMirrorAt = now + MIRROR_MS + MIRROR_COOLDOWN_MS;
     const heading = Number(user.heading ?? vars.direcciones.down);
@@ -550,6 +562,27 @@ export function mirrorBlocks(user: RuntimeCharacter | undefined, dir: Pos): bool
     return isMirrorUp(shielder) && comesFromFront(Number(shielder!.heading ?? vars.direcciones.down), dir);
 }
 
+// Lo que rebota (el rayo de un ojo de piedra, la bola de un hechicero, una pluma del Águila): si el Campo lo frena de
+// frente, además destella y avisa. El que lo consulta decide qué pasa con lo rebotado.
+export function mirrorReflects(user: RuntimeCharacter | undefined, dir: Pos, what = "lo"): boolean {
+    if (!mirrorBlocks(user, dir)) return false;
+    const shielder = user as ToolUser;
+    playSound(shielder, TOOL_SOUNDS.bloqueo);
+    broadcast(shielder, { id: Number(shielder.id), tipo: "rebote", heading: Number(shielder.heading ?? vars.direcciones.down), ms: 260 });
+    tell(shielder.id, `¡El Campo de Protección ${what} rebotó!`);
+    return true;
+}
+
+// Mientras un Tragón tiene el Campo comido, no se levanta (Torre del Águila).
+export function eatField(user: RuntimeCharacter | undefined, ms: number): boolean {
+    const victim = user as ToolUser | undefined;
+    if (!victim || !isMirrorUp(victim)) return false;
+    victim.mirrorUntil = 0;
+    victim.fieldEatenUntil = Date.now() + ms;
+    broadcast(victim, { id: Number(victim.id), tipo: "escudo", heading: Number(victim.heading ?? vars.direcciones.down), ms: 1 });
+    return true;
+}
+
 // El golpe de una criatura que está adelante no entra (lo consulta npcs.ts antes de pegar).
 export function mirrorBlocksNpcHit(user: RuntimeCharacter | undefined, npc: { pos?: Pos } | undefined): boolean {
     const shielder = user as ToolUser | undefined;
@@ -559,7 +592,7 @@ export function mirrorBlocksNpcHit(user: RuntimeCharacter | undefined, npc: { po
     const dir = Math.abs(dx) >= Math.abs(dy) ? { x: -Math.sign(dx), y: 0 } : { x: 0, y: -Math.sign(dy) };
     if (!mirrorBlocks(shielder, dir)) return false;
     playSound(shielder, TOOL_SOUNDS.bloqueo);
-    tell(shielder.id, "¡El Escudo Espejo frenó el golpe!");
+    tell(shielder.id, "¡El Campo de Protección frenó el golpe!");
     return true;
 }
 
@@ -572,6 +605,7 @@ export function dropCarry(user: RuntimeCharacter | undefined) {
     broadcast(carrier, { id: Number(carrier.id), tipo: "suelta", ms: 0 });
     if (kind === "botella") require("./dungeonGrotto").dropBottle(carrier);
     if (kind === "bola") require("./dungeonShrineBosses").dropBall(carrier);
+    if (kind === "orbe") require("./dungeonTower").dropOrb(carrier);
 }
 
 // Lo revisa el tic de la mazmorra: si murió o cambió de mapa con algo levantado, lo suelta.
@@ -593,12 +627,15 @@ module.exports = {
     POWDER_ITEM,
     TOOL_SOUNDS,
     traceLine,
+    damageNpc,
     fire,
     hookshot,
     bracelet,
     mirror,
     comesFromFront,
     mirrorBlocks,
+    mirrorReflects,
+    eatField,
     mirrorBlocksNpcHit,
     bomb,
     bombsOn,

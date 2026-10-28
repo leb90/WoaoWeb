@@ -13,7 +13,8 @@ import type { Engine } from "./Engine";
 // - gancho: la cadena sale hasta el blanco; si engancha, arrastra al personaje hasta ahí; si no, vuelve;
 // - levanta / tira / suelta: lo que se lleva sobre la cabeza, el vuelo en arco al tirarlo y los pedazos al romperse;
 // - bomba: la bomba con la mecha encendida, que titila cada vez más rápido, y la explosión de 3 × 3 baldosas;
-// - escudo: el Escudo Espejo levantado delante del personaje, con un brillo que lo recorre, mientras dura;
+// - escudo: el Campo de Protección levantado delante del personaje (un arco de energía que late), mientras dura;
+// - rebote: el destello del Campo cuando rebota algo (un rayo, una bola de fuego, una pluma);
 // - polvo: una nube de chispas doradas y violetas sobre la baldosa de adelante.
 // Bomba: "16-bit animated bomb" de victordelima (CC0); explosión: "Pixel Explosion (12 Frames)" de JROB774 (CC-BY 3.0),
 // docs/CREDITOS_GRAFICOS.md. La flecha del Arco usa el proyectil de los arqueros (paquete createProjectile).
@@ -27,9 +28,7 @@ const FIRE_SPELL = {
     projectileVisual: { coreColor: "#ffe08a", ringColor: "#ff8c1a", trailColor: "#ff3b00", magnitude: 1.35 },
 } as unknown as SpellData;
 
-const TOOL_TYPES = new Set(["fuego", "gancho", "levanta", "tira", "suelta", "bomba", "escudo", "polvo"]);
-// El Escudo de Diamantes del juego (grh 28661), que parece un espejo.
-const MIRROR_URL = "/sprites/escudo-espejo.png";
+const TOOL_TYPES = new Set(["fuego", "gancho", "levanta", "tira", "suelta", "bomba", "escudo", "rebote", "polvo"]);
 
 const BOMB_URL = "/sprites/bomba.png"; // 3 cuadros de 32 × 32 (la chispa de la mecha)
 const EXPLOSION_URL = "/sprites/explosion.png"; // 12 cuadros de 96 × 96
@@ -358,46 +357,85 @@ async function playBomb(engine: Engine, payload: DungeonMotionPayload) {
     });
 }
 
-// Delante del personaje según adonde mira (en el contenedor del personaje, que arranca arriba a la izquierda de su
-// baldosa): adelante, a un costado o un poco más arriba que el cuerpo.
+// El Campo de Protección: un arco de energía delante del personaje, según adonde mira (en el contenedor del personaje,
+// que arranca arriba a la izquierda de su baldosa). Mirando hacia arriba queda detrás del cuerpo.
 // Orientaciones del juego: 1 arriba, 2 abajo, 3 derecha, 4 izquierda.
-const MIRROR_OFFSET: Record<number, { x: number; y: number; behind: boolean }> = {
-    1: { x: 16, y: -14, behind: true },
-    2: { x: 16, y: 14, behind: false },
-    3: { x: 30, y: 6, behind: false },
-    4: { x: 2, y: 6, behind: false },
+const FIELD_FACING: Record<number, { x: number; y: number; angle: number; behind: boolean }> = {
+    1: { x: 16, y: 4, angle: -Math.PI / 2, behind: true },
+    2: { x: 16, y: 24, angle: Math.PI / 2, behind: false },
+    3: { x: 24, y: 14, angle: 0, behind: false },
+    4: { x: 8, y: 14, angle: Math.PI, behind: false },
 };
+const FIELD_RADIUS = 17;
+const FIELD_SPAN = 1.05;
+const FIELD_COLOR = 0x7fe9ff;
 
-async function playMirror(engine: Engine, payload: DungeonMotionPayload) {
+function drawField(node: Graphics, angle: number, pulse: number, alpha: number) {
+    node.clear();
+    // Un velo tenue y el arco que late; el borde claro va por afuera.
+    node.moveTo(0, 0).arc(0, 0, FIELD_RADIUS - 2, angle - FIELD_SPAN, angle + FIELD_SPAN).closePath().fill({ color: FIELD_COLOR, alpha: 0.1 * alpha });
+    node.arc(0, 0, FIELD_RADIUS, angle - FIELD_SPAN, angle + FIELD_SPAN).stroke({ color: FIELD_COLOR, width: 3 + pulse * 1.5, alpha: (0.55 + pulse * 0.35) * alpha });
+    node.arc(0, 0, FIELD_RADIUS + 3, angle - FIELD_SPAN * 0.85, angle + FIELD_SPAN * 0.85).stroke({ color: 0xffffff, width: 1, alpha: (0.35 + pulse * 0.4) * alpha });
+    // Celdas: unas marcas cortas sobre el arco, como un panal.
+    for (let i = -2; i <= 2; i++) {
+        const a = angle + (i * FIELD_SPAN) / 2.4;
+        node.moveTo(Math.cos(a) * (FIELD_RADIUS - 5), Math.sin(a) * (FIELD_RADIUS - 5))
+            .lineTo(Math.cos(a) * (FIELD_RADIUS + 1), Math.sin(a) * (FIELD_RADIUS + 1))
+            .stroke({ color: 0xffffff, width: 1, alpha: 0.25 * alpha });
+    }
+}
+
+// El Campo de cada personaje: uno nuevo reemplaza al anterior (con ms 1, lo apaga: un Tragón se lo comió).
+const activeFields = new Map<number, Graphics>();
+
+function playField(engine: Engine, payload: DungeonMotionPayload) {
     const startedAt = engine.timestamp();
-    const texture = await Assets.load(MIRROR_URL).catch(() => null);
-    const shield: Container = texture ? new Sprite(texture as Texture) : new Graphics().roundRect(-8, -10, 16, 20, 4).fill({ color: 0xcfe8ff });
-    if (shield instanceof Sprite) shield.anchor.set(0.5);
-    const shine = new Graphics();
+    activeFields.get(payload.id)?.destroy();
+    const field = new Graphics();
+    activeFields.set(payload.id, field);
     engine.dungeonToolEffects.push((now) => {
         const elapsed = now - startedAt;
         const container = containerOf(engine, payload.id);
         const entity = engine.personajes[payload.id];
-        if (elapsed >= payload.ms || !container || !entity || shield.destroyed) {
-            shield.destroy();
-            shine.destroy();
+        if (elapsed >= payload.ms || !container || !entity || field.destroyed) {
+            if (activeFields.get(payload.id) === field) activeFields.delete(payload.id);
+            field.destroy();
             return false;
         }
-        const offset = MIRROR_OFFSET[entity.heading] ?? MIRROR_OFFSET[2];
-        if (shield.parent !== container) container.addChild(shield, shine);
-        // Mirando hacia arriba, el escudo queda detrás del cuerpo.
-        container.setChildIndex(shield, offset.behind ? 0 : container.children.length - 1);
-        shield.x = offset.x;
-        shield.y = offset.y;
-        shield.alpha = elapsed > payload.ms - 300 ? (payload.ms - elapsed) / 300 : 1;
-        // Un brillo que cruza el escudo cada medio segundo.
-        const t = (elapsed % 500) / 500;
-        shine.clear();
-        shine.rect(-1.5, -9, 3, 18).fill({ color: 0xffffff, alpha: 0.55 * Math.sin(Math.PI * t) });
-        shine.x = offset.x - 7 + t * 14;
-        shine.y = offset.y;
-        shine.rotation = 0.35;
-        if (container.getChildIndex(shine) < container.getChildIndex(shield)) container.setChildIndex(shine, container.getChildIndex(shield));
+        const facing = FIELD_FACING[entity.heading] ?? FIELD_FACING[2];
+        if (field.parent !== container) container.addChild(field);
+        container.setChildIndex(field, facing.behind ? 0 : container.children.length - 1);
+        field.x = facing.x;
+        field.y = facing.y;
+        const fade = elapsed > payload.ms - 300 ? (payload.ms - elapsed) / 300 : Math.min(1, elapsed / 120);
+        const pulse = (Math.sin((elapsed / 420) * Math.PI * 2) + 1) / 2;
+        drawField(field, facing.angle, pulse, fade);
+        return true;
+    });
+}
+
+// El rebote: un destello blanco sobre el arco y chispas celestes.
+function playBounce(engine: Engine, payload: DungeonMotionPayload) {
+    const entity = engine.personajes[payload.id];
+    const center = characterCenter(engine, payload.id);
+    if (!entity || !center) return;
+    const facing = FIELD_FACING[payload.heading ?? entity.heading] ?? FIELD_FACING[2];
+    const at = { x: center.x + facing.x - 16, y: center.y + facing.y - 16 };
+    burst(engine, { x: at.x + Math.cos(facing.angle) * FIELD_RADIUS, y: at.y + Math.sin(facing.angle) * FIELD_RADIUS }, [0xffffff, FIELD_COLOR, 0xbff6ff], 14, 0.09);
+    const flash = new Graphics();
+    const startedAt = engine.timestamp();
+    engine.dungeonToolEffects.push((now) => {
+        const t = (now - startedAt) / Math.max(1, payload.ms || 260);
+        const container = containerOf(engine, payload.id);
+        if (t >= 1 || !container || flash.destroyed) {
+            flash.destroy();
+            return false;
+        }
+        if (flash.parent !== container) container.addChild(flash);
+        flash.x = facing.x;
+        flash.y = facing.y;
+        flash.clear();
+        flash.arc(0, 0, FIELD_RADIUS + 1, facing.angle - FIELD_SPAN, facing.angle + FIELD_SPAN).stroke({ color: 0xffffff, width: 6 * (1 - t), alpha: 1 - t });
         return true;
     });
 }
@@ -417,7 +455,8 @@ export function playDungeonTool(engine: Engine, payload: DungeonMotionPayload) {
     if (payload.tipo === "levanta") return playLift(engine, payload);
     if (payload.tipo === "tira") return playThrow(engine, payload);
     if (payload.tipo === "bomba") return void playBomb(engine, payload);
-    if (payload.tipo === "escudo") return void playMirror(engine, payload);
+    if (payload.tipo === "escudo") return playField(engine, payload);
+    if (payload.tipo === "rebote") return playBounce(engine, payload);
     if (payload.tipo === "polvo") return playPowder(engine, payload);
     if (payload.tipo === "suelta") {
         // La botella del Genio y la bola del Machacador caen enteras (el server las vuelve a mostrar en el piso).

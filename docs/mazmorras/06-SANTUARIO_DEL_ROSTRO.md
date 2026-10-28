@@ -113,7 +113,7 @@ Celdas (columna, fila) desde arriba a la izquierda, de 0 a 7 y de 0 a 6. El núm
 |---|---|---|---|---|---|
 | Baldosas del pozo | (3,3) | 11 | 16 baldosas voladoras que, al despegarse, **dejan pozos**; al romperse todas cae la **K3**. Llega la **escalera D**. Bloque cerradura hacia el Búho de la pasarela | — | Baldosas, pozos |
 | Aspiradora | (3,4) | 12 | Un **remolino** entre pozos que lleva a la Entrada | 4 mocos escondidos | Remolino, pozos |
-| Ojo de piedra | (4,4) | 12 | Un **ojo de piedra** que dispara un rayo al que se le cruza (el Escudo Espejo lo frena), pozos y bloques | Hechicero | Ojo, pozos |
+| Ojo de piedra | (4,4) | 12 | Un **ojo de piedra** que dispara un rayo al que se le cruza (el Campo de Protección lo frena), pozos y bloques | Hechicero | Ojo, pozos |
 | Antesala | (4,3) | 12 | La **puerta del jefe** al norte. Encender las 2 antorchas espanta a las chispas | 2 chispas | — |
 | Rostro | (4,2) | 12 | La escalera a la Guarida | — | — |
 
@@ -203,7 +203,7 @@ Una cara tallada en el piso de la Guarida. No se mueve y tocarla no lastima. Se 
 | En el original | En AO |
 |---|---|
 | Aparece de a poco y habla ("Pista del búho") | Igual, con la cara apareciendo en el piso |
-| Tira **20 baldosas**, de a parejas opuestas del borde: cada una sube, flota un momento y sale derecho hacia Link | Igual, apuntando al jugador más cercano. El Escudo Espejo las frena de frente |
+| Tira **20 baldosas**, de a parejas opuestas del borde: cada una sube, flota un momento y sale derecho hacia Link | Igual, apuntando al jugador más cercano. El Campo de Protección las frena de frente |
 | Después tira **las 4 vasijas** de las esquinas | Igual (lastiman más que las baldosas) |
 | Abre **pozos** alrededor de la cara, uno cada ~2 s, que duran ~2 s y chupan; caer te devuelve a la entrada de la sala | Igual |
 | **Solo le hacen daño las bombas:** 5 bombas, y después de cada una no recibe daño ~4,6 s | Igual, con la vida escalada para hasta 5 jugadores |
@@ -271,7 +271,7 @@ Ver la sección 5. Lo nuevo para construir: la cara en el piso, las baldosas que
 | Cofre que se abre tirándole algo | La llave del jefe |
 | Baldosas voladoras | Se despegan y vuelan hacia el jugador; en una sala dejan pozos |
 | Cintas transportadoras | Te llevan en un sentido |
-| Lanzallamas y ojo de piedra | Trampas que disparan al que se les cruza; el Escudo Espejo frena el rayo del ojo |
+| Lanzallamas y ojo de piedra | Trampas que disparan al que se les cruza; el Campo de Protección frena el rayo del ojo |
 | Hechiceros | Aparecen, tiran un rayo y desaparecen |
 | Machacador | La bola de hierro que se le devuelve con el Brazalete |
 | Serpientes Glotonas | Solo mueren comiendo bombas |

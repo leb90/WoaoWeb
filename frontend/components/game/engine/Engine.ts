@@ -50,6 +50,7 @@ import { updateDungeonShrine } from "./dungeonShrine";
 import { updateDungeonShrineBosses } from "./dungeonShrineBosses";
 import { updateDungeonMaw } from "./dungeonMaw";
 import { updateDungeonMawBosses } from "./dungeonMawBosses";
+import { updateDungeonTower } from "./dungeonTower";
 import { updateDungeonDarkness } from "./dungeonDarkness";
 import { updateDungeonTools } from "./dungeonTools";
 import {
@@ -613,6 +614,8 @@ export class Engine {
     dungeonParticles: DungeonParticle[] = [];
     // El Polvo de Fuego, el Gancho y la Pulsera (engine/dungeonTools.ts): efectos en curso y lo que lleva cada uno.
     dungeonToolEffects: Array<(now: number) => boolean> = [];
+    // Temblor de la cámara (el derrumbe de la Torre del Águila): hasta cuándo y cuánto, en píxeles.
+    cameraShake: { until: number; amplitude: number } | null = null;
     dungeonCarried: Map<number, Container> = new Map();
     // Las salas a oscuras del piso (engine/dungeonDarkness.ts): las manda el estado de la mazmorra.
     dungeonDarkRooms: DungeonDarkRoom[] = [];
@@ -2253,6 +2256,7 @@ export class Engine {
         updateDungeonShrineBosses(this, now);
         updateDungeonMaw(this, now);
         updateDungeonMawBosses(this, now);
+        updateDungeonTower(this, now);
         updateDungeonTools(this, now);
         updateDungeonDarkness(this);
     }
@@ -2816,6 +2820,15 @@ export class Engine {
         // Round camera position to whole pixels to prevent flickering
         this.mapContainer.x = Math.round(this.mapContainer.x);
         this.mapContainer.y = Math.round(this.mapContainer.y);
+        if (this.cameraShake) {
+            const left = this.cameraShake.until - this.timestamp();
+            if (left <= 0) this.cameraShake = null;
+            else {
+                const amplitude = this.cameraShake.amplitude * Math.min(1, left / 400);
+                this.mapContainer.x += Math.round((Math.random() * 2 - 1) * amplitude);
+                this.mapContainer.y += Math.round((Math.random() * 2 - 1) * amplitude);
+            }
+        }
 
         // La grilla de debug es del mapa actual: la corremos a su origen de mundo.
         if (this.debugGrid) {

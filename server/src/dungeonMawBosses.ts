@@ -4,7 +4,7 @@
 // El Maestro Stalfos (07_master_stalfos.asm), cuatro encuentros en cuatro salas:
 // - cada uno aparece solo si huyó del anterior (si no, su sala queda vacía y abierta); el que sigue aparece cuando el
 //   anterior huye;
-// - camina hacia el jugador más cercano, salta hacia él si está lejos y tira un espadazo que el Escudo Espejo no frena
+// - camina hacia el jugador más cercano, salta hacia él si está lejos y tira un espadazo que el Campo de Protección no frena
 //   (saltar con la Pluma lo esquiva);
 // - un golpe de costado o por la espalda lo desarma (de frente lo frena el escudo); desarmado, unos 4,5 s, solo le
 //   entran las bombas. Al rearmarse, si ya recibió sus bombazos (3, 2 y 2) huye; el cuarto muere al tercero y deja el
@@ -303,14 +303,14 @@ function hurt(user: Player, fraction: number, message: string) {
     getDungeons().hurtPlayer(user, fraction, message);
 }
 
-// Lo que sale de una criatura hacia el jugador: con el Escudo Espejo de frente no entra (salvo `unblockable`).
+// Lo que sale de una criatura hacia el jugador: con el Campo de Protección de frente no entra (salvo `unblockable`).
 function hit(user: Player, travel: Pos, fraction: number, message: string, unblockable = false): boolean {
     if (getMotion().isAirborne(user)) return false;
     const tools = getTools();
     const dir = Math.abs(travel.x) >= Math.abs(travel.y) ? { x: Math.sign(travel.x), y: 0 } : { x: 0, y: Math.sign(travel.y) };
     if (!unblockable && tools.mirrorBlocks(user, dir)) {
         sound(Number(user.map), user.pos, tools.TOOL_SOUNDS.bloqueo);
-        tell(user, "¡El Escudo Espejo lo frenó!");
+        tell(user, "¡El Campo de Protección lo frenó!");
         return true;
     }
     hurt(user, fraction, message);
@@ -479,7 +479,7 @@ const STALFOS_GREETING: Record<number, string> = {
     4: "¿¡Otra vez vos!? No parás nunca... ¡no te aguanto más! ¡Está bien, peleemos!",
 };
 
-// El espadazo: carga y tajo hacia adelante. El Escudo Espejo no lo frena; saltando se lo esquiva.
+// El espadazo: carga y tajo hacia adelante. El Campo de Protección no lo frena; saltando se lo esquiva.
 function slash(boss: Stalfos, npc: any, target: Player, now: number) {
     boss.mode = "carga";
     boss.modeUntil = now + MS_WINDUP_MS;

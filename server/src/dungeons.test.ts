@@ -92,6 +92,7 @@ test("los objetos de mazmorra existen y no se levantan", () => {
 test("las mecánicas de cada mapa están bien armadas y la mazmorra se puede resolver", () => {
     const allNpcs = readJson("server/jsons/npcs.json");
     const defs = readJson("server/jsons/dungeons.json") as Array<Record<string, any>>;
+    const npcsForFlags = readJson("server/jsons/npcs.json");
     for (const def of defs) {
         const counts = { llaves: 0, puertasConLlave: 0, llaveJefe: 0, puertaJefe: 0 };
         for (const map of def.mapas) {
@@ -125,12 +126,17 @@ test("las mecánicas de cada mapa están bien armadas y la mazmorra se puede res
                 if (barrier.tipo === "jefe") counts.puertaJefe++;
                 if (barrier.tipo === "placa") {
                     // La abren las placas, las antorchas, las cabezas de caballo o las baldosas voladoras de una de las salas
-                    // que separa.
+                    // que separa; en la Torre del Águila, también los ojos rotos de una sala de ojos y el Águila vencida (la
+                    // Sala del Órgano, la del trofeo).
                     const shrine = mech.santuario ?? { cabezas: [], baldosas: [] };
+                    const tower = mech.torre ?? { salasOjos: [] };
+                    const trophyRoom = mech.chests.find((chest: { contenido: string }) => chest.contenido === "trofeo")?.sala;
                     const solvable = barrier.salas.some((sala: number) =>
                         mech.plates.some((key: string) => mech.roomOf[key] === sala) ||
                         (mech.torches ?? []).some((torch: { sala: number }) => torch.sala === sala) ||
-                        [...shrine.cabezas, ...shrine.baldosas].some((thing: { sala: number }) => thing.sala === sala),
+                        [...shrine.cabezas, ...shrine.baldosas].some((thing: { sala: number }) => thing.sala === sala) ||
+                        tower.salasOjos.includes(sala) ||
+                        (trophyRoom !== undefined && sala === trophyRoom && tower.salasOjos !== undefined && Object.values(specials.npcs ?? {}).some((id: unknown) => npcsForFlags[String(id)]?.aguila)),
                     );
                     assert.ok(solvable, `${at}: la puerta "=" da a una sala con algo que la abra`);
                 }
@@ -155,8 +161,9 @@ test("las mecánicas de cada mapa están bien armadas y la mazmorra se puede res
                     torchRooms.has(chest.sala) ||
                     orderRooms.has(chest.sala) ||
                     tileRooms.has(chest.sala) ||
-                    joinRooms.has(chest.sala);
-                assert.equal(chest.oculto, hides, `${at}: oculto solo en salas que se cierran, con placas, con antorchas apagadas, de matar en orden, con baldosas voladoras o con bloques que se juntan`);
+                    joinRooms.has(chest.sala) ||
+                    Boolean(chest.trasJefe);
+                assert.equal(chest.oculto, hides, `${at}: oculto solo en salas que se cierran, con placas, con antorchas apagadas, de matar en orden, con baldosas voladoras, con bloques que se juntan o si espera al jefe`);
                 const chestObject = chest.contenido === "trofeo" ? DUNGEON_OBJECT_IDS.cofreJefe : DUNGEON_OBJECT_IDS.cofre;
                 assert.equal(objects[`${chest.x},${chest.y}`]?.objIndex, chest.oculto ? undefined : chestObject, `${at}: objeto`);
                 if (chest.contenido === "llave") counts.llaves++;
@@ -327,7 +334,7 @@ test("el Brazalete de Fuerza nivel 2 reemplaza al 1 y cumple lo que pedía el 1"
     assert.equal(dungeons.characterHasDungeonItem(solo, "pulsera"), true, "lo que pide el nivel 1 lo cumple el 2");
 });
 
-test("el Escudo Espejo solo frena lo que llega de frente, y solo adentro de una mazmorra", () => {
+test("el Campo de Protección solo frena lo que llega de frente, y solo adentro de una mazmorra", () => {
     const tools = require("./dungeonTools") as typeof import("./dungeonTools");
     const right = 3; // mira al este
     // Una bola de fuego que viaja hacia el oeste viene del este: de frente.
@@ -748,6 +755,103 @@ test("las Fauces del Bagre: el Gancho, los cuatro Maestro Stalfos, las Gohma, la
     const eelKey = Object.keys(specials(572).npcs)[0];
     const lairRoom = lair.rooms.find((room: { id: number }) => room.id === lair.roomOf[eelKey]);
     assert.ok(lairRoom.x2 - lairRoom.x1 >= 12 && lairRoom.y2 - lairRoom.y1 >= 10 && lairRoom.cierra);
+    // La música: tres temas y el de combate, con sus créditos.
+    const credits = fs.readFileSync(path.join(root, "docs/CREDITOS_SONIDOS.md"), "utf8");
+    for (const file of [...def.musica.pistas, def.musica.combate]) {
+        assert.ok(fs.existsSync(path.join(root, "frontend/public", file)), file);
+        assert.ok(credits.includes(file.replace("/music/mazmorras/", "")), `créditos de ${file}`);
+    }
+});
+
+test("la Torre del Águila: cuatro pisos, el Campo de Protección, los pilares y el Orbe, los ojos que abren puertas, el Flautista y el Águila", () => {
+    const specials = (map: number) => readJson(`server/mapas_source/mapa_${map}/specials.json`);
+    const npcs = readJson("server/jsons/npcs.json");
+    const def = (readJson("server/jsons/dungeons.json") as Array<Record<string, any>>).find((entry) => entry.id === "torre")!;
+    assert.deepEqual(def.mapas, [580, 581, 582, 583]);
+    assert.equal(def.itemMazmorra.id, "campo_de_proteccion");
+    assert.deepEqual(def.requiere.map((item: { id: string }) => item.id), ["pluma", "pulsera", "gancho"]);
+    assert.equal(def.entrada.map, 580);
+    const ground = specials(580).dungeon;
+    const first = specials(581).dungeon;
+    const second = specials(582).dungeon;
+    const top = specials(583).dungeon;
+    // Los pozos de cada piso tiran al de abajo; los de la terraza, a la sala de la escalera del mismo mapa.
+    assert.equal(ground.caida, null);
+    assert.equal(first.caida.map, 580);
+    assert.equal(second.caida.map, 581);
+    assert.equal(top.caida.map, 583);
+    assert.ok(second.pits.length >= 150, "los abismos del segundo piso");
+    assert.ok(second.fauces.pisoFlojo.length >= 30, "las cornisas de piso flojo");
+    // El Campo está en el primer piso, con el Orbe al lado; los cuatro pilares, en las salas del centro.
+    const item = first.chests.find((chest: { contenido: string }) => chest.contenido === "premio");
+    assert.ok(item && first.torre.orbe && first.roomOf[`${first.torre.orbe.x},${first.torre.orbe.y}`] === item.sala);
+    assert.equal(first.torre.pilares.length, 4);
+    assert.equal(new Set(first.torre.pilares.map((p: { sala: number }) => p.sala)).size, 4);
+    for (const pillar of first.torre.pilares) assert.equal(specials(581).objects[`${pillar.x},${pillar.y}`]?.objIndex, 1891);
+    assert.equal(specials(581).objects[`${first.torre.orbe.x},${first.torre.orbe.y}`]?.objIndex, 1893);
+    // La escalera 6 (del segundo piso a lo alto) espera al derrumbe: escondida en las dos puntas, la revela la "sala" -1
+    // del mapa de los pilares.
+    const collapseExits = [...second.hiddenExits, ...top.hiddenExits].filter((h: { revela: { sala: number } }) => h.revela.sala === -1);
+    assert.equal(collapseExits.length, 2);
+    assert.ok(collapseExits.every((h: { revela: { map: number } }) => h.revela.map === 581));
+    // Las salas de ojos: la de los dos ojos tiene una persiana que abren los ojos rotos.
+    assert.ok(second.torre.salasOjos.length >= 1);
+    const eyeRoom = second.torre.salasOjos.find((sala: number) => second.santuario.ojos.filter((eye: { sala: number }) => eye.sala === sala).length === 2);
+    assert.ok(eyeRoom !== undefined, "la sala de los dos ojos");
+    assert.ok(second.barriers.some((b: { tipo: string; salas: number[] }) => b.tipo === "placa" && b.salas.includes(eyeRoom)));
+    // Llaves: tres chicas para tres cerraduras (una puerta y dos bloques) y la del jefe para la puerta del jefe de lo alto.
+    const all = [ground, first, second, top];
+    const count = (tipo: string) => all.reduce((n, mech) => n + mech.barriers.filter((b: { tipo: string }) => b.tipo === tipo).length, 0);
+    const chests = (contenido: string) => all.reduce((n, mech) => n + mech.chests.filter((c: { contenido: string }) => c.contenido === contenido).length, 0);
+    assert.equal(chests("llave"), 3);
+    assert.equal(count("llave"), 3);
+    assert.equal(count("jefe"), 1);
+    assert.equal(chests("jefe"), 1);
+    assert.equal(top.barriers.filter((b: { tipo: string }) => b.tipo === "jefe").length, 1);
+    for (const contenido of ["pico", "mapa", "brujula", "caracola", "trofeo"]) assert.equal(chests(contenido), 1, contenido);
+    assert.equal(chests("oro"), 4);
+    assert.equal(chests("oroGrande"), 2);
+    // La K1 la custodian los Tragones en una sala que se cierra; el Cíclope rojo también suelta una llave.
+    const placed = (map: number, name: string) => Object.entries(specials(map).npcs as Record<string, number>).filter(([, id]) => npcs[id]?.name === name).map(([key]) => key);
+    const tragones = placed(580, "Tragón");
+    assert.ok(tragones.length >= 2 && tragones.every((key) => npcs[specials(580).npcs[key]].tragon));
+    const keyRoom = ground.chests.find((c: { contenido: string; oculto: boolean }) => c.contenido === "llave" && c.oculto)!;
+    assert.ok(tragones.some((key) => ground.roomOf[key] === keyRoom.sala) && ground.rooms.find((r: { id: number }) => r.id === keyRoom.sala)!.cierra);
+    const cyclops = placed(581, "Cíclope rojo");
+    assert.equal(cyclops.length, 1);
+    assert.ok(npcs[specials(581).npcs[cyclops[0]]].ciclope);
+    assert.ok(first.chests.some((c: { contenido: string; sala: number }) => c.contenido === "llave" && c.sala === first.roomOf[cyclops[0]]));
+    // El Flautista: una sala que se cierra, con el portal-atajo a la Entrada escondido hasta vencerlo.
+    const piper = placed(582, "Flautista");
+    assert.equal(piper.length, 1);
+    const piperTemplate = npcs[specials(582).npcs[piper[0]]];
+    assert.ok(piperTemplate.flautista && piperTemplate.bandada === 6 && npcs[String(piperTemplate.murcielagos)]);
+    const piperRoom = second.roomOf[piper[0]];
+    assert.ok(second.rooms.find((r: { id: number }) => r.id === piperRoom)!.cierra);
+    assert.ok(second.hiddenExits.some((h: { revela: { sala: number } }) => h.revela.sala === piperRoom) && ground.hiddenExits.some((h: { revela: { map: number; sala: number } }) => h.revela.map === 582 && h.revela.sala === piperRoom));
+    // La Llave del jefe aparece al apretar las dos placas con los bloques.
+    const bossKey = second.chests.find((c: { contenido: string }) => c.contenido === "jefe")!;
+    assert.ok(bossKey.oculto);
+    assert.equal(second.plates.filter((key: string) => second.roomOf[key] === bossKey.sala).length, 2);
+    assert.equal(second.blocks.filter((key: string) => second.roomOf[key] === bossKey.sala).length, 2);
+    // El Águila: en la terraza (una sala que se cierra, rodeada de vacío), con la escalera 7 siempre a la vista.
+    const eagle = placed(583, "Águila Malvada");
+    assert.equal(eagle.length, 1);
+    const eagleTemplate = npcs[specials(583).npcs[eagle[0]]];
+    assert.ok(eagleTemplate.aguila && eagleTemplate.jefe && eagleTemplate.idBody === 584);
+    const terrace = top.rooms.find((r: { id: number }) => r.id === top.roomOf[eagle[0]])!;
+    assert.ok(terrace.cierra && terrace.x2 - terrace.x1 >= 12 && terrace.y2 - terrace.y1 >= 6);
+    const terraceExit = Object.keys(specials(583).exits).find((key) => top.roomOf[key] === terrace.id);
+    assert.ok(terraceExit && !top.hiddenExits.some((h: { x: number; y: number }) => `${h.x},${h.y}` === terraceExit), "la escalera 7 no se esconde");
+    assert.ok(top.pits.length >= 200, "el vacío alrededor de la terraza");
+    // El trofeo está en la Sala del Órgano, detrás de una persiana que abre el Águila vencida.
+    const trophy = top.chests.find((c: { contenido: string }) => c.contenido === "trofeo")!;
+    assert.ok(top.barriers.some((b: { tipo: string; salas: number[] }) => b.tipo === "placa" && b.salas.includes(trophy.sala)));
+    // Las criaturas con sus marcas y los Naipes en orden.
+    for (const [map, flag] of [[580, "hechicero"], [580, "cuchilla"], [580, "chispa"], [581, "escondido"], [582, "mascara"], [581, "orden"]] as Array<[number, string]>) {
+        assert.ok(Object.values(specials(map).npcs as Record<string, number>).some((id) => npcs[id]?.[flag]), `${flag} en ${map}`);
+    }
+    assert.deepEqual(["Naipe I", "Naipe II", "Naipe III"].map((name) => npcs[specials(581).npcs[placed(581, name)[0]]].orden), [1, 2, 3]);
     // La música: tres temas y el de combate, con sus créditos.
     const credits = fs.readFileSync(path.join(root, "docs/CREDITOS_SONIDOS.md"), "utf8");
     for (const file of [...def.musica.pistas, def.musica.combate]) {

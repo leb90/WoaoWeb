@@ -192,7 +192,7 @@ Cerraduras: la puerta de los Murciélagos (K1), el bloque de Antes de Gohma (K2)
 ### Minijefes
 
 **El Maestro Stalfos** (Master Stalfos, `07_master_stalfos.asm`), cuatro veces. Cuerpo del Esqueleto de AO o un caballero esqueleto; si ninguno sirve, se busca un sprite libre.
-- **Cómo pelea:** camina hacia el más cercano y, si está lejos, salta hacia él. Cerca, tira un **espadazo** que el Escudo Espejo **no** frena; saltar con la Pluma lo esquiva.
+- **Cómo pelea:** camina hacia el más cercano y, si está lejos, salta hacia él. Cerca, tira un **espadazo** que el Campo de Protección **no** frena; saltar con la Pluma lo esquiva.
 - **Cómo se le gana:**
   - un golpe cuerpo a cuerpo **lo desarma**: cae en un montón de huesos unos 4,5 s, tiembla y se rearma;
   - mientras está desarmado **solo lo lastima una bomba**;

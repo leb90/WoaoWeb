@@ -208,7 +208,7 @@ Pasean en 3 × 3 cuando no persiguen a nadie, y la dificultad escala con el tama
 
 ## 6. El ítem: Brazalete de Fuerza
 
-**Ya está hecho** (PR del Brazalete y el Escudo Espejo): es la Pulsera de Zelda.
+**Ya está hecho** (PR del Brazalete y el Campo de Protección): es la Pulsera de Zelda.
 - **Qué hace:** levanta lo que tiene adelante (vasijas y piedras), lo lleva sobre la cabeza y lo tira hasta 4 baldosas. Lo que tapaba queda a la vista.
 - **No toca la fuerza del personaje:** el hechizo Fuerza es parte del meta de AO (pedido de Leandro). El Brazalete de Fuerza II, de otra mazmorra, además levanta las piedras pesadas.
 - **Usos en esta mazmorra:**
@@ -227,7 +227,7 @@ Lo sacamos del código del original (`04_genie.asm`):
 |---|---|
 | La botella salta hacia el centro; a los ~4 s sale el Genio en una nube de humo | Igual |
 | El Genio flota y es **invulnerable** mientras tiene la botella | Igual. Avisa: "¡No me podés lastimar mientras tenga mi botella!" |
-| Tira **8 bolas de fuego** apuntadas, alternando las manos, en arco (una cada ~0,8 s) | Igual. Las bolas las frena el **Escudo Espejo** si llegan de frente |
+| Tira **8 bolas de fuego** apuntadas, alternando las manos, en arco (una cada ~0,8 s) | Igual. Las bolas las frena el **Campo de Protección** si llegan de frente |
 | Vuelve a la botella, que **persigue a saltos** | Igual |
 | Un golpe de espada **aturde la botella** ~3 s (tiembla al final) | Un golpe cualquiera la aturde ~3 s |
 | Aturdida, se la **levanta con la pulsera** y se la tira contra una pared: **3 impactos** la rompen | Igual, con el Brazalete. En grupo, cualquiera puede levantarla |

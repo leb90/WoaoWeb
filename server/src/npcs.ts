@@ -3085,7 +3085,7 @@ function Npcs(this: NpcsApi) {
 
                 const probExito = Math.max(10, Math.min(90, 50 + (npcPoderAtaque - userEvasion) * 0.4));
                 // Evasión de viento del chamán: el 90 % de los golpes no le entran.
-                // Mazmorras: el Escudo Espejo levantado frena los golpes que llegan de frente (dungeonTools.ts).
+                // Mazmorras: el Campo de Protección levantado frena los golpes que llegan de frente (dungeonTools.ts).
                 const npcImpacto =
                     funct.randomIntFromInterval(1, 100) <= probExito &&
                     !(require("./elementalEffects") as typeof import("./elementalEffects")).rollWindEvasion(user) &&

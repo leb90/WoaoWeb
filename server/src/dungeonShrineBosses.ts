@@ -286,7 +286,7 @@ function hurt(user: Player, fraction: number, message: string) {
     getDungeons().hurtPlayer(user, fraction, message);
 }
 
-// Al tocarlo caminando: pega y empuja (con el Escudo Espejo de frente, no).
+// Al tocarlo caminando: pega y empuja (con el Campo de Protección de frente, no).
 function touch(npc: any, touchedAt: Map<string, number>, user: Player, dir: Pos, message: string, now: number) {
     if (now < (touchedAt.get(String(user.id)) ?? 0)) return;
     touchedAt.set(String(user.id), now + TOUCH_COOLDOWN_MS);
@@ -505,7 +505,7 @@ function bossThrow(boss: Smasher, npc: any, players: Player[], now: number) {
             const victim = playersInRoom(boss.mapId, boss.room).find((user) => chebyshev(user.pos, end) === 0 && !getMotion().isAirborne(user));
             if (victim && tools.mirrorBlocks(victim, travel)) {
                 sound(boss.mapId, victim.pos, tools.TOOL_SOUNDS.bloqueo);
-                tell(victim, "¡El Escudo Espejo frenó la bola!");
+                tell(victim, "¡El Campo de Protección frenó la bola!");
             } else if (victim) {
                 hurt(victim, BALL_DAMAGE, "Te pegó la bola de hierro del Machacador:");
                 if (!victim.dead) getMotion().push(victim, travel, 1);

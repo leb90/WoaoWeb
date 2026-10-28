@@ -13,7 +13,7 @@ Fecha: 2026-10-26. Es la referencia para ordenar nuestras mazmorras: qué ítem 
 | 5 | Fauces del Bagre (*Catfish's Maw*) | Gancho (*Hookshot*) | Engancharse a cofres y bloques para cruzar | Maestro Stalfos (varias veces) y dos Gohma | Anguila Viscosa (*Slime Eel*) | Marimba del Viento (*Wind Marimba*) | Las Aletas |
 | 6 | Santuario del Rostro (*Face Shrine*) | Pulsera Poderosa (*Powerful Bracelet*) | Levantar cosas más pesadas | Serpientes Dodongo y Rover (*Smasher*) | Fachada (*Facade*) | Triángulo de Coral (*Coral Triangle*) | Llave del Rostro (Caballero Armos) |
 | 7 | Torre del Águila (*Eagle's Tower*) | Escudo Espejo (*Mirror Shield*) | Rebotar rayos y proyectiles | Hinox rojo y Grim Creeper | Águila Malvada (*Evil Eagle*) | Órgano de la Calma Vespertina (*Organ of Evening Calm*) | Llave del Pájaro |
-| 8 | Roca Tortuga (*Turtle Rock*) | Vara Mágica (*Magic Rod*) | Tirar fuego; derrite hielo | Varios minijefes anteriores y Blaino | Cabeza Ardiente (*Hot Head*) | Tambor del Trueno (*Thunder Drum*) | El Escudo Espejo |
+| 8 | Roca Tortuga (*Turtle Rock*) | Vara Mágica (*Magic Rod*) | Tirar fuego; derrite hielo | Varios minijefes anteriores y Blaino | Cabeza Ardiente (*Hot Head*) | Tambor del Trueno (*Thunder Drum*) | El Campo de Protección |
 | — | Mazmorra del Color (opcional, versión DX) | Túnica roja o azul | Más daño o más defensa | Gran Buzz Blob y Hinox de piedra | Escarabajo Duro (*Hardhit Beetle*) | — | La Pulsera de Fuerza |
 
 Los nombres en castellano son traducciones nuestras; los del juego van entre paréntesis.
@@ -38,7 +38,9 @@ Cada ítem nuestro adapta uno del original, con nombre propio cuando hace falta 
 | 2 | Cueva de la Cola | 1 · Cueva de la Cola | Pluma de Roc (saltar) | Hecha, en desarrollo hasta probarla en producción ([03-CUEVA_DE_LA_COLA.md](03-CUEVA_DE_LA_COLA.md)) |
 | a definir | Gruta de la Botella | 2 · Gruta de la Botella | Brazalete de Fuerza (levantar) | Diseño para confirmar ([05-GRUTA_DE_LA_BOTELLA.md](05-GRUTA_DE_LA_BOTELLA.md)); el Brazalete ya está hecho. Pide la pluma |
 | 4 | Caverna de las Llaves | 3 · Cueva de las Llaves | Botas de Pegaso (correr) | Diseñada ([02-CAVERNA_DE_LAS_LLAVES.md](02-CAVERNA_DE_LAS_LLAVES.md)); pide la pluma |
-| a definir | — | 5 a 7 del original | Gancho, Brazalete de Fuerza II, Escudo Espejo | Los tres ítems ya están hechos (`dungeonTools.ts`); las mazmorras, no |
+| a definir | Fauces del Bagre | 5 · Fauces del Bagre | Gancho (engancharse) | Hecha ([07-FAUCES_DEL_BAGRE.md](07-FAUCES_DEL_BAGRE.md)); pide las Patas, la pluma y el Brazalete |
+| a definir | Santuario del Rostro | 6 · Santuario del Rostro | Brazalete de Fuerza nivel 2 | Hecho ([06-SANTUARIO_DEL_ROSTRO.md](06-SANTUARIO_DEL_ROSTRO.md)); pide el Brazalete, la pluma, las botas y el Gancho |
+| a definir | Torre del Águila | 7 · Torre del Águila | Campo de Protección (frenar y rebotar) | Hecha ([08-TORRE_DEL_AGUILA.md](08-TORRE_DEL_AGUILA.md)); pide la pluma, el Brazalete y el Gancho |
 | a definir (después de la Cueva) | Roca de la Tortuga | 8 · Roca Tortuga | Polvo de Fuego (fuego) | Diseñada ([04-ROCA_DE_LA_TORTUGA.md](04-ROCA_DE_LA_TORTUGA.md)); pide la pluma, el gancho y la pulsera, que se hacen con ella |
 
 - **Por qué la Gruta va primera:** ya estaba diseñada y con el motor hecho, y nadar no depende de los otros ítems. Del original en adelante se respeta el orden.

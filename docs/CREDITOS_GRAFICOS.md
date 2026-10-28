@@ -52,13 +52,13 @@ Hecho con gráficos del propio juego: **`320257.png`, el bloque de hielo**, es e
 
 Hecho con gráficos del propio juego: **`graphics/320261.png`, la pared rajada en una pared horizontal**, es la puerta de piedra (grh 9193) con la abertura rellena de piedra y una grieta.
 
-## Brazalete de Fuerza II y Escudo Espejo
+## Brazalete de Fuerza II y Campo de Protección
 
 | Archivo | Uso en el juego | Original | Autor | Licencia |
 |---|---|---|---|---|
 | `graphics/320263.png` | Piedra pesada (solo la levanta el Brazalete de Fuerza II) | Un bloque de piedra de "[LPC] Jungle Ruins", https://opengameart.org/content/lpc-jungle-ruins | bluecarrot16 | CC-BY 3.0+ / OGA-BY 3.0+ |
 
-Hecho con gráficos del propio juego: **`sprites/escudo-espejo.png`**, el Escudo Espejo levantado, es el ícono del Escudo de Diamantes (grh 28661).
+El Campo de Protección (el Escudo Espejo de Zelda) se dibuja con formas en el cliente (`engine/dungeonTools.ts`): un arco de energía delante del personaje. Antes era el ícono del Escudo de Diamantes del juego (`sprites/escudo-espejo.png`, ya borrado).
 
 ## Mecánicas compartidas: búho, remolino y bloques de color
 
@@ -133,3 +133,17 @@ Hechos para el juego, sin gráficos de terceros:
 - el hueso (`graphics/330030.png`, 42352).
 
 El puente (`graphics/330029.png`, 42350 y 42351) está armado con la madera del muelle del propio juego (grh 5500-5503).
+
+## Torre del Águila
+
+| Archivo | Uso en el juego | Original | Autor | Licencia |
+|---|---|---|---|---|
+| `graphics/330039.png` | Águila Malvada en vuelo (cuerpo 584): 4 direcciones, 3 cuadros de 96 × 96 | `bird_2_eagle.png` de "[LPC] Birds", https://opengameart.org/content/lpc-birds, al triple con vecino más cercano (las filas de vuelo) | bluecarrot16 (encargo de castelonia) | [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/) (también CC-BY 3.0, CC-BY-SA, GPL y OGA-BY 3.0) |
+| `graphics/330040.png` | Águila Malvada posada (cuerpo 585): 4 direcciones, 3 cuadros de 96 × 96 | Las filas de caminar del mismo `bird_2_eagle.png`, al triple | bluecarrot16 (encargo de castelonia) | CC-BY 4.0 |
+
+Atribución que piden: "[LPC] Birds" by bluecarrot16, commissioned by castelonia. https://opengameart.org/content/lpc-birds
+
+Hechos para el juego, sin gráficos de terceros:
+- el pilar de la torre, entero y roto (`graphics/330037.png`, 42448 y 42449), dibujado con sombreado de cilindro;
+- el ojo de piedra roto (`graphics/330038.png`, 42451), que es el ojo de piedra del Santuario (42299) apagado y con rajas;
+- el Orbe (42450) es la bola de hierro del Machacador (`graphics/330022.png`), ahora como objeto del piso.

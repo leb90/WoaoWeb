@@ -45,7 +45,7 @@ const SERIES_ITEMS: Array<{ id: string; nombre: string; icon: LucideIcon; tone: 
     { id: "botas_de_pegaso", nombre: "Botas de Pegaso", icon: Wind, tone: "text-orange-200", uso: "La Carrera; con la Pluma, el salto largo", mazmorra: "Caverna de las Llaves" },
     { id: "gancho", nombre: "Gancho", icon: Anchor, tone: "text-stone-200", uso: "Engancharse a cofres, bloques y estatuas para cruzar; arma puentes sobre las anclas y aturde criaturas", mazmorra: "Fauces del Bagre" },
     { id: "pulsera_poderosa", nombre: "Brazalete de Fuerza nivel 2", icon: BicepsFlexed, tone: "text-rose-200", uso: "Como el nivel 1, y además levanta las piedras pesadas", mazmorra: "Santuario del Rostro" },
-    { id: "escudo_espejo", nombre: "Escudo Espejo", icon: Shield, tone: "text-cyan-200", uso: "Levantarlo 3 s: frena lo que llega de frente (golpes, rayos y bolas de fuego)", mazmorra: "Mazmorra a definir" },
+    { id: "campo_de_proteccion", nombre: "Campo de Protección", icon: Shield, tone: "text-cyan-200", uso: "Levantarlo 3 s: frena lo que llega de frente y rebota los rayos, las bolas de fuego y las plumas", mazmorra: "Torre del Águila" },
     { id: "polvo_de_fuego", nombre: "Polvo de Fuego", icon: Flame, tone: "text-orange-300", uso: "Tirar fuego: enciende antorchas, derrite hielo y quema criaturas", mazmorra: "Roca de la Tortuga" },
 ];
 
@@ -57,7 +57,7 @@ const SERIES_TROPHIES: Array<{ id: string | null; nombre: string }> = [
     { id: "iris_del_ojo", nombre: "Iris del Ojo" },
     { id: "colmillo_de_la_anguila", nombre: "Colmillo de la Anguila" },
     { id: "mascara_de_piedra", nombre: "Máscara de Piedra" },
-    { id: null, nombre: "Séptima mazmorra" },
+    { id: "garra_del_aguila", nombre: "Garra del Águila" },
     { id: null, nombre: "Octava mazmorra" },
 ];
 

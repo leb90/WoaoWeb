@@ -78,6 +78,11 @@ const OBJ = {
     cabezaDragon: 1885,
     puente: 1886,
     puenteHorizontal: 1890,
+    // Torre del Águila (dungeonTower.ts): los pilares que tira el Orbe, el Orbe en el piso y el ojo de piedra roto.
+    pilar: 1891,
+    pilarRoto: 1892,
+    orbe: 1893,
+    ojoRoto: 1894,
 } as const;
 // Portal azul (escaleras que se ven como portal: el atajo de la Cueva de la Cola).
 const PORTAL_OBJ = 378;
@@ -229,6 +234,14 @@ type MapMechanics = {
         salasJuntar: number[];
         peces: Array<{ x: number; y: number; sala: number }>;
         aguaBaja: string[];
+    };
+    // Torre del Águila: los pilares que tira el Orbe, dónde arranca el Orbe y las salas cuyas puertas abren los ojos
+    // de piedra rotos (dungeonTower.ts).
+    torre?: {
+        pilares: Array<{ x: number; y: number; sala: number }>;
+        orbe: { x: number; y: number } | null;
+        salasOjos: number[];
+        salaTrofeo: number | null;
     };
 };
 type Torch = { x: number; y: number; encendida: boolean; sala: number };
@@ -897,6 +910,8 @@ function destroyRun(run: DungeonRun) {
         require("./dungeonShrineBosses").forgetMap(mapId);
         require("./dungeonMaw").forgetMap(mapId);
         require("./dungeonMawBosses").forgetMap(mapId);
+        require("./dungeonTower").forgetMap(mapId);
+        require("./dungeonTowerBosses").forgetMap(mapId);
         for (const npcId of Object.keys(vars.npcs ?? {})) {
             if (vars.npcs[npcId]?.map === mapId) {
                 delete vars.npcs[npcId];
@@ -2040,6 +2055,8 @@ function fastTickRun(run: DungeonRun) {
         require("./dungeonShrineBosses").tick(mapId, now);
         require("./dungeonMaw").tick(mapId, now);
         require("./dungeonMawBosses").tick(mapId, now);
+        require("./dungeonTower").tick(mapId, now);
+        require("./dungeonTowerBosses").tick(mapId, now);
     }
 }
 
@@ -2128,6 +2145,23 @@ export function mawDataOf(mapId: number): { fauces: NonNullable<MapMechanics["fa
     const ctx = contextOf(mapId);
     if (!ctx?.index.mech.fauces) return null;
     return { fauces: ctx.index.mech.fauces, roomOf: ctx.index.mech.roomOf };
+}
+
+// --- Ayudas para dungeonTower.ts (Torre del Águila) ---
+
+export function towerDataOf(mapId: number): { torre: NonNullable<MapMechanics["torre"]>; roomOf: Record<string, number> } | null {
+    const ctx = contextOf(mapId);
+    if (!ctx?.index.mech.torre) return null;
+    return { torre: ctx.index.mech.torre, roomOf: ctx.index.mech.roomOf };
+}
+
+// Aparecen las escaleras que esperaban a una sala (la -1 es la que revela el derrumbe de los pilares).
+export function revealExitsOfRoom(mapId: number, roomId: number): boolean {
+    const ctx = contextOf(mapId);
+    if (!ctx) return false;
+    const exits = revealExits(ctx.run, ctx.base, roomId);
+    if (exits) refreshRun(ctx.run);
+    return Boolean(exits);
 }
 
 // Un pozo del plano que todavía no tiene puente.
@@ -2556,6 +2590,8 @@ export function onNpcStruck(npc: any, attacker: RuntimeCharacter): boolean {
     if (require("./dungeonShrine").onNpcStruck(npc, attacker)) return true;
     // Los jefes de las Fauces del Bagre: el golpe desarma al Maestro Stalfos o le pega al corazón de la Anguila.
     if (require("./dungeonMawBosses").onNpcStruck(npc, attacker)) return true;
+    // Los jefes de la Torre del Águila: al Flautista no le entra; al Águila, solo cuando vuela bajo.
+    if (require("./dungeonTowerBosses").onNpcStruck(npc, attacker)) return true;
     if (!templateOf(npc).retrocede) return false;
     require("./dungeonHazards").strikeBeetle(npc, attacker);
     return true;
@@ -2586,6 +2622,9 @@ export function getNpcInvulnerableReason(
     // Los jefes de las Fauces: a cada uno le entra una sola cosa.
     const mawBoss = require("./dungeonMawBosses").invulnerableReason(npc, source);
     if (mawBoss) return mawBoss;
+    // Los jefes de la Torre del Águila.
+    const towerBoss = require("./dungeonTowerBosses").invulnerableReason(npc, source);
+    if (towerBoss) return towerBoss;
     // Los imitadores se cubren de frente: hay que pegarles por la espalda o de costado.
     const frontal = attacker ? require("./dungeonHazards").frontalBlockReason(npc, attacker) : null;
     if (frontal) return frontal;
@@ -2770,7 +2809,7 @@ function templateOf(npc: { templateNpcIndex?: number } | undefined): SpecialTemp
 }
 
 function registerSpecialNpc(run: DungeonRun, npc: any) {
-    if (require("./dungeonHazards").register(npc) || require("./dungeonBoss").register(npc) || require("./dungeonGrotto").register(npc) || require("./dungeonShrine").register(npc) || require("./dungeonShrineBosses").register(npc) || require("./dungeonMaw").register(npc) || require("./dungeonMawBosses").register(npc)) return;
+    if (require("./dungeonHazards").register(npc) || require("./dungeonBoss").register(npc) || require("./dungeonGrotto").register(npc) || require("./dungeonShrine").register(npc) || require("./dungeonShrineBosses").register(npc) || require("./dungeonMaw").register(npc) || require("./dungeonMawBosses").register(npc) || require("./dungeonTower").register(npc) || require("./dungeonTowerBosses").register(npc)) return;
     const template = templateOf(npc);
     if (template.despierta) npc.dormant = true;
     if (template.pareja) {
@@ -2982,10 +3021,10 @@ const DUNGEON_ITEMS: Record<string, { nombre: string; accion: "carrera" | "salto
     // Los de la Roca de la Tortuga (dungeonTools.ts). El Gancho lo va a dar otra mazmorra.
     polvo_de_fuego: { nombre: "Polvo de Fuego", accion: "fuego" },
     gancho: { nombre: "Gancho", accion: "gancho" },
-    // El Brazalete de Fuerza (la Pulsera de Zelda) lo da la Gruta de la Botella; el II y el Escudo Espejo, otras.
+    // El Brazalete de Fuerza (la Pulsera de Zelda) lo da la Gruta de la Botella; el II y el Campo de Protección, otras.
     pulsera: { nombre: "Brazalete de Fuerza", accion: "pulsera" },
     pulsera_poderosa: { nombre: "Brazalete de Fuerza nivel 2", accion: "pulsera" },
-    escudo_espejo: { nombre: "Escudo Espejo", accion: "escudo" },
+    campo_de_proteccion: { nombre: "Campo de Protección", accion: "escudo" },
 };
 
 // Ítems que mejoran a otro, como en Zelda: el Brazalete de Fuerza nivel 2 reemplaza al nivel 1 (ocupa su lugar en la
@@ -3104,6 +3143,8 @@ export function onNpcDied(npc: { id?: EntityId; map?: number; templateNpcIndex?:
     require("./dungeonShrineBosses").onNpcDied(npc);
     require("./dungeonMaw").onNpcDied(npc);
     require("./dungeonMawBosses").onNpcDied(npc);
+    require("./dungeonTower").onNpcDied(npc);
+    require("./dungeonTowerBosses").onNpcDied(npc);
     const boss = ctx.run.floatingBoss;
     if (boss?.npcId === String(npc.id)) {
         ctx.run.floatingBoss = null;
@@ -3210,6 +3251,8 @@ module.exports = {
     openPitAt,
     setBossPit,
     mawDataOf,
+    towerDataOf,
+    revealExitsOfRoom,
     despawnRunNpc,
     spawnRunNpc,
     releaseRoomIfEmpty,

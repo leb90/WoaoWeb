@@ -372,5 +372,77 @@
             ],
             "combate": "/music/mazmorras/fauces/combate.mp3"
         }
+    },
+    {
+        "id": "torre",
+        "nombre": "Torre del Águila",
+        "descripcion": "Una torre de piedra de cuatro pisos, con un águila gigante en lo más alto. Adentro hay cornisas sobre el vacío, pilares que sostienen el piso de arriba y un flautista que llama a sus murciélagos. Dicen que el escudo que se guarda ahí rebota lo que le tiran.",
+        "nivelMinimo": 25,
+        "maxJugadores": 5,
+        "soloDesarrollo": true,
+        "piedraNpc": 9727,
+        "mapas": [
+            580,
+            581,
+            582,
+            583
+        ],
+        "entrada": {
+            "map": 580,
+            "x": 44,
+            "y": 65
+        },
+        "salidas": [
+            {
+                "map": 580,
+                "x": 46,
+                "y": 66
+            },
+            {
+                "map": 583,
+                "x": 40,
+                "y": 48
+            }
+        ],
+        "regreso": {
+            "map": 34,
+            "x": 50,
+            "y": 52
+        },
+        "requiere": [
+            {
+                "id": "pluma",
+                "nombre": "la Pluma de Roc"
+            },
+            {
+                "id": "pulsera",
+                "nombre": "el Brazalete de Fuerza"
+            },
+            {
+                "id": "gancho",
+                "nombre": "el Gancho"
+            }
+        ],
+        "escalado": {
+            "vidaPorJugador": 0.7,
+            "danoPorJugador": 0.15
+        },
+        "itemMazmorra": {
+            "id": "campo_de_proteccion",
+            "nombre": "el Campo de Protección"
+        },
+        "trofeo": {
+            "id": "garra_del_aguila",
+            "nombre": "la Garra del Águila"
+        },
+        "oroJefe": 900,
+        "musica": {
+            "pistas": [
+                "/music/mazmorras/torre/1.mp3",
+                "/music/mazmorras/torre/2.mp3",
+                "/music/mazmorras/torre/3.mp3"
+            ],
+            "combate": "/music/mazmorras/torre/combate.mp3"
+        }
     }
 ]

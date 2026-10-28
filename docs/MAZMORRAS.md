@@ -133,6 +133,7 @@ Todas por datos del mapa, para que las mazmorras siguientes se armen sin código
    - Las mecánicas están en la sección 17; los mapas, las criaturas y la música, en la 18; los jefes, en la 19.
    - Se construyó en tres PR: las mecánicas; los mapas, las criaturas y la música; y los jefes.
 10. **Fauces del Bagre. [hecha, en desarrollo hasta probarla en producción: secciones 20, 21 y 22]** Adapta las Fauces del Bagre (nivel 5 de Link's Awakening) y da el **Gancho** (ya hecho; esta mazmorra le suma el puente del ancla, arrancar máscaras y sacar al jefe de la pared). Diseño en [mazmorras/07-FAUCES_DEL_BAGRE.md](mazmorras/07-FAUCES_DEL_BAGRE.md).
+11. **Torre del Águila. [hecha en un solo PR, en desarrollo hasta probarla en producción: secciones 23, 24 y 25]** Adapta la Torre del Águila (nivel 7 de Link's Awakening) y da el **Campo de Protección** (el Escudo Espejo, que ya existía sin mazmorra; esta lo renombra, lo dibuja como un campo y le suma el rebote). La última de la serie. Diseño en [mazmorras/08-TORRE_DEL_AGUILA.md](mazmorras/08-TORRE_DEL_AGUILA.md).
    - La grilla de 7 × 8 salas en un mapa (570), los 4 pasajes (571) y la Guarida de la Anguila (572).
    - El Maestro Stalfos aparece cuatro veces y la cuarta suelta el Gancho; el minijefe son las dos Gohma y el jefe, la Anguila Viscosa.
    - Se construye en tres PR, como el Santuario: mecánicas y criaturas; mapas y música; jefes.
@@ -447,7 +448,7 @@ El diseño está en [mazmorras/04-ROCA_DE_LA_TORTUGA.md](mazmorras/04-ROCA_DE_LA
 
 Son ítems de mazmorra como la Pluma y las Botas: se ponen en las teclas Z o X desde la Mochila y solo funcionan adentro.
 
-**Ninguno toca los atributos, los hechizos ni la defensa del personaje** (pedido de Leandro): el hechizo Fuerza es parte del meta de AO. El Brazalete no da fuerza: es la herramienta de Zelda para levantar cosas. Y el Escudo Espejo solo frena lo que pasa adentro de las mazmorras. El server los resuelve en `dungeonTools.ts` y avisa en el mismo paquete que la Carrera (101), con tipos nuevos. El cliente los dibuja en `engine/dungeonTools.ts`.
+**Ninguno toca los atributos, los hechizos ni la defensa del personaje** (pedido de Leandro): el hechizo Fuerza es parte del meta de AO. El Brazalete no da fuerza: es la herramienta de Zelda para levantar cosas. Y el Campo de Protección solo frena lo que pasa adentro de las mazmorras. El server los resuelve en `dungeonTools.ts` y avisa en el mismo paquete que la Carrera (101), con tipos nuevos. El cliente los dibuja en `engine/dungeonTools.ts`.
 
 | Ítem | Qué hace | Números |
 |---|---|---|
@@ -455,7 +456,7 @@ Son ítems de mazmorra como la Pluma y las Botas: se ponen en las teclas Z o X d
 | **Gancho** (`gancho`) | Cadena hasta 7 baldosas. Si engancha algo firme (cofre, bloque, vasija, piedra, estatua, antorcha, hielo, cristal o puerta), arrastra al personaje hasta al lado, por encima de pozos y lava. En una criatura, la aturde 1,5 s y le saca un poco. Contra la pared o sin nada, vuelve. No atraviesa a otros personajes | 40 ms por baldosa de ida, 50 por baldosa de arrastre, 0,9 s entre usos. Daño: 5 + 1 por nivel |
 | **Brazalete de Fuerza** (`pulsera`) | Levanta la vasija o la piedra que hay adelante y la lleva sobre la cabeza: se camina, pero no se ataca ni se usan otros ítems. Apretando otra vez la tira hasta 4 baldosas; se rompe al caer y lastima a la criatura que toque. Lo que tapaba queda a la vista (un botón). Al morir, salir o cambiar de mapa se suelta | 70 ms por baldosa del tiro. Daño: 15 + 2 por nivel |
 | **Brazalete de Fuerza II** (`pulsera_poderosa`, la misma acción) | Todo lo del Brazalete y además las **piedras pesadas** (`]` en el plano). Con el Brazalete común la piedra pesada no se mueve: "Es demasiado pesada" | Daño de la piedra pesada tirada: 30 + 3 por nivel |
-| **Escudo Espejo** (`escudo`) | Lo levanta 3 s delante del personaje (el Escudo de Diamantes del juego, con un brillo que lo recorre). Lo que llega de frente no entra: los golpes de las criaturas, con aviso. Las trampas que tiran rayos o bolas de fuego lo consultan con `mirrorBlocks` | 3 s levantado y 1,5 s de espera |
+| **Campo de Protección** (`escudo`) | Lo levanta 3 s delante del personaje: un arco de energía celeste que late (antes era el Escudo de Diamantes del juego; se cambió porque hay personajes que no usan escudos y el ítem no es uno). Lo que llega de frente no entra: los golpes de las criaturas, con aviso. Las trampas que tiran rayos o bolas de fuego lo consultan con `mirrorBlocks`; las que rebotan, con `mirrorReflects` (ver la sección 23) | 3 s levantado y 1,5 s de espera |
 
 Mientras arrastra el Gancho, el personaje cuenta como en el aire, igual que saltando: la lava, el rodillo y el Ciempiés no lo tocan.
 
@@ -465,7 +466,7 @@ Mientras arrastra el Gancho, el personaje cuenta como en el aire, igual que salt
 
 (En las capturas el personaje es un GM invisible: por eso se ve, con lo que lleva, medio transparente.)
 
-![El Escudo Espejo levantado frente a un esqueleto](mazmorras/herramientas/escudo.png)
+![El Campo de Protección levantado frente a un esqueleto](mazmorras/herramientas/escudo.png)
 
 ### Símbolos nuevos del plano
 | Símbolo | Qué es |
@@ -727,7 +728,7 @@ Los dos salen del código del original (zladx/LADX-Disassembly) y los mueve el s
 ### El Genio de la Botella (jefe; el Genie, `04_genie.asm`)
 **Fase 1, con la botella:**
 - **La botella:** salta de baldosa en baldosa, en arco y con su sombra. Primero va hacia el centro y después persigue. Al lado de alguien se queda quieta: es cuando se le puede pegar.
-- **El Genio sale y vuelve:** a los 4 s sale en una nube de humo, flota y tira **8 bolas de fuego** (una cada 0,8 s, alternando las manos). Las bolas van en arco hacia donde estaba el jugador y queman el 10 %; el Escudo Espejo las frena de frente. Después vuelve a la botella en otra nube. Afuera, la botella vacía queda sólida en su lugar.
+- **El Genio sale y vuelve:** a los 4 s sale en una nube de humo, flota y tira **8 bolas de fuego** (una cada 0,8 s, alternando las manos). Las bolas van en arco hacia donde estaba el jugador y queman el 10 %; el Campo de Protección las frena de frente. Después vuelve a la botella en otra nube. Afuera, la botella vacía queda sólida en su lugar.
 - **Invulnerable:** mientras tenga la botella no se lo puede lastimar ("¡No me podés lastimar mientras tenga mi botella!").
 - **Aturdir la botella:** un golpe (cuerpo a cuerpo, flecha, bomba o algo tirado) a la botella con el Genio adentro la aturde 3 s; queda torcida y en el último segundo tiembla.
 - **Levantarla y estrellarla:** aturdida, se levanta con el **Brazalete** y se tira contra una pared. Si no llega a una pared, cae entera y vuelve a saltar. Con **3 golpes contra la pared se rompe**.
@@ -767,10 +768,10 @@ El diseño está en [mazmorras/06-SANTUARIO_DEL_ROSTRO.md](mazmorras/06-SANTUARI
 | **Persiana** | Una puerta sin cerradura que se abre cuando le pega algo tirado con el Brazalete (una estatua o una vasija) | `[` |
 | **Cofre trabado** | El de la llave del jefe: con un clic no se abre, tirándole algo sí (se lo lleva el que tiró) | `Ñ` |
 | **Cabezas de caballo** | Se levantan con el nivel 1 y se tiran; no se rompen y caen paradas o acostadas (mitad y mitad), en la última baldosa libre del vuelo. Con todas las de su sala paradas, la sala se resuelve: se abren sus puertas `=` | `♞` |
-| **Baldosas voladoras** | Con alguien en la sala, cada 1,1 s una se despega, sube y tiembla, y sale derecho hacia donde está el jugador más cercano (10 %; el Escudo Espejo la frena de frente). Las marcadas dejan un pozo. Rotas todas, la sala se resuelve: aparecen sus cofres (que arrancan ocultos) | `▦`, `▩` (deja pozo) |
+| **Baldosas voladoras** | Con alguien en la sala, cada 1,1 s una se despega, sube y tiembla, y sale derecho hacia donde está el jugador más cercano (10 %; el Campo de Protección la frena de frente). Las marcadas dejan un pozo. Rotas todas, la sala se resuelve: aparecen sus cofres (que arrancan ocultos) | `▦`, `▩` (deja pozo) |
 | **Cintas transportadoras** | Cada 0,33 s corren una baldosa al que está encima (salvo en el aire) | `→ ← ↑ ↓` |
 | **Lanzallamas** | Cada 2,6 s escupe una bola de fuego en línea recta hacia la sala, hasta la pared; quema (12 %) al primero que encuentra | `♨` |
-| **Ojo de piedra** | Gira por las 8 direcciones; si ve a alguien en línea (hasta 8 baldosas, sin paredes), avisa con una línea fina y le tira un rayo (12 %; el Escudo Espejo lo frena) | `◉` |
+| **Ojo de piedra** | Gira por las 8 direcciones; si ve a alguien en línea (hasta 8 baldosas, sin paredes), avisa con una línea fina y le tira un rayo (12 %; el Campo de Protección lo frena) | `◉` |
 | **Hechiceros** | Aparecen en la fila o la columna del jugador, tiran un rayo mágico y desaparecen. Escondidos no se los puede tocar; el golpe cuerpo a cuerpo solo los empuja; una bomba o algo tirado los mata de una | plantilla con `hechicero` |
 | **Mocos escondidos** | No se ven ni ocupan baldosa hasta que alguien pasa a 2 baldosas; ahí aparecen y pelean | plantilla con `escondido` |
 | **Estrellas** | Rebotan en diagonal contra las paredes y pegan al tocar | plantilla con `estrella` |
@@ -907,7 +908,7 @@ Los tres salen del código del original (zladx/LADX-Disassembly) y los mueve el 
 | Qué hace | Cómo |
 |---|---|
 | Busca la bola | Va hasta su **bola de hierro** y la levanta (0,55 s) |
-| Se acerca y la tira | Da dos pasos hacia el jugador más cercano y se la tira. La bola vuela en arco hasta donde estaba (hasta 5 baldosas) y le pega al primero que encuentra (15 %, con empujón). El Escudo Espejo la frena de frente |
+| Se acerca y la tira | Da dos pasos hacia el jugador más cercano y se la tira. La bola vuela en arco hasta donde estaba (hasta 5 baldosas) y le pega al primero que encuentra (15 %, con empujón). El Campo de Protección la frena de frente |
 | Deambula | Mientras un jugador tiene la bola, camina al azar sin perseguir |
 | Pisotón | Si camina contra alguien, le pega (8 %) y lo empuja |
 
@@ -932,7 +933,7 @@ Los tres salen del código del original (zladx/LADX-Disassembly) y los mueve el 
 ### El Rostro de Piedra (jefe; Facade, `04_facade.asm`)
 - **La cara:** está tallada en el piso de la Guarida. La criatura de AO no se ve. No se mueve y tocarla no lastima.
 - **Al entrar:** a los 1,5 s aparece de a poco (2,5 s) y da la pista por el chat: «¡Eh, tonto! ¿Querés una pista? Mi punto débil es... ¡Uy! ¡Casi!».
-- **Las baldosas:** tira las **20 baldosas** del borde de a parejas opuestas, girando alrededor de la cara, una cada 1,07 s. Suben, flotan y salen hacia el jugador más cercano (10 %); el Escudo Espejo las frena. Las de esta sala no salen solas, como las de las otras: las tira él.
+- **Las baldosas:** tira las **20 baldosas** del borde de a parejas opuestas, girando alrededor de la cara, una cada 1,07 s. Suben, flotan y salen hacia el jugador más cercano (10 %); el Campo de Protección las frena. Las de esta sala no salen solas, como las de las otras: las tira él.
 - **Las vasijas:** después tira las **4 vasijas** de las esquinas, en cruz (15 %). Si alguien ya levantó una, la saltea.
 - **Los pozos:** después abre pozos en el **anillo a dos baldosas de la cara** (16 lugares), uno cada 1,6 a 2,6 s, como mucho dos a la vez y nunca dos seguidos en el mismo lugar. Cada uno:
   1. se raja (0,65 s);
@@ -999,7 +1000,7 @@ El diseño está en [mazmorras/07-FAUCES_DEL_BAGRE.md](mazmorras/07-FAUCES_DEL_B
 | **Peces que saltan** | Cada 2,6 s (más o menos) un pez salta del hueco y muerde (8 %) al que está encima o al lado | `∿` |
 | **Máscaras de Hierro** | De frente se cubren de los golpes, las flechas y lo que se tira; las bombas les entran siempre. El Gancho de frente les arranca la máscara (sin daño) y desde ahí se las lastima de cualquier lado | plantilla con `mascara` |
 | **Esqueleto saltarín** | Si alguien está a 2 baldosas, le salta al lado en arco y le pega al caer (8 %) | plantilla con `saltarin` |
-| **Esqueleto esquivo** | Si alguien se le pega, salta para atrás y le tira un hueso que vuela girando (6 %; el Escudo Espejo lo frena) | plantilla con `esquiva` |
+| **Esqueleto esquivo** | Si alguien se le pega, salta para atrás y le tira un hueso que vuela girando (6 %; el Campo de Protección lo frena) | plantilla con `esquiva` |
 | **Pulgas de agua** | Patinan en diagonal y rebotan, solo por el agua (baja o profunda). Muerden al tocar | plantilla con `pulga` |
 | **Calamares** | Criaturas comunes que solo andan por el agua profunda (`aguaValida` y `tierraInvalida`). Nacen en el agua | plantilla con esas marcas |
 
@@ -1138,7 +1139,7 @@ Hay una plantilla por encuentro, con `maestroStalfos: 1-4` y `bombazos` (3, 2, 2
 
 **Cómo pelea:**
 - Camina hacia el jugador más cercano y, si está a 4 baldosas o más, salta hacia él.
-- Al lado, carga un espadazo (0,45 s) que pega 15 % y empuja. **El Escudo Espejo no lo frena**; saltando con la Pluma se esquiva.
+- Al lado, carga un espadazo (0,45 s) que pega 15 % y empuja. **El Campo de Protección no lo frena**; saltando con la Pluma se esquiva.
 - Al aparecer dice su frase (los encuentros 2 a 4).
 
 **Cómo se le gana:**
@@ -1148,7 +1149,7 @@ Hay una plantilla por encuentro, con `maestroStalfos: 1-4` y `bombazos` (3, 2, 2
 
 ### Las Gohma (minijefe; Gohma, `05_ghoma.asm`)
 - **Cómo se mueven:** caminan de lado a lado por su fila. Si el jugador está en su fila, tiemblan 0,8 s y arremeten hasta la pared o hasta él (10 % y empujón).
-- **El ojo:** cada 2,6 a 4,2 s, al pasar por la columna de un jugador, se frenan, lo miran y abren el ojo **1,2 s** (en el original 0,8; se alargó por la latencia). Si nadie se pone en su columna, lo abren igual a los 2,5 s. A la mitad escupen una bola de fuego (8 %; el Escudo Espejo la frena).
+- **El ojo:** cada 2,6 a 4,2 s, al pasar por la columna de un jugador, se frenan, lo miran y abren el ojo **1,2 s** (en el original 0,8; se alargó por la latencia). Si nadie se pone en su columna, lo abren igual a los 2,5 s. A la mitad escupen una bola de fuego (8 %; el Campo de Protección la frena).
 - **Cómo se les gana:** solo con el ojo abierto. Una **flecha** o una bomba saca un tercio y el **Gancho** un sexto. Los golpes no les hacen nada.
 - **Al vencer a las dos:** aparece el portal-atajo a la Entrada.
 
@@ -1186,3 +1187,112 @@ La prueba en vivo es `pw/run-fauces-jefes.mjs`. Hace esto:
   - el cofre del Gancho al vencer al cuarto.
 - **Gohma:** los golpes no les entran; con flechas y el Gancho con el ojo abierto mueren las dos, y aparece el portal.
 - **Anguila:** la presentación, el enganche, los golpes al corazón y la muerte.
+
+## 23. Torre del Águila: el Campo de Protección y las mecánicas propias
+
+La última mazmorra de la serie ([mazmorras/08-TORRE_DEL_AGUILA.md](mazmorras/08-TORRE_DEL_AGUILA.md)), hecha entera en un PR. Lo propio está en `server/src/dungeonTower.ts` (y los jefes en `dungeonTowerBosses.ts`); lo que se ve, en `engine/dungeonTower.ts` y `engine/dungeonTowerBosses.ts`. El rebote vive en `dungeonTools.ts` y `dungeonShrine.ts`.
+
+### El Campo de Protección (`campo_de_proteccion`)
+Es el Escudo Espejo de Zelda, que ya existía en el juego como "Escudo Espejo" sin mazmorra que lo diera. Pedido de Leandro: que no sea un escudo equipable, porque hay personajes que no usan escudo. Así que:
+- **Se renombró** a Campo de Protección (id `campo_de_proteccion`; nadie lo tenía todavía) y **se dibuja como un arco de energía celeste** delante del personaje, que late mientras dura (antes era el ícono del Escudo de Diamantes). Lo levanta cualquier clase, 3 s, con 1,5 s de espera.
+- **Frena** lo de siempre: lo que llega de frente (golpes de criaturas, rayos, bolas de fuego, huesos, la bola del Machacador).
+- **Rebota** (`mirrorReflects`): lo que lo consulta así vuelve hacia donde vino, con un destello y chispas (`rebote` en el paquete de movimiento). Lo que rebota hoy:
+
+| Qué | Qué pasa al rebotar | Dónde está |
+|---|---|---|
+| El rayo del **ojo de piedra** | Vuelve al ojo y **lo rompe**: queda de piedra rota (sigue tapando el paso) y no tira más. Si la sala está en `salasOjos` (leyenda `ojosAbrenPuertas`), romper todos los ojos abre sus persianas | `dungeonShrine.ts` (`reflectToEye`) |
+| La bola del **hechicero** | Vuelve y le saca la mitad de la vida (si sigue a la vista) | `dungeonShrine.ts` (`reflectToWizard`) |
+| La **pluma del Águila** | Vuelve, la lastima y la tira a la terraza unos segundos | `dungeonTowerBosses.ts` |
+| El **viento del Águila** | No rebota: con el Campo mirándola, las ráfagas no te mueven | `dungeonTowerBosses.ts` |
+
+- **Se lo pueden comer:** un Tragón que te traga con el Campo levantado se lo come (`eatField`): 15 s sin poder levantarlo, con aviso del tiempo que falta.
+
+### Las mecánicas propias (`dungeonTower.ts`)
+
+| Mecánica | Cómo funciona | Cómo se dibuja |
+|---|---|---|
+| **Pilares** (`¶`) | Cuatro, en las salas del centro del primer piso. Los rompe el Orbe: queda un pilar roto (sigue tapando el paso). Con los cuatro rotos, **el derrumbe**: la torre tiembla, se avisa a todo el piso y 1,6 s después aparecen las escaleras de `escalerasTrasPilares` de la leyenda (escondidas con "sala -1", que no vacía nadie: las revela `revealExitsOfRoom(mapa, -1)`) | Polvo y pedazos de piedra al romperse; en el derrumbe, la cámara tiembla (`engine.cameraShake`) y caen escombros por toda la pantalla |
+| **El Orbe** (`●`) | Un objeto del piso (1893, la bola de hierro del Machacador). Se levanta con el Brazalete (cualquier nivel), se lleva y se tira hacia adonde se mira: vuela hasta 4 baldosas por encima de los pozos; si del otro lado de donde frena hay un pilar, lo rompe; si le pega a una criatura, le saca un cuarto. Cae en la última baldosa libre y queda ahí. **Vuelve solo a su lugar** (a los 1,8 s) si cae a un pozo o al agua, o si quien lo lleva muere, cambia de mapa o sale | Lo lleva el personaje como la bola; al caer a un pozo se achica y desaparece; al volver, un destello |
+| **Tragones** (`tragon` en la plantilla) | Los Like Like: el server los mueve (un paso cada 0,65 s hacia el más cercano de la sala). Al lado, **te tragan** 1,4 s (no te podés mover ni atacar; 6 %) y te escupen dos baldosas. Con el Campo levantado, se lo comen. Cada jugador tiene 4,5 s de respiro | El personaje tragado se ve apenas, latiendo, con polvo verde |
+| **Salas de ojos** (`ojosAbrenPuertas`) | Las salas con ojos de piedra y una puerta `=`: romper todos los ojos (rebotando sus rayos) resuelve la sala (`solveRoomPuzzle`) | — |
+| **Caerse de la terraza** | Los pozos de un mapa pueden tirar al mismo mapa (`caida: 583` en el plano del 583): el que se cae de la terraza va a parar a la sala de la escalera 7 | — |
+
+**Leyenda:** `¶` pilar, `●` Orbe, `escalerasTrasPilares` (números de escalera) y `ojosAbrenPuertas` (true). El generador anota en `specials.json` → `dungeon.torre`: `pilares` (con su sala), `orbe` y `salasOjos`.
+
+**Objetos nuevos:** 1891 pilar, 1892 pilar roto, 1893 Orbe y 1894 ojo de piedra roto (gráficos en [CREDITOS_GRAFICOS.md](CREDITOS_GRAFICOS.md)).
+
+| El cuarto pilar roto: la torre se derrumba | El Campo rebotó el rayo: el ojo quedó roto |
+|---|---|
+| ![Derrumbe](mazmorras/torre/derrumbe.png) | ![Ojo roto](mazmorras/torre/ojo-roto.png) |
+
+### Para probarlas
+La prueba en vivo es `pw/run-torre.mjs` (con `SOLO=planta|pilares|ojos|flautista|aguila` para correr una parte). Chequea los Tragones y la K1, el Gancho a la cornisa de la K2, el cristal y el cofre del Campo, el Orbe contra los cuatro pilares y el derrumbe (la escalera 6 aparece), los ojos que se rompen con el rebote y la persiana que abren, el Flautista y la Llave del jefe, y el Águila.
+
+## 24. Torre del Águila: los mapas, las criaturas y la música
+
+- **Mapas:** 580 (planta baja, 16 salas), 581 (primer piso, 14), 582 (segundo piso, 12) y 583 (lo alto: 4 salas y la terraza). Celdas de 11 × 9 con salas de 10 × 8, como el Santuario y las Fauces.
+- **Archivos:** los planos están en `server/mazmorras/torre/`, armados con `scratchpad/dungeon8/componer.py`. El simulador (`scratchpad/dungeon8/simular.py`) llega a todas las salas y cofres (menos la Sala del Órgano, que abre el Águila) con 0 llaves sobrantes y 0 estados sin vuelta; sin el Campo, la sala de ojos frena el segundo piso, como tiene que ser.
+- **Un mapa por piso:** así el mapa grande tiene una pestaña por piso. Los pozos del 581 tiran al 580 (a la Cruz), los del 582 al 581 (al Pilar SE) y los de la terraza, a la sala de la escalera 7 del mismo 583.
+- **Gráficos:** piso de losas de piedra (9688) y paredes de ladrillo gris (7812).
+- **Escaleras:** 1-4 entre la planta baja y el primer piso (las A-D del dibujo), 5 al segundo, 6 a lo alto (aparece con el derrumbe) y 7 a la terraza (siempre visible, `siempreVisibles`). El portal Ⅰ vuelve del Flautista a la Entrada.
+- **Llaves:** K1 (Tragones), K2 (cornisa, con el Gancho) y K3 (Cíclope rojo) para la puerta de las Cuchillas y los dos bloques cerradura; la Llave del jefe, empujando dos bloques a dos placas.
+- **Música:** "Thunderbird", "Ascending the Vale" y "The Sky of our Ancestors", y "Crossing the Chasm" para el combate (Kevin MacLeod, CC-BY 4.0; [CREDITOS_SONIDOS.md](CREDITOS_SONIDOS.md)).
+
+### Las criaturas
+| Plantilla | Rol del original | Cuerpo |
+|---|---|---|
+| 9822 Tragón (`tragon`) | Like Like | Moco de Pantano (504) |
+| 9823 Momia | Gibdo | Momia (252) |
+| 9824 Cuervo de la torre | Peahat | Cuervo (68) |
+| 9825 Hongo | Goomba | Moco (146) |
+| 9827 Serpiente de la torre | Snake | Serpiente (13) |
+| 9828-9830 Naipe I, II y III (`orden`) | Three-of-a-Kind | Esqueleto (12) |
+| 9831 Cíclope rojo (`ciclope`, minijefe) | Hinox | Cíclope (176) |
+| 9832 Murciélago del Flautista | Keese | Murciélago (9) |
+| 9833 Flautista (`flautista`, minijefe) | Grim Creeper | Fantasma encapuchado (251) |
+| 9834 Águila Malvada (`aguila`, jefe) | Evil Eagle | Nuevo: 584 en vuelo y 585 posada ([LPC] Birds, al triple) |
+| Reusadas: 9800 hechicero, 9805 esqueleto esquivo, 9809 moco escondido, 9810 moco, 9814 chispa, 9815 cuchilla, 9803 Máscara de Hierro, 9739 mini gusano | Wizzrobe, Stalfos, Zol, Spark, Blade trap, Iron Mask, Mini-Moldorm | Los de siempre |
+
+Piedra de invocación: NPC 9727.
+
+| Planta baja (580) | Primer piso (581) |
+|---|---|
+| ![Planta baja](mazmorras/torre/vista-580.png) | ![Primer piso](mazmorras/torre/vista-581.png) |
+
+| Segundo piso (582) | Lo alto de la torre (583) |
+|---|---|
+| ![Segundo piso](mazmorras/torre/vista-582.png) | ![Lo alto](mazmorras/torre/vista-583.png) |
+
+| Un Tragón se traga al personaje | El cofre del Campo, el cristal y el Orbe | El Orbe en las manos, frente a un pilar |
+|---|---|---|
+| ![Tragón](mazmorras/torre/tragon.png) | ![Campo](mazmorras/torre/campo.png) | ![Orbe](mazmorras/torre/orbe.png) |
+
+## 25. Torre del Águila: el Flautista y el Águila Malvada
+
+Los dos salen del código del original (zladx/LADX-Disassembly) y los mueve el server (`server/src/dungeonTowerBosses.ts`, con `customMotion`). Lo que se ve aparte llega por el paquete `dungeonBoss` con `tipo` `flautista` y `aguila` y lo dibuja `engine/dungeonTowerBosses.ts`. El Cíclope rojo es el Cíclope de la Gruta de la Botella (sección 16) con otra plantilla.
+
+### El Flautista (minijefe; Grim Creeper)
+- **No se lo lastima** nunca: los golpes y todo lo demás avisan que se escurre entre sus murciélagos.
+- **Al entrar** dice su frase y toca la flauta 1,8 s (notas que suben); después llama a sus **seis murciélagos** (`murcielagos` y `bandada` en la plantilla), de a uno cada 0,32 s. La sala se cierra.
+- **Si se tarda** más de 28 s, toca otra vez y vuelven los que faltan.
+- **Vencidos los seis** dice "¡Mis murciélagos! ¡Me las vas a pagar!" y huye volando (sube y se desvanece). La sala se abre y aparece el portal-atajo. El Águila lo presenta después, montado.
+
+### El Águila Malvada (jefe; Evil Eagle)
+**Cómo empieza:** al entrar a la terraza, el Flautista (montado, dibujado encima) la presenta. Ronda alto, fuera de alcance (el dibujo se levanta y deja una sombra chica en el piso).
+
+**Los ataques**, uno cada 1,4-2,6 s de ronda:
+- **La pasada:** entra por un costado a la altura de alguien y cruza la terraza bajo (una baldosa cada 95 ms). Atropella al que pasa por encima (12 %, empujón). Mientras vuela bajo le entran los golpes, las flechas y el Gancho.
+- **El viento** (cada tres ataques, o al azar): se queda en un costado, fuera de la terraza, y aletea 4,2 s: cada 0,26 s empuja a todos una baldosa hacia el otro borde. El que llega al vacío se cae a la sala de la escalera 7 y vuelve a subir. **Con el Campo de Protección mirándola, no te mueve.** Mientras tanto tira **plumas** por la fila de alguien (cada 0,85 s; 8 %). **Con el Campo de frente la pluma rebota**, vuelve, la lastima (un golpe) y **la tira a la terraza 4 s**, posada y al alcance de todos (cuerpo 585).
+- **La picada:** se para alto sobre alguien 0,8 s (crece su sombra) y cae: 15 % y empujón. Saltando con la Pluma se esquiva.
+
+**Cómo se le gana:** 12 golpes, más 3 por cada jugador extra, con ella baja o posada. Al morir cae girando y suelta plumas; el Flautista grita; se abre la Sala del Órgano (`solveRoomPuzzle` sobre la sala del trofeo) y aparece el cofre del jefe, que hasta ahí estaba escondido (`cofresTrasJefe: ["Y"]` en la leyenda).
+
+**Si nadie queda en la terraza** (se cayeron todos), ronda hasta que vuelvan.
+
+**Detalles técnicos:**
+- **La terraza** son las baldosas pisables de su sala (lo demás es vacío): ahí cae posada y por ahí pasa bajo. Ronda dos filas arriba de la terraza y aletea a tres baldosas de cada costado.
+- **Ocupa baldosa cuando está libre**, aunque vuele: el server arma la foto del área con las baldosas ocupadas, y si nunca ocupara ninguna, el que llega a la terraza no la vería. Además se la presenta entera (`sendNpc`) al empezar la pelea y en cada ronda.
+
+| El Flautista y sus seis murciélagos | El Campo de frente: la pluma rebotó y el Águila cayó a la terraza | Posada, los golpes le entran |
+|---|---|---|
+| ![Flautista](mazmorras/torre/flautista.png) | ![Águila y el Campo](mazmorras/torre/aguila-campo.png) | ![Golpe al Águila](mazmorras/torre/aguila-golpe.png) |

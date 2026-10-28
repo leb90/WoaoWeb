@@ -59,6 +59,11 @@
 //   ✉  cofre con una nota (texto en "notas" de leyenda.json, en orden de lectura)      Ψ  cabeza de dragón (se engancha)
 //   Las escaleras de "bajoElAgua" (por número) quedan bajo el agua profunda en la punta que tiene agua al lado: solo se
 //   llega nadando (la otra punta es una escalera común).
+// Torre del Águila (dungeonTower.ts):
+//   ¶  pilar: lo tira el Orbe (con los cuatro rotos se derrumba el piso de arriba y aparecen las escaleras de
+//      "escalerasTrasPilares" de leyenda.json)      ●  el Orbe, en el piso (se levanta con el Brazalete y se tira)
+//   Con "ojosAbrenPuertas" en leyenda.json, las puertas = de una sala con ojos de piedra se abren al romperlos todos
+//   (el Campo de Protección rebota su rayo).
 // Bombas (los básicos que tiene todo el mundo):
 //   @  pared rajada: un paso tapado que se abre con una bomba (arco tapiado en una pared horizontal, rocas en una vertical)
 // Lo que aparece: los cofres de una sala que se cierra (!), que tiene placas o antorchas apagadas aparecen al vaciarla,
@@ -84,6 +89,8 @@ const VOID_GRH = 1; // negro
 const WATER_GRH = 1505; // bloque de 4×4 de agua (waterTiles.ts)
 // Gráficos de las Fauces del Bagre (docs/CREDITOS_GRAFICOS.md). El agua baja es un bloque de 4 × 4, como el agua.
 const MAW_GRH = { aguaBaja: 42326, anclaNorte: 42342, anclaSur: 42343, anclaEste: 42344, anclaOeste: 42345, pisoFlojo: 42346, cristalGolpe: 42348, cabezaDragon: 42349, puente: 42350, puenteHorizontal: 42351 };
+// Gráficos de la Torre del Águila (docs/CREDITOS_GRAFICOS.md).
+const TOWER_GRH = { pilar: 42448, pilarRoto: 42449, orbe: 42450, ojoRoto: 42451 };
 // El reflejo del agua baja (capa 2): con algo en la capa 2, el juego no la toma como agua y se camina.
 const SHALLOW_WATER_GRH = MAW_GRH.aguaBaja;
 const PORTAL_OBJ = 378; // Teleport (portal azul, no se puede levantar)
@@ -159,6 +166,12 @@ export const DUNGEON_OBJECTS = {
     anclaEste: { id: 1888, name: "Ancla del Gancho", grh: MAW_GRH.anclaEste },
     anclaOeste: { id: 1889, name: "Ancla del Gancho", grh: MAW_GRH.anclaOeste },
     puenteHorizontal: { id: 1890, name: "Puente", grh: MAW_GRH.puenteHorizontal },
+    // Torre del Águila (dungeonTower.ts, docs/CREDITOS_GRAFICOS.md): el pilar entero y el roto, el Orbe (la bola de
+    // hierro del Machacador, ahora como objeto del piso) y el ojo de piedra roto.
+    pilar: { id: 1891, name: "Pilar de la torre", grh: TOWER_GRH.pilar },
+    pilarRoto: { id: 1892, name: "Pilar roto", grh: TOWER_GRH.pilarRoto },
+    orbe: { id: 1893, name: "Orbe", grh: TOWER_GRH.orbe },
+    ojoRoto: { id: 1894, name: "Ojo de piedra roto", grh: TOWER_GRH.ojoRoto },
 } as const;
 const CONVEYOR_DIR: Record<string, string> = { "↑": "norte", "↓": "sur", "→": "este", "←": "oeste" };
 const CHEST_CONTENT: Record<string, string> = {
@@ -209,6 +222,9 @@ type Tile = {
 type Plan = { mapId: number; meta: Record<string, string>; origin: { x: number; y: number }; grid: string[] };
 type Legend = {
     criaturas?: Record<string, number | { npc: number; movimiento?: number }>;
+    // Torre del Águila: escaleras que aparecen al tirar los cuatro pilares, y si romper los ojos de una sala abre sus puertas.
+    escalerasTrasPilares?: string[];
+    ojosAbrenPuertas?: boolean;
     // Textos de las losas de cada mapa, en orden de lectura (de arriba abajo y de izquierda a derecha).
     losas?: Record<string, string[]>;
     // Lo que dice cada búho de cada mapa, en orden de lectura (solo con el pico de piedra).
@@ -447,7 +463,8 @@ for (const plan of plans) {
             const roomId = roomOf.get(`${x},${y}`);
             const room = rooms.find((r) => r.id === roomId);
             const roomKey = `${plan.mapId}:${roomId}`;
-            if (room?.cierra || plateRooms.has(roomKey) || torchRooms.has(roomKey) || orderRooms.has(roomKey) || flyingTileRooms.has(roomKey) || joinRooms.has(roomKey)) {
+            // Los cofres que esperan al jefe ("cofresTrasJefe") se esconden aunque su sala no se cierre: los revela su muerte.
+            if (room?.cierra || plateRooms.has(roomKey) || torchRooms.has(roomKey) || orderRooms.has(roomKey) || flyingTileRooms.has(roomKey) || joinRooms.has(roomKey) || (legend.cofresTrasJefe ?? []).includes(charAt(plan, x, y))) {
                 hiddenChests.add(`${plan.mapId}:${x},${y}`);
             }
         }
@@ -468,6 +485,16 @@ for (const [digit, ends] of stairs) {
         for (const other of ends) {
             hiddenExits.set(other.mapId, [...(hiddenExits.get(other.mapId) ?? []), { x: other.x, y: other.y, revela: { map: end.mapId, sala: roomId! } }]);
         }
+    }
+}
+
+// Torre del Águila: las escaleras que aparecen con el derrumbe quedan escondidas hasta que el mapa de los pilares las
+// revela (sala -1: no la vacía nadie; las revela dungeonTower.ts al caer el cuarto pilar).
+const pillarsMap = plans.find((plan) => plan.grid.some((row) => row.includes("¶")))?.mapId;
+for (const digit of legend.escalerasTrasPilares ?? []) {
+    if (pillarsMap === undefined) throw new Error(`"escalerasTrasPilares" pide pilares (¶) en algún mapa.`);
+    for (const end of stairs.get(digit) ?? []) {
+        hiddenExits.set(end.mapId, [...(hiddenExits.get(end.mapId) ?? []), { x: end.x, y: end.y, revela: { map: pillarsMap, sala: -1 } }]);
     }
 }
 
@@ -527,6 +554,14 @@ function buildMechanics(plan: Plan) {
             peces: [] as Array<{ x: number; y: number; sala: number }>,
             aguaBaja: [] as string[],
         },
+        // Torre del Águila (dungeonTower.ts): los pilares, dónde arranca el Orbe y las salas cuyas puertas abren los ojos rotos.
+        torre: {
+            pilares: [] as Array<{ x: number; y: number; sala: number }>,
+            orbe: null as { x: number; y: number } | null,
+            salasOjos: [] as number[],
+            // La sala del cofre del jefe: el Águila vencida abre sus puertas = y revela sus cofres "trasJefe".
+            salaTrofeo: null as number | null,
+        },
     };
     if (plan.meta.caida) {
         const caida = markers.caidas.get(Number(plan.meta.caida));
@@ -577,6 +612,8 @@ function buildMechanics(plan: Plan) {
             if (c in CONVEYOR_DIR) data.santuario.cintas.push({ x, y, dir: CONVEYOR_DIR[c] });
             if (c === "♨") data.santuario.lanzallamas.push({ x, y, dir: shooterDir(plan, x, y), sala });
             if (c === "◉") data.santuario.ojos.push({ x, y, sala });
+            if (c === "¶") data.torre.pilares.push({ x, y, sala });
+            if (c === "●") data.torre.orbe = { x, y };
             if (c === "H" || c === "Ψ") data.hookPosts.push(key);
             if (c === "∿") data.fauces.peces.push({ x, y, sala });
             if (c === "/") data.owls.push({ x, y, texto: owlTexts[data.owls.length] ?? "El búho no dice nada." });
@@ -599,6 +636,11 @@ function buildMechanics(plan: Plan) {
             if (c === "?") data.slabs.push({ x, y, texto: slabTexts[data.slabs.length] ?? "La losa está gastada: no se puede leer." });
         }
     }
+    if (legend.ojosAbrenPuertas) {
+        const eyeRooms = new Set(data.santuario.ojos.map((eye) => eye.sala));
+        data.torre.salasOjos = [...eyeRooms].filter((sala) => data.barriers.some((b) => b.tipo === "placa" && b.salas.includes(sala)));
+    }
+    data.torre.salaTrofeo = data.chests.find((chest) => chest.contenido === "trofeo")?.sala ?? null;
     return data;
 }
 
@@ -672,6 +714,11 @@ function buildTile(plan: Plan, x: number, y: number): Tile {
     }
     if (c === "◇" || c === "Ψ") {
         tile.object = c === "◇" ? DUNGEON_OBJECTS.cristalGolpe.id : DUNGEON_OBJECTS.cabezaDragon.id;
+        tile.blocked = true;
+    }
+    // Torre del Águila: el pilar y el Orbe tapan el paso (el Orbe, hasta que lo levantan).
+    if (c === "¶" || c === "●") {
+        tile.object = c === "¶" ? DUNGEON_OBJECTS.pilar.id : DUNGEON_OBJECTS.orbe.id;
         tile.blocked = true;
     }
     if (c === "?") {
@@ -848,7 +895,7 @@ function minimapColor(plan: Plan, tile: Tile, x: number, y: number) {
     if (c === "*") return MINIMAP_COLORS.crystal;
     if (c === ":") return MINIMAP_COLORS.fragile;
     if (c === "Z") return MINIMAP_COLORS.crusher;
-    if (c === "W") return MINIMAP_COLORS.crackedWall;
+    if (c === "W" || c === "¶") return MINIMAP_COLORS.crackedWall;
     if (c === "~" || c === "∿" || isUnderwaterStair(plan, x, y)) return MINIMAP_COLORS.water;
     if (c === "≈") return MINIMAP_COLORS.shallow;
     if (c === " " || c === "O") return MINIMAP_COLORS.void;

@@ -107,7 +107,6 @@ El Elfo Oscuro se subió porque quedaba muy por debajo del Tauros.
   - Gnomo mago, constitución 18 → 20: de 337 a 388.
   - Tauros guerrero, 20 → 19: de 535 a 509.
   - Probado en local con Playwright: en el segundo login la vida no vuelve a cambiar.
-- **Remort:** a los personajes con remort no se les corre la vida. Su constitución guardada trae el bono de la rama (Gork-RoR +4, Drakon +2), que el login no conserva (problema anterior a este cambio), y se les restaría vida.
 - **Producción:**
   - el deploy no corre `import-game-data` y `game_balance` solo se siembra con la tabla vacía;
   - por eso la api aplica la tabla nueva una sola vez al arrancar: migración `2026-10-29-razas-espejo` de `api/src/dataMigrations.ts`, anotada en `data_migrations`;

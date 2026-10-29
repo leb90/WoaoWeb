@@ -230,9 +230,9 @@ function refreshConnectedCharactersFromBalance(): number {
         user.attrConstitucion = nextAttrConstitucion;
 
         const storedMaxHp = Number(user.maxHp ?? 0);
-        // Si cambió la constitución, la vida se corre lo mismo que el promedio (como al entrar, ver login.ts; con
-        // remort no). El corrimiento va sobre la vida base, sin el bono del set, que se vuelve a sumar abajo.
-        const hpShift = storedMaxHp > 0 && previousAttrConstitucion > 0 && previousAttrConstitucion !== nextAttrConstitucion && !user.remorted
+        // Si cambió la constitución, la vida se corre lo mismo que el promedio (como al entrar, ver login.ts).
+        // El corrimiento va sobre la vida base, sin el bono del set, que se vuelve a sumar abajo.
+        const hpShift = storedMaxHp > 0 && previousAttrConstitucion > 0 && previousAttrConstitucion !== nextAttrConstitucion
             ? balance.getHpShiftForConstitutionChange(classId, previousAttrConstitucion, nextAttrConstitucion, level)
             : 0;
         const equipHpBonus = storedMaxHp === Number(user.equipVitalsMaxHp ?? 0) ? Number(user.equipHpBonus ?? 0) : 0;

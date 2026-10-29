@@ -828,10 +828,8 @@ function Login(this: LoginApi) {
                           personaje.level,
                       );
                 // Si la tabla de razas le cambió la constitución, la vida guardada se corre lo mismo que el promedio
-                // (una sola vez: al guardar ya queda la constitución nueva). Con remort no: la constitución guardada
-                // trae el bono de la rama, que el login no conserva, y se le restaría vida.
-                const remorted = Boolean(require("./woaoProgress").getProgress(personaje).remorted);
-                if (storedMaxHp > 0 && previousAttrConstitucion > 0 && previousAttrConstitucion !== baseAttrConstitucion && !remorted) {
+                // (una sola vez: al guardar ya queda la constitución nueva).
+                if (storedMaxHp > 0 && previousAttrConstitucion > 0 && previousAttrConstitucion !== baseAttrConstitucion) {
                     const hpShift = balance.getHpShiftForConstitutionChange(
                         personaje.idClase,
                         previousAttrConstitucion,

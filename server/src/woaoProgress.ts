@@ -34,8 +34,6 @@ export type WoaoProgress = {
     mounts: Record<string, MountProgress>;
     activeMountInstanceId: string;
     mountMigrationVersion: number;
-    remort: number;
-    remorted: string;
     elo: number;
     pClan: number;
     houseKeys: number[];
@@ -63,8 +61,6 @@ function emptyProgress(): WoaoProgress {
         mounts: {},
         activeMountInstanceId: "",
         mountMigrationVersion: 0,
-        remort: 0,
-        remorted: "",
         elo: 300,
         pClan: 0,
         houseKeys: [],
@@ -149,8 +145,6 @@ export function hydrateUser(user: {
     puntosCanje?: number;
     puntosDonacion?: number;
     questStats?: WoaoProgress;
-    remort?: number;
-    remorted?: string;
     elo?: number;
     pClan?: number;
 }): void {
@@ -158,8 +152,6 @@ export function hydrateUser(user: {
     user.puntosCanje = progress.puntosCanje;
     user.puntosDonacion = progress.puntosDonacion;
     user.questStats = progress;
-    user.remort = progress.remort;
-    user.remorted = progress.remorted;
     user.elo = progress.elo;
     user.pClan = progress.pClan;
 }

@@ -1,4 +1,5 @@
 import { Howl } from "howler";
+import { DEFAULT_SOUND_VOLUMES } from "./soundVolumes";
 
 // Música del mundo, al estilo de Skyrim: cada ciudad tiene su canción y cada tipo de lugar dos temas que se turnan,
 // con un silencio entre uno y otro. La música que le toca a cada mapa la decide el server
@@ -53,7 +54,7 @@ export class MusicPlaylist {
     private index = 0;
     private current: Howl | null = null;
     private timer: number | null = null;
-    private volume = 0.3;
+    private volume = DEFAULT_SOUND_VOLUMES.musica;
     private options: Required<PlaylistOptions> = { restMs: [REST_MIN_MS, REST_MAX_MS], startDelayMs: ARRIVAL_DELAY_MS };
 
     /** Cambia de lugar. Con la misma clave no hace nada (la música sigue donde iba). */

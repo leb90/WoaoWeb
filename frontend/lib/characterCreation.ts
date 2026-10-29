@@ -418,8 +418,21 @@ export function getAlianzaRaces(): RaceOption[] {
     return raceOptions.filter((race) => race.faction === "alianza");
 }
 
+// Cada raza de la Horda es el espejo de una de la Alianza (mismos atributos, docs/balance/RAZAS.md).
+const HORDA_MIRROR_OF: Partial<Record<RaceKey, RaceKey>> = {
+    nomuerto: "humano",
+    vampiro: "elfo",
+    orco: "enano",
+    goblin: "gnomo",
+    elfoDrow: "tauros",
+    licantropo: "abisario",
+};
+
+// En el orden de su espejo de la Alianza: en la creación de personaje cada fila es un par.
 export function getHordaRaces(): RaceOption[] {
-    return raceOptions.filter((race) => race.faction === "horda");
+    const alianza = getAlianzaRaces().map((race) => race.key);
+    const mirrorIndex = (race: RaceOption) => alianza.indexOf(HORDA_MIRROR_OF[race.key] ?? race.key);
+    return raceOptions.filter((race) => race.faction === "horda").sort((a, b) => mirrorIndex(a) - mirrorIndex(b));
 }
 
 export function getClassOption(key: CharacterClassKey): CharacterClassOption {

@@ -59,27 +59,42 @@ body {
 :root {
     --cursor-juego: url("/cursors/guantelete.png") 2 2, default;
     --cursor-juego-clic: url("/cursors/guantelete-oro.png") 2 2, pointer;
+    --cursor-juego-presionado: url("/cursors/guantelete-presionado.png") 2 2, pointer;
     --cursor-juego-enemigo: url("/cursors/guantelete-rojo.png") 2 2, default;
     --cursor-juego-amigo: url("/cursors/guantelete-azul.png") 2 2, default;
     --cursor-juego-apuntar: url("/cursors/cruceta.png") 16 16, crosshair;
     --cursor-juego-prohibido: url("/cursors/prohibido.png") 16 16, not-allowed;
 }
 
-html.game-cursor,
-html.game-cursor body {
+/* En todo el sitio (inicio, creación de personaje, wiki y el juego): lo que se puede clickear muestra el borde dorado
+   y, mientras se aprieta, el guantelete oscuro. */
+html,
+body {
     cursor: var(--cursor-juego);
 }
 
-html.game-cursor
+html
     :is(a[href], button:not(:disabled), [role="button"]:not([aria-disabled="true"]), summary, select, .cursor-pointer) {
     cursor: var(--cursor-juego-clic);
 }
 
-html.game-cursor :is(button:disabled, [aria-disabled="true"], .cursor-not-allowed) {
+html
+    :is(
+        a[href],
+        button:not(:disabled),
+        [role="button"]:not([aria-disabled="true"]),
+        summary,
+        select,
+        .cursor-pointer
+    ):active {
+    cursor: var(--cursor-juego-presionado);
+}
+
+html :is(button:disabled, [aria-disabled="true"], .cursor-not-allowed) {
     cursor: var(--cursor-juego-prohibido);
 }
 
-html.game-cursor
+html
     :is(
         input:not([type="checkbox"], [type="radio"], [type="range"], [type="button"], [type="submit"], [type="color"]),
         textarea

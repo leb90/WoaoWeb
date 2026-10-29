@@ -18,6 +18,7 @@ import BuffStatusSidebar from "../../components/BuffStatusSidebar";
 import PlayerUnitFrame from "../../components/PlayerUnitFrame";
 import TargetUnitFrame from "../../components/TargetUnitFrame";
 import { publishPerformanceSample } from "../../lib/performanceReadout";
+import { DEFAULT_SOUND_VOLUMES, loadSoundVolumes, saveSoundVolumes, type SoundVolumes } from "../../lib/soundVolumes";
 import InvisibilityCornerTimer from "../../components/InvisibilityCornerTimer";
 import BleedBanner from "../../components/BleedBanner";
 import ElementalStatusBanner from "../../components/ElementalStatusBanner";
@@ -131,7 +132,6 @@ const FULLSCREEN_HINT_DURATION_MS = 2600;
 const FULLSCREEN_PROMPT_MAX_WIDTH = 1200;
 const FULLSCREEN_PROMPT_MAX_HEIGHT = 900;
 const PLAY_HOTKEYS_HINT_STORAGE_KEY = "ao-play-hotkeys-hint-dismissed";
-const PLAY_SOUND_VOLUME_STORAGE_KEY = "ao-play-sound-volume";
 const PLAY_MINIMAP_VISIBLE_STORAGE_KEY = "ao-play-minimap-visible";
 const PLAY_ORIENTATION_LOCK_STORAGE_KEY = "ao-play-orientation-locked";
 const MOBILE_RECOVERY_STORAGE_KEY = "ao-play-mobile-recovery-at";
@@ -1122,7 +1122,8 @@ function HomeContent() {
         setRetosLoading(false);
         setRetosActionKey(null);
     }, [retosState]);
-    const [soundVolume, setSoundVolume] = useState(1);
+    // Música, clima y ambiente, efectos y pisadas, cada uno con su volumen (lib/soundVolumes.ts).
+    const [soundVolumes, setSoundVolumes] = useState<SoundVolumes>(DEFAULT_SOUND_VOLUMES);
     const hasInitializedSoundVolumeRef = useRef(false);
     const hasSkippedInitialSoundVolumePersistRef = useRef(false);
     const [runtimeTiming, setRuntimeTiming] = useState<RuntimeTimingConfig>(
@@ -2546,26 +2547,8 @@ function HomeContent() {
     }, [marketState]);
 
     useLayoutEffect(() => {
-        let nextVolume = 1;
-
-        try {
-            const storedVolume = window.localStorage.getItem(
-                PLAY_SOUND_VOLUME_STORAGE_KEY,
-            );
-
-            if (storedVolume != null) {
-                const parsedVolume = Number.parseFloat(storedVolume);
-
-                if (Number.isFinite(parsedVolume)) {
-                    nextVolume = Math.min(1, Math.max(0, parsedVolume));
-                }
-            }
-        } catch {
-            nextVolume = 1;
-        }
-
         hasInitializedSoundVolumeRef.current = true;
-        setSoundVolume(nextVolume);
+        setSoundVolumes(loadSoundVolumes());
     }, []);
 
     useEffect(() => {
@@ -2613,15 +2596,8 @@ function HomeContent() {
             return;
         }
 
-        try {
-            window.localStorage.setItem(
-                PLAY_SOUND_VOLUME_STORAGE_KEY,
-                soundVolume.toString(),
-            );
-        } catch {
-            // Ignore storage failures in restricted/browser test contexts.
-        }
-    }, [soundVolume]);
+        saveSoundVolumes(soundVolumes);
+    }, [soundVolumes]);
 
     useEffect(() => {
         if (!isChatOpen) {
@@ -3571,7 +3547,7 @@ function HomeContent() {
                                     runtimeTiming={runtimeTiming}
                                     hotkeySettings={hotkeySettings}
                                     macros={macros}
-                                    soundVolume={soundVolume}
+                                    soundVolumes={soundVolumes}
                                     onMapChange={setSelectedMap}
                                     onStatusChange={handleStatusChange}
                                     onHudChange={setHud}
@@ -4509,9 +4485,9 @@ function HomeContent() {
                                     selectedSpellSlot={selectedSpellSlot}
                                     hotkeySettings={hotkeySettings}
                                     useItemRepeatMs={useItemRepeatMs}
-                                    soundVolume={soundVolume}
+                                    soundVolumes={soundVolumes}
                                     onHotkeySettingsChange={setHotkeySettings}
-                                    onSoundVolumeChange={setSoundVolume}
+                                    onSoundVolumesChange={setSoundVolumes}
                                     onSelectSpell={setSelectedSpellSlot}
                                     onCastSpell={(spell) =>
                                         setSpellTargetRequest((current) => ({

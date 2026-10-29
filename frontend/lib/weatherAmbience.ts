@@ -10,7 +10,7 @@ const BASE_PATH = "/sounds/clima";
 const LOOP_FADE_IN_MS = 2000;
 const LOOP_FADE_OUT_MS = 1500;
 const INDOOR_FADE_MS = 600;
-// Volumen de cada bucle respecto del volumen general del juego.
+// Volumen de cada bucle respecto del volumen de clima y ambiente de Configuración.
 const LOOP_VOLUME: Record<AmbienceLoop, number> = {
     lluvia: 0.6,
     tormenta: 0.8,

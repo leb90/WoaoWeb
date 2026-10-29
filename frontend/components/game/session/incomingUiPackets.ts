@@ -1,4 +1,5 @@
 import { handleDungeonBoss } from "../engine/dungeonBoss";
+import { rememberEnvironment } from "../rendering/weatherFx";
 import { handleGrottoBoss } from "../engine/dungeonGrotto";
 import { handleShrineEffect } from "../engine/dungeonShrine";
 import { handleShrineBoss } from "../engine/dungeonShrineBosses";
@@ -225,6 +226,8 @@ export async function handleIncomingUiPacket({
             return true;
 
         case "environmentUpdate":
+            // Queda guardado aunque el motor todavía no exista (al entrar) o se vuelva a crear (al cambiar de mapa).
+            rememberEnvironment(packet.payload);
             if (engine) {
                 engine.environmentState = packet.payload;
             }

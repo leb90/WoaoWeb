@@ -2,12 +2,12 @@ import { Howl } from "howler";
 
 // Música de las mazmorras (server/jsons/dungeons.json, "musica"): tres temas que suenan uno detrás del otro y vuelven
 // a empezar, y el de combate mientras dura la pelea con un jefe o un minijefe (vuelve al siguiente tema al terminar).
-// No tiene un botón propio para silenciarla: sigue al volumen general del juego. Archivos en public/music/mazmorras
+// Sigue al volumen de música de Configuración (lib/soundVolumes.ts). Archivos en public/music/mazmorras
 // (ver docs/CREDITOS_SONIDOS.md).
 
 const FADE_MS = 1500;
-// Volumen de la música respecto del volumen general (los efectos tienen que seguir oyéndose).
-const MUSIC_LEVEL = 0.45;
+// La música tiene su propio volumen en Configuración (30% por defecto): el control es directo.
+const MUSIC_LEVEL = 1;
 
 export type DungeonMusicSpec = { pistas: string[]; combate?: string } | null | undefined;
 

@@ -1297,7 +1297,12 @@ async function processJailTick() {
 
 function processEnvironmentTick() {
     environment.tickEnvironment();
+    sendEnvironmentUpdates();
+}
 
+// El clima, la estación y el momento del día de cada jugador, solo si cambió desde lo último que se le mandó. Corre en
+// el chequeo de estados (cada 500 ms) para que al cambiar de mapa, o al fijarlo un GM, llegue enseguida.
+function sendEnvironmentUpdates() {
     for (const idUser in vars.personajes as RuntimeCharacters) {
         const user = (vars.personajes as RuntimeCharacters)[idUser] as ServerCharacter | undefined;
 
@@ -1315,8 +1320,8 @@ function processEnvironmentTick() {
         const signature = `${payload.mapId}:${payload.season}:${payload.dayPhase}:${payload.weather}:${payload.temperatureC}`;
 
         // No mandamos el paquete si para este jugador no cambió nada desde la
-        // última vez (mismo mapa, mismo clima/hora/temperatura): la mayoría de
-        // los ticks de 60s no tienen novedad, así que esto evita tráfico de más.
+        // última vez (mismo mapa, mismo clima/hora/temperatura): casi nunca hay
+        // novedad, así que esto evita tráfico de más.
         if (user.lastSentEnvironmentSignature === signature) {
             continue;
         }
@@ -1358,6 +1363,7 @@ createDynamicScheduler(
 
         if (now >= nextPlayerStatusTickAt) {
             processPlayerStatusTick(now);
+            sendEnvironmentUpdates();
             protocol.refreshTargetFrames();
             nextPlayerStatusTickAt = now + vars.timing.playerStatusTickMs;
         }

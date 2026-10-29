@@ -41,6 +41,8 @@ import {
     CloudLightning,
     CloudFog,
     Thermometer,
+    Music,
+    Footprints,
     type LucideIcon,
 } from "lucide-react";
 import type {
@@ -53,6 +55,7 @@ import type {
 } from "../lib/aowProtocol";
 import type { GraphicData, ObjectsDB, SpellData } from "../types/game";
 import { OBJECT_TYPE } from "../lib/aowProtocol";
+import type { SoundCategory, SoundVolumes } from "../lib/soundVolumes";
 import {
     getTexturePath,
     loadGraphicsDB,
@@ -107,9 +110,9 @@ type InventoryFloatingPanelProps = {
     selectedSpellSlot: number | null;
     hotkeySettings: HotkeySettings;
     useItemRepeatMs: number;
-    soundVolume: number;
+    soundVolumes: SoundVolumes;
     onHotkeySettingsChange: (settings: HotkeySettings) => void;
-    onSoundVolumeChange: (volume: number) => void;
+    onSoundVolumesChange: (volumes: SoundVolumes) => void;
     onSelectSpell: (slot: number | null) => void;
     onCastSpell: (spell: SpellEntry) => void;
     onMoveSpell?: (slot: number, direction: "up" | "down") => void;
@@ -263,6 +266,14 @@ const classLabels: Record<number, string> = {
 };
 
 const clanNamePattern = /^[A-Za-z ]+$/;
+// Los volúmenes de Configuración, uno por tipo de sonido (lib/soundVolumes.ts).
+const SOUND_VOLUME_CONTROLS: Array<{ key: SoundCategory; label: string; icon: LucideIcon }> = [
+    { key: "musica", label: "Música", icon: Music },
+    { key: "ambiente", label: "Clima y ambiente", icon: CloudRain },
+    { key: "efectos", label: "Efectos", icon: Sparkles },
+    { key: "pisadas", label: "Pisadas", icon: Footprints },
+];
+
 const CLAN_CREATION_LEVEL_REQUIRED = 30;
 const CLAN_CREATION_COST = 150_000;
 
@@ -1329,9 +1340,9 @@ export default function InventoryFloatingPanel({
     selectedSpellSlot,
     hotkeySettings,
     useItemRepeatMs,
-    soundVolume,
+    soundVolumes,
     onHotkeySettingsChange,
-    onSoundVolumeChange,
+    onSoundVolumesChange,
     onSelectSpell,
     onCastSpell,
     onMoveSpell,
@@ -4795,32 +4806,39 @@ export default function InventoryFloatingPanel({
                                             Sonido
                                         </p>
                                         <p className="mt-1 text-sm text-stone-300">
-                                            Ajusta el volumen general de efectos
-                                            del juego.
+                                            Cada tipo de sonido tiene su volumen.
                                         </p>
-                                    </div>
-                                    <div className="rounded-full border border-amber-300/20 bg-black/30 px-3 py-1 text-sm font-semibold text-amber-100">
-                                        {Math.round(soundVolume * 100)}%
                                     </div>
                                 </div>
 
-                                <div className="mt-4">
-                                    <input
-                                        type="range"
-                                        min="0"
-                                        max="100"
-                                        step="1"
-                                        value={Math.round(soundVolume * 100)}
-                                        onChange={(event) =>
-                                            onSoundVolumeChange(
-                                                Number(event.target.value) /
-                                                    100,
-                                            )
-                                        }
-                                        className="h-2 w-full cursor-pointer appearance-none rounded-full bg-amber-200/15 accent-amber-400"
-                                        aria-label="Volumen general"
-                                    />
-                                    <div className="mt-2 flex justify-between text-[10px] uppercase tracking-[0.2em] text-stone-500">
+                                <div className="mt-4 space-y-3.5">
+                                    {SOUND_VOLUME_CONTROLS.map(({ key, label, icon: Icon }) => (
+                                        <div key={key} data-sound-volume={key}>
+                                            <div className="mb-1.5 flex items-center gap-2 text-sm text-stone-200">
+                                                <Icon className="h-4 w-4 shrink-0 text-amber-200/80" strokeWidth={1.8} aria-hidden="true" />
+                                                <span className="flex-1">{label}</span>
+                                                <span className="min-w-[3.25rem] rounded-full border border-amber-300/20 bg-black/30 px-2 py-0.5 text-center text-xs font-semibold tabular-nums text-amber-100">
+                                                    {Math.round(soundVolumes[key] * 100)}%
+                                                </span>
+                                            </div>
+                                            <input
+                                                type="range"
+                                                min="0"
+                                                max="100"
+                                                step="1"
+                                                value={Math.round(soundVolumes[key] * 100)}
+                                                onChange={(event) =>
+                                                    onSoundVolumesChange({
+                                                        ...soundVolumes,
+                                                        [key]: Number(event.target.value) / 100,
+                                                    })
+                                                }
+                                                className="h-2 w-full cursor-pointer appearance-none rounded-full bg-amber-200/15 accent-amber-400"
+                                                aria-label={`Volumen de ${label.toLowerCase()}`}
+                                            />
+                                        </div>
+                                    ))}
+                                    <div className="flex justify-between text-[10px] uppercase tracking-[0.2em] text-stone-500">
                                         <span>Silencio</span>
                                         <span>Máximo</span>
                                     </div>
@@ -4933,7 +4951,7 @@ export default function InventoryFloatingPanel({
                       portalTarget ?? document.body,
                   )
                 : null}
-            <DungeonMusicPlayer inside={hud?.dungeonState?.enMazmorra} volume={soundVolume} />
+            <DungeonMusicPlayer inside={hud?.dungeonState?.enMazmorra} volume={soundVolumes.musica} />
 
             {isShopOpen && typeof document !== "undefined"
                 ? createPortal(

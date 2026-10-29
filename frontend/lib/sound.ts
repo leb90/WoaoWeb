@@ -1,4 +1,5 @@
 import { Howl, Howler } from "howler";
+import { DEFAULT_SOUND_VOLUMES } from "./soundVolumes";
 
 export interface SoundPosition {
     map?: number;
@@ -8,6 +9,8 @@ export interface SoundPosition {
 
 interface PlaySoundOptions {
     soundId: number;
+    // Qué volumen de Configuración le corresponde: las pisadas tienen el suyo; todo lo demás es "efectos".
+    category?: "efectos" | "pisadas";
     listener?: SoundPosition;
     source?: SoundPosition;
     fadeInMs?: number;
@@ -81,7 +84,8 @@ export class GameSoundManager {
     private readonly unavailableSoundIds = new Set<number>();
     private readonly soundCache = new Map<number, Howl>();
     private readonly preferWebAudio: boolean;
-    private masterVolume = 1;
+    // Los volúmenes de efectos y pisadas (lib/soundVolumes.ts). La música y el clima tienen sus propios reproductores.
+    private categoryVolumes = { efectos: DEFAULT_SOUND_VOLUMES.efectos, pisadas: DEFAULT_SOUND_VOLUMES.pisadas };
     private preferredExtension: (typeof SOUND_FILE_EXTENSIONS)[number] =
         SOUND_FILE_EXTENSIONS[0];
 
@@ -94,6 +98,7 @@ export class GameSoundManager {
 
     play({
         soundId,
+        category = "efectos",
         listener,
         source,
         fadeInMs = 0,
@@ -107,7 +112,7 @@ export class GameSoundManager {
             return;
         }
 
-        const computedVolume = this.getVolume(listener, source);
+        const computedVolume = this.getVolume(listener, source) * this.categoryVolumes[category];
         if (computedVolume <= 0) {
             return;
         }
@@ -159,9 +164,11 @@ export class GameSoundManager {
         sound.once("load", startPlayback);
     }
 
-    setMasterVolume(volume: number): void {
-        this.masterVolume = Math.min(1, Math.max(0, volume));
-        Howler.volume(this.masterVolume);
+    setCategoryVolumes(volumes: { efectos: number; pisadas: number }): void {
+        const clamp = (value: number) => Math.min(1, Math.max(0, Number(value) || 0));
+        this.categoryVolumes = { efectos: clamp(volumes.efectos), pisadas: clamp(volumes.pisadas) };
+        // Cada tipo de sonido tiene su volumen: el general de Howler queda fijo.
+        Howler.volume(1);
     }
 
     destroy(): void {

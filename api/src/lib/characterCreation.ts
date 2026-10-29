@@ -287,16 +287,18 @@ const raceOptions: Record<RaceKey, RaceOption> = {
         key: "enano",
         baseStats: statsFromBonus({ fuerza: 2, agilidad: 1, inteligencia: 0, carisma: 0, constitucion: 2 }),
         genders: {
-            male: { bodyId: 53, startHeadId: 401, endHeadId: 411 },
-            female: { bodyId: 60, startHeadId: 470, endHeadId: 476 },
+            // Cabezas de enano (barbudos) 301-315 y 370-373, como en el AO clásico; el CharInfo.dat del cliente viejo
+            // las tenía cruzadas con las de gnomo (401-411 y 470-476).
+            male: { bodyId: 53, startHeadId: 301, endHeadId: 315 },
+            female: { bodyId: 60, startHeadId: 370, endHeadId: 373 },
         },
     },
     gnomo: {
         key: "gnomo",
         baseStats: statsFromBonus({ fuerza: -1, agilidad: 1, inteligencia: 4, carisma: 0, constitucion: 2 }),
         genders: {
-            male: { bodyId: 53, startHeadId: 301, endHeadId: 315 },
-            female: { bodyId: 60, startHeadId: 370, endHeadId: 373 },
+            male: { bodyId: 53, startHeadId: 401, endHeadId: 411 },
+            female: { bodyId: 60, startHeadId: 470, endHeadId: 476 },
         },
     },
     orco: {

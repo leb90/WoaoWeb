@@ -7,7 +7,8 @@ import type { HoverRelation } from "@/components/game/rendering/hoverHighlight";
 // - enemigo: borde rojo, sobre criaturas hostiles y otros jugadores;
 // - amigo: borde azul, sobre uno mismo, el grupo y el clan;
 // - apuntar: la cruceta, mientras se elige el objetivo de un hechizo o un ataque a distancia.
-// Los botones deshabilitados muestran el prohibido (solo CSS: --cursor-juego-prohibido).
+// En el resto del sitio rige el CSS: el dorado sobre lo clickeable, el guantelete oscuro mientras se aprieta
+// (--cursor-juego-presionado) y el prohibido en los botones deshabilitados.
 export type GameCursor = "normal" | "clic" | "enemigo" | "amigo" | "apuntar";
 
 export const GAME_CURSOR_CSS: Record<GameCursor, string> = {
@@ -17,10 +18,6 @@ export const GAME_CURSOR_CSS: Record<GameCursor, string> = {
     amigo: "var(--cursor-juego-amigo)",
     apuntar: "var(--cursor-juego-apuntar)",
 };
-
-// Clase de <html> que prende los cursores del juego (también en lo que se dibuja fuera del contenedor, como el
-// inventario flotante).
-export const GAME_CURSOR_ROOT_CLASS = "game-cursor";
 
 export function cursorForHoverRelation(relation: HoverRelation | null): GameCursor {
     switch (relation) {

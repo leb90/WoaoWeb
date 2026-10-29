@@ -4,6 +4,7 @@ import {
     loadSeedBalanceJson,
     upsertGameBalance,
 } from "./repositories/gameBalance";
+import { getGameObjectById, upsertGameObject } from "./repositories/gameObjects";
 
 // Cambios de datos que tienen que llegar una sola vez a la base de producción: el deploy no corre importGameData y
 // `game_balance` solo se siembra con la tabla vacía. Corren en `migrate` (al arrancar la api) y quedan anotados en
@@ -24,6 +25,38 @@ const DATA_MIGRATIONS: DataMigration[] = [
                 ...current.data,
                 balanceRazas: loadSeedBalanceJson().balanceRazas,
             });
+        },
+    },
+    {
+        // El pergamino 200 enseña el hechizo 1, que ya se llamaba "Curar efectos" (cura veneno y quemadura).
+        id: "2026-10-29-pergamino-curar-efectos",
+        run: async () => {
+            const scroll = await getGameObjectById(200).catch(() => null);
+            if (!scroll || scroll.data.name !== "Curar veneno") return;
+            await upsertGameObject(200, { ...scroll.data, name: "Curar efectos" });
+        },
+    },
+    {
+        // Las cabezas de enano (301-315 y 370-373) y las de gnomo (401-411 y 470-476) estaban cruzadas: cada
+        // personaje pasa a la cabeza equivalente de su raza, por posición y recortando al largo del rango.
+        id: "2026-10-29-cabezas-enano-gnomo",
+        run: async () => {
+            const remap = [
+                // [raza, desde, hasta, nuevo inicio, nuevo fin]
+                [4, 401, 411, 301, 315],
+                [4, 470, 476, 370, 373],
+                [5, 301, 315, 401, 411],
+                [5, 370, 373, 470, 476],
+            ];
+            for (const [race, from, to, start, end] of remap) {
+                for (const column of ["id_head", "id_last_head"]) {
+                    await pool.query(
+                        `UPDATE characters SET ${column} = LEAST($4 + (${column} - $2), $5)
+                         WHERE id_raza = $1 AND ${column} BETWEEN $2 AND $3`,
+                        [race, from, to, start, end],
+                    );
+                }
+            }
         },
     },
 ];

@@ -41,12 +41,31 @@ export function isUnsafeArenaPosition(mapId: number | undefined, pos: Position |
     return vars.mapa[zoneMapId]?.[pos.y]?.[pos.x]?.trigger === 6;
 }
 
+const normalizeMapTag = (value: unknown) =>
+    String(value ?? "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim()
+        .toUpperCase();
+
+// Ciudad segura: zona segura dentro de un mapa de ciudad (zona o terreno CIUDAD). Ahí no se ataca a otros usuarios
+// ni a los NPC neutrales o aliados; las criaturas hostiles se pueden atacar.
+export function isSafeCityPosition(mapId: number | undefined, pos: Position | undefined): boolean {
+    if (!isSafeZonePosition(mapId, pos)) {
+        return false;
+    }
+
+    const mapData = vars.mapData[resolveZoneMapId(mapId) ?? 0];
+    return normalizeMapTag(mapData?.zona) === "CIUDAD" || normalizeMapTag(mapData?.terreno) === "CIUDAD";
+}
+
 export function getSafeZoneFlag(mapId: number | undefined, pos: Position | undefined): 0 | 1 {
     return isSafeZonePosition(mapId, pos) ? 1 : 0;
 }
 
 module.exports = {
     getSafeZoneFlag,
+    isSafeCityPosition,
     isSafeZonePosition,
     isUnsafeArenaPosition,
 };

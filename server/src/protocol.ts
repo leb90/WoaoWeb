@@ -800,6 +800,28 @@ function getSafeZoneBoundaryAttackMessage(attacker: RuntimeCharacter, target: Ar
         : "Esa criatura está en zona segura: su protección impide atacarla desde afuera.";
 }
 
+/**
+ * En una ciudad segura no se ataca a los NPC neutrales ni aliados (guardias, animales, comerciantes, criaturas
+ * invocadas por otros): solo a las criaturas hostiles. Entre usuarios ya lo impide la zona segura (game.ts).
+ * Devuelve el aviso cuando el ataque queda bloqueado; null si se puede atacar.
+ */
+function getSafeCityNpcAttackMessage(attacker: RuntimeCharacter, target: AreaTarget | undefined) {
+    if (!target?.isNpc) {
+        return null;
+    }
+
+    const npc = target as RuntimeNpc;
+    if (Number(npc.hostile ?? 0) === 1 && !npc.summonedByUserId) {
+        return null;
+    }
+
+    if (!safeZone.isSafeCityPosition(attacker.map, attacker.pos) && !safeZone.isSafeCityPosition(target.map, target.pos)) {
+        return null;
+    }
+
+    return "En la ciudad no se puede atacar a ese NPC.";
+}
+
 function isPartialInvisibilityRemovalSpell(datSpell: Record<string, unknown> | undefined) {
     return Number(datSpell?.remueveInvisibilidadParcial ?? 0) === 1;
 }
@@ -3895,7 +3917,8 @@ function attackMele(ws: RuntimeClient) {
             return;
         }
 
-        const safeZoneBoundaryMessage = getSafeZoneBoundaryAttackMessage(user, combatTarget);
+        const safeZoneBoundaryMessage =
+            getSafeZoneBoundaryAttackMessage(user, combatTarget) ?? getSafeCityNpcAttackMessage(user, combatTarget);
 
         if (safeZoneBoundaryMessage) {
             handleProtocol.console(safeZoneBoundaryMessage, "white", 0, 0, ws);
@@ -4122,7 +4145,8 @@ function attackRange(ws: RuntimeClient) {
                 return;
             }
 
-            const safeZoneBoundaryMessage = getSafeZoneBoundaryAttackMessage(user, combatTarget);
+            const safeZoneBoundaryMessage =
+                getSafeZoneBoundaryAttackMessage(user, combatTarget) ?? getSafeCityNpcAttackMessage(user, combatTarget);
 
             if (safeZoneBoundaryMessage) {
                 handleProtocol.console(safeZoneBoundaryMessage, "white", 0, 0, ws);
@@ -4278,7 +4302,7 @@ function castAreaSpell(
         if (hitIds.some((id) => String(id) === String(target.id))) continue;
         if (!target.isNpc && isInvisibleAdmin(target as RuntimeCharacter)) continue;
         if (target.isNpc && (isOwnSummonTarget(clientId, target) || isNonAttackableNpcTarget(target))) continue;
-        if (getSafeZoneBoundaryAttackMessage(user, target)) continue;
+        if (getSafeZoneBoundaryAttackMessage(user, target) || getSafeCityNpcAttackMessage(user, target)) continue;
         if (!target.isNpc && game.getFriendlyFireBlockReason(clientId, target.id)) continue;
 
         const result = target.isNpc
@@ -4718,7 +4742,7 @@ function attackSpell(ws: RuntimeClient) {
             }
 
             const safeZoneBoundaryMessage = isHostileCombatSpell(datSpell)
-                ? getSafeZoneBoundaryAttackMessage(user, spellTarget)
+                ? (getSafeZoneBoundaryAttackMessage(user, spellTarget) ?? getSafeCityNpcAttackMessage(user, spellTarget))
                 : null;
 
             if (safeZoneBoundaryMessage) {

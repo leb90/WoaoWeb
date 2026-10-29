@@ -78,6 +78,7 @@ import { useRemoteEntityController } from "./useRemoteEntityController";
 import { createEntityOverlays } from "../rendering/entityOverlays";
 import { createElementalAuras } from "../rendering/elementalAuras";
 import { WeatherAmbience } from "../../../lib/weatherAmbience";
+import { MeditationSound, isMeditationFx } from "../../../lib/meditationSound";
 import type { AreaSpellFxPayload } from "../../../lib/aowProtocol";
 import {
     ELEMENTAL_SLOW_WALK_MULTIPLIER,
@@ -777,6 +778,8 @@ export default function MapRenderer({
     const movementKeyPriorityRef = useRef<number[]>([]);
     const soundManagerRef = useRef<GameSoundManager | null>(null);
     const weatherAmbienceRef = useRef<WeatherAmbience | null>(null);
+    const meditationSoundRef = useRef<MeditationSound | null>(null);
+    const effectsVolumeRef = useRef(soundVolumes.efectos);
     const ambienceVolumeRef = useRef(soundVolumes.ambiente);
     const stepVariantRef = useRef<Map<number, 0 | 1>>(new Map());
     const lastStepSoundAtRef = useRef<Map<number, number>>(new Map());
@@ -851,7 +854,23 @@ export default function MapRenderer({
         });
         ambienceVolumeRef.current = soundVolumes.ambiente;
         weatherAmbienceRef.current?.setMasterVolume(soundVolumes.ambiente);
+        effectsVolumeRef.current = soundVolumes.efectos;
+        meditationSoundRef.current?.setVolume(soundVolumes.efectos);
     }, [soundVolumes.ambiente, soundVolumes.efectos, soundVolumes.pisadas]);
+
+    // Viento de la meditación del propio personaje (lib/meditationSound.ts); lo prende renderEntityFX.
+    useEffect(() => {
+        if (typeof window === "undefined") {
+            return;
+        }
+        const meditation = new MeditationSound();
+        meditation.setVolume(effectsVolumeRef.current);
+        meditationSoundRef.current = meditation;
+        return () => {
+            meditation.destroy();
+            meditationSoundRef.current = null;
+        };
+    }, []);
 
     // Sonido del clima: sigue al clima del mapa y al techo (bajo techo suena apagado), y un trueno por relámpago.
     useEffect(() => {
@@ -1749,8 +1768,15 @@ export default function MapRenderer({
     );
 
     const renderEntityFX = React.useCallback(
-        (engine: Engine, entityId: number, graphicId: number) =>
-            entityOverlays.renderEntityFX(engine, entityId, graphicId),
+        (engine: Engine, entityId: number, graphicId: number) => {
+            // El viento de la meditación suena solo para el propio personaje: el server manda el efecto al
+            // empezar y un 0 al terminar.
+            if (entityId === engine.user?.id) {
+                if (isMeditationFx(graphicId)) meditationSoundRef.current?.start();
+                else if (!graphicId) meditationSoundRef.current?.stop();
+            }
+            return entityOverlays.renderEntityFX(engine, entityId, graphicId);
+        },
         [entityOverlays],
     );
 

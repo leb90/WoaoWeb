@@ -15,10 +15,12 @@ import React, {
 import { MapRenderer } from "../../components/game";
 import AdminIntervalsModal from "../../components/AdminIntervalsModal";
 import BuffStatusSidebar from "../../components/BuffStatusSidebar";
+import PlayerUnitFrame from "../../components/PlayerUnitFrame";
+import { publishPerformanceSample } from "../../lib/performanceReadout";
 import InvisibilityCornerTimer from "../../components/InvisibilityCornerTimer";
 import BleedBanner from "../../components/BleedBanner";
 import ElementalStatusBanner from "../../components/ElementalStatusBanner";
-import AggroPanel from "../../components/AggroPanel";
+import AggroPanel, { AGGRO_STRIP_SLOTS, AggroStrip } from "../../components/AggroPanel";
 import MacroBar from "../../components/MacroBar";
 import BailModal from "../../components/BailModal";
 import CharacterStatsModal from "../../components/CharacterStatsModal";
@@ -111,6 +113,8 @@ const RIGHT_PANEL_WIDTH = 320;
 const DESKTOP_CONSOLE_HEIGHT = 110;
 const CHAT_TABS_ESTIMATED_HEIGHT = 32;
 const CHAT_INPUT_ROW_HEIGHT = 36;
+// Ancho de la caja del marco del personaje, a la izquierda del chat (escritorio).
+const CHARACTER_DOCK_WIDTH = 236;
 const EXP_BAR_ESTIMATED_HEIGHT = 34;
 const RIGHT_COLUMN_ACTIONS_ESTIMATED_HEIGHT = 112;
 const SHELL_VERTICAL_PADDING = 16;
@@ -3393,7 +3397,23 @@ function HomeContent() {
                                     baseWidth={CANVAS_BASE_WIDTH}
                                     onMeasure={handleTopHudSectionMeasure}
                                 >
-                                    <div className="pointer-events-auto isolate flex w-full min-w-0 flex-col overflow-hidden bg-[#0c0907]">
+                                    <div className="pointer-events-auto isolate flex w-full min-w-0 items-stretch overflow-hidden bg-[#0c0907]">
+                                        {/* El marco del personaje a la izquierda del chat, con sus estados y las primeras criaturas que te persiguen.
+                                            Va en una caja absoluta para que nunca agrande la franja. */}
+                                        <div className="relative shrink-0 border-r border-[#6f5734]" style={{ width: `${CHARACTER_DOCK_WIDTH}px` }}>
+                                            <div data-testid="hud-character-dock" className="absolute inset-0 overflow-hidden p-[5px]">
+                                                <PlayerUnitFrame
+                                                    hud={hud}
+                                                    runtimeTiming={runtimeTiming}
+                                                    skillsState={skillsState}
+                                                    className="w-full"
+                                                    interactive
+                                                >
+                                                    <AggroStrip aggro={hud?.aggroState} />
+                                                </PlayerUnitFrame>
+                                            </div>
+                                        </div>
+                                        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
                                         <div className="flex w-full min-w-0 items-stretch overflow-hidden border-b border-[#6f5734]">
                                             <div className="flex min-w-0 w-0 flex-1 flex-col overflow-hidden">
                                             {chatTabsHorizontal}
@@ -3472,6 +3492,7 @@ function HomeContent() {
                                                 </form>
                                             ) : null}
                                         </div>
+                                        </div>
                                     </div>
                                 </ScaledHudFrame>
                             ) : null}
@@ -3483,13 +3504,17 @@ function HomeContent() {
                                     height: `${hudLayout.canvasHeight ?? CANVAS_BASE_HEIGHT}px`,
                                 }}
                             >
-                                <BuffStatusSidebar
-                                    hud={hud}
-                                    runtimeTiming={runtimeTiming}
-                                    skillsState={skillsState}
-                                />
+                                {isMobile ? (
+                                    <BuffStatusSidebar
+                                        hud={hud}
+                                        runtimeTiming={runtimeTiming}
+                                        skillsState={skillsState}
+                                    />
+                                ) : null}
                                 <MapRenderer
                                     embedded
+                                    hideStatusText={!isMobile}
+                                    onPerformanceSample={publishPerformanceSample}
                                     mapNumber={selectedMap}
                                     width={hudLayout.canvasWidth}
                                     height={hudLayout.canvasHeight}
@@ -3723,21 +3748,25 @@ function HomeContent() {
                                     />
                                 ) : null}
 
-                                {!isMobile ? (
-                                    <InvisibilityCornerTimer
+                                {/* Escritorio: el marco del personaje va a la izquierda del chat y ahí entran las primeras cuatro
+                                    criaturas que te persiguen; las demás, acá. Sin la franja del chat (ventana angosta), el marco
+                                    queda adentro del render. */}
+                                {isDesktopConsoleLayout ? (
+                                    <AggroPanel
+                                        aggro={hud?.aggroState}
+                                        skip={AGGRO_STRIP_SLOTS}
+                                        className="absolute left-2 top-2"
+                                    />
+                                ) : !isMobile ? (
+                                    <PlayerUnitFrame
                                         hud={hud}
                                         runtimeTiming={runtimeTiming}
                                         skillsState={skillsState}
-                                        className="absolute left-2"
-                                        style={{ bottom: isFullscreen ? 42 : 8 }}
-                                    />
-                                ) : null}
-
-                                {!isMobile ? (
-                                    <AggroPanel
-                                        aggro={hud?.aggroState}
-                                        className="absolute left-2 top-[68px]"
-                                    />
+                                        className="absolute left-2 top-2"
+                                        style={{ width: CHARACTER_DOCK_WIDTH }}
+                                    >
+                                        <AggroPanel aggro={hud?.aggroState} />
+                                    </PlayerUnitFrame>
                                 ) : null}
 
                                 <div

@@ -144,6 +144,9 @@ type FactionWarStatePayload = {
 
 type MapPosition = Position & { map: number };
 
+// Daño del veneno por golpe (0 = sano) y ms que le quedan a la ceguera y a la estupidez.
+export type AfflictionStatePayload = { venenoDmg: number; cegueraMs: number; estupidezMs: number };
+
 type AreaItemSnapshot = {
     idItem: number;
     map: number;
@@ -476,6 +479,7 @@ export type HandleProtocolApi = {
     shopState: (payload: unknown, client: RuntimeClient) => void;
     aggroState: (payload: unknown, client: RuntimeClient) => void;
     bleedState: (remainingMs: number, client: RuntimeClient) => void;
+    afflictionState: (payload: AfflictionStatePayload, client: RuntimeClient) => void;
     elementalState: (payload: Record<string, unknown>, client: RuntimeClient) => void;
     areaSpellFx: (payload: Record<string, unknown>, client: RuntimeClient) => void;
     dungeonState: (payload: Record<string, unknown>, client: RuntimeClient) => void;
@@ -1607,6 +1611,13 @@ const handleServer: HandleProtocolApi = {
     bleedState(remainingMs, client) {
         pkg.setPackageID(pkg.clientPacketID.bleedState);
         pkg.writeString(JSON.stringify({ remainingMs: Math.max(0, Math.round(remainingMs)) }));
+        socket.send(client);
+    },
+
+    // Veneno, ceguera y estupidez del propio personaje, para los íconos de estado del HUD.
+    afflictionState(payload, client) {
+        pkg.setPackageID(pkg.clientPacketID.afflictionState);
+        pkg.writeString(JSON.stringify(payload));
         socket.send(client);
     },
 

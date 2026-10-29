@@ -79,6 +79,8 @@ type UseRendererBootstrapOptions = {
     pingTextRef: RefObject<any>;
     seguroTextRef: RefObject<any>;
     clanSeguroTextRef: RefObject<any>;
+    statusTextLayerRef: RefObject<Container | null>;
+    hideStatusTextRef: RefObject<boolean>;
     debugCombatTextRef: RefObject<any>;
     fpsDisplayTextRef: RefObject<string>;
     pingDisplayTextRef: RefObject<string>;
@@ -945,8 +947,13 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                 fpsText.resolution = 1;
                 fpsText.x = 10;
                 fpsText.y = 8;
-                fpsText.zIndex = 1000;
-                app.stage.addChild(fpsText);
+
+                // FPS, ping y los dos seguros en una capa: en escritorio se oculta y se ven en el panel de la derecha.
+                const statusTextLayer = new Container();
+                statusTextLayer.zIndex = 1000;
+                statusTextLayer.visible = !options.hideStatusTextRef.current;
+                statusTextLayer.addChild(fpsText);
+                app.stage.addChild(statusTextLayer);
 
                 const pingText = new Text({
                     text: options.pingDisplayTextRef.current,
@@ -955,8 +962,7 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                 pingText.resolution = 1;
                 pingText.x = 10;
                 pingText.y = 22;
-                pingText.zIndex = 1000;
-                app.stage.addChild(pingText);
+                statusTextLayer.addChild(pingText);
 
                 const seguroText = new Text({
                     text: "",
@@ -965,8 +971,7 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                 seguroText.resolution = 1;
                 seguroText.x = 10;
                 seguroText.y = 36;
-                seguroText.zIndex = 1000;
-                app.stage.addChild(seguroText);
+                statusTextLayer.addChild(seguroText);
 
                 const clanSeguroText = new Text({
                     text: "",
@@ -975,8 +980,7 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                 clanSeguroText.resolution = 1;
                 clanSeguroText.x = 10;
                 clanSeguroText.y = 50;
-                clanSeguroText.zIndex = 1000;
-                app.stage.addChild(clanSeguroText);
+                statusTextLayer.addChild(clanSeguroText);
 
                 const debugCombatText = new Text({
                     text: "Combat Debug [OFF]",
@@ -998,6 +1002,7 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                 options.pingTextRef.current = pingText;
                 options.seguroTextRef.current = seguroText;
                 options.clanSeguroTextRef.current = clanSeguroText;
+                options.statusTextLayerRef.current = statusTextLayer;
                 options.updateSeguroIndicators(options.playerHudRef.current);
                 options.debugCombatTextRef.current = debugCombatText;
                 options.updateDebugCombatText();
@@ -1138,6 +1143,7 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
             options.pingTextRef.current = null;
             options.seguroTextRef.current = null;
             options.clanSeguroTextRef.current = null;
+            options.statusTextLayerRef.current = null;
             options.debugCombatTextRef.current = null;
             if (options.engineRef.current) {
                 options.engineRef.current.destroy();

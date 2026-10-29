@@ -149,6 +149,8 @@ interface MapRendererProps {
     embedded?: boolean;
     connection?: ManualConnectionConfig | null;
     isMobile?: boolean;
+    // Oculta el FPS, el ping y los seguros dibujados arriba a la izquierda (en escritorio van en el panel de la derecha).
+    hideStatusText?: boolean;
     touchMovementDirection?: "up" | "down" | "left" | "right" | null;
     meleeAttackRequest?: { token: number } | null;
     cancelTargetingRequest?: { token: number } | null;
@@ -661,6 +663,7 @@ export default function MapRenderer({
     embedded = false,
     connection,
     isMobile = false,
+    hideStatusText = false,
     touchMovementDirection = null,
     meleeAttackRequest,
     cancelTargetingRequest,
@@ -724,6 +727,8 @@ export default function MapRenderer({
     const pingDisplayTextRef = useRef("Ping: -- ms");
     const seguroTextRef = useRef<Text | null>(null);
     const clanSeguroTextRef = useRef<Text | null>(null);
+    const statusTextLayerRef = useRef<Container | null>(null);
+    const hideStatusTextRef = useRef(hideStatusText);
     const debugCombatTextRef = useRef<Text | null>(null);
     const debugCombatOverlayTextRef = useRef("");
     const fpsDisplayTextRef = useRef("FPS: 0");
@@ -894,6 +899,13 @@ export default function MapRenderer({
     useEffect(() => {
         onPerformanceSampleRef.current = onPerformanceSample;
     }, [onPerformanceSample]);
+
+    useEffect(() => {
+        hideStatusTextRef.current = hideStatusText;
+        if (statusTextLayerRef.current) {
+            statusTextLayerRef.current.visible = !hideStatusText;
+        }
+    }, [hideStatusText]);
 
     const emitPerformanceSample = React.useCallback(
         (patch: Partial<PerformanceSample>) => {
@@ -1901,6 +1913,8 @@ export default function MapRenderer({
         pingTextRef,
         seguroTextRef,
         clanSeguroTextRef,
+        statusTextLayerRef,
+        hideStatusTextRef,
         debugCombatTextRef,
         fpsDisplayTextRef,
         pingDisplayTextRef,

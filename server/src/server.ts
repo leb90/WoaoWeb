@@ -805,6 +805,44 @@ wsServer?.on("connection", function (ws: RuntimeClient, request: RuntimeConnecti
     });
 });
 
+// Ceguera y estupidez duran 10 s desde que entraron (se apagan en processPlayerStatusTick).
+const AFFLICTION_DURATION_MS = 10000;
+
+/**
+ * Veneno, ceguera y estupidez del personaje para los íconos de estado del HUD: se manda solo cuando
+ * alguno se prende o se apaga, así cubre todos los caminos que los aplican o los curan.
+ */
+function sendAfflictionStateIfChanged(idUser: string, user: ServerCharacter, now: number) {
+    const venenoDmg = user.dead ? 0 : Math.max(0, Number(user.envenenado ?? 0));
+    const remaining = (flag: unknown, since: unknown) =>
+        !user.dead && Number(flag ?? 0) > 0
+            ? Math.max(0, AFFLICTION_DURATION_MS - (now - Number(since ?? 0)))
+            : 0;
+    const cegueraMs = remaining(user.ceguera, user.cooldownCeguera);
+    const estupidezMs = remaining(user.estupidez, user.cooldownEstupidez);
+    const signature = `${venenoDmg}|${Number(user.cooldownCeguera ?? 0) * Number(cegueraMs > 0)}|${
+        Number(user.cooldownEstupidez ?? 0) * Number(estupidezMs > 0)
+    }`;
+
+    if (user.afflictionStateSent === signature) {
+        return;
+    }
+
+    // Al entrar sano no hace falta avisar nada.
+    if (user.afflictionStateSent === undefined && signature === "0|0|0") {
+        user.afflictionStateSent = signature;
+        return;
+    }
+
+    const client = getClientById(idUser);
+    if (!client) {
+        return;
+    }
+
+    user.afflictionStateSent = signature;
+    handleProtocol.afflictionState({ venenoDmg, cegueraMs, estupidezMs }, client);
+}
+
 function processPlayerStatusTick(now: number) {
     for (const idUser in vars.personajes as RuntimeCharacters) {
         const user = (vars.personajes as RuntimeCharacters)[idUser] as ServerCharacter | undefined;
@@ -850,6 +888,8 @@ function processPlayerStatusTick(now: number) {
             user.estupidez = 0;
             user.cooldownEstupidez = 0;
         }
+
+        sendAfflictionStateIfChanged(idUser, user, now);
 
         if (Number(user.protec ?? 0) > 0 && now - Number(user.cooldownProtec ?? 0) >= Number(user.protec) * 10000) {
             user.protec = 0;

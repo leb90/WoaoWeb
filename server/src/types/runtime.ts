@@ -359,6 +359,8 @@ export type RuntimeCharacter = {
     cooldownCeguera?: number;
     estupidez?: NumericFlag;
     cooldownEstupidez?: number;
+    // Último estado de veneno/ceguera/estupidez mandado al cliente (server.ts, sendAfflictionStateIfChanged).
+    afflictionStateSent?: string;
     sta?: number;
     maxSta?: number;
     hambre?: number;

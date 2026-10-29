@@ -253,6 +253,19 @@ export async function handleIncomingUiPacket({
             return true;
         }
 
+        case "afflictionState": {
+            const now = Date.now();
+            const until = (ms: number | undefined) => (Number(ms ?? 0) > 0 ? now + Number(ms) : 0);
+            ctx.mergeHud({
+                afflictions: {
+                    venenoDmg: Math.max(0, Number(packet.payload.venenoDmg ?? 0)),
+                    cegueraUntil: until(packet.payload.cegueraMs),
+                    estupidezUntil: until(packet.payload.estupidezMs),
+                },
+            });
+            return true;
+        }
+
         case "areaSpellFx": {
             if (!engine) {
                 return true;

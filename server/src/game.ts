@@ -94,10 +94,10 @@ type AllyShieldKind = import("./elementalEffects").AllyShieldKind;
 
 const SURVIVAL_HAMBRE_MAX = Number(balance.MAX_HAMBRE ?? 100);
 const SURVIVAL_SED_MAX = Number(balance.MAX_SED ?? 100);
-// Hambre y sed bajan 1 punto cada 16 s. Sin vestimenta y con frío (menos de 15 °C) bajan cada 6,5 s, y bajo cero
+// Hambre y sed bajan 1 punto cada 32 s. Sin vestimenta y con frío (menos de 15 °C) bajan cada 6,5 s, y bajo cero
 // (0 °C o menos) además se pierde un 5% de la vida máxima cada 5 s. El frío nunca mata: deja como mínimo 1 de vida,
 // igual que el hambre. La temperatura es la del mapa (environment.ts, la misma del HUD).
-const HUNGER_DRAIN_INTERVAL_MS = 16000;
+const HUNGER_DRAIN_INTERVAL_MS = 32000;
 const HUNGER_DRAIN_COLD_INTERVAL_MS = 6500;
 const COLD_TEMPERATURE_C = 15;
 const FREEZING_TEMPERATURE_C = 0;

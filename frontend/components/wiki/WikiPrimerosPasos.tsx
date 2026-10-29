@@ -155,7 +155,7 @@ export default function WikiPrimerosPasos() {
                         Matar a un newbie no suma a los ciudadanos ni a los criminales matados, y tampoco cuenta para el puntaje de facción. Ser newbie no impide que te ataquen.
                     </p>
                     <p>
-                        Hambre y sed empiezan en 100 y bajan 1 punto cada 16 segundos. Si una de las dos llega a 0, perdés un 10% de tu vida máxima y ese tope se mantiene hasta que comas y bebas. Si las dos llegan a 0, la energía baja en vez de regenerarse. La manzana recupera hambre y la botella recupera sed: seleccionalas y apretá U.
+                        Hambre y sed empiezan en 100 y bajan 1 punto cada 32 segundos. Si una de las dos llega a 0, perdés un 10% de tu vida máxima y ese tope se mantiene hasta que comas y bebas. Si las dos llegan a 0, la energía baja en vez de regenerarse. La manzana recupera hambre y la botella recupera sed: seleccionalas y apretá U.
                     </p>
                     <p>
                         La vestimenta abriga. Sin vestimenta y con menos de 15 °C, hambre y sed bajan cada 6,5 segundos. Con 0 °C o menos perdés un 5% de tu vida máxima cada 5 segundos, aunque el frío nunca te deja por debajo de 1 de vida. La temperatura del mapa aparece en el panel: los mapas de nieve, como el Polo, son mucho más fríos, y la lluvia y la nieve enfrían un poco más.

@@ -4,6 +4,7 @@ import {
     loadSeedBalanceJson,
     upsertGameBalance,
 } from "./repositories/gameBalance";
+import { getGameObjectById, upsertGameObject } from "./repositories/gameObjects";
 
 // Cambios de datos que tienen que llegar una sola vez a la base de producción: el deploy no corre importGameData y
 // `game_balance` solo se siembra con la tabla vacía. Corren en `migrate` (al arrancar la api) y quedan anotados en
@@ -24,6 +25,15 @@ const DATA_MIGRATIONS: DataMigration[] = [
                 ...current.data,
                 balanceRazas: loadSeedBalanceJson().balanceRazas,
             });
+        },
+    },
+    {
+        // El pergamino 200 enseña el hechizo 1, que ya se llamaba "Curar efectos" (cura veneno y quemadura).
+        id: "2026-10-29-pergamino-curar-efectos",
+        run: async () => {
+            const scroll = await getGameObjectById(200).catch(() => null);
+            if (!scroll || scroll.data.name !== "Curar veneno") return;
+            await upsertGameObject(200, { ...scroll.data, name: "Curar efectos" });
         },
     },
 ];

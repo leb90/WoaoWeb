@@ -2590,10 +2590,23 @@ export class Engine {
         updateWeatherFx(this, this.delta);
         updateEquipmentAuras(this);
         // Respiración y reflejos: después de mover y animar a todos, y antes del contorno del hover, que copia la escala.
+        // Son adornos: si fallan se apagan y se avisa una vez, pero el cuadro (y el juego) sigue.
         const idleNow = this.timestamp();
-        updateBreathing(this, idleNow);
-        updateWaterReflections(this, idleNow);
+        this.runCosmeticStep("breathing", () => updateBreathing(this, idleNow));
+        this.runCosmeticStep("waterReflections", () => updateWaterReflections(this, idleNow));
     };
+
+    private disabledCosmeticSteps = new Set<string>();
+
+    private runCosmeticStep(name: string, step: () => void) {
+        if (this.disabledCosmeticSteps.has(name)) return;
+        try {
+            step();
+        } catch (error) {
+            this.disabledCosmeticSteps.add(name);
+            console.error(`[render] ${name} falló y quedó apagado:`, error);
+        }
+    }
 
     updateCulling(): void {
         if (!this.app || !this.mapContainer) return;

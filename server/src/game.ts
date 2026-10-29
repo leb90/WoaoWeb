@@ -873,7 +873,7 @@ function resistsParalysisBySet(user: GameCharacter | undefined): boolean {
 
 // Vida y maná máximos con el equipo: bono de vida del set de tier y maná de objetoEspecial (8/9/10/17/19)
 // más el % de maná del set. El bono se guarda aparte (equipHpBonus / equipManaBonus) y nunca se persiste.
-// Si alguien reasignó maxHp o maxMana desde afuera (login, nivel, remort, recarga de balance), ese valor es
+// Si alguien reasignó maxHp o maxMana desde afuera (login, nivel, recarga de balance), ese valor es
 // la nueva base; si no, la base es el valor efectivo menos el bono anterior.
 function refreshEquipmentVitals(user: GameCharacter, notify = true): boolean {
     if (!user || user.botLoad || user.adminSummonedBot) {
@@ -4452,47 +4452,6 @@ function getMeditationFx(user: GameCharacter): number {
     const level = Number(user.level ?? 0);
     const isHorde = normalizeFaction(user.faction) === "caos";
     const isAlliance = normalizeFaction(user.faction) === "armada";
-    const isRemort = Number(user.remort ?? 0) > 0;
-
-    if (isRemort) {
-        if (!user.criminal) {
-            if (level < 10) {
-                return 98;
-            }
-            if (level < 20) {
-                return 127;
-            }
-            if (level < 30) {
-                return 125;
-            }
-            if (level < 40) {
-                return 117;
-            }
-            if (level < 50) {
-                return 97;
-            }
-
-            return 112;
-        }
-
-        if (level < 10) {
-            return 99;
-        }
-        if (level < 20) {
-            return 126;
-        }
-        if (level < 30) {
-            return 124;
-        }
-        if (level < 40) {
-            return 118;
-        }
-        if (level < 50) {
-            return 96;
-        }
-
-        return 111;
-    }
 
     if (level < 13) {
         return isHorde ? 136 : 135;
@@ -11685,10 +11644,6 @@ function Game(this: GameApi) {
             const poderAtaqueArmaTmp = (effectiveAgilidad + Math.round(skill / 2) + n * effectiveAgilidad) * modifier;
 
             let poderAtaqueArma = poderAtaqueArmaTmp + 2.5 * Math.max(user.level - 12, 0);
-
-            if (Number(user.remort ?? 0) > 0) {
-                poderAtaqueArma += Math.floor(poderAtaqueArma / 3);
-            }
 
             return poderAtaqueArma;
         } catch (err) {

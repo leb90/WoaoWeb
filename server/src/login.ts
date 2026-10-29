@@ -1096,7 +1096,7 @@ function Login(this: LoginApi) {
                     }
 
                     handleProtocol.console(
-                        `WOAO> Canje ${personajeWS.puntosCanje ?? 0} | ELO ${personajeWS.elo ?? 300} | Remort ${personajeWS.remorted || "no"} | /woao`,
+                        `WOAO> Canje ${personajeWS.puntosCanje ?? 0} | ELO ${personajeWS.elo ?? 300} | /woao`,
                         "#E69500",
                         1,
                         0,
@@ -1319,8 +1319,6 @@ function Login(this: LoginApi) {
             puntosCanje: 0,
             puntosDonacion: 0,
             elo: 300,
-            remort: 0,
-            remorted: "",
             pClan: 0,
             homeMap: ULLA_MAP_ID,
             homeX: ULLA_POS_X,
@@ -1443,7 +1441,7 @@ function Login(this: LoginApi) {
             require("./bossEvents").sendState(ws);
             sendWelcomeConsoleMessage(ws);
             handleProtocol.console(
-                `WOAO> Canje ${newCharacter.puntosCanje ?? 0} | ELO ${newCharacter.elo ?? 300} | Remort ${newCharacter.remorted || "no"} | /woao`,
+                `WOAO> Canje ${newCharacter.puntosCanje ?? 0} | ELO ${newCharacter.elo ?? 300} | /woao`,
                 "#E69500",
                 1,
                 0,

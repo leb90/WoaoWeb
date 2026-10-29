@@ -3236,18 +3236,12 @@ const command: CommandApi = {
 
                 case "/woao": {
                     handleProtocol.console(
-                        "WOAO: /quest /quests /questaceptar /questabandonar /montura /activarmontura /renombrarmontura /liberarmontura /monturastat /ofertarmontura /subastas /premios /canjear /donaciones /canjeardonacion /viaje /dungeon /comerciar /ranked /rankedaceptar /rankedrechazar /hunters /crearhunter /torneo /participar /atorneo /remort /ciudades /castillos /castillo /clanpuntos /bloodcastle /guerra /templo /domar /robar /critico /pagarmulta /casa /dia /party /aceptar /partyinfo /salirparty",
+                        "WOAO: /quest /quests /questaceptar /questabandonar /montura /activarmontura /renombrarmontura /liberarmontura /monturastat /ofertarmontura /subastas /premios /canjear /donaciones /canjeardonacion /viaje /dungeon /comerciar /ranked /rankedaceptar /rankedrechazar /hunters /crearhunter /torneo /participar /atorneo /ciudades /castillos /castillo /clanpuntos /bloodcastle /guerra /templo /domar /robar /critico /pagarmulta /casa /dia /party /aceptar /partyinfo /salirparty",
                         "#E69500",
                         1,
                         0,
                         ws as CommandClient,
                     );
-                    break;
-                }
-
-                case "/remort": {
-                    const result = require("./remort").doRemort(String(clientId), nextText);
-                    handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
                     break;
                 }
 

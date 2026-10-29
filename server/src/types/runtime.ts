@@ -395,8 +395,6 @@ export type RuntimeCharacter = {
     puntosCanje?: number;
     puntosDonacion?: number;
     elo?: number;
-    remort?: number;
-    remorted?: string;
     pClan?: number;
     seguroActivado?: boolean;
     seguroClanActivado?: boolean;

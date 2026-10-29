@@ -10,7 +10,7 @@ export default function ClassSelector({
     onSelect,
 }: {
     options: CharacterClassOption[];
-    selectedClass: CharacterClassKey;
+    selectedClass: CharacterClassKey | null;
     onSelect: (key: CharacterClassKey) => void;
 }) {
     // Al pasar el mouse (o el foco) por una clase se ve cuál es antes de elegirla: en el título y en un cartel.

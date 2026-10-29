@@ -59,21 +59,22 @@ function Column({
     preview,
 }: {
     rows: typeof LEFT;
-    preview: CombatPreview;
+    preview: CombatPreview | null;
 }) {
     return (
         <dl className="space-y-1">
             {rows.map((row) => (
                 <div key={row.label} className="flex items-baseline justify-between gap-3 text-[13px]" title={row.hint}>
                     <dt className="text-[#9f9587]">{row.label}</dt>
-                    <dd className="text-[#eee5d3]">{preview[row.value]}</dd>
+                    <dd className="text-[#eee5d3]">{preview ? preview[row.value] : "—"}</dd>
                 </div>
             ))}
         </dl>
     );
 }
 
-export default function DerivedStats({ preview }: { preview: CombatPreview }) {
+// Sin clase elegida no hay estadísticas: dependen de los modificadores de la clase.
+export default function DerivedStats({ preview }: { preview: CombatPreview | null }) {
     return (
         <section className={`${panelClass} px-3 py-2.5`} aria-label="Estadísticas derivadas">
             <h2 className="mb-2 text-[11px] tracking-[0.22em] text-[#d6a62d]">

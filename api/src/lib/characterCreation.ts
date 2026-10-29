@@ -278,7 +278,8 @@ const raceOptions: Record<RaceKey, RaceOption> = {
         key: "elfoDrow",
         baseStats: statsFromBonus({ fuerza: 2, agilidad: 1, inteligencia: 1, carisma: -1, constitucion: 1 }),
         genders: {
-            male: { bodyId: 32, startHeadId: 201, endHeadId: 216 },
+            // La 201 es una cabeza de elfo común (piel clara): el elfo oscuro arranca en la 202.
+            male: { bodyId: 32, startHeadId: 202, endHeadId: 216 },
             female: { bodyId: 40, startHeadId: 270, endHeadId: 277 },
         },
     },

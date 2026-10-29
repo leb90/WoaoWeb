@@ -34,7 +34,6 @@ import {
     type RaceKey,
 } from "../lib/characterCreation";
 
-const initialClass = characterClassOptions[0].key;
 const initialRace = getAlianzaRaces()[0].key;
 
 function resolveGraphicFrame(graphicsDB: GraphicsDB, graphicId: number) {
@@ -105,7 +104,8 @@ export default function CreateCharacterView() {
     const [creatingCharacter, setCreatingCharacter] = useState(false);
     const [newCharacterName, setNewCharacterName] = useState("");
     const [nameAttempted, setNameAttempted] = useState(false);
-    const [selectedClass, setSelectedClass] = useState<CharacterClassKey>(initialClass);
+    // Sin clase hasta que el jugador elige una: mientras tanto el personaje se ve desnudo, con la cara y el cuerpo de la raza.
+    const [selectedClass, setSelectedClass] = useState<CharacterClassKey | null>(null);
     const [selectedRace, setSelectedRace] = useState<RaceKey>(initialRace);
     const [selectedGender, setSelectedGender] = useState<GenderKey>("male");
     const [selectedHeadIndex, setSelectedHeadIndex] = useState(0);
@@ -115,7 +115,10 @@ export default function CreateCharacterView() {
     const [headsDB, setHeadsDB] = useState<HeadsDB | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    const selectedClassOption = useMemo(() => getClassOption(selectedClass), [selectedClass]);
+    const selectedClassOption = useMemo(
+        () => (selectedClass ? getClassOption(selectedClass) : null),
+        [selectedClass],
+    );
     const selectedRaceOption = useMemo(() => getRaceOption(selectedRace), [selectedRace]);
     const headIds = useMemo(
         () => getHeadIds(selectedRace, selectedGender),
@@ -134,17 +137,19 @@ export default function CreateCharacterView() {
     const selectedHeadId =
         availableHeadIds[selectedHeadIndex] ?? availableHeadIds[0] ?? headIds[0];
     const combatPreview = useMemo(
-        () => getCombatPreview(selectedClass, selectedRace),
+        () => (selectedClass ? getCombatPreview(selectedClass, selectedRace) : null),
         [selectedClass, selectedRace],
     );
     const classPreview = useMemo(
         () =>
-            getClassCreationPreview(
-                selectedClass,
-                selectedRace,
-                selectedGender,
-                selectedAppearance.bodyId,
-            ),
+            selectedClass
+                ? getClassCreationPreview(
+                      selectedClass,
+                      selectedRace,
+                      selectedGender,
+                      selectedAppearance.bodyId,
+                  )
+                : { bodyId: selectedAppearance.bodyId, weaponId: 0, shieldId: 0, helmetId: 0 },
         [selectedAppearance.bodyId, selectedClass, selectedGender, selectedRace],
     );
     const hasRenderableBody = useMemo(() => {
@@ -241,6 +246,10 @@ export default function CreateCharacterView() {
             : getDisplayNameError(trimmedName);
         if (validationError) {
             setError(null);
+            return;
+        }
+        if (!selectedClass) {
+            setError("Elegí una clase para tu personaje.");
             return;
         }
         setCreatingCharacter(true);
@@ -350,7 +359,11 @@ export default function CreateCharacterView() {
                         <ClassSelector
                             options={characterClassOptions}
                             selectedClass={selectedClass}
-                            onSelect={setSelectedClass}
+                            onSelect={(key) => {
+                                setSelectedClass(key);
+                                // El aviso de "elegí una clase" ya no corresponde.
+                                setError(null);
+                            }}
                         />
                         <DerivedStats preview={combatPreview} />
                         <CreationActions

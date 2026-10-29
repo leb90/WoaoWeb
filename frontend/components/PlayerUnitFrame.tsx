@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Shield, Skull } from "lucide-react";
+import { Shield, Skull, Zap } from "lucide-react";
 import type { PlayerHudState, SkillsState } from "../lib/aowProtocol";
 import type { RuntimeTimingConfig } from "../lib/runtime-config";
 import CharacterSpritePreview from "./CharacterSpritePreview";
@@ -11,7 +11,7 @@ import {
     type PlayerStatusEntry,
 } from "./playerStatusEntries";
 
-// El marco del personaje (escritorio), al estilo del de WoW: nivel y nombre, energía, vida y maná, el retrato con el
+// El marco del personaje (escritorio), al estilo del de WoW: nombre y energía, vida y maná, el retrato con el
 // escudo del bando y, debajo, los estados con lo que les falta. Va a la izquierda del chat; toma el ancho de su caja.
 
 type PlayerUnitFrameProps = {
@@ -153,7 +153,6 @@ export default function PlayerUnitFrame({
     const maxMana = hud.maxMana ?? 0;
     const sta = hud.sta ?? 0;
     const maxSta = hud.maxSta ?? 0;
-    const level = hud.level ?? 0;
     const dead = Boolean(hud.dead);
     // Hambre y sed en 0 a la vez: el personaje está perdiendo vida y estamina. La vida se pinta bordó.
     const isStarving = (hud.hambre ?? 100) <= 0 && (hud.sed ?? 100) <= 0;
@@ -207,8 +206,14 @@ export default function PlayerUnitFrame({
                                 <Skull className="h-2.5 w-2.5" /> Muerto
                             </span>
                         ) : null}
-                        <span data-testid="player-frame-level" className="text-[11px] font-bold leading-none tabular-nums text-amber-300 [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]">
-                            {level}
+                        {/* La energía (el nivel ya está en el panel de la derecha, junto al nombre). */}
+                        <span
+                            data-testid="player-frame-energy-value"
+                            title="Energía"
+                            className="flex shrink-0 items-center gap-[2px] text-[10px] font-bold leading-none tabular-nums text-[#f2cf5b] [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]"
+                        >
+                            <Zap className="h-2.5 w-2.5 fill-current" aria-hidden="true" />
+                            {sta}/{maxSta}
                         </span>
                     </div>
                     <div className="space-y-[2px] py-[3px] pl-9 pr-1.5">

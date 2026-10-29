@@ -3504,6 +3504,16 @@ function HomeContent() {
                                     height: `${hudLayout.canvasHeight ?? CANVAS_BASE_HEIGHT}px`,
                                 }}
                             >
+                                {/* El borde del render, como las líneas que separan el chat de su línea para escribir. Va
+                                    encima del canvas para no cambiarle el tamaño al juego. */}
+                                {!isMobile ? (
+                                    <div
+                                        aria-hidden="true"
+                                        data-testid="render-border"
+                                        className="pointer-events-none absolute inset-0 z-[15] border-solid border-[#6f5734]"
+                                        style={{ borderWidth: `${Math.max(1, Math.round(hudScale))}px` }}
+                                    />
+                                ) : null}
                                 {isMobile ? (
                                     <BuffStatusSidebar
                                         hud={hud}

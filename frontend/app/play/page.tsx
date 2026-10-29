@@ -2732,12 +2732,12 @@ function HomeContent() {
     ]);
 
     // Botón "Salir": misma desconexión que /salir (con la espera en zona
-    // insegura), pero al terminar vuelve al home en vez de a personajes.
-    // En arena se respeta el destino propio de ese modo.
+    // insegura) y, al terminar, vuelve a la selección de personajes. En arena
+    // se respeta el destino propio de ese modo.
     const handleLogoutRequest = useCallback(() => {
         exitRequestedRef.current = true;
         if (!arenaMode) {
-            setPendingExitHref("/");
+            setPendingExitHref("/characters");
         }
         sendChatMessage("/salir");
     }, [arenaMode, sendChatMessage]);

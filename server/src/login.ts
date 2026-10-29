@@ -850,10 +850,12 @@ function Login(this: LoginApi) {
                 personaje.maxHit = balance.getMaxHitForLevel(personaje.idClase, personaje.level);
                 const normalizedMaxHp = personaje.maxHp ?? 1;
                 const normalizedMaxMana = personaje.maxMana ?? 0;
-                personaje.hp = personaje.dead
-                    ? 0
-                    : Math.min(Math.max(personaje.hp ?? normalizedMaxHp, 0), normalizedMaxHp);
-                personaje.mana = Math.min(Math.max(personaje.mana ?? normalizedMaxMana, 0), normalizedMaxMana);
+                // La vida y el maná guardados pueden traer el bono del equipo: el recorte definitivo va después de
+                // sumarlo (refreshEquipmentVitals, más abajo). Sin dato, se entra con todo lleno.
+                const persistedHp = personaje.dead ? 0 : Math.max(Number(personaje.hp ?? Infinity), 0);
+                const persistedMana = Math.max(Number(personaje.mana ?? Infinity), 0);
+                personaje.hp = Math.min(persistedHp, normalizedMaxHp);
+                personaje.mana = Math.min(persistedMana, normalizedMaxMana);
                 personaje.maxHambre = 100;
                 personaje.maxSed = 100;
                 personaje.maxSta = balance.getMaxStaForLevel(
@@ -996,6 +998,8 @@ function Login(this: LoginApi) {
 
                 // Vida y maná con el equipo (set de tier y +maná de los ítems), sobre la base guardada.
                 game.refreshEquipmentVitals(personaje, false);
+                personaje.hp = Math.min(persistedHp, Number(personaje.maxHp ?? 0));
+                personaje.mana = Math.min(persistedMana, Number(personaje.maxMana ?? 0));
 
                 personaje.gold = balance.clampGold(personaje.gold || 0);
                 relocateToJailIfNeeded(personaje);

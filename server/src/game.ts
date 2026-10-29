@@ -5140,10 +5140,13 @@ function buildCharacterSnapshotPayload(
         ...(Object.prototype.hasOwnProperty.call(options ?? {}, "connected") ? { connected: options?.connected } : {}),
         attrFuerza: persistedAttrFuerza,
         attrAgilidad: persistedAttrAgilidad,
-        // Se guarda la vida base: el bono del set se recalcula al entrar.
+        // Los máximos se guardan sin el bono del equipo (set de tier, +maná), que se recalcula al entrar. La vida y el
+        // maná actuales se guardan como están, con el bono incluido: recortarlos a la base hacía que al volver a
+        // entrar faltara justo lo que da el equipo.
         maxHp: getBaseMaxHp(user),
         maxMana: getBaseMaxMana(user),
-        hp: Math.min(safeNumber(user.hp), getBaseMaxHp(user)),
+        hp: Math.min(safeNumber(user.hp), safeNumber(user.maxHp)),
+        mana: Math.min(safeNumber(user.mana), safeNumber(user.maxMana)),
         spells: serializeSpells(user.spells),
         items: serializeInventory(getPersistableInventoryRecord(user)),
         bankItems: serializeBank(user.bank ?? {}),

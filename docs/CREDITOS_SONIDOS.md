@@ -2,6 +2,15 @@
 
 Sonidos que no son del Argentum original. Los de clima son todos CC0: no exigen atribución, pero se listan para saber de dónde salió cada uno.
 
+## Meditación (`frontend/public/sounds/meditacion/`)
+
+Viento suave mientras el propio personaje medita: una ráfaga al empezar y después el bucle. Se pasaron a mono, se les sacaron graves y agudos (120 a 2600 Hz) para que suenen suaves, se normalizaron a −26 LUFS (más bajo que el clima) y se guardaron en OGG y MP3; al bucle se le hizo un fundido cruzado de 3 s para que empalme sin clic. Los usa `frontend/lib/meditationSound.ts`.
+
+| Archivo | Uso | Original | Autor | Licencia |
+|---|---|---|---|---|
+| meditacion-viento | Bucle mientras se medita | `wind1.wav` (24 s), https://opengameart.org/content/wind1 | Luke.RUSTLTD | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| meditacion-rafaga | Ráfaga al empezar a meditar | `Wind2.ogg` del paquete "Wind", https://opengameart.org/content/wind | IgnasD | CC0 |
+
 ## Clima (`frontend/public/sounds/clima/`)
 
 Se recortaron, se les hizo un fundido cruzado para que los bucles empalmen sin clic, se normalizaron (−20 LUFS los bucles y −16 los truenos) y se guardaron en OGG y MP3. Los usa `frontend/lib/weatherAmbience.ts`.

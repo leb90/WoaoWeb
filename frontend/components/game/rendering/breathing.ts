@@ -18,6 +18,10 @@ const BREATH_GEAR_LIFT = 0.75;
 // Un cuerpo humano mide 26 × 46; una montura con jinete, 32 × 69, y una barca, 66 × 94.
 const HUMANOID_MAX_BODY_WIDTH = 40;
 const HUMANOID_MAX_BODY_HEIGHT = 56;
+// Al caminar hay uno o dos cuadros quietos entre baldosa y baldosa: la respiración espera un momento y entra de a poco,
+// así el cuerpo no salta respecto de la cabeza en medio de la caminata.
+const BREATH_START_DELAY_MS = 350;
+const BREATH_RAMP_MS = 900;
 
 type BreathingSprite = (Sprite | AnimatedSprite) & {
     breathBaseY?: number;
@@ -25,6 +29,7 @@ type BreathingSprite = (Sprite | AnimatedSprite) & {
     renderMetrics?: BodyRenderMetrics;
 };
 type BreathingHost = Container & {
+    breathStillSince?: number;
     bodySprite?: BreathingSprite;
     headSprite?: Sprite;
     weaponSprite?: BreathingSprite;
@@ -62,7 +67,14 @@ function applyBreathing(host: BreathingHost, entity: Character, now: number) {
     const metrics = body?.renderMetrics;
     if (!body || body.destroyed || !metrics) return;
 
-    const amount = canBreathe(host, entity, metrics) ? getInhale(entity, now) : 0;
+    let amount = 0;
+    if (canBreathe(host, entity, metrics)) {
+        host.breathStillSince ??= now;
+        const ramp = Math.min(1, Math.max(0, (now - host.breathStillSince - BREATH_START_DELAY_MS) / BREATH_RAMP_MS));
+        amount = getInhale(entity, now) * ramp;
+    } else {
+        host.breathStillSince = undefined;
+    }
     if (amount === 0 && !body.breathApplied) return;
 
     const stretch = 1 + amount * BREATH_STRETCH;

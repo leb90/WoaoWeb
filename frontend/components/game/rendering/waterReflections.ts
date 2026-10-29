@@ -29,6 +29,9 @@ type ReflectionRig = {
     copies: Sprite[];
     renderTexture: RenderTexture | null;
     strips: Sprite[];
+    // Las texturas de las tiras, aparte: si el contenedor del personaje se destruye con sus hijos, las tiras quedan
+    // destruidas y sin textura, pero las texturas hay que liberarlas igual.
+    stripTextures: Texture[];
     stripsKey: string;
     waterKey: string;
     water: WaterInfo | null;
@@ -61,7 +64,18 @@ function getRig(engine: EngineWithReflections, host: ReflectionHost): Reflection
     host.addChild(layer);
     const source = new Container();
     source.scale.y = -1;
-    rig = { host, layer, source, copies: [], renderTexture: null, strips: [], stripsKey: "", waterKey: "", water: null };
+    rig = {
+        host,
+        layer,
+        source,
+        copies: [],
+        renderTexture: null,
+        strips: [],
+        stripTextures: [],
+        stripsKey: "",
+        waterKey: "",
+        water: null,
+    };
     host.waterReflection = rig;
     (engine.waterReflectionRigs ??= new Set()).add(rig);
     return rig;
@@ -69,10 +83,11 @@ function getRig(engine: EngineWithReflections, host: ReflectionHost): Reflection
 
 function destroyStrips(rig: ReflectionRig) {
     for (const strip of rig.strips) {
-        strip.texture.destroy(false);
-        strip.destroy();
+        if (!strip.destroyed) strip.destroy();
     }
+    for (const texture of rig.stripTextures) texture.destroy(false);
     rig.strips = [];
+    rig.stripTextures = [];
     rig.stripsKey = "";
 }
 
@@ -191,9 +206,12 @@ function updateCharacterReflection(engine: EngineWithReflections, host: Reflecti
             const stripHeight = Math.min(REFLECTION_STRIP_HEIGHT, drawHeight - dy);
             const frameY = Math.floor((dy / drawHeight) * sourceHeight);
             const frameHeight = Math.max(1, Math.min(sourceHeight - frameY, Math.ceil((stripHeight / drawHeight) * sourceHeight)));
-            const strip = new Sprite(
-                new Texture({ source: renderTexture.source, frame: new Rectangle(0, frameY, sourceWidth, frameHeight) }),
-            );
+            const stripTexture = new Texture({
+                source: renderTexture.source,
+                frame: new Rectangle(0, frameY, sourceWidth, frameHeight),
+            });
+            rig.stripTextures.push(stripTexture);
+            const strip = new Sprite(stripTexture);
             strip.eventMode = "none";
             strip.scale.set(drawWidth / sourceWidth, stripHeight / frameHeight);
             strip.y = surfaceY + dy;

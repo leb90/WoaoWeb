@@ -6,7 +6,7 @@ import { Howl } from "howler";
 // (ver docs/CREDITOS_SONIDOS.md).
 
 const FADE_MS = 1500;
-// La música tiene su propio volumen en Configuración (30% por defecto): el control es directo.
+// La música tiene su propio volumen en Configuración (10% por defecto): el control es directo.
 const MUSIC_LEVEL = 1;
 
 export type DungeonMusicSpec = { pistas: string[]; combate?: string } | null | undefined;

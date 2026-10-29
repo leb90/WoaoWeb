@@ -8,7 +8,7 @@ export type SoundCategory = "musica" | "ambiente" | "efectos" | "pisadas";
 export type SoundVolumes = Record<SoundCategory, number>;
 
 export const DEFAULT_SOUND_VOLUMES: SoundVolumes = {
-    musica: 0.3,
+    musica: 0.1,
     ambiente: 0.5,
     efectos: 1,
     pisadas: 1,

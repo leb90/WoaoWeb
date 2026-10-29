@@ -12,6 +12,8 @@ Gráficos que no son del Argentum original y que se usan en el juego. Los CC-BY 
 | `guantelete-oro.png` | Botones y NPC con los que se habla o comercia | Ídem, contorno `cursor_outline_yellow` | itsmars | CC0 |
 | `guantelete-rojo.png` | Criaturas hostiles y otros jugadores | Ídem, contorno `cursor_outline_red` | itsmars | CC0 |
 | `guantelete-azul.png` | Uno mismo, el grupo y el clan | Ídem, contorno `cursor_outline_blue` | itsmars | CC0 |
+| `cruceta.png` | Apuntar un hechizo o un ataque a distancia | "Cursor Pack", `target_round_b`, https://kenney.nl/assets/cursor-pack, repintado con el acero del guantelete y un punto rojo en el centro | Kenney | CC0 |
+| `prohibido.png` | Botones deshabilitados | Ídem, `disabled`, repintado con el acero del guantelete y la barra en rojo | Kenney | CC0 |
 
 ## Chamán elemental (efectos 147 a 154)
 

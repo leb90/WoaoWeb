@@ -37,7 +37,8 @@ import {
     setTextIfChanged,
 } from "../rendering/textStyles";
 import { Engine } from "../engine/Engine";
-import { updateHoverHighlight } from "../rendering/hoverHighlight";
+import { getHoverRelation, updateHoverHighlight } from "../rendering/hoverHighlight";
+import { cursorForHoverRelation, setElementCursor } from "../../../lib/gameCursors";
 import { updateSpellAreaPreview } from "../rendering/spellAreaPreview";
 import { getSpellDataForTargeting } from "../admin/npcInspector";
 import {
@@ -925,6 +926,16 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                             : null;
                     });
                     const targeting = options.targetingModeRef.current;
+                    // El guantelete cambia de borde según a quién señala; apuntando manda la cruceta
+                    // (useCombatController.updateCanvasCursor).
+                    if (!targeting) {
+                        const hovered =
+                            engine.hoveredEntityId !== null ? engine.personajes[engine.hoveredEntityId] : null;
+                        setElementCursor(
+                            app.canvas,
+                            cursorForHoverRelation(hovered ? getHoverRelation(engine, hovered) : null),
+                        );
+                    }
                     const targetingSpell =
                         targeting?.type === "spell"
                             ? getSpellDataForTargeting(engine, targeting.slot, options.playerHudRef.current?.spells)

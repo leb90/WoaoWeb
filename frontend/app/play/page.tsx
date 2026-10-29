@@ -99,6 +99,7 @@ import {
     VIEWPORT_PIXEL_HEIGHT,
     VIEWPORT_PIXEL_WIDTH,
 } from "../../lib/viewport";
+import { GAME_CURSOR_ROOT_CLASS } from "../../lib/gameCursors";
 
 const DEFAULT_WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:7666";
 const OverviewModal = dynamic(() => import("../../components/OverviewModal"), {
@@ -911,6 +912,14 @@ function HomeContent() {
     // a recuperar. Se marca al pedir /salir (el servidor puede cerrar antes
     // de que se procese su mensaje "Cerrando sesión...").
     const exitRequestedRef = useRef(false);
+
+    // Cursores del juego (lib/gameCursors.ts) mientras se está en esta página.
+    useEffect(() => {
+        const root = document.documentElement;
+        root.classList.add(GAME_CURSOR_ROOT_CLASS);
+        return () => root.classList.remove(GAME_CURSOR_ROOT_CLASS);
+    }, []);
+
     const closeMobileSkills = useCallback(
         () => setIsMobileSkillsOpen(false),
         [],

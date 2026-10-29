@@ -4,6 +4,7 @@ import { ArrowRight, BookOpen } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import WikiBreadcrumbs from "@/components/wiki/WikiBreadcrumbs";
 import WikiCraftingGuide from "@/components/wiki/WikiCraftingGuide";
+import WikiCreditos from "@/components/wiki/WikiCreditos";
 import WikiPersonajesProgresion from "@/components/wiki/WikiPersonajesProgresion";
 import WikiPrimerosPasos from "@/components/wiki/WikiPrimerosPasos";
 import WikiPvpBalance from "@/components/wiki/WikiPvpBalance";
@@ -84,6 +85,7 @@ export default async function WikiSectionPage({ params }: PageProps) {
             ) : null}
             {category.slug === "crafting" ? <WikiCraftingGuide /> : null}
             {category.slug === "pvp" ? <WikiPvpBalance /> : null}
+            {category.slug === "creditos" ? <WikiCreditos /> : null}
 
             {catalogs.length ? (
                 <div className="mt-6 grid gap-3 md:grid-cols-2">
@@ -99,7 +101,11 @@ export default async function WikiSectionPage({ params }: PageProps) {
                 </div>
             ) : null}
 
-            {category.slug === "primeros-pasos" || category.slug === "personajes" || category.slug === "crafting" || category.slug === "pvp" ? null : (
+            {category.slug === "primeros-pasos" ||
+            category.slug === "personajes" ||
+            category.slug === "crafting" ||
+            category.slug === "pvp" ||
+            category.slug === "creditos" ? null : (
             <WikiSection title="Contenido manual" className="mt-6">
                 <div className="flex min-h-44 flex-col items-center justify-center text-center">
                     <BookOpen className="h-8 w-8 text-amber-300/35" />

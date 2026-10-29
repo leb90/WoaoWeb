@@ -112,6 +112,12 @@ export const WIKI_CATEGORIES = [
         links: ["Hunters Game", "Blood Castle", "Guerra de facciones", "Bosses"],
     },
     {
+        slug: "creditos",
+        label: "Créditos",
+        description: "La música de otros autores que suena en el juego, con su licencia.",
+        links: ["Música del mundo", "Inicio", "Mazmorras"],
+    },
+    {
         slug: "enciclopedia",
         label: "Enciclopedia",
         description: "Catálogos enlazados de todo el contenido público.",

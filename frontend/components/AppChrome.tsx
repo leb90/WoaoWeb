@@ -17,6 +17,7 @@ import {
 import { useEffect, useState } from "react";
 import type { AuthErrorResponse, AuthSession } from "@/lib/auth";
 import InstallAppButton from "./InstallAppButton";
+import MenuMusic from "./MenuMusic";
 
 type AppChromeProps = {
     children: React.ReactNode;
@@ -146,6 +147,7 @@ export default function AppChrome({ children }: AppChromeProps) {
                     </nav>
 
                     <div className="flex items-center gap-3">
+                        <MenuMusic pathname={pathname} />
                         <InstallAppButton />
                         {session ? (
                             <>

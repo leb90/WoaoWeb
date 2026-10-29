@@ -543,7 +543,7 @@ export type HandleProtocolApi = {
     characterStatsSnapshot: (snapshot: unknown, client: RuntimeClient) => void;
     skillsState: (payload: { skillPts: number; values: number[] }, client: RuntimeClient) => void;
     environmentUpdate: (
-        payload: { mapId: number; season: number; dayPhase: number; weather: number; temperatureC: number },
+        payload: { mapId: number; season: number; dayPhase: number; weather: number; temperatureC: number; music?: string },
         client: RuntimeClient,
     ) => void;
     partyState: (delta: PartyRuntimeStateDelta, client: RuntimeClient) => void;
@@ -2173,6 +2173,8 @@ const handleServer: HandleProtocolApi = {
         pkg.writeByte(payload.dayPhase);
         pkg.writeByte(payload.weather);
         pkg.writeShort(payload.temperatureC);
+        // La música del mapa (environment.ts, getMusicForMap): va al final para que un cliente viejo la ignore.
+        pkg.writeString(payload.music ?? "");
         socket.send(client);
     },
 

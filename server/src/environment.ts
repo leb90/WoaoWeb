@@ -227,6 +227,48 @@ function getTemperatureC(season: SeasonId, dayPhase: DayPhaseId): number {
     return SEASON_BASE_TEMP_C[season] + DAY_PHASE_TEMP_DELTA_C[dayPhase];
 }
 
+// La música de cada mapa (el cliente la busca en frontend/lib/worldMusic.ts): las ciudades tienen su canción y el
+// resto suena según el tipo de lugar, con dos temas cada uno. Las mazmorras de la serie tienen su propia música
+// (dungeons.json) y el cliente le da prioridad. Torneos, arenas, salas de clan, eventos y mapas de GM: sin música.
+// Las ciudades se reconocen por la música que tenían en el AO original (musicNum del mapa): así también suenan sus
+// afueras, que están marcadas como ciudad (los bosques de Ciudad Caos, el puerto de Banderbill, etc.).
+const CITY_MUSIC_BY_ORIGINAL_MUSIC: Record<number, string> = {
+    4: "ullathorpe",
+    5: "nix",
+    11: "banderbill",
+    12: "banderbill",
+    13: "lindos",
+    16: "lindos",
+    53: "caos",
+    54: "caos",
+};
+
+export function getMusicForMap(mapId: number): string {
+    const data = vars.mapData?.[mapId] ?? {};
+    const zona = String(data.zona ?? "").trim().toUpperCase();
+    const terreno = String(data.terreno ?? "").trim().toUpperCase();
+    const name = String(data.name ?? "").trim().toLowerCase();
+
+    if (zona === "CIUDAD") {
+        const city = CITY_MUSIC_BY_ORIGINAL_MUSIC[Number(data.musicNum ?? 0)];
+        if (city) return `ciudad:${city}`;
+        if (name.includes("mar")) return "mar";
+        if (name.includes("sotano")) return "cueva";
+        return "";
+    }
+
+    if (zona === "BOSQUE TERROR" || name.includes("terror")) return "terror";
+    if (terreno === "NIEVE") return zona === "DUNGEON" ? "cueva" : "nieve";
+    if (zona === "DUNGEON" || zona === "MINA") return "cueva";
+    if (zona === "DESIERTO" || terreno === "DESIERTO") return "desierto";
+    if (zona === "MAR" || zona === "ISLA") return "mar";
+    if (zona === "BOSQUE" || (zona === "CAMPO" && terreno === "BOSQUE") || (!zona && name.startsWith("bosque"))) return "bosque";
+    if (zona === "CAMPO") return "campo";
+    if (zona === "ALDEA") return "aldea";
+    if (zona === "CASTILLO" || zona === "CONQUISTA") return "castillo";
+    return "";
+}
+
 export function getEnvironmentForMap(mapId: number, now: Date = new Date()) {
     const season = getSeason(now);
     const dayPhase = getDayPhase(now);
@@ -238,6 +280,7 @@ export function getEnvironmentForMap(mapId: number, now: Date = new Date()) {
         dayPhase,
         weather: getWeatherForZone(zone),
         temperatureC: getTemperatureC(season, dayPhase),
+        music: getMusicForMap(mapId),
     };
 }
 
@@ -270,6 +313,7 @@ module.exports = {
     DAY_PHASE,
     WEATHER,
     getEnvironmentForMap,
+    getMusicForMap,
     tickEnvironment,
     setWeatherOverride,
     setSeasonOverride,

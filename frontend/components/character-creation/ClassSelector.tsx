@@ -10,7 +10,7 @@ export default function ClassSelector({
     onSelect,
 }: {
     options: CharacterClassOption[];
-    selectedClass: CharacterClassKey;
+    selectedClass: CharacterClassKey | null;
     onSelect: (key: CharacterClassKey) => void;
 }) {
     // Al pasar el mouse (o el foco) por una clase se ve cuál es antes de elegirla: en el título y en un cartel.
@@ -48,6 +48,7 @@ export default function ClassSelector({
             <div className="grid grid-cols-5 gap-1.5 min-[1400px]:grid-cols-6" onMouseLeave={() => setHoveredClass(null)}>
                 {options.map((option) => {
                     const active = option.key === selectedClass;
+                    const showName = option.key === hoveredClass;
                     return (
                         <button
                             key={option.key}
@@ -65,6 +66,19 @@ export default function ClassSelector({
                             }`}
                         >
                             <span aria-hidden="true">{option.icon}</span>
+                            {/* El nombre sale al costado del ícono apenas pasás el mouse: se despliega desde el ícono. */}
+                            <span
+                                aria-hidden="true"
+                                data-class-hover-label={option.key}
+                                data-visible={showName ? "1" : "0"}
+                                className={`pointer-events-none absolute left-full top-1/2 z-20 ml-2 flex origin-left -translate-y-1/2 items-center whitespace-nowrap border border-[#d6a62d] bg-black/95 px-2 py-1 text-[12px] font-semibold tracking-[0.08em] text-[#f3e6b8] shadow-[0_4px_14px_rgba(0,0,0,0.65),0_0_10px_rgba(214,166,45,0.25)] transition-[opacity,scale,translate] duration-200 ease-out ${
+                                    showName ? "scale-100 opacity-100" : "translate-x-[-6px] scale-x-50 opacity-0"
+                                }`}
+                            >
+                                {/* Piquito que apunta al ícono. */}
+                                <span className="absolute -left-[5px] top-1/2 h-2 w-2 -translate-y-1/2 rotate-45 border-b border-l border-[#d6a62d] bg-black" />
+                                {option.label}
+                            </span>
                         </button>
                     );
                 })}

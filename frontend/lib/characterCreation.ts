@@ -349,7 +349,8 @@ export const raceOptions: RaceOption[] = [
         summary: "Los elfos de la noche poseen 3% de evasión extra y 2% de daño extra con arcos.",
         bonus: { fuerza: 2, inteligencia: 1, agilidad: 1, carisma: -1, constitucion: 1 },
         genders: {
-            male: { bodyId: 32, startHeadId: 201, endHeadId: 216 },
+            // La 201 es una cabeza de elfo común (piel clara): el elfo oscuro arranca en la 202.
+            male: { bodyId: 32, startHeadId: 202, endHeadId: 216 },
             female: { bodyId: 40, startHeadId: 270, endHeadId: 277 },
         },
     },

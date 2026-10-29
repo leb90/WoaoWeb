@@ -110,6 +110,8 @@ async function createCharacter(page, name) {
   await page.goto(`${FRONTEND}/createcharacter`, { waitUntil: "domcontentloaded" });
   await page.getByPlaceholder(/Nombre del personaje/i).waitFor({ timeout: 20000 });
   await page.getByPlaceholder(/Nombre del personaje/i).fill(name);
+  // La creación arranca sin clase (el personaje se ve desnudo): hay que elegir una.
+  await page.getByRole("button", { name: "Mago", exact: true }).click();
   await screenshot(page, `create-${name}`);
   await page.getByRole("button", { name: /^CREAR$/i }).click();
   await page.waitForURL(/\/characters/, { timeout: 30000 });

@@ -26,7 +26,23 @@ export function RaceInfoPanel({
     );
 }
 
-export function ClassInfoPanel({ option }: { option: CharacterClassOption }) {
+export function ClassInfoPanel({ option }: { option: CharacterClassOption | null }) {
+    if (!option) {
+        return (
+            <section className={`${panelClass} flex min-h-0 flex-1 flex-col p-3`} aria-label="Clase sin elegir">
+                <header className="mb-2 flex items-center gap-2">
+                    <span className="flex h-11 w-11 items-center justify-center border border-dashed border-[#41351f] bg-black text-xl text-[#6f675c]">
+                        ?
+                    </span>
+                    <h2 className="text-[13px] tracking-[0.16em] text-[#eee5d3]">CLASE: SIN ELEGIR</h2>
+                </header>
+                <p className="text-[13px] leading-relaxed text-[#d7ccb4]">
+                    Elegí la raza y la cara mirando el cuerpo desnudo; después elegí una clase abajo y el personaje se viste con su equipo.
+                </p>
+            </section>
+        );
+    }
+
     return (
         <section className={`${panelClass} flex min-h-0 flex-1 flex-col p-3`} aria-label={`Clase ${option.label}`}>
             <header className="mb-2 flex items-center gap-2">

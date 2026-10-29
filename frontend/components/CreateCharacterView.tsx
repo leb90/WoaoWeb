@@ -345,12 +345,13 @@ export default function CreateCharacterView() {
                             helmetId={classPreview.helmetId}
                             scale={previewScale}
                             heading={heading}
+                            headIds={availableHeadIds}
                             headIndex={selectedHeadIndex}
-                            headCount={availableHeadIds.length}
                             bonus={selectedRaceOption.bonus}
                             canRender={hasRenderableBody}
                             onRotate={rotateHeading}
                             onCycleHead={cycleHead}
+                            onSelectHead={setSelectedHeadIndex}
                         />
                         <div className="flex min-h-0 flex-col gap-2">
                             <RaceInfoPanel race={selectedRaceOption} gender={selectedGender} />

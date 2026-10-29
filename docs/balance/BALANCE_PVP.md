@@ -237,8 +237,8 @@ Requisitos para lanzar (`protocol.ts`): `minNivel` **y** `minSkill` de magia. Co
 - **Vida:** `CON + promedio * (nivel - 1)`. El promedio por nivel es `(vidaMin + vidaMax) / 2 + (CON - 21) * 0,5`.
   - Humano a nivel 50: Mago 388, Druida y Clérigo 412, Bardo y Asesino 437, Paladín y Cazador 486, Guerrero 535.
   - Coincide casi exacto con AoDrag Oficial a nivel 50 (Mago 398, Guerrero 562 con CON 21).
-- **Maná:** `INT * manaInicial + multMana * INT * (nivel - 1)`. Mago humano a nivel 50: 2487, que alcanza para **2** Llamas de Dragón de 1000.
-- **Atributos:** `18 + bono de raza`. Al entrar se recalculan (`login.ts`).
+- **Maná:** `INT * manaInicial + multMana * INT * (nivel - 1)`. Mago humano a nivel 50: 2764, que alcanza para **2** Llamas de Dragón de 1000.
+- **Atributos:** `18 + bono de raza` (razas espejadas por arquetipo, ver [RAZAS.md](RAZAS.md)). Al entrar se recalculan (`login.ts`); si la constitución cambió, la vida guardada se corre con la diferencia del promedio.
 - **Skills:**
   - 10 al crear y +5 por nivel (255 a nivel 50); además suben con el uso.
   - Tope por nivel (`skills.getLevelSkillCap`): 155 a nivel 30, 195 a nivel 38 y 200 desde el 39.
@@ -309,7 +309,7 @@ Ningún set de tier da resistencia ni defensa mágica. Ladrón y Bandido no tien
 |---|---|
 | Humano y Tauros | +5 % de resistencia mágica |
 | Gnomo | +10 % de evasión |
-| Drow | +3 % de evasión |
+| Elfo Oscuro (Drow) | +5 % de evasión y +5 % de daño con arco |
 | Enano | ×1,5 de daño físico con menos de 33 % de vida |
 | Licántropo | Crítico de +20 % (10-15 % de probabilidad) |
 | Orco | 10 % de ignorar un hechizo |
@@ -325,6 +325,7 @@ El simulador usa Humano en todos los cruces.
 - **Balance** (modificadores de clase, vida por nivel, atributos de raza):
   - El server lo hidrata al arrancar desde la api (`gameDataSync.initializeBalanceFromApi`), con el perfil de la tabla `game_balance`, y **ese perfil pisa los valores por defecto de `balanceData.ts`**.
   - La api solo siembra `game_balance` desde `api/src/jsons/balance.json` **cuando la tabla está vacía** (`api/src/repositories/gameBalance.ts` → `ensureSeededInternal`).
+  - Para llevar un cambio puntual a producción sin correr `import-game-data`, se agrega una migración de datos en `api/src/dataMigrations.ts`: corre una sola vez al arrancar la api (`migrate`) y queda anotada en la tabla `data_migrations`. Así llegaron las razas espejadas.
   - En la base local el perfil es de mayo y **no coincide** con el código. Por ejemplo:
 
 | Valor | Base local | Código |

@@ -102,7 +102,7 @@ const gameBalanceSchema = z.object({
 
 let seedPromise: Promise<void> | null = null;
 
-function loadSeedBalanceJson(): GameBalanceRecordData {
+export function loadSeedBalanceJson(): GameBalanceRecordData {
     return normalizeGameBalanceData(
         JSON.parse(
             fs.readFileSync(BALANCE_SEED_JSON_PATH, "utf8"),

@@ -78,6 +78,15 @@ const getMaxHpForLevel = (classId: number, constitucion: number, level: number):
     return Math.round(total);
 };
 
+// Si cambia la constitución de un personaje que ya tiene sus tiradas de vida (por ejemplo, porque cambió la tabla
+// de razas), su vida máxima se corre lo mismo que se corre el promedio, sin volver a tirar los niveles.
+const getHpShiftForConstitutionChange = (
+    classId: number,
+    previousConstitucion: number,
+    nextConstitucion: number,
+    level: number,
+): number => getMaxHpForLevel(classId, nextConstitucion, level) - getMaxHpForLevel(classId, previousConstitucion, level);
+
 const getMinHpForLevel = (classId: number, constitucion: number, level: number): number => {
     const safeLevel = clampLevel(level);
     return Math.round(constitucion + getHpGainRange(classId, constitucion).min * (safeLevel - 1));
@@ -158,6 +167,7 @@ module.exports = {
     getHpAveragePerLevel,
     rollHpGain,
     getMaxHpForLevel,
+    getHpShiftForConstitutionChange,
     getMinHpForLevel,
     getMaxRolledHpForLevel,
     getHpAverageDelta,

@@ -51,7 +51,7 @@ export function getRacialEvasionMultiplier(user: Combatant | null | undefined): 
     const id = raceId(user);
     let multiplier = 1;
     if (id === WOAO_RACE.elfoDrow) {
-        multiplier += 0.03;
+        multiplier += 0.05;
     }
     if (id === WOAO_RACE.gnomo) {
         multiplier += 0.1;
@@ -88,7 +88,7 @@ export function modifyOutgoingPhysicalDamage(
     }
 
     if (id === WOAO_RACE.elfoDrow && kind === "ranged") {
-        next = Math.floor(next * 1.02);
+        next = Math.floor(next * 1.05);
     }
 
     if (id === WOAO_RACE.licantropo) {

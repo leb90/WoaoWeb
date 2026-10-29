@@ -707,6 +707,12 @@ CREATE TABLE IF NOT EXISTS game_balance (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Cambios de datos aplicados una sola vez al arrancar la api (src/dataMigrations.ts).
+CREATE TABLE IF NOT EXISTS data_migrations (
+    id TEXT PRIMARY KEY,
+    applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS game_data_revisions (
     id BIGSERIAL PRIMARY KEY,
     kind TEXT NOT NULL,

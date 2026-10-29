@@ -3,84 +3,84 @@
         "1": {
             "fuerza": 1,
             "agilidad": 1,
-            "inteligencia": 0,
+            "inteligencia": 2,
             "constitucion": 2,
             "carisma": 0
         },
         "2": {
             "fuerza": 0,
             "agilidad": 2,
-            "inteligencia": 2,
+            "inteligencia": 3,
             "constitucion": 1,
-            "carisma": 1
+            "carisma": 0
         },
         "3": {
-            "fuerza": 2,
-            "agilidad": 1,
+            "fuerza": 1,
+            "agilidad": 2,
             "inteligencia": 1,
             "constitucion": 1,
-            "carisma": -1
+            "carisma": 0
         },
         "4": {
-            "fuerza": 3,
-            "agilidad": 0,
-            "inteligencia": -3,
-            "constitucion": 3,
-            "carisma": -1
+            "fuerza": 2,
+            "agilidad": 1,
+            "inteligencia": 0,
+            "constitucion": 2,
+            "carisma": 0
         },
         "5": {
-            "fuerza": -2,
-            "agilidad": 3,
+            "fuerza": -1,
+            "agilidad": 1,
             "inteligencia": 4,
-            "constitucion": 0,
-            "carisma": 2
+            "constitucion": 2,
+            "carisma": 0
         },
         "6": {
-            "fuerza": 3,
-            "agilidad": 0,
-            "inteligencia": -2,
-            "constitucion": 3,
+            "fuerza": 2,
+            "agilidad": 1,
+            "inteligencia": 0,
+            "constitucion": 2,
             "carisma": 0
         },
         "7": {
-            "fuerza": -1,
-            "agilidad": 3,
-            "inteligencia": 2,
+            "fuerza": 0,
+            "agilidad": 2,
+            "inteligencia": 3,
             "constitucion": 1,
-            "carisma": 2
+            "carisma": 0
         },
         "8": {
-            "fuerza": 3,
-            "agilidad": 1,
-            "inteligencia": 0,
+            "fuerza": 2,
+            "agilidad": 2,
+            "inteligencia": -1,
             "constitucion": 1,
             "carisma": 0
         },
         "9": {
-            "fuerza": -2,
-            "agilidad": 3,
+            "fuerza": -1,
+            "agilidad": 1,
             "inteligencia": 4,
-            "constitucion": 0,
-            "carisma": 0
-        },
-        "10": {
-            "fuerza": 2,
-            "agilidad": 3,
-            "inteligencia": -1,
             "constitucion": 2,
             "carisma": 0
         },
+        "10": {
+            "fuerza": 1,
+            "agilidad": 2,
+            "inteligencia": 1,
+            "constitucion": 1,
+            "carisma": 0
+        },
         "11": {
-            "fuerza": 3,
-            "agilidad": 1,
-            "inteligencia": 0,
+            "fuerza": 2,
+            "agilidad": 2,
+            "inteligencia": -1,
             "constitucion": 1,
             "carisma": 0
         },
         "12": {
-            "fuerza": 2,
+            "fuerza": 1,
             "agilidad": 1,
-            "inteligencia": 1,
+            "inteligencia": 2,
             "constitucion": 2,
             "carisma": 0
         }

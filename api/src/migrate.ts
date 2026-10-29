@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import pool from "./db";
+import { runDataMigrations } from "./dataMigrations";
 
 async function migrate(): Promise<void> {
     const schemaPath = path.resolve(__dirname, "..", "schema.sql");
@@ -18,6 +19,7 @@ async function migrate(): Promise<void> {
       WHERE status = 'active'
   `);
     console.log("Database schema applied successfully");
+    await runDataMigrations();
 }
 
 void migrate()

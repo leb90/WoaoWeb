@@ -102,3 +102,40 @@ Atribución que piden las licencias CC-BY:
 - "Mirage", "Mystery Bazaar", "Hidden Wonders" e "Ibn Al-Noor", de Kevin MacLeod (incompetech.com), con licencia Creative Commons: By Attribution 4.0 (http://creativecommons.org/licenses/by/4.0/), convertidos, nivelados y con los silencios de las puntas recortados.
 - "Temple of the Manes", "Vulcan", "Shamanistic" y "Grim Idol", de Kevin MacLeod (incompetech.com), con licencia Creative Commons: By Attribution 4.0 (http://creativecommons.org/licenses/by/4.0/), recortados, normalizados y recodificados a MP3 (a "Shamanistic" también se le limitaron los picos).
 - "Water Prelude", "Floating Cities", "Immersed" y "Eternal Terminal", de Kevin MacLeod (incompetech.com), con licencia Creative Commons: By Attribution 4.0 (http://creativecommons.org/licenses/by/4.0/), recortados, normalizados y recodificados a MP3 ("Water Prelude" se cortó en 4:37 con un fundido de salida, porque el original termina de golpe, y a "Immersed" se le limitaron los picos).
+
+## Música del mundo y del menú (`frontend/public/music/mundo/` y `frontend/public/music/menu/`)
+
+Cada ciudad tiene su canción y cada tipo de lugar dos temas que se turnan con un silencio de 30 a 75 s entre uno y otro, como en Skyrim (`lib/worldMusic.ts`). El server decide qué música le toca a cada mapa (`server/src/environment.ts`, `getMusicForMap`). Se pasaron a MP3 de 96 kbps, se igualaron a −18 LUFS y se recortaron los silencios de las puntas. Ninguno tiene letra. Los créditos también se ven en la wiki (Créditos), porque las licencias CC BY lo piden.
+
+| Archivo | Uso | Original | Autor | Licencia |
+|---|---|---|---|---|
+| `mundo/ciudades/ullathorpe.mp3` | Ullathorpe | "Townsong", https://www.free-stock-music.com/alexander-nakarada-townsong.html | Alexander Nakarada (CreatorChords) | CC BY 4.0 |
+| `mundo/ciudades/nix.mp3` | Nix | "Tam Lin", https://www.free-stock-music.com/alexander-nakarada-tam-lin.html | Alexander Nakarada (CreatorChords) | CC BY 4.0 |
+| `mundo/ciudades/banderbill.mp3` | Banderbill | "Medieval Chateau", https://www.free-stock-music.com/alexander-nakarada-medieval-chateau.html | Alexander Nakarada (CreatorChords) | CC BY 4.0 |
+| `mundo/ciudades/lindos.mp3` | Lindos | "The Streets of Prague", https://www.free-stock-music.com/alexander-nakarada-the-streets-of-prague.html | Alexander Nakarada (CreatorChords) | CC BY 4.0 |
+| `mundo/ciudades/caos.mp3` | Ciudad Caos | "Balefire", https://www.scottbuckley.com.au/library/balefire/ | Scott Buckley | CC BY 4.0 |
+| `mundo/bosque/1.mp3` | Bosques | "Woods of Imagination", https://www.free-stock-music.com/alexander-nakarada-woods-of-imagination.html | Alexander Nakarada (CreatorChords) | CC BY 4.0 |
+| `mundo/bosque/2.mp3` | Bosques | "Spirits of the Greenwood", https://www.free-stock-music.com/alexander-nakarada-spirits-of-the-greenwood.html | Alexander Nakarada (CreatorChords) | CC BY 4.0 |
+| `mundo/campo/1.mp3` | Campos | "Tranquil Fields (Peaceful)", https://www.free-stock-music.com/alexander-nakarada-tranquil-fields-peaceful.html | Alexander Nakarada (CreatorChords) | CC BY 4.0 |
+| `mundo/campo/2.mp3` | Campos | "Pathfinder", https://www.free-stock-music.com/alexander-nakarada-pathfinder.html | Alexander Nakarada (CreatorChords) | CC BY 4.0 |
+| `mundo/mar/1.mp3` | Mar e islas | "The Great Sea", https://www.scottbuckley.com.au/library/the-great-sea/ | Scott Buckley | CC BY 4.0 |
+| `mundo/mar/2.mp3` | Mar e islas | "Seven Seas", https://www.free-stock-music.com/alexander-nakarada-seven-seas.html | Alexander Nakarada (CreatorChords) | CC BY 4.0 |
+| `mundo/desierto/1.mp3` | Desierto | "The Desert (The Grand Score)", https://www.free-stock-music.com/alexander-nakarada-the-desert.html | Alexander Nakarada (CreatorChords) | CC BY 4.0 |
+| `mundo/desierto/2.mp3` | Desierto | "Tranquil Fields (Eastern)", https://www.free-stock-music.com/alexander-nakarada-tranquil-fields-eastern.html | Alexander Nakarada (CreatorChords) | CC BY 4.0 |
+| `mundo/nieve/1.mp3` | Nieve | "Traversing the White Peaks", https://www.free-stock-music.com/alexander-nakarada-traversing-the-white-peaks.html | Alexander Nakarada (CreatorChords) | CC BY 4.0 |
+| `mundo/nieve/2.mp3` | Nieve | "Frost", https://www.free-stock-music.com/alexander-nakarada-frost.html | Alexander Nakarada (CreatorChords) | CC BY 4.0 |
+| `mundo/terror/1.mp3` | Bosque del terror | "Headless Horseman", https://www.free-stock-music.com/alexander-nakarada-headless-horseman.html | Alexander Nakarada (CreatorChords) | CC BY 4.0 |
+| `mundo/terror/2.mp3` | Bosque del terror | "Dark Hollows", https://www.free-stock-music.com/alexander-nakarada-dark-hollows.html | Alexander Nakarada (CreatorChords) | CC BY 4.0 |
+| `mundo/cueva/1.mp3` | Cuevas y minas | "Mysterious Adventure", https://www.free-stock-music.com/alexander-nakarada-mysterious-adventure.html | Alexander Nakarada (CreatorChords) | CC BY 4.0 |
+| `mundo/cueva/2.mp3` | Cuevas y minas | "Odin’s Blessing", https://www.free-stock-music.com/alexander-nakarada-odins-blessing.html | Alexander Nakarada (CreatorChords) | CC BY 4.0 |
+| `mundo/castillo/1.mp3` | Castillos y fortalezas | "Song of the Forge", https://www.scottbuckley.com.au/library/song-of-the-forge/ | Scott Buckley | CC BY 4.0 |
+| `mundo/castillo/2.mp3` | Castillos y fortalezas | "Might & Magic", https://www.free-stock-music.com/alexander-nakarada-might-magic.html | Alexander Nakarada (CreatorChords) | CC BY 4.0 |
+| `mundo/aldea/1.mp3` | Aldeas | "Village Ambiance", https://www.free-stock-music.com/alexander-nakarada-village-ambiance.html | Alexander Nakarada (CreatorChords) | CC BY 4.0 |
+| `mundo/aldea/2.mp3` | Aldeas | "Farm", https://www.free-stock-music.com/alexander-nakarada-farm.html | Alexander Nakarada (CreatorChords) | CC BY 4.0 |
+| `menu/inicio.mp3` | Inicio, cuenta y personajes | "Shoulders of Giants", https://www.scottbuckley.com.au/library/shoulders-of-giants/ | Scott Buckley | CC BY 4.0 |
+| `menu/creacion.mp3` | Creación de personaje | "Shop Theme (Buy Something)", https://opengameart.org/content/shop-theme | CleytonKauffman | CC0 |
+
+Atribución que piden las licencias CC BY:
+- Los temas de Alexander Nakarada (CreatorChords, https://creatorchords.com), publicados en https://www.free-stock-music.com con licencia Creative Commons Attribution 4.0 International (https://creativecommons.org/licenses/by/4.0/), convertidos, nivelados y con los silencios de las puntas recortados.
+- "Balefire", "The Great Sea", "Song of the Forge" y "Shoulders of Giants", de Scott Buckley, released under CC-BY 4.0, www.scottbuckley.com.au; convertidos, nivelados y con los silencios de las puntas recortados.
+- "Shop Theme", de CleytonKauffman, es CC0 (no pide atribución).

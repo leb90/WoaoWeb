@@ -234,6 +234,8 @@ export type EnvironmentState = {
     dayPhase: number;
     weather: number;
     temperatureC: number;
+    // La música del mapa (server/src/environment.ts, getMusicForMap; ver lib/worldMusic.ts). "" = sin música.
+    music?: string;
 };
 
 export const SERVER_PACKET_ID = {
@@ -2768,10 +2770,11 @@ function parseServerPacketById(
             const dayPhase = reader.getByte();
             const weather = reader.getByte();
             const temperatureC = reader.getShort();
+            const music = reader.canReadBytes(2) ? reader.getString() : "";
 
             return {
                 type: "environmentUpdate",
-                payload: { mapId, season, dayPhase, weather, temperatureC },
+                payload: { mapId, season, dayPhase, weather, temperatureC, music },
             };
         }
 

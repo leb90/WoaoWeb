@@ -86,6 +86,7 @@ import DungeonOverlay, { DungeonMinimapFog } from "./DungeonOverlay";
 import { DungeonBar, DungeonMusicPlayer } from "./DungeonBackpack";
 import SkillsModal from "./SkillsModal";
 import PanelStatusReadout from "./PanelStatusReadout";
+import WorldMusicPlayer from "./WorldMusicPlayer";
 import type { SkillsState } from "../lib/aowProtocol";
 import { DAY_PHASE, SEASON, WEATHER, type EnvironmentState } from "../lib/aowProtocol";
 import {
@@ -4952,6 +4953,11 @@ export default function InventoryFloatingPanel({
                   )
                 : null}
             <DungeonMusicPlayer inside={hud?.dungeonState?.enMazmorra} volume={soundVolumes.musica} />
+            {/* Afuera de las mazmorras de la serie, la música del lugar (ciudad o tipo de lugar). */}
+            <WorldMusicPlayer
+                musicKey={hud?.dungeonState?.enMazmorra ? null : environment?.music}
+                volume={soundVolumes.musica}
+            />
 
             {isShopOpen && typeof document !== "undefined"
                 ? createPortal(

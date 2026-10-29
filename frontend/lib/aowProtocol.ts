@@ -100,6 +100,7 @@ export const CLIENT_PACKET_ID = {
     dungeonState: 100,
     dungeonMotion: 101,
     dungeonBoss: 102,
+    afflictionState: 103,
 } as const;
 
 export const CHARACTER_SWING_WEAPON = 1;
@@ -471,6 +472,8 @@ export type ShopProductPayload = {
 
 // Desangrado de la apuñalada (server/src/game.ts, startBleeding): ms que quedan, 0 = terminó.
 export type BleedStatePayload = { remainingMs: number };
+// Veneno (daño por golpe, 0 = sano), ceguera y estupidez (ms que faltan) del propio personaje.
+export type AfflictionStatePayload = { venenoDmg: number; cegueraMs: number; estupidezMs: number };
 // Hechizo de área: centro de la cruz, forma (aoe), efecto y sonido.
 // Mazmorras (server/src/dungeons.ts): panel de la piedra de invocación (cuando se la toca), invocación pendiente
 // del líder y la mazmorra en la que está el jugador.
@@ -1006,6 +1009,10 @@ export interface PlayerHudState {
     dungeonState?: DungeonStatePayload;
     // Hasta cuándo dura el desangrado (Date.now() del cliente; 0 o ausente = no sangra).
     bleedUntil?: number;
+    // Hasta cuándo dura la parálisis o la inmovilización, según el server (Date.now() del cliente; 0 = sin dato).
+    crowdControlUntil?: number;
+    // Veneno, ceguera y estupidez (paquete afflictionState), con los vencimientos en Date.now() del cliente.
+    afflictions?: { venenoDmg: number; cegueraUntil: number; estupidezUntil: number };
     // Efectos del chamán sobre el propio personaje (escudos, evasión, silencios, lentitud, quemadura).
     elemental?: ElementalEntityState;
     castleState?: CastleStatePayload;
@@ -1594,6 +1601,7 @@ export type ParsedServerPacket =
     | { type: "shopState"; payload: ShopStatePayload }
     | { type: "aggroState"; payload: AggroStatePayload }
     | { type: "bleedState"; payload: BleedStatePayload }
+    | { type: "afflictionState"; payload: AfflictionStatePayload }
     | { type: "elementalState"; payload: ElementalStatePayload }
     | { type: "areaSpellFx"; payload: AreaSpellFxPayload }
     | { type: "dungeonState"; payload: DungeonStatePayload }
@@ -2827,6 +2835,19 @@ function parseServerPacketById(
                 return {
                     type: "bleedState",
                     payload: JSON.parse(rawPayload) as BleedStatePayload,
+                };
+            } catch {
+                return { type: "unknown", payload: { packetId } };
+            }
+        }
+
+        case CLIENT_PACKET_ID.afflictionState: {
+            const rawPayload = reader.getString();
+
+            try {
+                return {
+                    type: "afflictionState",
+                    payload: JSON.parse(rawPayload) as AfflictionStatePayload,
                 };
             } catch {
                 return { type: "unknown", payload: { packetId } };

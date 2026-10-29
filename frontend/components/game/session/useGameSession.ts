@@ -255,7 +255,8 @@ export function useGameSession({
             );
             recentPingSamplesRef.current = nextPing.samples;
             pingDisplayTextRef.current = nextPing.text;
-            onPingSampleRef.current?.(sampleMs);
+            // El ping suavizado, el mismo que se muestra (el panel de la derecha lo lee de acá).
+            onPingSampleRef.current?.(nextPing.value);
 
             if (pingTextRef.current) {
                 setTextIfChanged(

@@ -198,6 +198,12 @@ export function useHudStateController({
                       ...(hud.bleedUntil === undefined && previousHud?.bleedUntil
                           ? { bleedUntil: previousHud.bleedUntil }
                           : {}),
+                      ...(hud.crowdControlUntil === undefined && previousHud?.crowdControlUntil
+                          ? { crowdControlUntil: previousHud.crowdControlUntil }
+                          : {}),
+                      ...(!hud.afflictions && previousHud?.afflictions
+                          ? { afflictions: previousHud.afflictions }
+                          : {}),
                       ...(!hud.elemental && previousHud?.elemental
                           ? { elemental: previousHud.elemental }
                           : {}),

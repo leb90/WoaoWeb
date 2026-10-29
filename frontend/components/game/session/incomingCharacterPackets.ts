@@ -709,6 +709,10 @@ export async function handleIncomingCharacterPacket({
                 pos: { x: packet.payload.x, y: packet.payload.y },
                 inmovilizado,
                 paralizado,
+                crowdControlUntil:
+                    (inmovilizado || paralizado) && Number(remainingMs ?? 0) > 0
+                        ? Date.now() + Number(remainingMs)
+                        : 0,
             });
             return true;
         }

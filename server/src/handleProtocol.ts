@@ -480,6 +480,7 @@ export type HandleProtocolApi = {
     aggroState: (payload: unknown, client: RuntimeClient) => void;
     bleedState: (remainingMs: number, client: RuntimeClient) => void;
     afflictionState: (payload: AfflictionStatePayload, client: RuntimeClient) => void;
+    targetState: (payload: Record<string, unknown> | null, client: RuntimeClient) => void;
     elementalState: (payload: Record<string, unknown>, client: RuntimeClient) => void;
     areaSpellFx: (payload: Record<string, unknown>, client: RuntimeClient) => void;
     dungeonState: (payload: Record<string, unknown>, client: RuntimeClient) => void;
@@ -1617,6 +1618,13 @@ const handleServer: HandleProtocolApi = {
     // Veneno, ceguera y estupidez del propio personaje, para los íconos de estado del HUD.
     afflictionState(payload, client) {
         pkg.setPackageID(pkg.clientPacketID.afflictionState);
+        pkg.writeString(JSON.stringify(payload));
+        socket.send(client);
+    },
+
+    // El objetivo del marco del HUD (lo último que clickeó el jugador); null lo borra.
+    targetState(payload, client) {
+        pkg.setPackageID(pkg.clientPacketID.targetState);
         pkg.writeString(JSON.stringify(payload));
         socket.send(client);
     },

@@ -16,6 +16,7 @@ import { MapRenderer } from "../../components/game";
 import AdminIntervalsModal from "../../components/AdminIntervalsModal";
 import BuffStatusSidebar from "../../components/BuffStatusSidebar";
 import PlayerUnitFrame from "../../components/PlayerUnitFrame";
+import TargetUnitFrame from "../../components/TargetUnitFrame";
 import { publishPerformanceSample } from "../../lib/performanceReadout";
 import InvisibilityCornerTimer from "../../components/InvisibilityCornerTimer";
 import BleedBanner from "../../components/BleedBanner";
@@ -1829,6 +1830,8 @@ function HomeContent() {
     // 768px y antes activaba por error la barra de consola/HUD de escritorio
     // al mismo tiempo que el HUD táctil, generando íconos duplicados.
     const isDesktopConsoleLayout = !isMobile && viewport.width > 768;
+    // Algo te persigue: debajo del marco del personaje va el aggro en lugar del objetivo.
+    const hasAggro = (hud?.aggroState?.npcs?.length ?? 0) > 0;
 
     // En mobile el canvas tiene que llenar toda la pantalla sin bordes -
     // nada de padding fijo pensado para el shell de escritorio.
@@ -3409,7 +3412,12 @@ function HomeContent() {
                                                     className="w-full"
                                                     interactive
                                                 >
-                                                    <AggroStrip aggro={hud?.aggroState} />
+                                                    {/* Si algo te persigue, ese lugar es del aggro; si no, de lo último que clickeaste. */}
+                                                    {hasAggro ? (
+                                                        <AggroStrip aggro={hud?.aggroState} />
+                                                    ) : (
+                                                        <TargetUnitFrame target={hud?.targetState} />
+                                                    )}
                                                 </PlayerUnitFrame>
                                             </div>
                                         </div>
@@ -3504,6 +3512,16 @@ function HomeContent() {
                                     height: `${hudLayout.canvasHeight ?? CANVAS_BASE_HEIGHT}px`,
                                 }}
                             >
+                                {/* El borde del render, como las líneas que separan el chat de su línea para escribir. Va
+                                    encima del canvas para no cambiarle el tamaño al juego. */}
+                                {!isMobile ? (
+                                    <div
+                                        aria-hidden="true"
+                                        data-testid="render-border"
+                                        className="pointer-events-none absolute inset-0 z-[15] border-solid border-[#6f5734]"
+                                        style={{ borderWidth: `${Math.max(1, Math.round(hudScale))}px` }}
+                                    />
+                                ) : null}
                                 {isMobile ? (
                                     <BuffStatusSidebar
                                         hud={hud}
@@ -3765,7 +3783,11 @@ function HomeContent() {
                                         className="absolute left-2 top-2"
                                         style={{ width: CHARACTER_DOCK_WIDTH }}
                                     >
-                                        <AggroPanel aggro={hud?.aggroState} />
+                                        {hasAggro ? (
+                                            <AggroPanel aggro={hud?.aggroState} />
+                                        ) : (
+                                            <TargetUnitFrame target={hud?.targetState} />
+                                        )}
                                     </PlayerUnitFrame>
                                 ) : null}
 

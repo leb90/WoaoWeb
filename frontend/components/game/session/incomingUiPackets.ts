@@ -253,6 +253,10 @@ export async function handleIncomingUiPacket({
             return true;
         }
 
+        case "targetState":
+            ctx.mergeHud({ targetState: packet.payload ?? null });
+            return true;
+
         case "afflictionState": {
             const now = Date.now();
             const until = (ms: number | undefined) => (Number(ms ?? 0) > 0 ? now + Number(ms) : 0);

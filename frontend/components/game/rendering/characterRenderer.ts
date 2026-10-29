@@ -48,6 +48,7 @@ import { getRowZIndex, Z_INDEX_LAYERS } from "./mapLayers";
 import { getMapRowLayerContainer } from "./rowLayerContainers";
 import { syncEquipmentAura } from "./equipmentAuras";
 import { getWarpedBodyTextures, resolveWarpRaceBodyId, setLayoutBodyData } from "./armorWarp";
+import { rememberBreathBase } from "./breathing";
 
 export function shouldRenderHead(
     engine: Engine,
@@ -1316,6 +1317,7 @@ export async function renderRemoteCharacter(
         );
         weaponSprite.x = Math.round(weaponPosition.x);
         weaponSprite.y = Math.round(weaponPosition.y);
+        rememberBreathBase(weaponSprite);
         weaponSprite.zIndex = getEquipmentLayerZIndex(entity.heading).weapon;
         weaponSprite.visible = !hideBody;
     } else {
@@ -1342,6 +1344,7 @@ export async function renderRemoteCharacter(
         );
         shieldSprite.x = Math.round(shieldPosition.x);
         shieldSprite.y = Math.round(shieldPosition.y);
+        rememberBreathBase(shieldSprite);
         shieldSprite.zIndex = getEquipmentLayerZIndex(entity.heading).shield;
         shieldSprite.visible = !hideBody;
     } else {
@@ -1875,6 +1878,7 @@ export async function renderLocalPlayer(
         );
         weaponSprite.x = Math.round(weaponPosition.x);
         weaponSprite.y = Math.round(weaponPosition.y);
+        rememberBreathBase(weaponSprite);
         weaponSprite.zIndex = getEquipmentLayerZIndex(engine.user.heading).weapon;
     } else {
         removeStoredCharacterChild(
@@ -1900,6 +1904,7 @@ export async function renderLocalPlayer(
         );
         shieldSprite.x = Math.round(shieldPosition.x);
         shieldSprite.y = Math.round(shieldPosition.y);
+        rememberBreathBase(shieldSprite);
         shieldSprite.zIndex = getEquipmentLayerZIndex(engine.user.heading).shield;
     } else {
         removeStoredCharacterChild(

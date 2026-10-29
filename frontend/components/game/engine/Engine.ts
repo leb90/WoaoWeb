@@ -114,6 +114,8 @@ import {
 } from "../rendering/rowLayerContainers";
 import { destroyWeatherFx, updateWeatherFx } from "../rendering/weatherFx";
 import { updateEquipmentAuras } from "../rendering/equipmentAuras";
+import { updateBreathing } from "../rendering/breathing";
+import { updateWaterReflections } from "../rendering/waterReflections";
 import { getLayoutBodyData } from "../rendering/armorWarp";
 
 const TREE_FADE_ALPHA = 0.25;
@@ -1062,6 +1064,14 @@ export class Engine {
         const layer2 = tile?.graphics?.["2"];
 
         return Boolean(layer1 && this.isWaterGraphic(layer1) && !layer2);
+    }
+
+    // Para los reflejos (rendering/waterReflections.ts) alcanza con el agua de la capa 1, aunque la orilla tenga
+    // dibujo en la capa 2, como en _React-Argentum.
+    isWaterSurfaceTile(tX: number, tY: number): boolean {
+        if (!this.mapData) return false;
+        const layer1 = this.getWalkTileData(tX, tY)?.graphics?.["1"];
+        return Boolean(layer1 && this.isWaterGraphic(layer1));
     }
 
     // Get timestamp (like engine.js timestamp)
@@ -2430,6 +2440,11 @@ export class Engine {
                     shouldAnimateBody,
                 );
 
+                // La cabeza y los rótulos salen de las medidas guardadas del cuerpo: el sprite puede estar estirado por la
+                // respiración (rendering/breathing.ts).
+                const bodyMetrics =
+                    ((bodySprite as any).renderMetrics as BodyRenderMetrics | undefined) ?? bodySprite;
+
                 if (bodySprite.currentFrame !== previousBodyFrame) {
                     debugBodyAnimation("remoteFrame", {
                         id: entity.id,
@@ -2445,7 +2460,7 @@ export class Engine {
 
                 if (bodyData && headSprite) {
                     const headPosition = getHeadSpritePosition(
-                        bodySprite,
+                        bodyMetrics,
                         bodyData,
                         headSprite.texture,
                     );
@@ -2454,7 +2469,7 @@ export class Engine {
                 }
 
                 if (nameLabel) {
-                    const labelPosition = getNameLabelPosition(bodySprite);
+                    const labelPosition = getNameLabelPosition(bodyMetrics);
                     const nextNameLabelText = getCharacterNameLabel(entity);
                     const nextNameLabelVisible = !shouldHideRemoteCharacterName(
                         entity,
@@ -2470,7 +2485,7 @@ export class Engine {
                 }
 
                 if (clanLabel) {
-                    const labelPosition = getNameLabelPosition(bodySprite);
+                    const labelPosition = getNameLabelPosition(bodyMetrics);
                     const nextClanLabelText =
                         getCharacterClanLabel(entity) ?? "";
                     const nextClanLabelStyle = createCharacterClanTextStyle(
@@ -2500,7 +2515,7 @@ export class Engine {
 
                 if (debugPositionLabel) {
                     const labelPosition =
-                        getDebugPositionLabelPosition(bodySprite);
+                        getDebugPositionLabelPosition(bodyMetrics);
                     debugPositionLabel.x = Math.round(labelPosition.x);
                     debugPositionLabel.y = Math.round(labelPosition.y);
                     setVisibilityIfChanged(
@@ -2521,7 +2536,7 @@ export class Engine {
                         Date.now(),
                     );
                     const crowdControlPosition =
-                        getCharacterCrowdControlBarLayout(bodySprite, {
+                        getCharacterCrowdControlBarLayout(bodyMetrics, {
                             isNpc: Boolean(entity.isNpc),
                             showNameplate: !entity.isNpc ? true : undefined,
                             showClanLabel: !entity.isNpc
@@ -2574,6 +2589,10 @@ export class Engine {
         this.updateTreeTransparency();
         updateWeatherFx(this, this.delta);
         updateEquipmentAuras(this);
+        // Respiración y reflejos: después de mover y animar a todos, y antes del contorno del hover, que copia la escala.
+        const idleNow = this.timestamp();
+        updateBreathing(this, idleNow);
+        updateWaterReflections(this, idleNow);
     };
 
     updateCulling(): void {

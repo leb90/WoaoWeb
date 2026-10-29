@@ -373,6 +373,10 @@ export type RuntimeCharacter = {
     lastHungerDrainAt?: number;
     lastStaRegenAt?: number;
     lastHpRegenAt?: number;
+    // Frío sin vestimenta (game.ts, tickSurvivalVitals): 0 nada, 1 frío (hambre y sed bajan más rápido), 2 bajo cero
+    // (pierde vida). Va en el paquete afflictionState para el ícono del HUD.
+    coldExposure?: 0 | 1 | 2;
+    lastFreezingDamageAt?: number;
     starvationPenaltyApplied?: boolean;
     starvationPenaltyAmount?: number;
     protec?: number;

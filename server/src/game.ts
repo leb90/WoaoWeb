@@ -82,6 +82,7 @@ const crafting = require("./crafting");
 const smelting = require("./smelting");
 const mapInstanceManager = require("./mapInstanceManager");
 const balance = require("./balance");
+const environment = require("./environment") as { getTemperatureForMap: (mapId: number) => number };
 const { isWaterGraphic } = require("./waterTiles");
 const workProfessions = require("./workProfessions");
 const skills = require("./skills");
@@ -93,7 +94,15 @@ type AllyShieldKind = import("./elementalEffects").AllyShieldKind;
 
 const SURVIVAL_HAMBRE_MAX = Number(balance.MAX_HAMBRE ?? 100);
 const SURVIVAL_SED_MAX = Number(balance.MAX_SED ?? 100);
-const HUNGER_DRAIN_INTERVAL_MS = 8000;
+// Hambre y sed bajan 1 punto cada 16 s. Sin vestimenta y con frío (menos de 15 °C) bajan cada 6,5 s, y bajo cero
+// (0 °C o menos) además se pierde un 5% de la vida máxima cada 5 s. El frío nunca mata: deja como mínimo 1 de vida,
+// igual que el hambre. La temperatura es la del mapa (environment.ts, la misma del HUD).
+const HUNGER_DRAIN_INTERVAL_MS = 16000;
+const HUNGER_DRAIN_COLD_INTERVAL_MS = 6500;
+const COLD_TEMPERATURE_C = 15;
+const FREEZING_TEMPERATURE_C = 0;
+const FREEZING_DAMAGE_INTERVAL_MS = 5000;
+const FREEZING_DAMAGE_PERCENT = 0.05;
 const STA_REGEN_INTERVAL_MS = 2000;
 /**
  * Regeneración pasiva de vida (legacy Sanar / SanaIntervaloSinDescansar).
@@ -106,6 +115,20 @@ const HP_REGEN_INTERVAL_MS = 16000;
 // un daño por tiempo: 100/100 -> 90/100 y se queda ahí), y se devuelve ese mismo
 // % apenas comas o bebas algo. Nunca puede matar por sí sola.
 const STARVATION_HP_PENALTY_PERCENT = 0.1;
+
+// Cuánto frío siente: 0 nada, 1 frío (menos de 15 °C), 2 bajo cero. Solo sin vestimenta; los muertos y los GM no.
+function getColdExposure(user: { dead?: unknown; privileges?: unknown; idItemBody?: unknown; map?: unknown }): 0 | 1 | 2 {
+    const hasBodyItem = String(user.idItemBody ?? 0) !== "0" && String(user.idItemBody ?? "") !== "";
+    if (user.dead || Number(user.privileges ?? 0) > 0 || hasBodyItem || !Number(user.map ?? 0)) {
+        return 0;
+    }
+
+    const temperatureC = environment.getTemperatureForMap(Number(user.map));
+    if (temperatureC <= FREEZING_TEMPERATURE_C) {
+        return 2;
+    }
+    return temperatureC < COLD_TEMPERATURE_C ? 1 : 0;
+}
 
 function clampVital(value: number, max: number) {
     return Math.max(0, Math.min(max, Math.floor(Number(value) || 0)));
@@ -478,6 +501,8 @@ type GameCharacter = RuntimeCharacter & {
     maxSed?: number;
     lastHungerDrainAt?: number;
     lastStaRegenAt?: number;
+    coldExposure?: 0 | 1 | 2;
+    lastFreezingDamageAt?: number;
     protec?: number;
     cooldownProtec?: number;
     morphBody?: number;
@@ -13271,9 +13296,24 @@ function Game(this: GameApi) {
         ensureSurvivalVitals(record);
         let changed = false;
 
+        const previousColdExposure = user.coldExposure ?? 0;
+        user.coldExposure = getColdExposure(user);
+        if (client && user.coldExposure > previousColdExposure) {
+            handleProtocol.console(
+                user.coldExposure === 2
+                    ? "Hace bajo cero y estás sin vestimenta: vas a perder vida por el frío hasta que te pongas algo."
+                    : "Hace frío y estás sin vestimenta: el hambre y la sed bajan más rápido.",
+                "#9ED8FF",
+                0,
+                0,
+                client,
+            );
+        }
+
         if (!user.dead) {
+            const hungerInterval = user.coldExposure > 0 ? HUNGER_DRAIN_COLD_INTERVAL_MS : HUNGER_DRAIN_INTERVAL_MS;
             const lastHunger = Number(user.lastHungerDrainAt ?? 0);
-            if (now - lastHunger >= HUNGER_DRAIN_INTERVAL_MS) {
+            if (now - lastHunger >= hungerInterval) {
                 user.lastHungerDrainAt = now;
                 const nextHambre = Math.max(0, Number(user.hambre ?? 0) - 1);
                 const nextSed = Math.max(0, Number(user.sed ?? 0) - 1);
@@ -13282,6 +13322,36 @@ function Game(this: GameApi) {
                     user.sed = nextSed;
                     changed = true;
                 }
+            }
+
+            if (user.coldExposure === 2) {
+                const lastFreezing = Number(user.lastFreezingDamageAt ?? 0);
+                // El primer golpe llega después de un intervalo entero: da tiempo a vestirse al entrar en la nieve.
+                if (lastFreezing <= 0) {
+                    user.lastFreezingDamageAt = now;
+                } else if (now - lastFreezing >= FREEZING_DAMAGE_INTERVAL_MS) {
+                    user.lastFreezingDamageAt = now;
+                    const currentHp = Number(user.hp ?? 0);
+                    const damage = Math.max(1, Math.floor(Number(user.maxHp ?? 0) * FREEZING_DAMAGE_PERCENT));
+                    const nextHp = Math.max(1, currentHp - damage);
+                    if (nextHp !== currentHp) {
+                        user.hp = nextHp;
+                        changed = true;
+                    }
+                    if (client) {
+                        handleProtocol.console(
+                            nextHp < currentHp
+                                ? `Te estás congelando: perdés ${currentHp - nextHp} de vida por el frío. Ponete una vestimenta.`
+                                : "Te estás congelando. Ponete una vestimenta.",
+                            "#9ED8FF",
+                            0,
+                            0,
+                            client,
+                        );
+                    }
+                }
+            } else {
+                user.lastFreezingDamageAt = 0;
             }
 
             // Estamina: requiere hambre Y sed en 0 a la vez.

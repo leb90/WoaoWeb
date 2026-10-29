@@ -1,8 +1,9 @@
 export {};
 
 // Sistema de clima / estación / día-noche.
-// - Estación y hora del día son GLOBALES y salen del reloj real del server
-//   (hemisferio sur, ver getSeason/getDayPhase).
+// - Estación y hora del día son GLOBALES y salen del reloj real, en la hora de
+//   Argentina (hemisferio sur, ver getSeason/getDayPhase), como en el server
+//   viejo: el VPS corre en UTC y sin esto la noche llegaba 3 horas antes.
 // - El clima (lluvia/tormenta/nieve/niebla) es POR REGIÓN: se agrupa por el
 //   campo `zona` que ya traen los mapas (server/src/loadMaps.ts), así que
 //   mapas del mismo bioma comparten clima en vez de tener 300 climas sueltos.
@@ -98,8 +99,44 @@ const WEATHER_CHANGE_CHANCE = 0.05;
 // zona -> clima actual de esa región.
 const regionWeather = new Map<string, WeatherId>();
 
+const ARGENTINA_TIMEZONE = "America/Argentina/Buenos_Aires";
+const argentinaClock = new Intl.DateTimeFormat("en-US", {
+    timeZone: ARGENTINA_TIMEZONE,
+    hour12: false,
+    month: "numeric",
+    hour: "numeric",
+});
+
+// Mes (0-11) y hora (0-23) en Argentina.
+function getArgentinaClock(date: Date): { month: number; hour: number } {
+    const parts = argentinaClock.formatToParts(date);
+    const value = (type: string) => Number(parts.find((part) => part.type === type)?.value ?? NaN);
+    const month = value("month") - 1;
+    // Algunos motores devuelven "24" para la medianoche.
+    const hour = value("hour") % 24;
+
+    if (!Number.isFinite(month) || !Number.isFinite(hour)) {
+        // Argentina es UTC-3 sin horario de verano.
+        const shifted = new Date(date.getTime() - 3 * 60 * 60 * 1000);
+        return { month: shifted.getUTCMonth(), hour: shifted.getUTCHours() };
+    }
+
+    return { month, hour };
+}
+
+// Lo que fija un GM con /clima, /estacion y /momento (null = automático).
+const overrides: { season: SeasonId | null; dayPhase: DayPhaseId | null; weather: WeatherId | null } = {
+    season: null,
+    dayPhase: null,
+    weather: null,
+};
+
 function getSeason(date: Date): SeasonId {
-    const month = date.getMonth();
+    if (overrides.season !== null) {
+        return overrides.season;
+    }
+
+    const { month } = getArgentinaClock(date);
 
     if (month === 11 || month === 0 || month === 1) {
         return SEASON.verano;
@@ -117,7 +154,11 @@ function getSeason(date: Date): SeasonId {
 }
 
 function getDayPhase(date: Date): DayPhaseId {
-    const hour = date.getHours();
+    if (overrides.dayPhase !== null) {
+        return overrides.dayPhase;
+    }
+
+    const { hour } = getArgentinaClock(date);
 
     if (hour >= 6 && hour < 12) {
         return DAY_PHASE.manana;
@@ -175,6 +216,10 @@ function getWeatherForZone(zone: string): WeatherId {
         return WEATHER.despejado;
     }
 
+    if (overrides.weather !== null) {
+        return overrides.weather;
+    }
+
     return regionWeather.get(zone) ?? WEATHER.despejado;
 }
 
@@ -202,10 +247,32 @@ export function tickEnvironment(now: Date = new Date()): void {
     tickRegionWeather(getSeason(now));
 }
 
+export function setWeatherOverride(weather: WeatherId | null): void {
+    overrides.weather = weather;
+}
+
+export function setSeasonOverride(season: SeasonId | null): void {
+    overrides.season = season;
+}
+
+export function setDayPhaseOverride(dayPhase: DayPhaseId | null): void {
+    overrides.dayPhase = dayPhase;
+}
+
+export function resetOverrides(): void {
+    overrides.weather = null;
+    overrides.season = null;
+    overrides.dayPhase = null;
+}
+
 module.exports = {
     SEASON,
     DAY_PHASE,
     WEATHER,
     getEnvironmentForMap,
     tickEnvironment,
+    setWeatherOverride,
+    setSeasonOverride,
+    setDayPhaseOverride,
+    resetOverrides,
 };

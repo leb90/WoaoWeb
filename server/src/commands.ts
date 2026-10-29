@@ -2270,6 +2270,47 @@ const command: CommandApi = {
                     break;
                 }
 
+                // Clima, estación y momento del día fijados por un GM, como en el server viejo (_Argentum). Llegan a
+                // los jugadores en el próximo chequeo de estados (server.ts, sendEnvironmentUpdates).
+                case "/clima":
+                case "/estacion":
+                case "/momento":
+                case "/climauto": {
+                    if (!hasAdminPrivileges(user)) {
+                        break;
+                    }
+
+                    const environment = require("./environment");
+                    const value = nextText.trim().toLocaleLowerCase("es-AR").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    const reply = (message: string) =>
+                        handleProtocol.console(`[INFO] ${message}`, "#E69500", 0, 0, ws as CommandClient);
+
+                    if (commandText === "/climauto") {
+                        environment.resetOverrides();
+                        reply("Clima, estación y momento del día vuelven a automático.");
+                        break;
+                    }
+
+                    const options: Record<string, Record<string, number>> = {
+                        "/clima": environment.WEATHER,
+                        "/estacion": environment.SEASON,
+                        "/momento": environment.DAY_PHASE,
+                    };
+                    const choices = options[commandText];
+                    const picked = Object.prototype.hasOwnProperty.call(choices, value) ? choices[value] : undefined;
+
+                    if (picked === undefined) {
+                        reply(`Uso: ${commandText} ${Object.keys(choices).join("|")} (o /climauto para volver a automático).`);
+                        break;
+                    }
+
+                    if (commandText === "/clima") environment.setWeatherOverride(picked);
+                    if (commandText === "/estacion") environment.setSeasonOverride(picked);
+                    if (commandText === "/momento") environment.setDayPhaseOverride(picked);
+                    reply(`${commandText.slice(1)} fijado en ${value}. /climauto lo vuelve a automático.`);
+                    break;
+                }
+
                 // Para probar en local (las pruebas en vivo de las mazmorras): vida y maná al máximo.
                 case "/devcurar": {
                     if (process.env.NODE_ENV === "production" || user.dead) {

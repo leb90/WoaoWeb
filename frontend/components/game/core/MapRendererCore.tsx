@@ -45,6 +45,7 @@ import {
 } from "../../../lib/runtime-config";
 import type { StoredMacro } from "../../../lib/character-settings";
 import { GameSoundManager, type SoundPosition } from "../../../lib/sound";
+import { DEFAULT_SOUND_VOLUMES, type SoundVolumes } from "../../../lib/soundVolumes";
 import { DebugCombatOverlay } from "../overlays/DebugCombatOverlay";
 import { LoadingOverlay } from "../overlays/LoadingOverlay";
 import { NpcContextMenu } from "../overlays/NpcContextMenu";
@@ -225,7 +226,8 @@ interface MapRendererProps {
     runtimeTiming?: RuntimeTimingConfig;
     hotkeySettings?: HotkeySettings;
     macros?: Array<StoredMacro | null>;
-    soundVolume?: number;
+    // Volúmenes por tipo de sonido (lib/soundVolumes.ts); la música la maneja el panel (DungeonMusicPlayer).
+    soundVolumes?: SoundVolumes;
     onMapChange?: (mapNumber: number) => void;
     onStatusChange?: (status: RendererStatus) => void;
     onHudChange?: (hud: PlayerHudState | null) => void;
@@ -690,7 +692,7 @@ export default function MapRenderer({
     runtimeTiming = DEFAULT_RUNTIME_TIMING,
     hotkeySettings = DEFAULT_HOTKEY_SETTINGS,
     macros = [],
-    soundVolume = 1,
+    soundVolumes = DEFAULT_SOUND_VOLUMES,
     onMapChange,
     onStatusChange,
     onHudChange,
@@ -775,7 +777,7 @@ export default function MapRenderer({
     const movementKeyPriorityRef = useRef<number[]>([]);
     const soundManagerRef = useRef<GameSoundManager | null>(null);
     const weatherAmbienceRef = useRef<WeatherAmbience | null>(null);
-    const soundVolumeRef = useRef(soundVolume);
+    const ambienceVolumeRef = useRef(soundVolumes.ambiente);
     const stepVariantRef = useRef<Map<number, 0 | 1>>(new Map());
     const lastStepSoundAtRef = useRef<Map<number, number>>(new Map());
     const runtimeTimingRef = useRef<RuntimeTimingConfig>(runtimeTiming);
@@ -843,10 +845,13 @@ export default function MapRenderer({
             soundManagerRef.current = new GameSoundManager();
         }
 
-        soundManagerRef.current?.setMasterVolume(soundVolume);
-        soundVolumeRef.current = soundVolume;
-        weatherAmbienceRef.current?.setMasterVolume(soundVolume);
-    }, [soundVolume]);
+        soundManagerRef.current?.setCategoryVolumes({
+            efectos: soundVolumes.efectos,
+            pisadas: soundVolumes.pisadas,
+        });
+        ambienceVolumeRef.current = soundVolumes.ambiente;
+        weatherAmbienceRef.current?.setMasterVolume(soundVolumes.ambiente);
+    }, [soundVolumes.ambiente, soundVolumes.efectos, soundVolumes.pisadas]);
 
     // Sonido del clima: sigue al clima del mapa y al techo (bajo techo suena apagado), y un trueno por relámpago.
     useEffect(() => {
@@ -855,7 +860,7 @@ export default function MapRenderer({
         }
         const ambience = new WeatherAmbience();
         weatherAmbienceRef.current = ambience;
-        ambience.setMasterVolume(soundVolumeRef.current);
+        ambience.setMasterVolume(ambienceVolumeRef.current);
         let lastEngine: Engine | null = null;
         const sync = () => {
             const engine = engineRef.current;
@@ -966,6 +971,7 @@ export default function MapRenderer({
 
             soundManagerRef.current?.play({
                 soundId: resolveStepSoundId(engine, character, nextVariant),
+                category: "pisadas",
                 listener: resolveEntitySoundPosition(engine, engine.user?.id),
                 source: resolveEntitySoundPosition(engine, entityId),
                 fadeInMs: 8,

@@ -2,6 +2,17 @@
 
 Gráficos que no son del Argentum original y que se usan en el juego. Los CC-BY exigen nombrar al autor y la licencia; los CC0 no, pero se listan igual para saber de dónde salió cada cosa.
 
+## Cursores del juego
+
+`frontend/public/cursors/`, aplicados en `frontend/lib/gameCursors.ts` y `frontend/app/globals.css`. El guantelete brillante es la base; las variantes con borde se armaron pintando sobre él el contorno de las variantes oscuras del mismo pack.
+
+| Archivo | Uso en el juego | Original | Autor | Licencia |
+|---|---|---|---|---|
+| `guantelete.png` | Cursor normal | "Gauntlet Cursor", `cursor_shiny`, https://opengameart.org/content/gauntlet-cursor (basado en "Pointers: part 5" de yd) | itsmars | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `guantelete-oro.png` | Botones y NPC con los que se habla o comercia | Ídem, contorno `cursor_outline_yellow` | itsmars | CC0 |
+| `guantelete-rojo.png` | Criaturas hostiles y otros jugadores | Ídem, contorno `cursor_outline_red` | itsmars | CC0 |
+| `guantelete-azul.png` | Uno mismo, el grupo y el clan | Ídem, contorno `cursor_outline_blue` | itsmars | CC0 |
+
 ## Chamán elemental (efectos 147 a 154)
 
 Los efectos se recortaron, se escalaron al tamaño del personaje y se juntaron en planillas nuevas (`frontend/public/graphics/320247.png` a `320253.png`). Ver [docs/CHAMAN_ELEMENTAL.md](CHAMAN_ELEMENTAL.md).

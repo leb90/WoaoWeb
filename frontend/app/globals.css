@@ -54,6 +54,34 @@ body {
     background: #02030a;
 }
 
+/* Cursores del juego (lib/gameCursors.ts): el guantelete de itsmars (CC0) con borde de color según a quién señala.
+   La cruceta (apuntar) es la del sistema hasta sumar la del Magic Crystal. */
+:root {
+    --cursor-juego: url("/cursors/guantelete.png") 2 2, default;
+    --cursor-juego-clic: url("/cursors/guantelete-oro.png") 2 2, pointer;
+    --cursor-juego-enemigo: url("/cursors/guantelete-rojo.png") 2 2, default;
+    --cursor-juego-amigo: url("/cursors/guantelete-azul.png") 2 2, default;
+    --cursor-juego-apuntar: crosshair;
+}
+
+html.game-cursor,
+html.game-cursor body {
+    cursor: var(--cursor-juego);
+}
+
+html.game-cursor
+    :is(a[href], button:not(:disabled), [role="button"]:not([aria-disabled="true"]), summary, select, .cursor-pointer) {
+    cursor: var(--cursor-juego-clic);
+}
+
+html.game-cursor
+    :is(
+        input:not([type="checkbox"], [type="radio"], [type="range"], [type="button"], [type="submit"], [type="color"]),
+        textarea
+    ) {
+    cursor: text;
+}
+
 html.game-targeting,
 html.game-targeting body,
 html.game-targeting body *,
@@ -62,7 +90,7 @@ html.game-targeting body *:active,
 html.game-targeting body *:focus,
 html.game-targeting body *::before,
 html.game-targeting body *::after {
-    cursor: crosshair !important;
+    cursor: var(--cursor-juego-apuntar) !important;
 }
 
 /* Full screen optimization for mobile */

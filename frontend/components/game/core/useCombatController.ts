@@ -4,6 +4,7 @@ import {
     type InventoryItem,
 } from "../../../lib/aowProtocol";
 import { sendClientSignal } from "../../../lib/clientDiagnostics";
+import { setElementCursor, type GameCursor } from "../../../lib/gameCursors";
 import {
     findVisibleEntityAtExactTile,
     getSpellDataForTargeting,
@@ -497,15 +498,11 @@ export function useCombatController(options: UseCombatControllerOptions) {
     const updateCanvasCursor = useCallback(() => {
         const canvas = engineRef.current?.app?.canvas;
         const isTargeting = Boolean(targetingModeRef.current);
-        const cursor = isTargeting ? "crosshair" : "default";
+        const cursor: GameCursor = isTargeting ? "apuntar" : "normal";
 
-        if (canvas) {
-            // eslint-disable-next-line react-hooks/immutability
-            canvas.style.cursor = cursor;
-        }
-
-        document.body.style.cursor = cursor;
-        document.documentElement.style.cursor = cursor;
+        setElementCursor(canvas, cursor);
+        setElementCursor(document.body, cursor);
+        setElementCursor(document.documentElement, cursor);
         document.documentElement.classList.toggle(
             "game-targeting",
             isTargeting,

@@ -275,6 +275,9 @@ export default function CharacterSpritePreview({
     const hostRef = useRef<HTMLDivElement | null>(null);
     const appRef = useRef<Application | null>(null);
     const [isAppReady, setIsAppReady] = useState(false);
+    // Sube con cada lienzo nuevo (al cambiar el tamaño se crea otro). Si el false y el true de isAppReady caen en la
+    // misma tanda, el estado no cambia y el dibujo no se repetía: el personaje quedaba en blanco.
+    const [appGeneration, setAppGeneration] = useState(0);
     const [graphicsDB, setGraphicsDB] = useState<GraphicsDB | null>(null);
     const [bodiesDB, setBodiesDB] = useState<BodiesDB | null>(null);
     const [headsDB, setHeadsDB] = useState<HeadsDB | null>(null);
@@ -352,6 +355,7 @@ export default function CharacterSpritePreview({
             app.stage.sortableChildren = true;
             appRef.current = app;
             setIsAppReady(true);
+            setAppGeneration((generation) => generation + 1);
         })();
 
         return () => {
@@ -661,6 +665,7 @@ export default function CharacterSpritePreview({
             disposableTextures.forEach((texture) => texture.destroy());
         };
     }, [
+        appGeneration,
         bodyId,
         bodiesDB,
         graphicsDB,

@@ -476,7 +476,6 @@ export type BleedStatePayload = { remainingMs: number };
 // Veneno (daño por golpe, 0 = sano), ceguera y estupidez (ms que faltan) del propio personaje.
 export type AfflictionStatePayload = { venenoDmg: number; cegueraMs: number; estupidezMs: number };
 // Lo último que clickeó el jugador, para el marco del objetivo (server/src/protocol.ts, buildTargetFramePayload).
-// De los usuarios no viene la vida: el clic nunca la mostró.
 export type TargetStatePayload =
     | {
           kind: "npc";
@@ -506,6 +505,10 @@ export type TargetStatePayload =
           rankedColor: string;
           newbie: boolean;
           dead: boolean;
+          hp: number;
+          maxHp: number;
+          mana: number;
+          maxMana: number;
           body: number;
           head: number;
       };

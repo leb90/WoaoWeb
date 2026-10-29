@@ -8,8 +8,8 @@ import UnitFrameShell, { Bar, HeadPortrait, PortraitBadge, StandingBadge } from 
 
 // El marco del objetivo (escritorio), del mismo tamaño que el del personaje: lo último que clickeaste. Va debajo del
 // marco del personaje cuando nada te persigue (si hay aggro, ese lugar es de la grilla de criaturas).
-// De una criatura: su vida y si es agresiva, neutral o amistosa. De un usuario: lo mismo que dice el clic en la
-// consola (clase, bando, rango y liga); su vida no, porque el clic nunca la mostró.
+// De una criatura: su vida y si es agresiva, neutral o amistosa. De un usuario: su vida y su maná, el bando con su
+// rango, la clase y la liga de ranked.
 
 const NPC_DISPOSITION = {
     agresivo: { label: "Agresivo", name: "text-red-300", tag: "text-red-400", icon: Swords },
@@ -108,6 +108,9 @@ function UserTarget({ target }: { target: Extract<TargetStatePayload, { kind: "u
             badge={<StandingBadge color={target.color} testId="target-frame-standing" />}
             band={
                 <>
+                    <span data-testid="target-frame-level" title="Nivel" className="shrink-0 text-[11px] font-bold leading-none tabular-nums text-amber-300 [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]">
+                        {target.level}
+                    </span>
                     <span
                         data-testid="target-frame-name"
                         className="min-w-0 flex-1 truncate text-[11px] font-semibold leading-none [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]"
@@ -115,26 +118,56 @@ function UserTarget({ target }: { target: Extract<TargetStatePayload, { kind: "u
                     >
                         {target.name}
                     </span>
+                    {/* El bando y su rango (o que está muerto), a la derecha de la banda. */}
                     {target.dead ? (
                         <span className="flex shrink-0 items-center gap-0.5 text-[8px] font-bold uppercase tracking-[0.08em] text-stone-300">
                             <Skull className="h-2.5 w-2.5" /> Muerto
                         </span>
-                    ) : null}
-                    <span data-testid="target-frame-level" title="Nivel" className="shrink-0 text-[11px] font-bold leading-none tabular-nums text-amber-300 [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]">
-                        {target.level}
-                    </span>
+                    ) : (
+                        <span
+                            data-testid="target-frame-standing-line"
+                            className="max-w-[62%] shrink-0 truncate text-[8.5px] font-bold leading-none [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]"
+                            style={{ color: target.color || "#d7c4a4" }}
+                        >
+                            {standingLine}
+                        </span>
+                    )}
                 </>
             }
+            bodyClassName="space-y-[2px] py-[2px]"
         >
-            <div className="flex min-w-0 items-baseline gap-1 text-[10px] font-semibold leading-[12px] text-[#f4ead6]">
+            <Bar
+                testId="target-frame-hp"
+                title={`Vida: ${target.hp}/${target.maxHp}`}
+                value={target.hp}
+                max={target.maxHp}
+                fromColor="#951212"
+                toColor="#f06b34"
+                heightClass="h-[13px]"
+                showText
+                textClass="text-[10px]"
+            />
+            {target.maxMana > 0 ? (
+                <Bar
+                    testId="target-frame-mana"
+                    title={`Maná: ${target.mana}/${target.maxMana}`}
+                    value={target.mana}
+                    max={target.maxMana}
+                    fromColor="#0e436f"
+                    toColor="#2fb8ed"
+                    heightClass="h-[9px]"
+                    showText
+                    textClass="text-[8px]"
+                />
+            ) : (
+                <div data-testid="target-frame-mana" className="flex h-[9px] items-center text-[8px] font-semibold leading-none text-stone-500">
+                    Sin maná
+                </div>
+            )}
+            <div className="flex h-[8px] min-w-0 items-center gap-1 text-[8px] font-semibold leading-none text-[#e6d8bd]">
                 <span className="shrink-0">{target.className}</span>
-                {target.newbie ? <span className="shrink-0 text-[8px] font-bold uppercase text-emerald-300">Newbie</span> : null}
-                {target.clan ? <span className="min-w-0 truncate text-[9px] text-[#cbb18e]">{target.clan}</span> : null}
-            </div>
-            <div className="flex min-w-0 items-baseline gap-1 text-[9px] font-semibold leading-[11px]">
-                <span data-testid="target-frame-standing-line" className="min-w-0 truncate" style={{ color: target.color || "#d7c4a4" }}>
-                    {standingLine}
-                </span>
+                {target.newbie ? <span className="shrink-0 font-bold uppercase text-emerald-300">Newbie</span> : null}
+                {target.clan ? <span className="min-w-0 truncate text-[#cbb18e]">{target.clan}</span> : null}
                 <span className="ml-auto shrink-0 font-bold" style={{ color: target.rankedColor }}>
                     &lt;{target.rankedLabel}&gt;
                 </span>

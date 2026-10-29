@@ -133,6 +133,7 @@ export default function UnitFrameShell({
     badge,
     dead = false,
     band,
+    bodyClassName = "space-y-[2px] py-[3px]",
     children,
 }: {
     testId: string;
@@ -141,6 +142,8 @@ export default function UnitFrameShell({
     dead?: boolean;
     // Lo que va en la banda del nombre (a la derecha del retrato).
     band: React.ReactNode;
+    // El espaciado de la zona de las barras (el alto no cambia).
+    bodyClassName?: string;
     // La zona de las barras: tiene alto fijo, así los dos marcos miden lo mismo.
     children: React.ReactNode;
 }) {
@@ -163,7 +166,7 @@ export default function UnitFrameShell({
                 <div className="flex h-[16px] items-center gap-1 border-b border-[#8b6b3e]/70 bg-[linear-gradient(180deg,#4d3419_0%,#2a1b10_100%)] pl-9 pr-1.5">
                     {band}
                 </div>
-                <div className="h-[38px] space-y-[2px] py-[3px] pl-9 pr-1.5">{children}</div>
+                <div className={`h-[38px] pl-9 pr-1.5 ${bodyClassName}`}>{children}</div>
             </div>
         </div>
     );

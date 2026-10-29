@@ -1118,8 +1118,8 @@ export type ProtocolApi = {
 const protocol = {} as ProtocolApi;
 
 // Marco del objetivo (HUD de escritorio): lo último que el jugador clickeó, una criatura o un usuario, con lo mismo
-// que dice el clic en la consola (de los usuarios no se muestra la vida, como hasta ahora). Se refresca en el chequeo
-// de estados y se borra si el objetivo muere, se va de la vista o deja de verse.
+// que dice el clic en la consola, más la vida y el maná del usuario (pedido de Leandro, como el marco de WoW). Se
+// refresca en el chequeo de estados y se borra si el objetivo muere, se va de la vista o deja de verse.
 const TARGET_FRAME_RANGE_X = 14;
 const TARGET_FRAME_RANGE_Y = 10;
 
@@ -1214,6 +1214,10 @@ function buildTargetFramePayload(viewer: RuntimeCharacter): Record<string, unkno
         rankedColor: RANKED_CONSOLE_COLORS[rank.tier] ?? RANKED_CONSOLE_COLORS.BRONCE,
         newbie: game.isNewbieCharacter(target),
         dead: Boolean(target.dead),
+        hp: Number(target.hp ?? 0),
+        maxHp: Number(target.maxHp ?? 0),
+        mana: Number(target.mana ?? 0),
+        maxMana: Number(target.maxMana ?? 0),
         body: Number(target.idBody ?? 0),
         head: Number(target.idHead ?? 0),
     };

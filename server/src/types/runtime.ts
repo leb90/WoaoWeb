@@ -361,6 +361,9 @@ export type RuntimeCharacter = {
     cooldownEstupidez?: number;
     // Último estado de veneno/ceguera/estupidez mandado al cliente (server.ts, sendAfflictionStateIfChanged).
     afflictionStateSent?: string;
+    // Lo último que clickeó (criatura o usuario) para el marco del objetivo, y lo último que se le mandó (protocol.ts).
+    targetFrame?: { kind: "npc" | "user"; id: EntityId };
+    targetFrameSent?: string;
     sta?: number;
     maxSta?: number;
     hambre?: number;

@@ -52,16 +52,19 @@ function SpriteFrame({ frame, left, top, scale }: { frame: GraphicData; left: nu
 }
 
 // Ícono de la criatura: cuerpo mirando al frente y, si tiene, la cabeza encima (como en el mapa).
-function CreatureIcon({
+export function CreatureIcon({
     body,
     head,
     dbs,
     size = ICON_SIZE,
+    boxClassName = "rounded border border-rose-300/25 bg-black/45",
 }: {
     body: number;
     head: number;
     dbs: Databases | null;
     size?: number;
+    // El marco del ícono; el retrato del marco del objetivo lo usa sin borde, adentro del círculo.
+    boxClassName?: string;
 }) {
     const bodyData = dbs?.bodies[String(body)];
     const bodyFrame = dbs && bodyData ? firstFrame(dbs.graphics, Number(bodyData[SOUTH])) : null;
@@ -69,7 +72,7 @@ function CreatureIcon({
     const headFrame = dbs && headData ? firstFrame(dbs.graphics, Number(headData[SOUTH])) : null;
 
     if (!bodyFrame) {
-        return <div className="shrink-0 rounded border border-rose-300/20 bg-black/40" style={{ width: size, height: size }} />;
+        return <div className={`shrink-0 ${boxClassName}`} style={{ width: size, height: size }} />;
     }
 
     // Caja virtual: el cuerpo apoyado abajo y la cabeza con el offset del cuerpo.
@@ -83,7 +86,7 @@ function CreatureIcon({
 
     return (
         <div
-            className="relative shrink-0 overflow-hidden rounded border border-rose-300/25 bg-black/45"
+            className={`relative shrink-0 overflow-hidden ${boxClassName}`}
             style={{ width: size, height: size }}
         >
             <SpriteFrame
@@ -105,7 +108,7 @@ function CreatureIcon({
 }
 
 // Los gráficos de los cuerpos y las cabezas, cargados la primera vez que hay una criatura para mostrar.
-function useCreatureDatabases(enabled: boolean) {
+export function useCreatureDatabases(enabled: boolean) {
     const [dbs, setDbs] = React.useState<Databases | null>(null);
 
     React.useEffect(() => {

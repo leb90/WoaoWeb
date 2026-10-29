@@ -101,6 +101,7 @@ export const CLIENT_PACKET_ID = {
     dungeonMotion: 101,
     dungeonBoss: 102,
     afflictionState: 103,
+    targetState: 104,
 } as const;
 
 export const CHARACTER_SWING_WEAPON = 1;
@@ -474,6 +475,40 @@ export type ShopProductPayload = {
 export type BleedStatePayload = { remainingMs: number };
 // Veneno (daño por golpe, 0 = sano), ceguera y estupidez (ms que faltan) del propio personaje.
 export type AfflictionStatePayload = { venenoDmg: number; cegueraMs: number; estupidezMs: number };
+// Lo último que clickeó el jugador, para el marco del objetivo (server/src/protocol.ts, buildTargetFramePayload).
+// De los usuarios no viene la vida: el clic nunca la mostró.
+export type TargetStatePayload =
+    | {
+          kind: "npc";
+          id: number;
+          name: string;
+          hp: number;
+          maxHp: number;
+          hostile: boolean;
+          attackable: boolean;
+          paralizado: boolean;
+          inmovilizado: boolean;
+          body: number;
+          head: number;
+          owner: string | null;
+      }
+    | {
+          kind: "user";
+          id: number;
+          name: string;
+          clan: string | null;
+          level: number;
+          className: string;
+          standing: string;
+          factionRank: string | null;
+          color: string;
+          rankedLabel: string;
+          rankedColor: string;
+          newbie: boolean;
+          dead: boolean;
+          body: number;
+          head: number;
+      };
 // Hechizo de área: centro de la cruz, forma (aoe), efecto y sonido.
 // Mazmorras (server/src/dungeons.ts): panel de la piedra de invocación (cuando se la toca), invocación pendiente
 // del líder y la mazmorra en la que está el jugador.
@@ -1013,6 +1048,8 @@ export interface PlayerHudState {
     crowdControlUntil?: number;
     // Veneno, ceguera y estupidez (paquete afflictionState), con los vencimientos en Date.now() del cliente.
     afflictions?: { venenoDmg: number; cegueraUntil: number; estupidezUntil: number };
+    // Lo último que clickeó (paquete targetState); null = sin objetivo.
+    targetState?: TargetStatePayload | null;
     // Efectos del chamán sobre el propio personaje (escudos, evasión, silencios, lentitud, quemadura).
     elemental?: ElementalEntityState;
     castleState?: CastleStatePayload;
@@ -1602,6 +1639,7 @@ export type ParsedServerPacket =
     | { type: "aggroState"; payload: AggroStatePayload }
     | { type: "bleedState"; payload: BleedStatePayload }
     | { type: "afflictionState"; payload: AfflictionStatePayload }
+    | { type: "targetState"; payload: TargetStatePayload | null }
     | { type: "elementalState"; payload: ElementalStatePayload }
     | { type: "areaSpellFx"; payload: AreaSpellFxPayload }
     | { type: "dungeonState"; payload: DungeonStatePayload }
@@ -2848,6 +2886,19 @@ function parseServerPacketById(
                 return {
                     type: "afflictionState",
                     payload: JSON.parse(rawPayload) as AfflictionStatePayload,
+                };
+            } catch {
+                return { type: "unknown", payload: { packetId } };
+            }
+        }
+
+        case CLIENT_PACKET_ID.targetState: {
+            const rawPayload = reader.getString();
+
+            try {
+                return {
+                    type: "targetState",
+                    payload: JSON.parse(rawPayload) as TargetStatePayload | null,
                 };
             } catch {
                 return { type: "unknown", payload: { packetId } };

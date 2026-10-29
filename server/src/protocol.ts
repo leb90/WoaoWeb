@@ -1112,9 +1112,140 @@ export type ProtocolApi = {
     syncPendingReviveCastVisibilityForUser: (movedUserId: EntityId) => void;
     moveUserByServer: (ws: RuntimeClient, x: number, y: number, heading: number) => void;
     syncOwnPosition: (ws: RuntimeClient) => void;
+    refreshTargetFrames: () => void;
 };
 
 const protocol = {} as ProtocolApi;
+
+// Marco del objetivo (HUD de escritorio): lo último que el jugador clickeó, una criatura o un usuario, con lo mismo
+// que dice el clic en la consola (de los usuarios no se muestra la vida, como hasta ahora). Se refresca en el chequeo
+// de estados y se borra si el objetivo muere, se va de la vista o deja de verse.
+const TARGET_FRAME_RANGE_X = 14;
+const TARGET_FRAME_RANGE_Y = 10;
+
+function isWithinTargetFrameRange(viewer: RuntimeCharacter, target: { map?: number; pos?: Position }) {
+    if (!target.pos || !target.map) {
+        return false;
+    }
+
+    const delta = worldLayout.getWorldDelta(viewer.map, viewer.pos, target.map, target.pos);
+    return Boolean(delta && Math.abs(delta.dx) <= TARGET_FRAME_RANGE_X && Math.abs(delta.dy) <= TARGET_FRAME_RANGE_Y);
+}
+
+function buildTargetFramePayload(viewer: RuntimeCharacter): Record<string, unknown> | null {
+    const ref = viewer.targetFrame;
+
+    if (!ref) {
+        return null;
+    }
+
+    if (ref.kind === "npc") {
+        const npc = vars.npcs[ref.id] as RuntimeNpc | undefined;
+
+        if (!npc || Number(npc.hp ?? 0) <= 0 || !isWithinTargetFrameRange(viewer, npc as { map?: number; pos?: Position })) {
+            return null;
+        }
+
+        const owner = npc.summonedByUserId
+            ? (vars.personajes[npc.summonedByUserId] as RuntimeCharacter | undefined)?.nameCharacter
+            : undefined;
+
+        return {
+            kind: "npc",
+            id: Number(npc.id),
+            name: npc.nameCharacter ?? "",
+            hp: Number(npc.hp ?? 0),
+            maxHp: Number(npc.maxHp ?? 0),
+            hostile: Number(npc.hostile ?? 0) === 1,
+            attackable: Number(npc.attackable ?? 1) === 1,
+            paralizado: Boolean(npc.paralizado),
+            inmovilizado: Boolean(npc.inmovilizado),
+            body: Number(npc.idBody ?? 0),
+            head: Number(npc.idHead ?? 0),
+            owner: owner ?? null,
+        };
+    }
+
+    const target = getCharacterById(ref.id);
+
+    if (
+        !target ||
+        isInvisibleAdmin(target) ||
+        target.invisibleSpell ||
+        target.hiddenSkill ||
+        (viewer.deadWorldActive && !target.dead) ||
+        !isWithinTargetFrameRange(viewer, target)
+    ) {
+        return null;
+    }
+
+    const faction = normalizeFaction(target.faction);
+    const factionScore =
+        faction === "armada"
+            ? Number(target.factionScoreArmada ?? 0)
+            : faction === "caos"
+              ? Number(target.factionScoreCaos ?? 0)
+              : 0;
+    const factionRankTitle =
+        faction !== "none"
+            ? (getFactionRankTitle(faction, getMaxEligibleFactionRank(faction, Number(target.level ?? 0), factionScore)) ??
+              "Sin rango")
+            : null;
+    const isStaff = target.privileges === 1 || target.privileges === 2;
+    const rank = getRankFromElo(Number(target.elo ?? 0));
+
+    return {
+        kind: "user",
+        id: Number(target.id),
+        name: target.nameCharacter ?? "",
+        clan: target.clan ?? null,
+        level: Number(target.level ?? 0),
+        className: vars.nameClases[target.idClase ?? 0] ?? "",
+        standing: isStaff
+            ? "Staff"
+            : faction !== "none"
+              ? getFactionDisplayName(faction)
+              : target.criminal
+                ? "Criminal"
+                : "Ciudadano",
+        factionRank: factionRankTitle,
+        color: String(target.color ?? ""),
+        rankedLabel: rank.label,
+        rankedColor: RANKED_CONSOLE_COLORS[rank.tier] ?? RANKED_CONSOLE_COLORS.BRONCE,
+        newbie: game.isNewbieCharacter(target),
+        dead: Boolean(target.dead),
+        body: Number(target.idBody ?? 0),
+        head: Number(target.idHead ?? 0),
+    };
+}
+
+/** Manda el objetivo del marco si cambió; si dejó de valer, lo borra. */
+function sendTargetFrame(client: RuntimeClient | undefined, viewer: RuntimeCharacter) {
+    const payload = buildTargetFramePayload(viewer);
+
+    if (viewer.targetFrame && !payload) {
+        viewer.targetFrame = undefined;
+    }
+
+    const signature = payload ? JSON.stringify(payload) : "";
+
+    if (!client || viewer.targetFrameSent === signature || (viewer.targetFrameSent === undefined && !payload)) {
+        return;
+    }
+
+    viewer.targetFrameSent = signature;
+    handleProtocol.targetState(payload, client);
+}
+
+protocol.refreshTargetFrames = () => {
+    for (const idUser in vars.personajes) {
+        const user = vars.personajes[idUser] as RuntimeCharacter | undefined;
+
+        if (user && (user.targetFrame || user.targetFrameSent)) {
+            sendTargetFrame(getClientById(idUser), user);
+        }
+    }
+};
 
 protocol.syncPendingReviveCastVisibilityForUser = syncPendingReviveCastVisibilityForUser;
 protocol.moveUserByServer = (ws, x, y, heading) => moveUserByServer(ws, x, y, heading);
@@ -2632,6 +2763,12 @@ function eventClick(ws: RuntimeClient) {
                 return;
             }
 
+            // El marco del objetivo: lo clickeado (a uno mismo no se lo toma como objetivo).
+            if (String(selectedId) !== String(clientId)) {
+                user.targetFrame = { kind: selectedTarget.isNpc ? "npc" : "user", id: selectedId };
+                sendTargetFrame(ws, user);
+            }
+
             if (selectedNpc) {
                 user.targetNpcId = selectedId;
             }
@@ -2900,6 +3037,10 @@ function eventClick(ws: RuntimeClient) {
                     handleProtocol.console(msg, color, 1, 0, ws);
                 }
             }
+        } else if (user.targetFrame) {
+            // Clic donde no hay criatura ni usuario (el piso o un objeto): se suelta el objetivo, como en WoW.
+            user.targetFrame = undefined;
+            sendTargetFrame(ws, user);
         }
     } catch (err) {
         funct.dumpError(err);

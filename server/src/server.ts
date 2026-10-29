@@ -1358,6 +1358,7 @@ createDynamicScheduler(
 
         if (now >= nextPlayerStatusTickAt) {
             processPlayerStatusTick(now);
+            protocol.refreshTargetFrames();
             nextPlayerStatusTickAt = now + vars.timing.playerStatusTickMs;
         }
 

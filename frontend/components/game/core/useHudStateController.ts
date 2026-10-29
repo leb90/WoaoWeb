@@ -204,6 +204,9 @@ export function useHudStateController({
                       ...(!hud.afflictions && previousHud?.afflictions
                           ? { afflictions: previousHud.afflictions }
                           : {}),
+                      ...(hud.targetState === undefined && previousHud?.targetState
+                          ? { targetState: previousHud.targetState }
+                          : {}),
                       ...(!hud.elemental && previousHud?.elemental
                           ? { elemental: previousHud.elemental }
                           : {}),

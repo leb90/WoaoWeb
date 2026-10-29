@@ -25,7 +25,7 @@
         "regreso": {
             "map": 34,
             "x": 50,
-            "y": 52
+            "y": 49
         },
         "escalado": {
             "vidaPorJugador": 0.7,
@@ -77,7 +77,7 @@
         "regreso": {
             "map": 34,
             "x": 50,
-            "y": 52
+            "y": 49
         },
         "escalado": {
             "vidaPorJugador": 0.7,
@@ -140,7 +140,7 @@
         "regreso": {
             "map": 34,
             "x": 50,
-            "y": 52
+            "y": 49
         },
         "escalado": {
             "vidaPorJugador": 0.7,

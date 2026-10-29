@@ -2,15 +2,15 @@
 
 import React from "react";
 import { Volume2, VolumeX } from "lucide-react";
-import { loadSoundVolumes } from "../lib/soundVolumes";
 import { MENU_MUSIC, MusicPlaylist } from "../lib/worldMusic";
 
 // La música de las páginas de afuera del juego: el inicio, la cuenta y la lista de personajes tienen un tema épico
 // (al estilo Baldur's Gate 3) y la creación de personaje uno de tienda de Zelda. Las demás páginas (wiki, ranking…)
-// no tienen música. Arranca con el primer clic o tecla (los navegadores no dejan sonar audio antes) y sigue al
-// volumen de música de Configuración. El botón la silencia y se recuerda.
+// no tienen música. Arranca con el primer clic o tecla (los navegadores no dejan sonar audio antes). Suena al 30%,
+// aparte del volumen de música del juego (que arranca al 10%); el botón la silencia y se recuerda.
 
 const MUTED_STORAGE_KEY = "ao-menu-music-muted";
+const MENU_MUSIC_VOLUME = 0.3;
 const HOME_ROUTES = new Set(["/", "/login", "/register", "/characters"]);
 
 function musicForPath(pathname: string): "inicio" | "creacion" | null {
@@ -44,7 +44,7 @@ export default function MenuMusic({ pathname }: { pathname: string }) {
     React.useEffect(() => {
         playlistRef.current ??= new MusicPlaylist();
         const playlist = playlistRef.current;
-        playlist.setVolume(loadSoundVolumes().musica);
+        playlist.setVolume(MENU_MUSIC_VOLUME);
         if (!unlocked || muted || !kind) {
             playlist.play(null, null);
             return;

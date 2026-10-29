@@ -43,18 +43,18 @@ const RACE_BASE_STATS: Record<
     constitucion: number;
   }
 > = {
-  1: { fuerza: 19, agilidad: 19, inteligencia: 18, constitucion: 20 },
-  2: { fuerza: 18, agilidad: 20, inteligencia: 20, constitucion: 19 },
-  3: { fuerza: 20, agilidad: 19, inteligencia: 19, constitucion: 19 },
-  4: { fuerza: 21, agilidad: 18, inteligencia: 15, constitucion: 21 },
-  5: { fuerza: 16, agilidad: 21, inteligencia: 22, constitucion: 18 },
-  6: { fuerza: 21, agilidad: 18, inteligencia: 16, constitucion: 21 },
-  7: { fuerza: 17, agilidad: 21, inteligencia: 20, constitucion: 19 },
-  8: { fuerza: 21, agilidad: 19, inteligencia: 18, constitucion: 19 },
-  9: { fuerza: 16, agilidad: 21, inteligencia: 22, constitucion: 18 },
-  10: { fuerza: 20, agilidad: 21, inteligencia: 17, constitucion: 20 },
-  11: { fuerza: 21, agilidad: 19, inteligencia: 18, constitucion: 19 },
-  12: { fuerza: 20, agilidad: 19, inteligencia: 19, constitucion: 20 },
+  1: { fuerza: 19, agilidad: 19, inteligencia: 20, constitucion: 20 },
+  2: { fuerza: 18, agilidad: 20, inteligencia: 21, constitucion: 19 },
+  3: { fuerza: 19, agilidad: 20, inteligencia: 19, constitucion: 19 },
+  4: { fuerza: 20, agilidad: 19, inteligencia: 18, constitucion: 20 },
+  5: { fuerza: 17, agilidad: 19, inteligencia: 22, constitucion: 20 },
+  6: { fuerza: 20, agilidad: 19, inteligencia: 18, constitucion: 20 },
+  7: { fuerza: 18, agilidad: 20, inteligencia: 21, constitucion: 19 },
+  8: { fuerza: 20, agilidad: 20, inteligencia: 17, constitucion: 19 },
+  9: { fuerza: 17, agilidad: 19, inteligencia: 22, constitucion: 20 },
+  10: { fuerza: 19, agilidad: 20, inteligencia: 19, constitucion: 19 },
+  11: { fuerza: 20, agilidad: 20, inteligencia: 17, constitucion: 19 },
+  12: { fuerza: 19, agilidad: 19, inteligencia: 20, constitucion: 20 },
 };
 
 const RACE_NAMES: Record<number, string> = {

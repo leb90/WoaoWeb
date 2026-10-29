@@ -215,6 +215,7 @@ function refreshConnectedCharactersFromBalance(): number {
         const nextBkAttrAgilidad = 18 + Number(raceBalance.agilidad ?? 0);
         const nextAttrInteligencia = 18 + Number(raceBalance.inteligencia ?? 0);
         const nextAttrConstitucion = 18 + Number(raceBalance.constitucion ?? 0);
+        const previousAttrConstitucion = Number(user.attrConstitucion ?? 0);
         const fuerzaDelta = Math.max(0, Number(user.attrFuerza ?? 0) - Number(user.bkAttrFuerza ?? nextBkAttrFuerza));
         const agilidadDelta = Math.max(
             0,
@@ -229,19 +230,32 @@ function refreshConnectedCharactersFromBalance(): number {
         user.attrConstitucion = nextAttrConstitucion;
 
         const storedMaxHp = Number(user.maxHp ?? 0);
+        // Si cambió la constitución, la vida se corre lo mismo que el promedio (como al entrar, ver login.ts; con
+        // remort no). El corrimiento va sobre la vida base, sin el bono del set, que se vuelve a sumar abajo.
+        const hpShift = storedMaxHp > 0 && previousAttrConstitucion > 0 && previousAttrConstitucion !== nextAttrConstitucion && !user.remorted
+            ? balance.getHpShiftForConstitutionChange(classId, previousAttrConstitucion, nextAttrConstitucion, level)
+            : 0;
+        const equipHpBonus = storedMaxHp === Number(user.equipVitalsMaxHp ?? 0) ? Number(user.equipHpBonus ?? 0) : 0;
         const newMaxHp = storedMaxHp > 0
-            ? Math.floor(storedMaxHp)
+            ? Math.max(1, Math.floor(storedMaxHp) - equipHpBonus + hpShift)
             : balance.getMaxHpForLevel(classId, nextAttrConstitucion, level);
         const newMaxMana = balance.getMaxManaForLevel(classId, nextAttrInteligencia, level);
         const newMinHit = balance.getMinHitForLevel(classId, level);
         const newMaxHit = balance.getMaxHitForLevel(classId, level);
 
+        const previousHp = Number(user.hp ?? newMaxHp);
+        const previousMana = Number(user.mana ?? newMaxMana);
+
         user.maxHp = newMaxHp;
-        user.hp = Math.min(Number(user.hp ?? newMaxHp), newMaxHp);
         user.maxMana = newMaxMana;
-        user.mana = Math.min(Number(user.mana ?? newMaxMana), newMaxMana);
         user.minHit = newMinHit;
         user.maxHit = newMaxHit;
+        // Los máximos nuevos son la base: el bono del set (vida y maná) se vuelve a sumar.
+        user.equipVitalsMaxHp = 0;
+        user.equipVitalsMaxMana = 0;
+        require("./game").refreshEquipmentVitals(user, false);
+        user.hp = previousHp > 0 ? Math.max(1, Math.min(previousHp + hpShift, Number(user.maxHp))) : 0;
+        user.mana = Math.min(previousMana, Number(user.maxMana));
 
         const userId = Number(user.id ?? 0);
         const client = getClientById(userId);

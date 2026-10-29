@@ -802,6 +802,8 @@ function Login(this: LoginApi) {
                 const baseAttrAgilidad = raceBalance ? 18 + raceBalance.agilidad : personaje.attrAgilidad;
                 const baseAttrInteligencia = raceBalance ? 18 + raceBalance.inteligencia : personaje.attrInteligencia;
                 const baseAttrConstitucion = raceBalance ? 18 + raceBalance.constitucion : personaje.attrConstitucion;
+                // La constitución que se guardó es con la que se tiraron sus niveles de vida hasta ahora.
+                const previousAttrConstitucion = Number(personaje.attrConstitucion ?? 0);
 
                 personaje.cooldownFuerza = 0;
                 personaje.cooldownAgilidad = 0;
@@ -825,6 +827,22 @@ function Login(this: LoginApi) {
                           personaje.attrConstitucion,
                           personaje.level,
                       );
+                // Si la tabla de razas le cambió la constitución, la vida guardada se corre lo mismo que el promedio
+                // (una sola vez: al guardar ya queda la constitución nueva). Con remort no: la constitución guardada
+                // trae el bono de la rama, que el login no conserva, y se le restaría vida.
+                const remorted = Boolean(require("./woaoProgress").getProgress(personaje).remorted);
+                if (storedMaxHp > 0 && previousAttrConstitucion > 0 && previousAttrConstitucion !== baseAttrConstitucion && !remorted) {
+                    const hpShift = balance.getHpShiftForConstitutionChange(
+                        personaje.idClase,
+                        previousAttrConstitucion,
+                        baseAttrConstitucion,
+                        personaje.level,
+                    );
+                    personaje.maxHp = Math.max(1, personaje.maxHp + hpShift);
+                    if (!personaje.dead && personaje.hp != null) {
+                        personaje.hp = Math.max(1, Number(personaje.hp) + hpShift);
+                    }
+                }
                 personaje.maxMana = balance.getMaxManaForLevel(
                     personaje.idClase,
                     personaje.attrInteligencia,

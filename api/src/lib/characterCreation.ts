@@ -260,7 +260,7 @@ export function getMaxManaForLevel(
 const raceOptions: Record<RaceKey, RaceOption> = {
     humano: {
         key: "humano",
-        baseStats: statsFromBonus({ fuerza: 1, agilidad: 1, inteligencia: 0, carisma: 0, constitucion: 2 }),
+        baseStats: statsFromBonus({ fuerza: 1, agilidad: 1, inteligencia: 2, carisma: 0, constitucion: 2 }),
         genders: {
             male: { bodyId: 21, startHeadId: 3, endHeadId: 53 },
             female: { bodyId: 39, startHeadId: 70, endHeadId: 82 },
@@ -268,7 +268,7 @@ const raceOptions: Record<RaceKey, RaceOption> = {
     },
     elfo: {
         key: "elfo",
-        baseStats: statsFromBonus({ fuerza: 0, agilidad: 2, inteligencia: 2, carisma: 1, constitucion: 1 }),
+        baseStats: statsFromBonus({ fuerza: 0, agilidad: 2, inteligencia: 3, carisma: 0, constitucion: 1 }),
         genders: {
             male: { bodyId: 21, startHeadId: 101, endHeadId: 119 },
             female: { bodyId: 39, startHeadId: 170, endHeadId: 180 },
@@ -276,7 +276,7 @@ const raceOptions: Record<RaceKey, RaceOption> = {
     },
     elfoDrow: {
         key: "elfoDrow",
-        baseStats: statsFromBonus({ fuerza: 2, agilidad: 1, inteligencia: 1, carisma: -1, constitucion: 1 }),
+        baseStats: statsFromBonus({ fuerza: 1, agilidad: 2, inteligencia: 1, carisma: 0, constitucion: 1 }),
         genders: {
             // La 201 es una cabeza de elfo común (piel clara): el elfo oscuro arranca en la 202.
             male: { bodyId: 32, startHeadId: 202, endHeadId: 216 },
@@ -285,7 +285,7 @@ const raceOptions: Record<RaceKey, RaceOption> = {
     },
     enano: {
         key: "enano",
-        baseStats: statsFromBonus({ fuerza: 3, agilidad: 0, inteligencia: -3, carisma: -1, constitucion: 3 }),
+        baseStats: statsFromBonus({ fuerza: 2, agilidad: 1, inteligencia: 0, carisma: 0, constitucion: 2 }),
         genders: {
             male: { bodyId: 53, startHeadId: 401, endHeadId: 411 },
             female: { bodyId: 60, startHeadId: 470, endHeadId: 476 },
@@ -293,7 +293,7 @@ const raceOptions: Record<RaceKey, RaceOption> = {
     },
     gnomo: {
         key: "gnomo",
-        baseStats: statsFromBonus({ fuerza: -2, agilidad: 3, inteligencia: 4, carisma: 2, constitucion: 0 }),
+        baseStats: statsFromBonus({ fuerza: -1, agilidad: 1, inteligencia: 4, carisma: 0, constitucion: 2 }),
         genders: {
             male: { bodyId: 53, startHeadId: 301, endHeadId: 315 },
             female: { bodyId: 60, startHeadId: 370, endHeadId: 373 },
@@ -301,7 +301,7 @@ const raceOptions: Record<RaceKey, RaceOption> = {
     },
     orco: {
         key: "orco",
-        baseStats: statsFromBonus({ fuerza: 3, agilidad: 0, inteligencia: -2, carisma: 0, constitucion: 3 }),
+        baseStats: statsFromBonus({ fuerza: 2, agilidad: 1, inteligencia: 0, carisma: 0, constitucion: 2 }),
         genders: {
             male: { bodyId: 215, startHeadId: 601, endHeadId: 606 },
             female: { bodyId: 217, startHeadId: 607, endHeadId: 609 },
@@ -309,7 +309,7 @@ const raceOptions: Record<RaceKey, RaceOption> = {
     },
     vampiro: {
         key: "vampiro",
-        baseStats: statsFromBonus({ fuerza: -1, agilidad: 3, inteligencia: 2, carisma: 2, constitucion: 1 }),
+        baseStats: statsFromBonus({ fuerza: 0, agilidad: 2, inteligencia: 3, carisma: 0, constitucion: 1 }),
         genders: {
             male: { bodyId: 32, startHeadId: 505, endHeadId: 512 },
             female: { bodyId: 40, startHeadId: 501, endHeadId: 503 },
@@ -317,7 +317,7 @@ const raceOptions: Record<RaceKey, RaceOption> = {
     },
     abisario: {
         key: "abisario",
-        baseStats: statsFromBonus({ fuerza: 3, agilidad: 1, inteligencia: 0, carisma: 0, constitucion: 1 }),
+        baseStats: statsFromBonus({ fuerza: 2, agilidad: 2, inteligencia: -1, carisma: 0, constitucion: 1 }),
         genders: {
             male: { bodyId: 488, startHeadId: 801, endHeadId: 804 },
             female: { bodyId: 486, startHeadId: 851, endHeadId: 853 },
@@ -325,7 +325,7 @@ const raceOptions: Record<RaceKey, RaceOption> = {
     },
     goblin: {
         key: "goblin",
-        baseStats: statsFromBonus({ fuerza: -2, agilidad: 3, inteligencia: 4, carisma: 0, constitucion: 0 }),
+        baseStats: statsFromBonus({ fuerza: -1, agilidad: 1, inteligencia: 4, carisma: 0, constitucion: 2 }),
         genders: {
             male: { bodyId: 178, startHeadId: 705, endHeadId: 712 },
             female: { bodyId: 212, startHeadId: 701, endHeadId: 704 },
@@ -333,7 +333,7 @@ const raceOptions: Record<RaceKey, RaceOption> = {
     },
     tauros: {
         key: "tauros",
-        baseStats: statsFromBonus({ fuerza: 2, agilidad: 3, inteligencia: -1, carisma: 0, constitucion: 2 }),
+        baseStats: statsFromBonus({ fuerza: 1, agilidad: 2, inteligencia: 1, carisma: 0, constitucion: 1 }),
         genders: {
             male: { bodyId: 529, startHeadId: 920, endHeadId: 923 },
             female: { bodyId: 528, startHeadId: 910, endHeadId: 913 },
@@ -341,7 +341,7 @@ const raceOptions: Record<RaceKey, RaceOption> = {
     },
     licantropo: {
         key: "licantropo",
-        baseStats: statsFromBonus({ fuerza: 3, agilidad: 1, inteligencia: 0, carisma: 0, constitucion: 1 }),
+        baseStats: statsFromBonus({ fuerza: 2, agilidad: 2, inteligencia: -1, carisma: 0, constitucion: 1 }),
         genders: {
             male: { bodyId: 531, startHeadId: 900, endHeadId: 903 },
             female: { bodyId: 530, startHeadId: 890, endHeadId: 893 },
@@ -349,7 +349,7 @@ const raceOptions: Record<RaceKey, RaceOption> = {
     },
     nomuerto: {
         key: "nomuerto",
-        baseStats: statsFromBonus({ fuerza: 2, agilidad: 1, inteligencia: 1, carisma: 0, constitucion: 2 }),
+        baseStats: statsFromBonus({ fuerza: 1, agilidad: 1, inteligencia: 2, carisma: 0, constitucion: 2 }),
         genders: {
             male: { bodyId: 527, startHeadId: 860, endHeadId: 863 },
             female: { bodyId: 526, startHeadId: 880, endHeadId: 883 },

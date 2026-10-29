@@ -87,7 +87,7 @@ const weaponMax = Math.max(...weapons.map(([, item]) => Number(item.maxHit ?? 0)
 const armorMax = Math.max(...armor.map(([, item]) => Number(item.maxDef ?? 0)));
 
 const mageElf = hpRows.find((row) => row.classId === 1 && row.raceId === 2)!;
-const mageMana = balance.getMaxManaForLevel(1, 20, LEVEL);
+const mageMana = balance.getMaxManaForLevel(1, 18 + Number(vars.balanceRazas[2].inteligencia ?? 0), LEVEL);
 const topEquipment = getMagicEquipmentTotals([{ magicDamageBonus: 90 }]);
 const dragonFlame = spells["45"];
 const dragonFlameCost = Number(dragonFlame.manaRequired ?? 0);
@@ -236,7 +236,9 @@ const markdown = [
     "",
     `- Vida nivel 50: ${mageElf.hpMin}-${mageElf.hpMax}, promedio ${mageElf.hpAverage}.`,
         `- Mana nivel 50: ${mageMana}. Llama de Dragon cuesta ${dragonFlameCost}.`,
-        `- Para tres Llamas de Dragon necesita ${potionsForThreeCasts(standardPotion)} azules comunes (${standardPotion} de mana efectivo cada una): una entre el primer y segundo lanzamiento, y otra entre el segundo y tercero.`,
+        potionsForThreeCasts(standardPotion) === 1
+            ? `- Para tres Llamas de Dragon necesita 1 azul comun (${standardPotion} de mana efectivo) antes del tercer lanzamiento.`
+            : `- Para tres Llamas de Dragon necesita ${potionsForThreeCasts(standardPotion)} azules comunes (${standardPotion} de mana efectivo cada una): una entre el primer y segundo lanzamiento, y otra entre el segundo y tercero.`,
         `- Llama de Dragon con equipo y montura al limite: ${mountDamageMin}-${mountDamageMax} antes de la resistencia del objetivo.`,
     "",
     "| Objetivo Elfo | HP promedio | Resist. clase | Dano por Llama de Dragon | Impactos promedio |",

@@ -281,7 +281,7 @@ export const raceOptions: RaceOption[] = [
         label: "Humano",
         faction: "alianza",
         summary: "Los humanos tienen 5% de resistencia mágica y el hechizo Remover Paralisis consume 50% menos de mana.",
-        bonus: { fuerza: 1, inteligencia: 0, agilidad: 1, carisma: 0, constitucion: 2 },
+        bonus: { fuerza: 1, inteligencia: 2, agilidad: 1, carisma: 0, constitucion: 2 },
         genders: {
             male: { bodyId: 21, startHeadId: 3, endHeadId: 53 },
             female: { bodyId: 39, startHeadId: 70, endHeadId: 82 },
@@ -292,7 +292,7 @@ export const raceOptions: RaceOption[] = [
         label: "Elfo",
         faction: "alianza",
         summary: "Los elfos tienen 10% probabilidad de restaurar un 15% de su mana total, al lanzar cualquier hechizo.",
-        bonus: { fuerza: 0, inteligencia: 2, agilidad: 2, carisma: 1, constitucion: 1 },
+        bonus: { fuerza: 0, inteligencia: 3, agilidad: 2, carisma: 0, constitucion: 1 },
         genders: {
             male: { bodyId: 21, startHeadId: 101, endHeadId: 119 },
             female: { bodyId: 39, startHeadId: 170, endHeadId: 180 },
@@ -303,7 +303,7 @@ export const raceOptions: RaceOption[] = [
         label: "Enano",
         faction: "alianza",
         summary: "Los enanos cuando tienen menos de 33% de vida, su daño físico aumenta un 50%.",
-        bonus: { fuerza: 3, inteligencia: -3, agilidad: 0, carisma: -1, constitucion: 3 },
+        bonus: { fuerza: 2, inteligencia: 0, agilidad: 1, carisma: 0, constitucion: 2 },
         genders: {
             male: { bodyId: 53, startHeadId: 401, endHeadId: 411 },
             female: { bodyId: 60, startHeadId: 470, endHeadId: 476 },
@@ -314,7 +314,7 @@ export const raceOptions: RaceOption[] = [
         label: "Gnomo",
         faction: "alianza",
         summary: "Los gnomos tienen un 10% de evasión extra.",
-        bonus: { fuerza: -2, inteligencia: 4, agilidad: 3, carisma: 2, constitucion: 0 },
+        bonus: { fuerza: -1, inteligencia: 4, agilidad: 1, carisma: 0, constitucion: 2 },
         genders: {
             male: { bodyId: 53, startHeadId: 301, endHeadId: 315 },
             female: { bodyId: 60, startHeadId: 370, endHeadId: 373 },
@@ -325,7 +325,7 @@ export const raceOptions: RaceOption[] = [
         label: "Tauros",
         faction: "alianza",
         summary: "Los Tauros tienen 5% de resistencia mágica, 5% de resistencia física y 5% de resistencia a flechas.",
-        bonus: { fuerza: 2, inteligencia: -1, agilidad: 3, carisma: 0, constitucion: 2 },
+        bonus: { fuerza: 1, inteligencia: 1, agilidad: 2, carisma: 0, constitucion: 1 },
         genders: {
             male: { bodyId: 529, startHeadId: 920, endHeadId: 923 },
             female: { bodyId: 528, startHeadId: 910, endHeadId: 913 },
@@ -336,7 +336,7 @@ export const raceOptions: RaceOption[] = [
         label: "Abisario",
         faction: "alianza",
         summary: "Poseen un 10% de probabilidad al recibir un golpe mortal, quedar en 1 de vida, evitando la muerte.",
-        bonus: { fuerza: 3, inteligencia: 0, agilidad: 1, carisma: 0, constitucion: 1 },
+        bonus: { fuerza: 2, inteligencia: -1, agilidad: 2, carisma: 0, constitucion: 1 },
         genders: {
             male: { bodyId: 488, startHeadId: 801, endHeadId: 804 },
             female: { bodyId: 486, startHeadId: 851, endHeadId: 853 },
@@ -346,8 +346,8 @@ export const raceOptions: RaceOption[] = [
         key: "elfoDrow",
         label: "Elfo Oscuro",
         faction: "horda",
-        summary: "Los elfos de la noche poseen 3% de evasión extra y 2% de daño extra con arcos.",
-        bonus: { fuerza: 2, inteligencia: 1, agilidad: 1, carisma: -1, constitucion: 1 },
+        summary: "Los elfos de la noche poseen 5% de evasión extra y 5% de daño extra con arcos.",
+        bonus: { fuerza: 1, inteligencia: 1, agilidad: 2, carisma: 0, constitucion: 1 },
         genders: {
             // La 201 es una cabeza de elfo común (piel clara): el elfo oscuro arranca en la 202.
             male: { bodyId: 32, startHeadId: 202, endHeadId: 216 },
@@ -359,7 +359,7 @@ export const raceOptions: RaceOption[] = [
         label: "Orco",
         faction: "horda",
         summary: "Los Orcos tienen 10% de probabilidad de evitar hechizos dañinos.",
-        bonus: { fuerza: 3, inteligencia: -2, agilidad: 0, carisma: 0, constitucion: 3 },
+        bonus: { fuerza: 2, inteligencia: 0, agilidad: 1, carisma: 0, constitucion: 2 },
         genders: {
             male: { bodyId: 215, startHeadId: 601, endHeadId: 606 },
             female: { bodyId: 217, startHeadId: 607, endHeadId: 609 },
@@ -370,7 +370,7 @@ export const raceOptions: RaceOption[] = [
         label: "Vampiro",
         faction: "horda",
         summary: "Los Vampiros pueden restaurar un 5% de su vida al recibir daño y tienen robo de vida reducido contra criaturas.",
-        bonus: { fuerza: -1, inteligencia: 2, agilidad: 3, carisma: 2, constitucion: 1 },
+        bonus: { fuerza: 0, inteligencia: 3, agilidad: 2, carisma: 0, constitucion: 1 },
         genders: {
             male: { bodyId: 32, startHeadId: 505, endHeadId: 512 },
             female: { bodyId: 40, startHeadId: 501, endHeadId: 503 },
@@ -381,7 +381,7 @@ export const raceOptions: RaceOption[] = [
         label: "Goblin",
         faction: "horda",
         summary: "Los goblins tienen 15% de probabilidad de evitar ser paralizados.",
-        bonus: { fuerza: -2, inteligencia: 4, agilidad: 3, carisma: 0, constitucion: 0 },
+        bonus: { fuerza: -1, inteligencia: 4, agilidad: 1, carisma: 0, constitucion: 2 },
         genders: {
             male: { bodyId: 178, startHeadId: 705, endHeadId: 712 },
             female: { bodyId: 212, startHeadId: 701, endHeadId: 704 },
@@ -392,7 +392,7 @@ export const raceOptions: RaceOption[] = [
         label: "Licantropo",
         faction: "horda",
         summary: "Los licantropos tienen probabilidad de acertar golpes críticos con daño cuerpo a cuerpo y con arcos.",
-        bonus: { fuerza: 3, inteligencia: 0, agilidad: 1, carisma: 0, constitucion: 1 },
+        bonus: { fuerza: 2, inteligencia: -1, agilidad: 2, carisma: 0, constitucion: 1 },
         genders: {
             male: { bodyId: 531, startHeadId: 900, endHeadId: 903 },
             female: { bodyId: 530, startHeadId: 890, endHeadId: 893 },
@@ -403,7 +403,7 @@ export const raceOptions: RaceOption[] = [
         label: "No-Muerto",
         faction: "horda",
         summary: "Los No-Muertos tienen 10% de resistencia a los daños con flechas y el hechizo Paralizar consume 50% menos de mana.",
-        bonus: { fuerza: 2, inteligencia: 1, agilidad: 1, carisma: 0, constitucion: 2 },
+        bonus: { fuerza: 1, inteligencia: 2, agilidad: 1, carisma: 0, constitucion: 2 },
         genders: {
             male: { bodyId: 527, startHeadId: 860, endHeadId: 863 },
             female: { bodyId: 526, startHeadId: 880, endHeadId: 883 },

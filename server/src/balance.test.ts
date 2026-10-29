@@ -21,6 +21,12 @@ assert.deepEqual(balance.getHpGainRange(3, 21), {
 });
 assert.equal(balance.getMaxHpForLevel(3, 21, 50), 560);
 
+// Si la tabla de razas cambia la constitución, la vida guardada se corre lo mismo que el promedio.
+assert.equal(balance.getHpShiftForConstitutionChange(1, 19, 20, 50), 26);
+assert.equal(balance.getHpShiftForConstitutionChange(1, 20, 19, 50), -26);
+assert.equal(balance.getHpShiftForConstitutionChange(1, 19, 20, 1), 1);
+assert.equal(balance.getHpShiftForConstitutionChange(3, 21, 21, 50), 0);
+
 const classIds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
 const raceIds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 

@@ -142,11 +142,11 @@ const CLASS_ICONS: Partial<Record<CharacterClassKey, LucideIcon>> = {
 const RACIAL_PASSIVES: Record<RaceKey, string> = {
     humano: "5% de resistencia mágica y 50% menos de maná al lanzar Remover Parálisis.",
     elfo: "10% de probabilidad de recuperar 15% del maná máximo al lanzar un hechizo.",
-    elfoDrow: "3% de evasión adicional y 2% más de daño con proyectiles.",
+    elfoDrow: "5% de evasión adicional y 5% más de daño con proyectiles.",
     enano: "Con menos de 33% de vida, aumenta 50% su daño físico.",
     gnomo: "10% de evasión adicional.",
     orco: "10% de probabilidad de ignorar por completo un hechizo dañino.",
-    vampiro: "Puede recuperar 15% de su vida al recibir daño y también al golpear criaturas.",
+    vampiro: "Al recibir daño, 8% de probabilidad de recuperar 5% de su vida; al golpear criaturas, 20%.",
     abisario: "10% de probabilidad de sobrevivir con 1 punto de vida a un golpe mortal.",
     goblin: "15% de probabilidad de evitar una parálisis.",
     tauros: "5% de resistencia mágica y 5% de reducción frente a daño físico.",

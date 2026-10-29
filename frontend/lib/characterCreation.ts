@@ -305,8 +305,10 @@ export const raceOptions: RaceOption[] = [
         summary: "Los enanos cuando tienen menos de 33% de vida, su daño físico aumenta un 50%.",
         bonus: { fuerza: 2, inteligencia: 0, agilidad: 1, carisma: 0, constitucion: 2 },
         genders: {
-            male: { bodyId: 53, startHeadId: 401, endHeadId: 411 },
-            female: { bodyId: 60, startHeadId: 470, endHeadId: 476 },
+            // Cabezas de enano (barbudos) 301-315 y 370-373, como en el AO clásico; el CharInfo.dat del cliente viejo
+            // las tenía cruzadas con las de gnomo (401-411 y 470-476).
+            male: { bodyId: 53, startHeadId: 301, endHeadId: 315 },
+            female: { bodyId: 60, startHeadId: 370, endHeadId: 373 },
         },
     },
     {
@@ -316,8 +318,8 @@ export const raceOptions: RaceOption[] = [
         summary: "Los gnomos tienen un 10% de evasión extra.",
         bonus: { fuerza: -1, inteligencia: 4, agilidad: 1, carisma: 0, constitucion: 2 },
         genders: {
-            male: { bodyId: 53, startHeadId: 301, endHeadId: 315 },
-            female: { bodyId: 60, startHeadId: 370, endHeadId: 373 },
+            male: { bodyId: 53, startHeadId: 401, endHeadId: 411 },
+            female: { bodyId: 60, startHeadId: 470, endHeadId: 476 },
         },
     },
     {

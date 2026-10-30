@@ -220,6 +220,30 @@ type Tile = {
     exit?: { map: number; x: number; y: number };
 };
 type Plan = { mapId: number; meta: Record<string, string>; origin: { x: number; y: number }; grid: string[] };
+// Un tramo de pared: baldosas de 32 × 32 seguidas desde "grh", fila por fila ("ancho" por fila, "alto" filas).
+type WallPiece = { grh: number; ancho: number; alto: number };
+// Paredes de tres baldosas de grosor: "arriba" es la cara norte de una sala (fila 0 el borde, la última la que toca el
+// piso), "abajo" la pared sur (fila 0 la que toca la sala), "izquierda" la oeste (la última columna toca la sala),
+// "derecha" la este (la columna 0 toca la sala) y las esquinas de 3 × 3 donde se juntan dos: "no" arriba a la izquierda
+// de la sala, "ne", "so" y "se".
+type WallSet = Record<"arriba" | "abajo" | "izquierda" | "derecha" | "no" | "ne" | "so" | "se", WallPiece>;
+// La piel de una mazmorra: sus propios dibujos de los objetos de mazmorra, que son los mismos para todas. El server
+// sigue usando los objetos de siempre (dungeons.ts) y le manda al cliente el de la piel (skinObject); los mapas del
+// cliente ya salen con la piel puesta. "objetos" son los nuevos (se crean en objs.json); lo demás dice qué objeto de la
+// piel reemplaza a cuál, por su clave en "objetos".
+type Skin = {
+    objetos: Record<string, { id: number; name: string; grh: number }>;
+    // Clave de DUNGEON_OBJECTS -> clave de la piel.
+    reemplazos?: Partial<Record<keyof typeof DUNGEON_OBJECTS, string>>;
+    portal?: string;
+    // La escalera que baja a un mapa de número mayor y la que sube.
+    escaleras?: { baja: string; sube: string };
+    cofreJefe?: { cerrado: string; abierto: string };
+    // Puertas en paredes horizontales: la abierta ("abierta") y la cerrada de cada tipo de barrera (sala, llave, jefe...).
+    puertas?: Record<string, string>;
+    // Puertas en paredes verticales de tres de grosor, abiertas y cerradas, en la pared oeste o este de una sala.
+    puertasLaterales?: { abierta: { izquierda: string; derecha: string }; cerrada: { izquierda: string; derecha: string } };
+};
 type Legend = {
     criaturas?: Record<string, number | { npc: number; movimiento?: number }>;
     // Torre del Águila: escaleras que aparecen al tirar los cuatro pilares, y si romper los ojos de una sala abre sus puertas.
@@ -236,8 +260,11 @@ type Legend = {
     trampa?: number[];
     // Criaturas propias de la mazmorra: número → plantilla de AO de base y los cambios.
     plantillas?: Record<string, { base: number } & Record<string, unknown>>;
-    // Piso y cara de pared propios (bloques de 4 × 4); sin esto, los del mapa 116.
-    graficos?: { piso?: number; pared?: number };
+    // Piso y cara de pared propios (bloques de 4 × 4); sin esto, los del mapa 116. Con "paredes", las paredes se arman
+    // con tramos y esquinas que rodean cada sala por los cuatro lados (ver themedWallGrh).
+    graficos?: { piso?: number; pared?: number; paredes?: WallSet };
+    // Los objetos de mazmorra dibujados para esta mazmorra (ver Skin).
+    piel?: Skin;
     // Escaleras (por número) que se ven como portal: el atajo de la Cueva de la Cola.
     portales?: string[];
     // Escaleras (por número) que llegan a una sala que se cierra y se ven siempre: se llega por ellas y la sala se
@@ -299,6 +326,66 @@ const isBarrier = (c: string) => c in BARRIER_TYPE;
 // Lo que forma parte de una sala (las puertas la cierran).
 const isRoomTile = (c: string) => isOpen(c) && !isBarrier(c);
 const block4 = (base: number, x: number, y: number, row?: number) => base + (row ?? (y - 1) % 4) * 4 + ((x - 1) % 4);
+
+// Paredes con tramos y esquinas (legend.graficos.paredes): cada baldosa de pared mira a qué distancia (1 a 3) tiene
+// piso en línea recta hacia cada lado, atravesando solo pared. Con piso abajo es la cara norte de esa sala (en vista de
+// tres cuartos manda la cara); si no, con piso a un costado es la pared oeste o este; si no, con piso arriba es la pared
+// sur; si no hay piso en línea recta pero sí en diagonal, es una esquina. Las paredes de menos de tres baldosas entre
+// dos salas se dibujan con el borde de roca (un muro bajo visto desde arriba). Lo que queda lejos de todo es negro.
+const WALLS = legend.graficos?.paredes;
+const wallPiece = (piece: WallPiece, col: number, row: number) => piece.grh + (row % piece.alto) * piece.ancho + (col % piece.ancho);
+
+function floorDistance(plan: Plan, x: number, y: number, dx: number, dy: number): number {
+    for (let d = 1; d <= 3; d++) {
+        const c = charAt(plan, x + dx * d, y + dy * d);
+        if (isOpen(c)) return d;
+        if (!isWall(c)) return 0;
+    }
+    return 0;
+}
+
+function themedWallGrh(plan: Plan, x: number, y: number, walls: WallSet): number {
+    const s = floorDistance(plan, x, y, 0, 1);
+    const n = floorDistance(plan, x, y, 0, -1);
+    const e = floorDistance(plan, x, y, 1, 0);
+    const w = floorDistance(plan, x, y, -1, 0);
+    const col = x - 1;
+    const row = y - 1;
+    if (s) {
+        // Grosor entre la sala de abajo y la de arriba (si hay una a tres o menos): con tres o más, borde, cara y la
+        // fila que toca el piso; con dos, borde y la que toca el piso; con una, el borde.
+        const thickness = n ? s + n - 1 : 3;
+        const faceRow = thickness >= 3 ? 3 - s : thickness === 2 ? (s === 1 ? 2 : 0) : 0;
+        return wallPiece(walls.arriba, col, faceRow);
+    }
+    if (e || w) {
+        const thickness = e && w ? e + w - 1 : 3;
+        if (thickness < 3) return w ? wallPiece(walls.derecha, 2, row) : wallPiece(walls.izquierda, 0, row);
+        // Entre dos salas: la cara de cada una contra su piso y el borde en el medio.
+        if (e && w) {
+            if (w === 1) return wallPiece(walls.derecha, 0, row);
+            if (e === 1) return wallPiece(walls.izquierda, 2, row);
+            if (thickness >= 4 && w === 2) return wallPiece(walls.derecha, 1, row);
+            if (thickness >= 4 && e === 2) return wallPiece(walls.izquierda, 1, row);
+            return wallPiece(walls.izquierda, 0, row);
+        }
+        return e ? wallPiece(walls.izquierda, 3 - e, row) : wallPiece(walls.derecha, w - 1, row);
+    }
+    if (n) return wallPiece(walls.abajo, col, n - 1);
+    // Esquinas: el piso más cercano en diagonal (la sala está abajo a la derecha de la esquina "no", y así).
+    let best: { d: number; grh: number } | null = null;
+    for (let j = 1; j <= 3; j++) {
+        for (let i = 1; i <= 3; i++) {
+            const d = Math.max(i, j) * 10 + i + j;
+            if (best && best.d <= d) continue;
+            if (isOpen(charAt(plan, x + i, y + j))) best = { d, grh: wallPiece(walls.no, 3 - i, 3 - j) };
+            else if (isOpen(charAt(plan, x - i, y + j))) best = { d, grh: wallPiece(walls.ne, i - 1, 3 - j) };
+            else if (isOpen(charAt(plan, x + i, y - j))) best = { d, grh: wallPiece(walls.so, 3 - i, j - 1) };
+            else if (isOpen(charAt(plan, x - i, y - j))) best = { d, grh: wallPiece(walls.se, i - 1, j - 1) };
+        }
+    }
+    return best?.grh ?? VOID_GRH;
+}
 
 // Una escalera de "bajoElAgua" está bajo el agua en la punta que tiene agua profunda al lado (la otra es común).
 function isUnderwaterStair(plan: Plan, x: number, y: number): boolean {
@@ -498,6 +585,65 @@ for (const digit of legend.escalerasTrasPilares ?? []) {
     }
 }
 
+// La piel de la mazmorra (legend.piel). skinId da el número de un objeto de la piel por su clave.
+const SKIN = legend.piel;
+const skinId = (key?: string) => (key ? SKIN?.objetos[key]?.id : undefined);
+
+// Una puerta en una pared vertical de tres de grosor (pared en las cuatro diagonales): la de la piel se ve abierta y
+// cerrada. En una pared de una baldosa queda como siempre (un cristal), porque el dibujo de la piel ocupa tres.
+function isThickSideDoor(plan: Plan, x: number, y: number): boolean {
+    return [[-1, -1], [1, -1], [-1, 1], [1, 1]].every(([dx, dy]) => isWall(charAt(plan, x + dx, y + dy)));
+}
+
+// La piel de una baldosa: objeto de base -> el de la piel. Las puertas, según su tipo y su pared; el cofre del jefe
+// (cerrado y abierto); las escaleras, según si bajan o suben.
+function tileSkin(plan: Plan, x: number, y: number): Record<number, number> {
+    const skin: Record<number, number> = {};
+    if (!SKIN) return skin;
+    const c = charAt(plan, x, y);
+    if (isBarrier(c) && BARRIER_TYPE[c] !== "bomba") {
+        const horizontal = isWall(charAt(plan, x - 1, y)) && isWall(charAt(plan, x + 1, y));
+        if (horizontal) {
+            const closed = skinId(SKIN.puertas?.[BARRIER_TYPE[c]]);
+            const open = skinId(SKIN.puertas?.abierta);
+            if (closed) skin[DUNGEON_OBJECTS.puerta.id] = closed;
+            if (open) skin[DUNGEON_OBJECTS.puertaAbierta.id] = open;
+        } else if (SKIN.puertasLaterales && isThickSideDoor(plan, x, y)) {
+            // La pared oeste de la sala de la derecha, salvo que solo haya sala a la izquierda.
+            const side = isOpen(charAt(plan, x + 2, y)) || !isOpen(charAt(plan, x - 2, y)) ? "izquierda" : "derecha";
+            const closed = skinId(SKIN.puertasLaterales.cerrada[side]);
+            const open = skinId(SKIN.puertasLaterales.abierta[side]);
+            if (closed) {
+                skin[DUNGEON_OBJECTS.barrera.id] = closed;
+                skin[DUNGEON_OBJECTS.puerta.id] = closed;
+            }
+            if (open) skin[DUNGEON_OBJECTS.puertaAbierta.id] = open;
+        }
+    }
+    if (c === "Y" && SKIN.cofreJefe) {
+        const closed = skinId(SKIN.cofreJefe.cerrado);
+        const open = skinId(SKIN.cofreJefe.abierto);
+        if (closed) skin[DUNGEON_OBJECTS.cofreJefe.id] = closed;
+        if (open) skin[DUNGEON_OBJECTS.cofreAbierto.id] = open;
+    }
+    if (isStair(c) && SKIN.escaleras && !portalDigits.has(c)) {
+        const other = (stairs.get(c) ?? []).find((s) => !(s.mapId === plan.mapId && s.x === x && s.y === y));
+        const id = skinId(other && other.mapId < plan.mapId ? SKIN.escaleras.sube : SKIN.escaleras.baja);
+        if (id) skin[STAIRS_OBJ] = id;
+    }
+    return skin;
+}
+
+// La piel de los objetos que se ven igual en toda la mazmorra.
+const objectSkin: Record<number, number> = {};
+for (const [base, key] of Object.entries(SKIN?.reemplazos ?? {})) {
+    const id = skinId(key);
+    const baseId = DUNGEON_OBJECTS[base as keyof typeof DUNGEON_OBJECTS]?.id;
+    if (!id || !baseId) throw new Error(`La piel reemplaza "${base}" por "${key}", y uno de los dos no existe.`);
+    objectSkin[baseId] = id;
+}
+if (skinId(SKIN?.portal)) objectSkin[PORTAL_OBJ] = skinId(SKIN?.portal)!;
+
 // Datos de mecánicas que lee dungeons.ts (clave "dungeon" de specials.json; el server no la usa para otra cosa).
 function buildMechanics(plan: Plan) {
     const { rooms, roomOf } = roomsByMap.get(plan.mapId)!;
@@ -652,6 +798,7 @@ function buildTile(plan: Plan, x: number, y: number): Tile {
         let distance = 1;
         while (distance <= 4 && isWall(charAt(plan, x, y + distance))) distance++;
         const object = c === "W" ? DUNGEON_OBJECTS.paredRajada.id : undefined;
+        if (WALLS) return { graphics: themedWallGrh(plan, x, y, WALLS), blocked: true, object };
         if (distance <= 4 && isOpen(charAt(plan, x, y + distance))) {
             return { graphics: block4(WALL_FACE_GRH, x, y, 4 - distance), blocked: true, object };
         }
@@ -679,7 +826,10 @@ function buildTile(plan: Plan, x: number, y: number): Tile {
                       ? DUNGEON_OBJECTS.puertaAbierta.id
                       : DUNGEON_OBJECTS.puerta.id
                   : open
-                    ? undefined
+                    ? // Con piel, la puerta lateral abierta también se ve (dungeons.ts, setBarrier).
+                      SKIN?.puertasLaterales && isThickSideDoor(plan, x, y)
+                        ? DUNGEON_OBJECTS.puertaAbierta.id
+                        : undefined
                     : DUNGEON_OBJECTS.barrera.id;
         if (c === "@") tile.object = horizontal ? DUNGEON_OBJECTS.paredBombeable.id : DUNGEON_OBJECTS.rocas.id;
         tile.blocked = !open;
@@ -927,6 +1077,8 @@ for (const plan of plans) {
     };
     const placements: Array<{ mapNum: number; x: number; y: number; npcIndex: number; movement?: number }> = [];
     const expanded: Record<string, Record<string, Record<string, unknown>>> = {};
+    // La piel para el server (dungeons.ts, skinObject): los objetos de siempre y por baldosa.
+    const skinByTile: Record<string, Record<number, number>> = {};
 
     for (let y = 1; y <= SIZE; y++) {
         const row: number[] = [];
@@ -954,9 +1106,12 @@ for (const plan of plans) {
                 specials.exits[coord] = tile.exit;
                 cell.tileExit = tile.exit;
             }
+            const skin = tileSkin(plan, x, y);
+            if (Object.keys(skin).length) skinByTile[coord] = skin;
             if (tile.object) {
+                // El server guarda el objeto de siempre; el cliente ve el de la piel.
                 specials.objects[coord] = { objIndex: tile.object, amount: 1 };
-                cell.objInfo = { objIndex: tile.object, amount: 1 };
+                cell.objInfo = { objIndex: skin[tile.object] ?? objectSkin[tile.object] ?? tile.object, amount: 1 };
             }
             if (tile.npc) {
                 specials.npcs[coord] = tile.npc;
@@ -967,6 +1122,7 @@ for (const plan of plans) {
         rows.push(row);
         expanded[String(y)] = expandedRow;
     }
+    if (SKIN) (specials.dungeon as Record<string, unknown>).piel = { objetos: objectSkin, porBaldosa: skinByTile };
 
     const meta = {
         id: plan.mapId,
@@ -1005,7 +1161,7 @@ function upsertDungeonObjects() {
         const raw = fs.readFileSync(fullPath, "utf8");
         const objects = JSON.parse(raw);
         const template = objects["864"]; // Pozo: decoración que no se levanta
-        for (const entry of Object.values(DUNGEON_OBJECTS)) {
+        for (const entry of [...Object.values(DUNGEON_OBJECTS), ...Object.values(SKIN?.objetos ?? {})]) {
             objects[String(entry.id)] = { ...template, name: entry.name, grhIndex: entry.grh, objType: 0, agarrable: 1, valor: 0 };
         }
         fs.writeFileSync(fullPath, `${JSON.stringify(objects)}${raw.endsWith("\n") ? "\n" : ""}`, "utf8");

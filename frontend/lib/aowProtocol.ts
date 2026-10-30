@@ -106,6 +106,8 @@ export const CLIENT_PACKET_ID = {
 
 export const CHARACTER_SWING_WEAPON = 1;
 export const CHARACTER_SWING_SHIELD = 2;
+// El golpe de una criatura con hoja de ataque (engine/creatureAttack.ts).
+export const CHARACTER_SWING_BODY = 4;
 
 export type PanelShare = {
     type: string;

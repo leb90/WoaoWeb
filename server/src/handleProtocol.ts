@@ -992,8 +992,14 @@ function writeNpcPayload(npc: ProtocolNpc, viewerId?: EntityId) {
     pkg.writeString(String(npc.etiqueta ?? ""));
 }
 
+// El objeto que ve el cliente: en una mazmorra con piel, el dibujo de esa mazmorra (dungeons.ts, skinObject). Se
+// carga acá y no arriba porque dungeons.ts usa este módulo.
+function shownObject(idItem: number, idMap: number, pos: Position): number {
+    return (require("./dungeons") as typeof import("./dungeons")).skinObject(Number(idMap), pos, Number(idItem));
+}
+
 function writeAreaItemSnapshot(item: AreaItemSnapshot) {
-    pkg.writeInt(item.idItem);
+    pkg.writeInt(shownObject(item.idItem, item.map, item.pos));
     pkg.writeShort(item.map);
     pkg.writeByte(item.pos.x);
     pkg.writeByte(item.pos.y);
@@ -1844,7 +1850,7 @@ const handleServer: HandleProtocolApi = {
 
     renderItem(idItem, idMap, pos, client) {
         pkg.setPackageID(pkg.clientPacketID.renderItem);
-        pkg.writeInt(idItem);
+        pkg.writeInt(shownObject(idItem, idMap, pos));
         pkg.writeShort(idMap);
         pkg.writeByte(pos.x);
         pkg.writeByte(pos.y);

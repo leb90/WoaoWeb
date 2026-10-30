@@ -161,3 +161,15 @@ Hechos para el juego, sin gráficos de terceros:
 - el pilar de la torre, entero y roto (`graphics/330037.png`, 42448 y 42449), dibujado con sombreado de cilindro;
 - el ojo de piedra roto (`graphics/330038.png`, 42451), que es el ojo de piedra del Santuario (42299) apagado y con rajas;
 - el Orbe (42450) es la bola de hierro del Machacador (`graphics/330022.png`), ahora como objeto del piso.
+
+## Gruta: arte de Ezequiel (mazmorra de prueba, mapas 590 y 591)
+
+Arte propio del equipo, hecho por Ezequiel para la Gruta del Abisal (`Recursos/Mazmorras/1/`). Las hojas se recortaron cuadro por cuadro (no tienen una grilla pareja), se achicaron a la escala de los personajes con los pies apoyados en la baldosa y se juntaron en planillas nuevas; las paredes se corrieron hacia la sala para que no quede una franja vacía contra el piso. No tiene licencia de terceros.
+
+| Planilla | Contenido | Números en el juego |
+|---|---|---|
+| `330041.png` a `330047.png` | Esqueleto, Zombie, Murciélago, Pulga de agua, Calamar, Tortuga Espinosa (minijefe) y El Abisal (jefe): caminata y ataque en las cuatro direcciones | cuerpos 586 a 599 (los pares son la caminata; cada uno trae `"ataque"` con el cuerpo de la animación de ataque) |
+| `330048.png` | Puertas (abierta, de sala, con cerradura, del jefe, reja, de un solo sentido y las laterales), escaleras, bloque, botón suelto y apretado, losa, cofres, cofre del jefe, antorchas y los dos portales | objetos 1895 a 1918 (la piel de la mazmorra en `server/mazmorras/prueba/leyenda.json`) |
+| `330049.png` | Paredes (cara norte, pared sur, oeste, este y las cuatro esquinas) y piso | `graficos` de la misma leyenda |
+
+Faltan, para una próxima tanda: el agua profunda animada con sus orillas, el pozo, la pared rajada de las bombas, la piedra de invocación, la tortuga rodando y aturdida, y el Abisal saliendo a morder y el pez chico que llama.

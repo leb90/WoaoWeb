@@ -243,6 +243,9 @@ type MapMechanics = {
         salasOjos: number[];
         salaTrofeo: number | null;
     };
+    // La piel de la mazmorra (scripts/buildDungeonMaps.ts, legend.piel): el objeto que ve el cliente en lugar del de
+    // siempre, en toda la mazmorra o en una baldosa (puertas, cofre del jefe, escaleras). Ver skinObject.
+    piel?: { objetos: Record<string, number>; porBaldosa: Record<string, Record<string, number>> };
 };
 type Torch = { x: number; y: number; encendida: boolean; sala: number };
 // La piedra pesada y la estatua pesada solo las levanta el Brazalete de Fuerza nivel 2. La cabeza de caballo del
@@ -452,6 +455,16 @@ export function isDungeonInstanceMap(mapId: number | undefined): boolean {
 
 export function isDungeonBaseMap(mapId: number | undefined): boolean {
     return Boolean(mapId) && getDungeonBaseMaps().includes(Number(mapId));
+}
+
+// El objeto que ve el cliente en una baldosa de mazmorra: el de la piel de esa mazmorra si tiene, si no el mismo. La
+// lógica usa siempre los objetos de siempre (OBJ); esto se aplica al mandárselos al cliente (handleProtocol.renderItem).
+export function skinObject(mapId: number, pos: { x: number; y: number }, objIndex: number): number {
+    if (!objIndex || mapId < 500) return objIndex;
+    const base = baseMapOf(mapId) ?? (isDungeonBaseMap(mapId) ? mapId : null);
+    const piel = base === null ? undefined : mechanicsOf(base)?.mech.piel;
+    if (!piel) return objIndex;
+    return piel.porBaldosa[coordKey(pos.x, pos.y)]?.[objIndex] ?? piel.objetos[objIndex] ?? objIndex;
 }
 
 function characterKey(user: RuntimeCharacter | undefined): string | null {
@@ -1361,8 +1374,10 @@ function setBarrier(ctx: MapContext, barrier: Barrier, open: boolean) {
     // bomba es un arco tapiado (en una pared horizontal) o un montón de rocas (en una vertical).
     const bombWall = barrier.tipo === "bomba";
     const closedObject = bombWall ? (barrier.horizontal ? OBJ.paredBombeable : OBJ.rocas) : barrier.bloque ? OBJ.puerta : OBJ.barrera;
+    // Con piel, la puerta lateral de una pared gruesa se ve también abierta (la de siempre, abierta, desaparece).
+    const openSide = ctx.index.mech.piel?.porBaldosa[key]?.[OBJ.puertaAbierta] ? OBJ.puertaAbierta : 0;
     const objIndex =
-        barrier.horizontal && !barrier.bloque ? (open ? OBJ.puertaAbierta : bombWall ? OBJ.paredBombeable : OBJ.puerta) : open ? 0 : closedObject;
+        barrier.horizontal && !barrier.bloque ? (open ? OBJ.puertaAbierta : bombWall ? OBJ.paredBombeable : OBJ.puerta) : open ? openSide : closedObject;
     setObject(ctx.mapId, barrier.x, barrier.y, objIndex);
     setBlocked(ctx.mapId, barrier.x, barrier.y, !open);
 }
@@ -3200,6 +3215,7 @@ module.exports = {
     findFreeSlot,
     isDungeonInstanceMap,
     isDungeonBaseMap,
+    skinObject,
     getAttackDeniedReason,
     developmentLockReason,
     isWatchedDungeonNpc,

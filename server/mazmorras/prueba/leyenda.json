@@ -322,45 +322,45 @@
   ]
  },
  "graficos": {
-  "piso": 43098,
+  "piso": 43141,
   "paredes": {
    "arriba": {
-    "grh": 42936,
+    "grh": 42979,
     "ancho": 11,
     "alto": 3
    },
    "abajo": {
-    "grh": 42969,
+    "grh": 43012,
     "ancho": 11,
     "alto": 3
    },
    "izquierda": {
-    "grh": 43002,
+    "grh": 43045,
     "ancho": 3,
     "alto": 10
    },
    "derecha": {
-    "grh": 43032,
+    "grh": 43075,
     "ancho": 3,
     "alto": 10
    },
    "no": {
-    "grh": 43062,
+    "grh": 43105,
     "ancho": 3,
     "alto": 3
    },
    "ne": {
-    "grh": 43071,
+    "grh": 43114,
     "ancho": 3,
     "alto": 3
    },
    "so": {
-    "grh": 43080,
+    "grh": 43123,
     "ancho": 3,
     "alto": 3
    },
    "se": {
-    "grh": 43089,
+    "grh": 43132,
     "ancho": 3,
     "alto": 3
    }
@@ -476,28 +476,50 @@
    "antorchaEncendida": {
     "id": 1916,
     "name": "Antorcha de la gruta encendida",
-    "grh": 42935
+    "grh": 42978
    },
    "portal": {
     "id": 1917,
     "name": "Portal de la gruta",
-    "grh": 42933
+    "grh": 42976
    },
    "portalAtajo": {
     "id": 1918,
     "name": "Portal de la gruta",
-    "grh": 42934
+    "grh": 42977
+   },
+   "cofreAbriendose": {
+    "id": 1919,
+    "name": "Cofre de la gruta abierto",
+    "grh": 42972
+   },
+   "cofreJefeAbriendose": {
+    "id": 1920,
+    "name": "Cofre del jefe de la gruta abierto",
+    "grh": 42973
+   },
+   "aplastadorBaja": {
+    "id": 1921,
+    "name": "Aplastador de la gruta",
+    "grh": 42974
+   },
+   "aplastadorSube": {
+    "id": 1922,
+    "name": "Losa del aplastador de la gruta",
+    "grh": 42975
    }
   },
   "reemplazos": {
    "cofre": "cofre",
-   "cofreAbierto": "cofreAbierto",
+   "cofreAbierto": "cofreAbriendose",
    "bloque": "bloque",
    "placa": "placa",
    "placaApretada": "placaApretada",
    "losa": "losa",
    "antorchaApagada": "antorchaApagada",
-   "antorchaEncendida": "antorchaEncendida"
+   "antorchaEncendida": "antorchaEncendida",
+   "aplastador": "aplastadorBaja",
+   "losaAplastador": "aplastadorSube"
   },
   "portal": "portal",
   "escaleras": {
@@ -506,7 +528,7 @@
   },
   "cofreJefe": {
    "cerrado": "cofreJefe",
-   "abierto": "cofreJefeAbierto"
+   "abierto": "cofreJefeAbriendose"
   },
   "puertas": {
    "abierta": "puertaAbierta",
@@ -527,6 +549,10 @@
     "izquierda": "lateralCerradaIzquierda",
     "derecha": "lateralCerradaDerecha"
    }
-  }
- }
+  },
+  "portalAtajo": "portalAtajo"
+ },
+ "portales": [
+  "5"
+ ]
 }

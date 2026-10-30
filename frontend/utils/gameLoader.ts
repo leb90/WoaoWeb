@@ -31,6 +31,8 @@ type CompactExtendedGraphic = {
     h?: number;
     r?: number[];
     s?: number;
+    // Se reproduce una sola vez (GraphicData.unaVez).
+    u?: number;
     o?: [x: number, y: number];
 };
 
@@ -263,6 +265,10 @@ function decompressGraphicsDb(
 
         if (compactGraphic.s !== undefined) {
             graphicData.speed = compactGraphic.s;
+        }
+
+        if (compactGraphic.u) {
+            graphicData.unaVez = true;
         }
 
         if (hasStaticFrameData) {

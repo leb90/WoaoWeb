@@ -8,6 +8,8 @@ export interface GraphicData {
     height: number;
     frames: Record<string, string>;
     speed?: number; // Animation speed in milliseconds per frame
+    // Se reproduce una sola vez y queda en el último cuadro (objetos que se abren o caen; "u" en el índice compacto).
+    unaVez?: boolean;
     offset: {
         x: number;
         y: number;

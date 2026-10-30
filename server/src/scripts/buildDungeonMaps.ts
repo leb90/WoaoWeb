@@ -236,6 +236,8 @@ type Skin = {
     // Clave de DUNGEON_OBJECTS -> clave de la piel.
     reemplazos?: Partial<Record<keyof typeof DUNGEON_OBJECTS, string>>;
     portal?: string;
+    // Las escaleras que se ven como portal ("portales"): los atajos, de otro color que la salida.
+    portalAtajo?: string;
     // La escalera que baja a un mapa de número mayor y la que sube.
     escaleras?: { baja: string; sube: string };
     cofreJefe?: { cerrado: string; abierto: string };
@@ -626,6 +628,7 @@ function tileSkin(plan: Plan, x: number, y: number): Record<number, number> {
         if (closed) skin[DUNGEON_OBJECTS.cofreJefe.id] = closed;
         if (open) skin[DUNGEON_OBJECTS.cofreAbierto.id] = open;
     }
+    if (isStair(c) && portalDigits.has(c) && skinId(SKIN.portalAtajo)) skin[PORTAL_OBJ] = skinId(SKIN.portalAtajo)!;
     if (isStair(c) && SKIN.escaleras && !portalDigits.has(c)) {
         const other = (stairs.get(c) ?? []).find((s) => !(s.mapId === plan.mapId && s.x === x && s.y === y));
         const id = skinId(other && other.mapId < plan.mapId ? SKIN.escaleras.sube : SKIN.escaleras.baja);

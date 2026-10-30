@@ -408,9 +408,11 @@ export function renderTileLayer(
             animatedSprite.alpha = 1;
             animatedSprite.visible = true;
 
+            // "unaVez": se reproduce una vez y queda en el último cuadro (el cofre que se abre, el aplastador).
             engine.animatedSpriteFrameCounters.set(animatedSprite, {
                 graphicId: graphicId.toString(),
                 graphicData,
+                loop: !graphicData.unaVez,
             });
 
             sprite = animatedSprite;
@@ -499,6 +501,7 @@ export function renderRoofLayer(
             engine.animatedSpriteFrameCounters.set(animatedSprite, {
                 graphicId: graphicId.toString(),
                 graphicData,
+                loop: !graphicData.unaVez,
             });
             sprite = animatedSprite;
         } else {

@@ -322,7 +322,7 @@
   ]
  },
  "graficos": {
-  "piso": 43141,
+  "piso": 43249,
   "paredes": {
    "arriba": {
     "grh": 42979,
@@ -346,23 +346,23 @@
    },
    "no": {
     "grh": 43105,
-    "ancho": 3,
-    "alto": 3
+    "ancho": 6,
+    "alto": 6
    },
    "ne": {
-    "grh": 43114,
-    "ancho": 3,
-    "alto": 3
+    "grh": 43141,
+    "ancho": 6,
+    "alto": 6
    },
    "so": {
-    "grh": 43123,
-    "ancho": 3,
-    "alto": 3
+    "grh": 43177,
+    "ancho": 6,
+    "alto": 6
    },
    "se": {
-    "grh": 43132,
-    "ancho": 3,
-    "alto": 3
+    "grh": 43213,
+    "ancho": 6,
+    "alto": 6
    }
   }
  },

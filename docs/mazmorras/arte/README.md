@@ -41,14 +41,21 @@ Hoy las mazmorras mezclan gráficos de Argentum Online, paquetes libres de otros
 **Reglas técnicas (las del motor del juego):**
 - **Archivos:** PNG con transparencia (RGBA), sin fondo, sin halos claros alrededor y sin texto ni marcas de agua.
 - **Baldosas de piso:** un bloque de 4 × 4 baldosas (128 × 128) que se repite sin costura en las dos direcciones; el juego elige la baldosa por la posición en el mapa.
-- **Paredes:** un bloque de 4 × 4. Cada fila es la cara de la pared vista a 1, 2, 3 y 4 baldosas del piso (la última fila toca el piso). Tiene que repetirse sin costura a lo ancho.
+- **Paredes:** el juego de piezas de la Gruta (ver [INTEGRAR.md](INTEGRAR.md)):
+  - pared de arriba y de abajo de 11 × 3 baldosas;
+  - izquierda y derecha de 3 × 10;
+  - las cuatro esquinas en L de 6 × 6, con sus dos brazos, para que el borde doble.
+
+  Paredes de 3 baldosas de grosor, con el borde claro del lado de afuera. Las puertas laterales van giradas 90° para encajar con su pared, en versión izquierda y derecha.
 - **Agua y lava:** bloque de 4 × 4 animado (4 cuadros en bucle, que empalmen).
 - **Objetos:** una baldosa (32 × 32), anclados abajo al centro. Si son altos (estatuas, puertas, pilares), el dibujo puede subir (32 × 64, 32 × 96) o ensancharse (96 × 96 las puertas); la base sigue en la baldosa.
 - **Cuerpos (criaturas y jefes):** una hoja por cuerpo, con 4 filas en este orden: mirando arriba, abajo, derecha e izquierda. Las columnas son los cuadros, todos de la misma medida. Mínimo 6 cuadros de caminata por dirección, que entren en bucle. Los pies van abajo al centro del cuadro: el juego lo apoya sobre la baldosa.
 - **Animaciones aparte** (ataques, poses, efectos): una tira horizontal por animación, con cuadros de la misma medida.
-- **Numeración del juego:** al día de este documento, el próximo grh libre es el 42484, el próximo archivo de gráficos el 330041 y el próximo cuerpo el 586. Verificalos antes de indexar.
+- **Numeración del juego:** después de la Gruta, los próximos libres son el grh 43265, el archivo 330050, el cuerpo 600, el objeto 1923 y la plantilla 9839. Verificalos en los archivos antes de indexar.
 
 ## Cómo entra al juego
+
+**Antes de integrar, leer [INTEGRAR.md](INTEGRAR.md):** son los errores de la Gruta y cómo evitarlos (paredes, esquinas, puertas, piel, criaturas, migraciones y cachés).
 
 **Cómo entra al juego (solo después de que Leandro apruebe el arte):**
 1. Cada hoja va a `frontend/public/graphics/<archivo>.png`, numeradas desde el próximo archivo libre.

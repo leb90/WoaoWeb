@@ -224,8 +224,9 @@ type Plan = { mapId: number; meta: Record<string, string>; origin: { x: number; 
 type WallPiece = { grh: number; ancho: number; alto: number };
 // Paredes de tres baldosas de grosor: "arriba" es la cara norte de una sala (fila 0 el borde, la última la que toca el
 // piso), "abajo" la pared sur (fila 0 la que toca la sala), "izquierda" la oeste (la última columna toca la sala),
-// "derecha" la este (la columna 0 toca la sala) y las esquinas de 3 × 3 donde se juntan dos: "no" arriba a la izquierda
-// de la sala, "ne", "so" y "se".
+// "derecha" la este (la columna 0 toca la sala) y las piezas en L de 6 × 6 de cada esquina: "no" arriba a la izquierda
+// de la sala (la esquina en las columnas 0-2 y filas 0-2, el brazo de la pared de arriba en las columnas 3-5 y el de la
+// pared de la izquierda en las filas 3-5), "ne", "so" y "se" espejadas.
 type WallSet = Record<"arriba" | "abajo" | "izquierda" | "derecha" | "no" | "ne" | "so" | "se", WallPiece>;
 // La piel de una mazmorra: sus propios dibujos de los objetos de mazmorra, que son los mismos para todas. El server
 // sigue usando los objetos de siempre (dungeons.ts) y le manda al cliente el de la piel (skinObject); los mapas del
@@ -332,61 +333,219 @@ const block4 = (base: number, x: number, y: number, row?: number) => base + (row
 // Paredes con tramos y esquinas (legend.graficos.paredes): cada baldosa de pared mira a qué distancia (1 a 3) tiene
 // piso en línea recta hacia cada lado, atravesando solo pared. Con piso abajo es la cara norte de esa sala (en vista de
 // tres cuartos manda la cara); si no, con piso a un costado es la pared oeste o este; si no, con piso arriba es la pared
-// sur; si no hay piso en línea recta pero sí en diagonal, es una esquina. Las paredes de menos de tres baldosas entre
-// dos salas se dibujan con el borde de roca (un muro bajo visto desde arriba). Lo que queda lejos de todo es negro.
+// sur; si no hay piso en línea recta pero sí en diagonal, es una esquina. Junto a una esquina, los tramos rectos siguen
+// con los brazos de su pieza en L, donde dobla el borde. Las paredes de menos de tres baldosas entre dos salas se
+// dibujan con el borde de roca (un muro bajo visto desde arriba). Lo que queda lejos de todo es negro.
 const WALLS = legend.graficos?.paredes;
 const wallPiece = (piece: WallPiece, col: number, row: number) => piece.grh + (row % piece.alto) * piece.ancho + (col % piece.ancho);
 
+// Una puerta metida en una pared y el pasillo que la cruza con ella (de hasta tres baldosas, con pared a los dos
+// costados) se dibujan como pared: la pared sigue de largo por detrás del dibujo de la puerta, que tapa el pasillo, en
+// vez de abrirse en dos caras.
+function isDoorway(plan: Plan, x: number, y: number): boolean {
+    // [dx, dy]: hacia dónde va el pasillo (vertical a través de una pared horizontal, u horizontal).
+    return [[0, 1], [1, 0]].some(([dx, dy]) => {
+        const inWall = (px: number, py: number) =>
+            isOpen(charAt(plan, px, py)) && isWall(charAt(plan, px - dy, py - dx)) && isWall(charAt(plan, px + dy, py + dx));
+        if (!inWall(x, y)) return false;
+        let back = 0;
+        let ahead = 0;
+        while (back < 3 && inWall(x - dx * (back + 1), y - dy * (back + 1))) back++;
+        while (ahead < 3 && inWall(x + dx * (ahead + 1), y + dy * (ahead + 1))) ahead++;
+        if (back + ahead + 1 > 3) return false;
+        for (let k = -back; k <= ahead; k++) if (isBarrier(charAt(plan, x + dx * k, y + dy * k))) return true;
+        return false;
+    });
+}
+const isSolid = (plan: Plan, x: number, y: number) => isWall(charAt(plan, x, y)) || isDoorway(plan, x, y);
+const isRoomFloor = (plan: Plan, x: number, y: number) => isOpen(charAt(plan, x, y)) && !isDoorway(plan, x, y);
+
+// Las salas de cada mapa (lo abierto, sin puertas) y en qué orden se llega a cada una desde donde se entra al mapa (la
+// entrada, o las escaleras que vienen de un mapa anterior).
+const roomsCache = new Map<number, { room: Map<string, number>; rank: number[] }>();
+function roomsOf(plan: Plan): { room: Map<string, number>; rank: number[] } {
+    const cached = roomsCache.get(plan.mapId);
+    if (cached) return cached;
+    const tiles: Array<[number, number]> = [];
+    plan.grid.forEach((line, gy) => [...line].forEach((_, gx) => tiles.push([gx + plan.origin.x, gy + plan.origin.y])));
+    const steps = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    const room = new Map<string, number>();
+    let rooms = 0;
+    for (const [x, y] of tiles) {
+        if (room.has(`${x},${y}`) || !isRoomFloor(plan, x, y)) continue;
+        const queue: Array<[number, number]> = [[x, y]];
+        room.set(`${x},${y}`, rooms);
+        while (queue.length) {
+            const [cx, cy] = queue.pop()!;
+            for (const [dx, dy] of steps) {
+                const key = `${cx + dx},${cy + dy}`;
+                if (room.has(key) || !isRoomFloor(plan, cx + dx, cy + dy)) continue;
+                room.set(key, rooms);
+                queue.push([cx + dx, cy + dy]);
+            }
+        }
+        rooms++;
+    }
+    const comesFromBefore = (c: string, x: number, y: number) =>
+        (stairs.get(c) ?? []).some((s) => !(s.mapId === plan.mapId && s.x === x && s.y === y) && s.mapId < plan.mapId);
+    let sources = tiles.filter(([x, y]) => {
+        const c = charAt(plan, x, y);
+        return c === "E" || (isStair(c) && !portalDigits.has(c) && comesFromBefore(c, x, y));
+    });
+    if (!sources.length) sources = tiles.filter(([x, y]) => isStair(charAt(plan, x, y)) && !portalDigits.has(charAt(plan, x, y)));
+    // Distancia caminando (cruzando puertas) desde donde se entra; cada sala toma la de su baldosa más cercana.
+    const rank = Array.from({ length: rooms }, (_, i) => Number.MAX_SAFE_INTEGER - rooms + i);
+    const distance = new Map(sources.map(([x, y]) => [`${x},${y}`, 0]));
+    const queue = [...sources];
+    for (let head = 0; head < queue.length; head++) {
+        const [x, y] = queue[head];
+        const d = distance.get(`${x},${y}`)!;
+        const r = room.get(`${x},${y}`);
+        if (r !== undefined) rank[r] = Math.min(rank[r], d);
+        for (const [dx, dy] of steps) {
+            const key = `${x + dx},${y + dy}`;
+            if (distance.has(key) || !isOpen(charAt(plan, x + dx, y + dy))) continue;
+            distance.set(key, d + 1);
+            queue.push([x + dx, y + dy]);
+        }
+    }
+    const result = { room, rank };
+    roomsCache.set(plan.mapId, result);
+    return result;
+}
+
+// Una pared vertical entre la sala de (lx, y) y la de (rx, y) es entera de una de las dos, la primera a la que se llega:
+// "derecha" si es la pared este de la de la izquierda, "izquierda" si es la oeste de la de la derecha. Su puerta abre
+// hacia esa misma sala.
+function sharedWallSide(plan: Plan, lx: number, rx: number, y: number): "izquierda" | "derecha" {
+    const { room, rank } = roomsOf(plan);
+    const left = room.get(`${lx},${y}`);
+    const right = room.get(`${rx},${y}`);
+    if (left === undefined) return "izquierda";
+    if (right === undefined) return "derecha";
+    return rank[right] < rank[left] ? "izquierda" : "derecha";
+}
+
 function floorDistance(plan: Plan, x: number, y: number, dx: number, dy: number): number {
     for (let d = 1; d <= 3; d++) {
-        const c = charAt(plan, x + dx * d, y + dy * d);
-        if (isOpen(c)) return d;
-        if (!isWall(c)) return 0;
+        if (isSolid(plan, x + dx * d, y + dy * d)) continue;
+        return isOpen(charAt(plan, x + dx * d, y + dy * d)) ? d : 0;
     }
     return 0;
 }
 
-function themedWallGrh(plan: Plan, x: number, y: number, walls: WallSet): number {
+// Qué pieza va en una baldosa de pared: la columna y la fila dentro de la pieza, y la baldosa de piso de la sala a la que
+// mira (thin: pared de menos de tres, sin brazos de esquina).
+type WallTile = { piece: keyof WallSet; col: number; row: number; floor: [number, number]; thin?: boolean };
+const wallTiles = new Map<string, WallTile | null>();
+function wallTile(plan: Plan, x: number, y: number): WallTile | null {
+    const key = `${plan.mapId},${x},${y}`;
+    if (!wallTiles.has(key)) wallTiles.set(key, computeWallTile(plan, x, y));
+    return wallTiles.get(key)!;
+}
+
+// Si la baldosa está debajo o encima de una pared vertical entre dos salas (sharedWallSide), de cuál de las dos es.
+function sharedWallAlong(plan: Plan, x: number, y: number): "izquierda" | "derecha" | undefined {
+    for (const dy of [1, -1]) {
+        for (let d = 1; d <= 3 && isSolid(plan, x, y + dy * d); d++) {
+            const e = floorDistance(plan, x, y + dy * d, 1, 0);
+            const w = floorDistance(plan, x, y + dy * d, -1, 0);
+            if (e && w && e + w - 1 >= 3) return sharedWallSide(plan, x - w, x + e, y + dy * d);
+            if (e || w) break;
+        }
+    }
+    return undefined;
+}
+
+function computeWallTile(plan: Plan, x: number, y: number): WallTile | null {
     const s = floorDistance(plan, x, y, 0, 1);
     const n = floorDistance(plan, x, y, 0, -1);
     const e = floorDistance(plan, x, y, 1, 0);
     const w = floorDistance(plan, x, y, -1, 0);
-    const col = x - 1;
-    const row = y - 1;
     if (s) {
         // Grosor entre la sala de abajo y la de arriba (si hay una a tres o menos): con tres o más, borde, cara y la
         // fila que toca el piso; con dos, borde y la que toca el piso; con una, el borde.
         const thickness = n ? s + n - 1 : 3;
-        const faceRow = thickness >= 3 ? 3 - s : thickness === 2 ? (s === 1 ? 2 : 0) : 0;
-        return wallPiece(walls.arriba, col, faceRow);
+        const row = thickness >= 3 ? 3 - s : thickness === 2 ? (s === 1 ? 2 : 0) : 0;
+        return { piece: "arriba", col: x - 1, row, floor: [x, y + s], thin: thickness < 3 };
     }
     if (e || w) {
         const thickness = e && w ? e + w - 1 : 3;
-        if (thickness < 3) return w ? wallPiece(walls.derecha, 2, row) : wallPiece(walls.izquierda, 0, row);
-        // Entre dos salas: la cara de cada una contra su piso y el borde en el medio.
-        if (e && w) {
-            if (w === 1) return wallPiece(walls.derecha, 0, row);
-            if (e === 1) return wallPiece(walls.izquierda, 2, row);
-            if (thickness >= 4 && w === 2) return wallPiece(walls.derecha, 1, row);
-            if (thickness >= 4 && e === 2) return wallPiece(walls.izquierda, 1, row);
-            return wallPiece(walls.izquierda, 0, row);
+        if (thickness < 3) {
+            return w
+                ? { piece: "derecha", col: 2, row: y - 1, floor: [x - w, y], thin: true }
+                : { piece: "izquierda", col: 0, row: y - 1, floor: [x + e, y], thin: true };
         }
-        return e ? wallPiece(walls.izquierda, 3 - e, row) : wallPiece(walls.derecha, w - 1, row);
+        // Entre dos salas, la pared es entera de una: su cara contra esa sala y el borde contra la otra.
+        const side = e && w ? sharedWallSide(plan, x - w, x + e, y) : e ? "izquierda" : "derecha";
+        return side === "izquierda"
+            ? { piece: "izquierda", col: 3 - e, row: y - 1, floor: [x + e, y] }
+            : { piece: "derecha", col: w - 1, row: y - 1, floor: [x - w, y] };
     }
-    if (n) return wallPiece(walls.abajo, col, n - 1);
-    // Esquinas: el piso más cercano en diagonal (la sala está abajo a la derecha de la esquina "no", y así).
-    let best: { d: number; grh: number } | null = null;
+    if (n) return { piece: "abajo", col: x - 1, row: n - 1, floor: [x, y - n] };
+    // Esquinas: el piso más cercano en diagonal (la sala está abajo a la derecha de la esquina "no", y así). Mandan las
+    // salas de abajo, como la cara de la pared; encima o debajo de una pared entre dos salas, la esquina es de la sala
+    // dueña de esa pared.
+    const side = sharedWallAlong(plan, x, y);
+    let best: { d: number; tile: WallTile } | null = null;
     for (let j = 1; j <= 3; j++) {
         for (let i = 1; i <= 3; i++) {
-            const d = Math.max(i, j) * 10 + i + j;
-            if (best && best.d <= d) continue;
-            if (isOpen(charAt(plan, x + i, y + j))) best = { d, grh: wallPiece(walls.no, 3 - i, 3 - j) };
-            else if (isOpen(charAt(plan, x - i, y + j))) best = { d, grh: wallPiece(walls.ne, i - 1, 3 - j) };
-            else if (isOpen(charAt(plan, x + i, y - j))) best = { d, grh: wallPiece(walls.so, 3 - i, j - 1) };
-            else if (isOpen(charAt(plan, x - i, y - j))) best = { d, grh: wallPiece(walls.se, i - 1, j - 1) };
+            const options: Array<[number, number, keyof WallSet, number, number]> = [
+                [x + i, y + j, "no", 3 - i, 3 - j],
+                [x - i, y + j, "ne", 2 + i, 3 - j],
+                [x + i, y - j, "so", 3 - i, 2 + j],
+                [x - i, y - j, "se", 2 + i, 2 + j],
+            ];
+            for (const [fx, fy, piece, col, row] of options) {
+                if (!isRoomFloor(plan, fx, fy)) continue;
+                if (side && (side === "derecha") !== (fx < x)) continue;
+                const d = (fy < y ? 1000 : 0) + Math.max(i, j) * 10 + i + j;
+                if (!best || d < best.d) best = { d, tile: { piece, col, row, floor: [fx, fy] } };
+            }
         }
     }
-    return best?.grh ?? VOID_GRH;
+    return best?.tile ?? null;
+}
+
+// Cerca de una esquina (a tres baldosas o menos), el tramo recto sigue con el brazo de la pieza en L, si esa esquina es
+// de la misma sala.
+function cornerArm(plan: Plan, x: number, y: number, tile: WallTile): WallTile | null {
+    const [fx, fy] = tile.floor;
+    // Cuántas baldosas de piso hay más allá de la de la sala hacia (dx, dy), hasta su pared.
+    const reach = (dx: number, dy: number) => {
+        let k = 0;
+        while (k < 3 && isRoomFloor(plan, fx + dx * (k + 1), fy + dy * (k + 1))) k++;
+        return k;
+    };
+    const cornerIs = (cx: number, cy: number, piece: keyof WallSet, cfx: number, cfy: number) => {
+        const corner = wallTile(plan, cx, cy);
+        return corner?.piece === piece && corner.floor[0] === cfx && corner.floor[1] === cfy;
+    };
+    const arms: Array<{ k: number; tile: WallTile }> = [];
+    if (tile.piece === "arriba" || tile.piece === "abajo") {
+        const [west, east] = tile.piece === "arriba" ? (["no", "ne"] as const) : (["so", "se"] as const);
+        const row = tile.row + (tile.piece === "abajo" ? 3 : 0);
+        const kw = reach(-1, 0);
+        const ke = reach(1, 0);
+        if (kw < 3 && cornerIs(x - kw - 1, y, west, fx - kw, fy)) arms.push({ k: kw, tile: { ...tile, piece: west, col: 3 + kw, row } });
+        if (ke < 3 && cornerIs(x + ke + 1, y, east, fx + ke, fy)) arms.push({ k: ke, tile: { ...tile, piece: east, col: 2 - ke, row } });
+    } else if (tile.piece === "izquierda" || tile.piece === "derecha") {
+        const [north, south] = tile.piece === "izquierda" ? (["no", "so"] as const) : (["ne", "se"] as const);
+        const col = tile.col + (tile.piece === "derecha" ? 3 : 0);
+        const kn = reach(0, -1);
+        const ks = reach(0, 1);
+        if (kn < 3 && cornerIs(x, y - kn - 1, north, fx, fy - kn)) arms.push({ k: kn, tile: { ...tile, piece: north, col, row: 3 + kn } });
+        if (ks < 3 && cornerIs(x, y + ks + 1, south, fx, fy + ks)) arms.push({ k: ks, tile: { ...tile, piece: south, col, row: 2 - ks } });
+    }
+    arms.sort((a, b) => a.k - b.k);
+    return arms[0]?.tile ?? null;
+}
+
+function themedWallGrh(plan: Plan, x: number, y: number, walls: WallSet): number {
+    const tile = wallTile(plan, x, y);
+    if (!tile) return VOID_GRH;
+    const shown = (!tile.thin && cornerArm(plan, x, y, tile)) || tile;
+    return wallPiece(walls[shown.piece], shown.col, shown.row);
 }
 
 // Una escalera de "bajoElAgua" está bajo el agua en la punta que tiene agua profunda al lado (la otra es común).
@@ -611,8 +770,8 @@ function tileSkin(plan: Plan, x: number, y: number): Record<number, number> {
             if (closed) skin[DUNGEON_OBJECTS.puerta.id] = closed;
             if (open) skin[DUNGEON_OBJECTS.puertaAbierta.id] = open;
         } else if (SKIN.puertasLaterales && isThickSideDoor(plan, x, y)) {
-            // La pared oeste de la sala de la derecha, salvo que solo haya sala a la izquierda.
-            const side = isOpen(charAt(plan, x + 2, y)) || !isOpen(charAt(plan, x - 2, y)) ? "izquierda" : "derecha";
+            // La de la pared de la sala a la que se llega primero (sharedWallSide): abre hacia esa sala.
+            const side = sharedWallSide(plan, x - 2, x + 2, y);
             const closed = skinId(SKIN.puertasLaterales.cerrada[side]);
             const open = skinId(SKIN.puertasLaterales.abierta[side]);
             if (closed) {

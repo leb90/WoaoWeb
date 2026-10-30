@@ -5,6 +5,8 @@ import {
     upsertGameBalance,
 } from "./repositories/gameBalance";
 import { getGameObjectById, upsertGameObject } from "./repositories/gameObjects";
+import { upsertGameNpc } from "./repositories/gameNpcs";
+import { loadSeedNpcsJson } from "./lib/gameData";
 
 // Cambios de datos que tienen que llegar una sola vez a la base de producción: el deploy no corre importGameData y
 // `game_balance` solo se siembra con la tabla vacía. Corren en `migrate` (al arrancar la api) y quedan anotados en
@@ -56,6 +58,19 @@ const DATA_MIGRATIONS: DataMigration[] = [
                         [race, from, to, start, end],
                     );
                 }
+            }
+        },
+    },
+    {
+        // Gruta (mazmorra de prueba): el arte de Ezequiel. Las plantillas que ya estaban en la base pasan a los cuerpos
+        // nuevos (esqueletos, murciélago, pulga y calamar); las nuevas (9835-9838) y los objetos de la piel entran solos
+        // porque faltan.
+        id: "2026-10-30-gruta-cuerpos-nuevos",
+        run: async () => {
+            const seed = new Map(loadSeedNpcsJson().map((row) => [row.id, row.data]));
+            for (const id of [9794, 9795, 9799, 9841, 9842, 9843, 9844]) {
+                const data = seed.get(id);
+                if (data) await upsertGameNpc(id, data);
             }
         },
     },

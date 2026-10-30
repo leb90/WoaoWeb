@@ -45,6 +45,7 @@ import {
     type DungeonParticle,
 } from "./dungeonMotion";
 import { updateDungeonBosses } from "./dungeonBoss";
+import { isCreatureAttacking, startCreatureAttack, updateCreatureAttack } from "./creatureAttack";
 import { updateDungeonGrotto } from "./dungeonGrotto";
 import { updateDungeonShrine } from "./dungeonShrine";
 import { updateDungeonShrineBosses } from "./dungeonShrineBosses";
@@ -54,6 +55,7 @@ import { updateDungeonTower } from "./dungeonTower";
 import { updateDungeonDarkness } from "./dungeonDarkness";
 import { updateDungeonTools } from "./dungeonTools";
 import {
+    CHARACTER_SWING_BODY,
     CHARACTER_SWING_SHIELD,
     CHARACTER_SWING_WEAPON,
     type CharacterSnapshot,
@@ -1150,7 +1152,7 @@ export class Engine {
     }
 
     shouldHoldMovementAnimation(character: Character, now: number): boolean {
-        if (character.moving || isDungeonCharging(character, now)) {
+        if (character.moving || isDungeonCharging(character, now) || isCreatureAttacking(character, now)) {
             return true;
         }
 
@@ -1256,6 +1258,10 @@ export class Engine {
         }
 
         const now = this.timestamp();
+        if (flags & CHARACTER_SWING_BODY) {
+            startCreatureAttack(this, character, now);
+            return;
+        }
         character.equipmentAttackFlags = flags;
         character.equipmentAttackStartedAt = now;
 
@@ -2311,6 +2317,7 @@ export class Engine {
             }
 
             syncCharacterContainerToRenderRow(this, entity, container);
+            updateCreatureAttack(this, entity, now);
 
             const direction = entity.heading.toString();
             const bodyData = getLayoutBodyData(
@@ -2342,7 +2349,7 @@ export class Engine {
 
             if (bodyGraphicData && this.delta > 0) {
                 const shouldAnimateBody =
-                    entity.moving || isDungeonCharging(entity, now);
+                    entity.moving || isDungeonCharging(entity, now) || isCreatureAttacking(entity, now);
 
                 if (shouldAnimateBody) {
                     entity.frameCounter = this.getBodyAnimationFrameCounter(

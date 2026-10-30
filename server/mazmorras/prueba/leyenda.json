@@ -1,7 +1,7 @@
 {
  "criaturas": {
-  "z": 502,
-  "k": 503,
+  "z": 9836,
+  "k": 9835,
   "i": 9799,
   "f": 9798,
   "p": 9793,
@@ -15,7 +15,9 @@
   "s": 9841,
   "d": 9842,
   "g": 9843,
-  "c": 9844
+  "c": 9844,
+  "t": 9837,
+  "a": 9838
  },
  "losas": {
   "590": [
@@ -28,8 +30,8 @@
  },
  "oro": 300,
  "trampa": [
-  503,
-  503
+  9835,
+  9835
  ],
  "plantillas": {
   "9799": {
@@ -43,7 +45,8 @@
    "gold": 10,
    "drop": [],
    "desc": "Copia cada paso tuyo, al revés. Se cubre de frente.",
-   "imitador": true
+   "imitador": true,
+   "idBody": 586
   },
   "9798": {
    "base": 607,
@@ -83,7 +86,8 @@
    "gold": 3,
    "drop": [],
    "desc": "El segundo.",
-   "orden": 2
+   "orden": 2,
+   "idBody": 590
   },
   "9794": {
    "base": 503,
@@ -96,7 +100,8 @@
    "gold": 5,
    "drop": [],
    "desc": "El último.",
-   "orden": 3
+   "orden": 3,
+   "idBody": 586
   },
   "9796": {
    "base": 9734,
@@ -200,7 +205,8 @@
    "minHit": 8,
    "maxHit": 14,
    "desc": "Si te acercás, te salta encima.",
-   "saltarin": true
+   "saltarin": true,
+   "idBody": 586
   },
   "9842": {
    "base": 503,
@@ -219,7 +225,8 @@
    "minHit": 8,
    "maxHit": 14,
    "desc": "Salta para atrás y te tira un hueso.",
-   "esquiva": true
+   "esquiva": true,
+   "idBody": 586
   },
   "9843": {
    "base": 503,
@@ -233,7 +240,7 @@
    "poderAtaque": 50,
    "poderEvasion": 30,
    "name": "Pulga de agua",
-   "idBody": 579,
+   "idBody": 592,
    "hp": 80,
    "maxHp": 80,
    "minHit": 6,
@@ -253,7 +260,7 @@
    "poderAtaque": 50,
    "poderEvasion": 30,
    "name": "Calamar",
-   "idBody": 580,
+   "idBody": 594,
    "hp": 100,
    "maxHp": 100,
    "minHit": 6,
@@ -261,6 +268,44 @@
    "desc": "Nada hacia vos.",
    "aguaValida": 1,
    "tierraInvalida": 1
+  },
+  "9835": {
+   "base": 503,
+   "name": "Esqueleto",
+   "idBody": 586,
+   "desc": "Un esqueleto con espada y escudo, cubierto de algas."
+  },
+  "9836": {
+   "base": 502,
+   "name": "Zombie",
+   "idBody": 588,
+   "desc": "Lento, pero pega fuerte."
+  },
+  "9837": {
+   "base": 539,
+   "name": "Tortuga Espinosa",
+   "idBody": 596,
+   "hp": 600,
+   "maxHp": 600,
+   "minHit": 14,
+   "maxHit": 28,
+   "exp": 600,
+   "gold": 60,
+   "drop": [],
+   "desc": "Minijefe de la gruta: un caparazón cubierto de púas que embiste."
+  },
+  "9838": {
+   "base": 548,
+   "name": "El Abisal",
+   "idBody": 598,
+   "hp": 1500,
+   "maxHp": 1500,
+   "minHit": 20,
+   "maxHit": 40,
+   "exp": 3000,
+   "gold": 300,
+   "drop": [],
+   "desc": "El jefe de la gruta: un pez abisal gigante que nada alrededor de la isla y muerde al que se acerca a la orilla."
   }
  },
  "buhos": {
@@ -275,5 +320,239 @@
   "591": [
    "Lo que había en este cofre lo tengo yo. ¡Vení a buscarlo, si podés! — El Maestro"
   ]
- }
+ },
+ "graficos": {
+  "piso": 43141,
+  "paredes": {
+   "arriba": {
+    "grh": 42979,
+    "ancho": 11,
+    "alto": 3
+   },
+   "abajo": {
+    "grh": 43012,
+    "ancho": 11,
+    "alto": 3
+   },
+   "izquierda": {
+    "grh": 43045,
+    "ancho": 3,
+    "alto": 10
+   },
+   "derecha": {
+    "grh": 43075,
+    "ancho": 3,
+    "alto": 10
+   },
+   "no": {
+    "grh": 43105,
+    "ancho": 3,
+    "alto": 3
+   },
+   "ne": {
+    "grh": 43114,
+    "ancho": 3,
+    "alto": 3
+   },
+   "so": {
+    "grh": 43123,
+    "ancho": 3,
+    "alto": 3
+   },
+   "se": {
+    "grh": 43132,
+    "ancho": 3,
+    "alto": 3
+   }
+  }
+ },
+ "piel": {
+  "objetos": {
+   "puertaAbierta": {
+    "id": 1895,
+    "name": "Puerta de la gruta abierta",
+    "grh": 42876
+   },
+   "puertaSala": {
+    "id": 1896,
+    "name": "Puerta de la gruta",
+    "grh": 42877
+   },
+   "puertaLlave": {
+    "id": 1897,
+    "name": "Puerta de la gruta con cerradura",
+    "grh": 42878
+   },
+   "puertaJefe": {
+    "id": 1898,
+    "name": "Puerta del jefe de la gruta",
+    "grh": 42879
+   },
+   "puertaReja": {
+    "id": 1899,
+    "name": "Reja de la gruta",
+    "grh": 42880
+   },
+   "puertaUnica": {
+    "id": 1900,
+    "name": "Puerta de la gruta de un solo sentido",
+    "grh": 42881
+   },
+   "lateralAbiertaIzquierda": {
+    "id": 1901,
+    "name": "Puerta lateral de la gruta abierta",
+    "grh": 42882
+   },
+   "lateralAbiertaDerecha": {
+    "id": 1902,
+    "name": "Puerta lateral de la gruta abierta",
+    "grh": 42883
+   },
+   "lateralCerradaIzquierda": {
+    "id": 1903,
+    "name": "Puerta lateral de la gruta",
+    "grh": 42884
+   },
+   "lateralCerradaDerecha": {
+    "id": 1904,
+    "name": "Puerta lateral de la gruta",
+    "grh": 42885
+   },
+   "escaleraBaja": {
+    "id": 1905,
+    "name": "Escalera de la gruta",
+    "grh": 42886
+   },
+   "escaleraSube": {
+    "id": 1906,
+    "name": "Escalera de la gruta",
+    "grh": 42887
+   },
+   "bloque": {
+    "id": 1907,
+    "name": "Bloque de coral",
+    "grh": 42888
+   },
+   "placa": {
+    "id": 1908,
+    "name": "Botón de concha",
+    "grh": 42889
+   },
+   "placaApretada": {
+    "id": 1909,
+    "name": "Botón de concha apretado",
+    "grh": 42890
+   },
+   "losa": {
+    "id": 1910,
+    "name": "Losa de la gruta",
+    "grh": 42891
+   },
+   "cofre": {
+    "id": 1911,
+    "name": "Cofre de la gruta",
+    "grh": 42892
+   },
+   "cofreAbierto": {
+    "id": 1912,
+    "name": "Cofre de la gruta abierto",
+    "grh": 42893
+   },
+   "cofreJefe": {
+    "id": 1913,
+    "name": "Cofre del jefe de la gruta",
+    "grh": 42894
+   },
+   "cofreJefeAbierto": {
+    "id": 1914,
+    "name": "Cofre del jefe de la gruta abierto",
+    "grh": 42895
+   },
+   "antorchaApagada": {
+    "id": 1915,
+    "name": "Antorcha de la gruta apagada",
+    "grh": 42896
+   },
+   "antorchaEncendida": {
+    "id": 1916,
+    "name": "Antorcha de la gruta encendida",
+    "grh": 42978
+   },
+   "portal": {
+    "id": 1917,
+    "name": "Portal de la gruta",
+    "grh": 42976
+   },
+   "portalAtajo": {
+    "id": 1918,
+    "name": "Portal de la gruta",
+    "grh": 42977
+   },
+   "cofreAbriendose": {
+    "id": 1919,
+    "name": "Cofre de la gruta abierto",
+    "grh": 42972
+   },
+   "cofreJefeAbriendose": {
+    "id": 1920,
+    "name": "Cofre del jefe de la gruta abierto",
+    "grh": 42973
+   },
+   "aplastadorBaja": {
+    "id": 1921,
+    "name": "Aplastador de la gruta",
+    "grh": 42974
+   },
+   "aplastadorSube": {
+    "id": 1922,
+    "name": "Losa del aplastador de la gruta",
+    "grh": 42975
+   }
+  },
+  "reemplazos": {
+   "cofre": "cofre",
+   "cofreAbierto": "cofreAbriendose",
+   "bloque": "bloque",
+   "placa": "placa",
+   "placaApretada": "placaApretada",
+   "losa": "losa",
+   "antorchaApagada": "antorchaApagada",
+   "antorchaEncendida": "antorchaEncendida",
+   "aplastador": "aplastadorBaja",
+   "losaAplastador": "aplastadorSube"
+  },
+  "portal": "portal",
+  "escaleras": {
+   "baja": "escaleraBaja",
+   "sube": "escaleraSube"
+  },
+  "cofreJefe": {
+   "cerrado": "cofreJefe",
+   "abierto": "cofreJefeAbriendose"
+  },
+  "puertas": {
+   "abierta": "puertaAbierta",
+   "sala": "puertaSala",
+   "llave": "puertaLlave",
+   "jefe": "puertaJefe",
+   "placa": "puertaReja",
+   "tiempo": "puertaReja",
+   "golpe": "puertaReja",
+   "unica": "puertaUnica"
+  },
+  "puertasLaterales": {
+   "abierta": {
+    "izquierda": "lateralAbiertaIzquierda",
+    "derecha": "lateralAbiertaDerecha"
+   },
+   "cerrada": {
+    "izquierda": "lateralCerradaIzquierda",
+    "derecha": "lateralCerradaDerecha"
+   }
+  },
+  "portalAtajo": "portalAtajo"
+ },
+ "portales": [
+  "5"
+ ]
 }

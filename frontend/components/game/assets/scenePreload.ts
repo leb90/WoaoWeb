@@ -138,13 +138,15 @@ export function collectSpecificBodyGraphicIds(
         if (!bodyData) {
             continue;
         }
+        // Con hoja de ataque (engine/creatureAttack.ts), también su cuerpo de ataque.
+        const attackBody = engine.bodiesDB[String((bodyData as { ataque?: number }).ataque ?? 0)];
 
-        for (const graphicId of [
-            bodyData["1"],
-            bodyData["2"],
-            bodyData["3"],
-            bodyData["4"],
-        ]) {
+        for (const graphicId of [bodyData, ...(attackBody ? [attackBody] : [])].flatMap((body) => [
+            body["1"],
+            body["2"],
+            body["3"],
+            body["4"],
+        ])) {
             if (graphicId && graphicId > 0) {
                 uniqueGraphics.add(graphicId.toString());
             }

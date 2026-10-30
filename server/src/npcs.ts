@@ -175,6 +175,8 @@ function emitCharacterFxToUserArea(entityId: EntityId, fxId: number) {
 }
 
 const CHARACTER_SWING_SHIELD = 2;
+// El golpe de una criatura: el cliente anima su cuerpo de ataque si tiene (bodies.json, "ataque").
+const CHARACTER_SWING_BODY = 4;
 
 function emitCharacterSwingToUserArea(entityId: EntityId, flags: number) {
     if (!flags) {
@@ -3067,13 +3069,14 @@ function Npcs(this: NpcsApi) {
             });
 
             withClientFlushGroups(flushGroupClients, () => {
-                if (npc.snd1 > 0) {
-                    this.loopArea(idNpc, (target) => {
-                        withUserClient(target.id, (targetClient) => {
-                            handleProtocol.playSound(idNpc, npc.snd1, targetClient);
-                        });
+                // El golpe de la criatura: el sonido y, si su cuerpo tiene hoja de ataque, la animación (el cliente
+                // ignora la marca si no la tiene; frontend/components/game/engine/creatureAttack.ts).
+                this.loopArea(idNpc, (target) => {
+                    withUserClient(target.id, (targetClient) => {
+                        if (npc.snd1 > 0) handleProtocol.playSound(idNpc, npc.snd1, targetClient);
+                        handleProtocol.characterSwing(idNpc, CHARACTER_SWING_BODY, targetClient);
                     });
-                }
+                });
 
                 let userEvasion = game.poderEvasion(idUser);
                 const npcPoderAtaque = npc.poderAtaque;

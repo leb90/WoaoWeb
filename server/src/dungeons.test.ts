@@ -115,7 +115,8 @@ test("las mecánicas de cada mapa están bien armadas y la mazmorra se puede res
                     : barrier.bloque
                     ? DUNGEON_OBJECT_IDS.puerta
                     : barrier.tipo === "sala" || barrier.tipo === "unica"
-                        ? barrier.horizontal
+                        ? // Abierta, en una pared vertical no se ve, salvo la puerta lateral de una mazmorra con piel.
+                          barrier.horizontal || mech.piel?.porBaldosa[`${barrier.x},${barrier.y}`]?.[DUNGEON_OBJECT_IDS.puertaAbierta]
                             ? DUNGEON_OBJECT_IDS.puertaAbierta
                             : undefined
                         : barrier.horizontal
@@ -858,4 +859,32 @@ test("la Torre del Águila: cuatro pisos, el Campo de Protección, los pilares y
         assert.ok(fs.existsSync(path.join(root, "frontend/public", file)), file);
         assert.ok(credits.includes(file.replace("/music/mazmorras/", "")), `créditos de ${file}`);
     }
+});
+
+test("la piel de la Gruta: el cliente ve los objetos de Ezequiel y el server sigue con los de siempre", () => {
+    const run = dungeons.instanceMapId(590, 0);
+    const mech = readJson("server/mapas_source/mapa_590/specials.json").dungeon;
+    const objects = readJson("server/jsons/objs.json");
+    const clientMap = readJson("frontend/public/static/maps_local/mapa_590.json")["590"];
+    // Cada objeto de la piel existe y no se levanta.
+    for (const id of [...Object.values(mech.piel.objetos), ...Object.values(mech.piel.porBaldosa).flatMap((tile) => Object.values(tile as object))]) {
+        assert.ok(objects[String(id)], `objeto ${id}`);
+        assert.equal(objects[String(id)].agarrable, 1);
+    }
+    // Lo que manda el server (renderItem) y lo que trae el mapa del cliente es lo mismo: la piel.
+    for (const [key, info] of Object.entries(readJson("server/mapas_source/mapa_590/specials.json").objects) as Array<[string, { objIndex: number }]>) {
+        const [x, y] = key.split(",").map(Number);
+        const shown = dungeons.skinObject(run, { x, y }, info.objIndex);
+        assert.equal(clientMap[String(y)][String(x)].objInfo.objIndex, shown, `(${key})`);
+        assert.equal(dungeons.skinObject(590, { x, y }, info.objIndex), shown, `(${key}) en el mapa base`);
+    }
+    // Cada puerta según su tipo; la abierta y la cerrada de las laterales gruesas, distintas.
+    const door = (tipo: string) => mech.barriers.find((barrier: { tipo: string }) => barrier.tipo === tipo);
+    const llave = door("llave");
+    assert.notEqual(dungeons.skinObject(run, llave, DUNGEON_OBJECT_IDS.puerta), DUNGEON_OBJECT_IDS.puerta);
+    const lateral = mech.barriers.find((barrier: { horizontal: boolean }) => !barrier.horizontal);
+    assert.notEqual(dungeons.skinObject(run, lateral, DUNGEON_OBJECT_IDS.barrera), dungeons.skinObject(run, lateral, DUNGEON_OBJECT_IDS.puertaAbierta));
+    // Las otras mazmorras y el mundo no cambian.
+    assert.equal(dungeons.skinObject(dungeons.instanceMapId(580, 0), { x: 10, y: 10 }, DUNGEON_OBJECT_IDS.cofre), DUNGEON_OBJECT_IDS.cofre);
+    assert.equal(dungeons.skinObject(34, { x: 50, y: 50 }, DUNGEON_OBJECT_IDS.cofre), DUNGEON_OBJECT_IDS.cofre);
 });

@@ -86,12 +86,10 @@ export function ensureCharacterBodyReady(
         return Promise.resolve();
     }
 
-    const graphicIds = [
-        bodyData["1"],
-        bodyData["2"],
-        bodyData["3"],
-        bodyData["4"],
-    ]
+    // Con hoja de ataque (engine/creatureAttack.ts), sus texturas bajan junto con las de caminar.
+    const attackBody = engine.bodiesDB[String((bodyData as { ataque?: number }).ataque ?? 0)];
+    const graphicIds = [bodyData, ...(attackBody ? [attackBody] : [])]
+        .flatMap((body) => [body["1"], body["2"], body["3"], body["4"]])
         .filter((graphicId) => Number.isFinite(graphicId) && graphicId > 0)
         .map((graphicId) => String(graphicId));
 

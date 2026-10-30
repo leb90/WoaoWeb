@@ -476,7 +476,8 @@ export type ShopProductPayload = {
 // Desangrado de la apuñalada (server/src/game.ts, startBleeding): ms que quedan, 0 = terminó.
 export type BleedStatePayload = { remainingMs: number };
 // Veneno (daño por golpe, 0 = sano), ceguera y estupidez (ms que faltan) del propio personaje.
-export type AfflictionStatePayload = { venenoDmg: number; cegueraMs: number; estupidezMs: number };
+// frio: 0 nada, 1 frío sin vestimenta (hambre y sed bajan más rápido), 2 bajo cero (pierde vida).
+export type AfflictionStatePayload = { venenoDmg: number; cegueraMs: number; estupidezMs: number; frio?: number };
 // Lo último que clickeó el jugador, para el marco del objetivo (server/src/protocol.ts, buildTargetFramePayload).
 export type TargetStatePayload =
     | {
@@ -1051,8 +1052,8 @@ export interface PlayerHudState {
     bleedUntil?: number;
     // Hasta cuándo dura la parálisis o la inmovilización, según el server (Date.now() del cliente; 0 = sin dato).
     crowdControlUntil?: number;
-    // Veneno, ceguera y estupidez (paquete afflictionState), con los vencimientos en Date.now() del cliente.
-    afflictions?: { venenoDmg: number; cegueraUntil: number; estupidezUntil: number };
+    // Veneno, ceguera, estupidez y frío (paquete afflictionState), con los vencimientos en Date.now() del cliente.
+    afflictions?: { venenoDmg: number; cegueraUntil: number; estupidezUntil: number; frio: number };
     // Lo último que clickeó (paquete targetState); null = sin objetivo.
     targetState?: TargetStatePayload | null;
     // Efectos del chamán sobre el propio personaje (escudos, evasión, silencios, lentitud, quemadura).
@@ -2769,7 +2770,8 @@ function parseServerPacketById(
             const season = reader.getByte();
             const dayPhase = reader.getByte();
             const weather = reader.getByte();
-            const temperatureC = reader.getShort();
+            // Con signo: en la nieve baja de 0 °C.
+            const temperatureC = (reader.getShort() << 16) >> 16;
             const music = reader.canReadBytes(2) ? reader.getString() : "";
 
             return {

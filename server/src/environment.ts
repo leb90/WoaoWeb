@@ -94,6 +94,16 @@ const DAY_PHASE_TEMP_DELTA_C: Record<DayPhaseId, number> = {
     [DAY_PHASE.noche]: -5,
 };
 
+// Los mapas de nieve (Polo, bosques nevados y sus cuevas) son mucho más fríos que el resto, y la nieve o la lluvia
+// enfrían un poco más. Así el frío bajo cero (game.ts, tickSurvivalVitals) solo aparece en la nieve o en una noche
+// de invierno nevando.
+const SNOW_TERRAIN_TEMP_DELTA_C = -18;
+const WEATHER_TEMP_DELTA_C: Partial<Record<WeatherId, number>> = {
+    [WEATHER.lluvia]: -2,
+    [WEATHER.tormenta]: -2,
+    [WEATHER.nieve]: -4,
+};
+
 const WEATHER_CHANGE_CHANCE = 0.05;
 
 // zona -> clima actual de esa región.
@@ -223,8 +233,16 @@ function getWeatherForZone(zone: string): WeatherId {
     return regionWeather.get(zone) ?? WEATHER.despejado;
 }
 
-function getTemperatureC(season: SeasonId, dayPhase: DayPhaseId): number {
-    return SEASON_BASE_TEMP_C[season] + DAY_PHASE_TEMP_DELTA_C[dayPhase];
+function getTemperatureC(season: SeasonId, dayPhase: DayPhaseId, mapId: number, weather: WeatherId): number {
+    const terreno = String(vars.mapData?.[mapId]?.terreno ?? "").trim().toUpperCase();
+    const terrainDelta = terreno === "NIEVE" ? SNOW_TERRAIN_TEMP_DELTA_C : 0;
+
+    return SEASON_BASE_TEMP_C[season] + DAY_PHASE_TEMP_DELTA_C[dayPhase] + terrainDelta + (WEATHER_TEMP_DELTA_C[weather] ?? 0);
+}
+
+// La temperatura que siente un personaje en ese mapa (la misma que muestra el HUD).
+export function getTemperatureForMap(mapId: number, now: Date = new Date()): number {
+    return getTemperatureC(getSeason(now), getDayPhase(now), mapId, getWeatherForZone(getZoneForMap(mapId)));
 }
 
 // La música de cada mapa (el cliente la busca en frontend/lib/worldMusic.ts): las ciudades tienen su canción y el
@@ -272,14 +290,14 @@ export function getMusicForMap(mapId: number): string {
 export function getEnvironmentForMap(mapId: number, now: Date = new Date()) {
     const season = getSeason(now);
     const dayPhase = getDayPhase(now);
-    const zone = getZoneForMap(mapId);
+    const weather = getWeatherForZone(getZoneForMap(mapId));
 
     return {
         mapId,
         season,
         dayPhase,
-        weather: getWeatherForZone(zone),
-        temperatureC: getTemperatureC(season, dayPhase),
+        weather,
+        temperatureC: getTemperatureC(season, dayPhase, mapId, weather),
         music: getMusicForMap(mapId),
     };
 }
@@ -314,6 +332,7 @@ module.exports = {
     WEATHER,
     getEnvironmentForMap,
     getMusicForMap,
+    getTemperatureForMap,
     tickEnvironment,
     setWeatherOverride,
     setSeasonOverride,

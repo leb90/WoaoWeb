@@ -10,7 +10,7 @@ export const WIKI_TRAINING_MAP_GROUPS = [
     { label: "Mausoleo", mapIds: [281] },
     { label: "Dungeon Inferno", mapIds: [184] },
     { label: "Ruinas de Earost", mapIds: [283, 284, 285] },
-    { label: "Polo Norte", mapIds: [286, 287, 288] },
+    { label: "Polo Norte", mapIds: [245, 246, 247, 248, 249, 250] },
     { label: "Montaña", mapIds: [264, 265, 266, 267, 268, 269, 270, 271] },
     { label: "Dungeon Dragon", mapIds: [166] },
 ] as const;

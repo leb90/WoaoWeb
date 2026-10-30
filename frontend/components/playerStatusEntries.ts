@@ -17,6 +17,7 @@ import {
     Skull,
     Snail,
     Snowflake,
+    ThermometerSnowflake,
     WandSparkles,
     Wind,
     type LucideIcon,
@@ -346,6 +347,34 @@ export function usePlayerStatusEntries({
                     accent: "rgba(190, 242, 100, 0.98)",
                     detail: `Te saca ${afflictions?.venenoDmg} de vida cada 3 s hasta que te cures.`,
                 }),
+            );
+        }
+        const coldLevel = Number(afflictions?.frio ?? 0);
+        if (coldLevel > 0) {
+            entries.push(
+                untimed(
+                    coldLevel >= 2
+                        ? {
+                              key: "frio",
+                              name: "Perdés vida por frío",
+                              label: "Helado",
+                              kind: "debuff",
+                              icon: ThermometerSnowflake,
+                              tone: "text-sky-300",
+                              accent: "rgba(125, 211, 252, 0.98)",
+                              detail: "Hace bajo cero y estás sin vestimenta: perdés un 5% de tu vida cada 5 s. Ponete algo o salí del frío.",
+                          }
+                        : {
+                              key: "frio",
+                              name: "Frío",
+                              label: "Frío",
+                              kind: "debuff",
+                              icon: ThermometerSnowflake,
+                              tone: "text-sky-200",
+                              accent: "rgba(186, 230, 253, 0.98)",
+                              detail: "Hace menos de 15 °C y estás sin vestimenta: el hambre y la sed bajan más rápido.",
+                          },
+                ),
             );
         }
         if (elemental?.burning) {

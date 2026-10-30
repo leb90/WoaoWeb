@@ -820,16 +820,17 @@ function sendAfflictionStateIfChanged(idUser: string, user: ServerCharacter, now
             : 0;
     const cegueraMs = remaining(user.ceguera, user.cooldownCeguera);
     const estupidezMs = remaining(user.estupidez, user.cooldownEstupidez);
+    const frio = user.dead ? 0 : Number(user.coldExposure ?? 0);
     const signature = `${venenoDmg}|${Number(user.cooldownCeguera ?? 0) * Number(cegueraMs > 0)}|${
         Number(user.cooldownEstupidez ?? 0) * Number(estupidezMs > 0)
-    }`;
+    }|${frio}`;
 
     if (user.afflictionStateSent === signature) {
         return;
     }
 
     // Al entrar sano no hace falta avisar nada.
-    if (user.afflictionStateSent === undefined && signature === "0|0|0") {
+    if (user.afflictionStateSent === undefined && signature === "0|0|0|0") {
         user.afflictionStateSent = signature;
         return;
     }
@@ -840,7 +841,7 @@ function sendAfflictionStateIfChanged(idUser: string, user: ServerCharacter, now
     }
 
     user.afflictionStateSent = signature;
-    handleProtocol.afflictionState({ venenoDmg, cegueraMs, estupidezMs }, client);
+    handleProtocol.afflictionState({ venenoDmg, cegueraMs, estupidezMs, frio }, client);
 }
 
 function processPlayerStatusTick(now: number) {
@@ -951,43 +952,6 @@ function processPlayerStatusTick(now: number) {
 
         const statusClient = getClientById(idUser);
         game.tickSurvivalVitals(user, now, statusClient);
-
-        const isNorthPoleMap = user.map === 286 || user.map === 287 || user.map === 288;
-        const currentHp = Number(user.hp ?? 0);
-        if (!isNorthPoleMap || user.dead || currentHp <= 0) {
-            continue;
-        }
-
-        const equippedBodySlot = String(user.idItemBody ?? 0);
-        const equippedInventory = Array.isArray(user.inv) ? undefined : user.inv;
-        const equippedBodyItem = equippedBodySlot !== "0" ? equippedInventory?.[equippedBodySlot] : undefined;
-        const equippedBodyObject = equippedBodyItem ? vars.datObj[equippedBodyItem.idItem] : undefined;
-        const isProtectedFromCold = Number(equippedBodyObject?.abriga ?? 0) === 1;
-
-        if (isProtectedFromCold) {
-            continue;
-        }
-
-        const nextHp = Math.max(0, currentHp - 5);
-        user.hp = nextHp;
-        const client = getClientById(idUser);
-
-        if (client) {
-            handleProtocol.console(
-                "El frio del Polo Norte te lastima. Necesitas equipo invernal.",
-                "#9ED8FF",
-                0,
-                0,
-                client,
-            );
-            handleProtocol.updateHP(user.hp, client);
-        }
-
-        if (nextHp <= 0) {
-            user.hp = 0;
-            game.putBodyAndHeadDead(idUser);
-            void game.tirarItemsUser(idUser);
-        }
     }
 }
 

@@ -145,7 +145,8 @@ type FactionWarStatePayload = {
 type MapPosition = Position & { map: number };
 
 // Daño del veneno por golpe (0 = sano) y ms que le quedan a la ceguera y a la estupidez.
-export type AfflictionStatePayload = { venenoDmg: number; cegueraMs: number; estupidezMs: number };
+// frio: 0 nada, 1 frío sin vestimenta (hambre y sed bajan más rápido), 2 bajo cero (pierde vida).
+export type AfflictionStatePayload = { venenoDmg: number; cegueraMs: number; estupidezMs: number; frio: number };
 
 type AreaItemSnapshot = {
     idItem: number;
@@ -1615,7 +1616,7 @@ const handleServer: HandleProtocolApi = {
         socket.send(client);
     },
 
-    // Veneno, ceguera y estupidez del propio personaje, para los íconos de estado del HUD.
+    // Veneno, ceguera, estupidez y frío del propio personaje, para los íconos de estado del HUD.
     afflictionState(payload, client) {
         pkg.setPackageID(pkg.clientPacketID.afflictionState);
         pkg.writeString(JSON.stringify(payload));
@@ -2172,7 +2173,8 @@ const handleServer: HandleProtocolApi = {
         pkg.writeByte(payload.season);
         pkg.writeByte(payload.dayPhase);
         pkg.writeByte(payload.weather);
-        pkg.writeShort(payload.temperatureC);
+        // Con signo: en la nieve baja de 0 °C.
+        pkg.writeShort(payload.temperatureC, true);
         // La música del mapa (environment.ts, getMusicForMap): va al final para que un cliente viejo la ignore.
         pkg.writeString(payload.music ?? "");
         socket.send(client);

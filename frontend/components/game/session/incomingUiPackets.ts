@@ -268,6 +268,7 @@ export async function handleIncomingUiPacket({
                     venenoDmg: Math.max(0, Number(packet.payload.venenoDmg ?? 0)),
                     cegueraUntil: until(packet.payload.cegueraMs),
                     estupidezUntil: until(packet.payload.estupidezMs),
+                    frio: Math.max(0, Number(packet.payload.frio ?? 0)),
                 },
             });
             return true;

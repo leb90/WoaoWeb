@@ -4,12 +4,11 @@ Sonidos que no son del Argentum original. Los de clima son todos CC0: no exigen 
 
 ## Meditación (`frontend/public/sounds/meditacion/`)
 
-Viento suave mientras el propio personaje medita: una ráfaga al empezar y después el bucle. Se pasaron a mono, se les sacaron graves y agudos (120 a 2600 Hz) para que suenen suaves, se normalizaron a −26 LUFS (más bajo que el clima) y se guardaron en OGG y MP3; al bucle se le hizo un fundido cruzado de 3 s para que empalme sin clic. Los usa `frontend/lib/meditationSound.ts`.
+"Ki sereno", elegido por Leandro entre tres tandas de opciones: un aire que respira (sube y baja cada 6 s) con un acorde grave y cálido muy bajito por debajo (La2, Mi3, La3), como energía que se va juntando. Está hecho para el juego con numpy (ruido filtrado entre 150 y 1200 Hz, con la respiración y un barrido suave del filtro), así que no tiene autor externo ni licencia que cumplir. Un solo archivo de 11 s: el arranque (el aire que se levanta, 0-3 s), un ciclo de respiración (3-9 s) y 2 s más del ciclo siguiente; se repite del segundo 10 al 4 para que la vuelta caiga lejos de los bordes, donde el códec deforma las muestras. Está a −26 LUFS (más bajo que el clima), en OGG y MP3. Lo usa `frontend/lib/meditationSound.ts`, que lo apaga despacio al terminar de meditar.
 
 | Archivo | Uso | Original | Autor | Licencia |
 |---|---|---|---|---|
-| meditacion-viento | Bucle mientras se medita | `wind1.wav` (24 s), https://opengameart.org/content/wind1 | Luke.RUSTLTD | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) |
-| meditacion-rafaga | Ráfaga al empezar a meditar | `Wind2.ogg` del paquete "Wind", https://opengameart.org/content/wind | IgnasD | CC0 |
+| meditacion-ki-sereno | Arranque y bucle mientras se medita | Sintetizado para el juego | WoAO | Propio |
 
 ## Clima (`frontend/public/sounds/clima/`)
 

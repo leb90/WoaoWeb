@@ -858,7 +858,7 @@ export default function MapRenderer({
         meditationSoundRef.current?.setVolume(soundVolumes.efectos);
     }, [soundVolumes.ambiente, soundVolumes.efectos, soundVolumes.pisadas]);
 
-    // Viento de la meditación del propio personaje (lib/meditationSound.ts); lo prende renderEntityFX.
+    // Sonido de la meditación del propio personaje (lib/meditationSound.ts); lo prende renderEntityFX.
     useEffect(() => {
         if (typeof window === "undefined") {
             return;
@@ -1769,7 +1769,7 @@ export default function MapRenderer({
 
     const renderEntityFX = React.useCallback(
         (engine: Engine, entityId: number, graphicId: number) => {
-            // El viento de la meditación suena solo para el propio personaje: el server manda el efecto al
+            // El sonido de la meditación suena solo para el propio personaje: el server manda el efecto al
             // empezar y un 0 al terminar.
             if (entityId === engine.user?.id) {
                 if (isMeditationFx(graphicId)) meditationSoundRef.current?.start();

@@ -6,7 +6,7 @@ import {
     socialImageSize,
 } from "@/lib/social-card";
 
-export const alt = "AOWeb";
+export const alt = "World of Argentum";
 export const size = socialImageSize;
 export const contentType = socialImageContentType;
 
@@ -15,13 +15,13 @@ export default async function OpenGraphImage() {
 
     return new ImageResponse(
         <SocialCard
-            eyebrow="AOWeb"
-            title="AOWeb"
-            description="Beta activa con roadmap abierto, updates frecuentes y una experiencia web pensada para jugar fluido."
+            eyebrow="MMORPG 2D"
+            title="World of Argentum"
+            description="Fantasía clásica gratis en el navegador y en el celular, sin descargas."
             bullets={[
-                "MMORPG clasico 100% web",
-                "Changelog y roadmap publicos",
-                "Seguimiento y mejoras continuas",
+                "Mundo abierto, clanes y guerras",
+                "Mazmorras con acertijos y jefes",
+                "Arena todos contra todos",
             ]}
             accent="#67e8f9"
             logoSrc={logoSrc}

@@ -15,7 +15,7 @@ export function LoadingOverlay({
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(120,53,15,0.32),_transparent_42%),linear-gradient(180deg,_rgba(12,10,9,0.88),_rgba(0,0,0,0.96))] px-6 text-stone-100">
             <div className="w-full max-w-sm rounded-3xl border border-amber-300/20 bg-stone-950/70 p-6 shadow-2xl backdrop-blur-md">
                 <p className="text-[10px] uppercase tracking-[0.35em] text-amber-300/80">
-                    AOWeb
+                    World of Argentum
                 </p>
                 <h2 className="mt-2 text-xl font-semibold text-white">
                     {stage}

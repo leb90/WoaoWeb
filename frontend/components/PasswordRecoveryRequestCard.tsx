@@ -61,7 +61,7 @@ export default function PasswordRecoveryRequestCard() {
         <div className="mx-auto w-full max-w-md overflow-hidden rounded-[32px] border border-stone-700/70 bg-stone-950/88 text-stone-100 shadow-2xl backdrop-blur-md">
             <div className="border-b border-white/8 bg-[#050302] px-6 py-6">
                 <p className="text-[11px] uppercase tracking-[0.34em] text-amber-200/80">
-                    AOWeb
+                    World of Argentum
                 </p>
                 <h1 className="mt-2 text-3xl font-semibold text-stone-50">
                     Recuperar contraseña

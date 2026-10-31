@@ -2,10 +2,127 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { MessageCircle, Sparkles, Swords, Users, X as XIcon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { MessageCircle, Sparkles, Swords, Users, Volume2, VolumeX, X as XIcon } from "lucide-react";
+import { HERO_VIDEO_SOUND_EVENT } from "../components/MenuMusic";
 import { useAuthRedirect } from "../hooks/useAuthRedirect";
 
+// Logo del inicio ya achicado al doble de su ancho máximo en pantalla (672 px): el PNG original pesa 2,4 MB y tardaba
+// en aparecer. Se precarga desde que llega la página, mientras se chequea la sesión, y entra con un fundido.
+// (`preload()` de react-dom no sale en el HTML desde un componente cliente; el <link> sí, React lo sube al <head>.)
+const HERO_LOGO = "/static/imgs/woaoicon-hero.webp";
+const heroLogoPreload = (
+    <link rel="preload" as="image" href={HERO_LOGO} fetchPriority="high" />
+);
+
+// Fondo del inicio: video en bucle y en silencio (3,7 MB, 720p). Su primer cuadro es igual a background.jpg, que
+// queda debajo: el video aparece recién cuando se reproduce. Con conexión mala o ahorro de datos no se baja, y si no
+// arranca en unos segundos (navegadores sin navigator.connection, autoplay bloqueado) se corta la descarga. En todos
+// esos casos queda la imagen. El botón de abajo a la derecha lo pasa a verse con sonido desde el principio y pausa la
+// música del inicio (HERO_VIDEO_SOUND_EVENT de MenuMusic).
+const HERO_BACKGROUND_IMAGE = "/static/imgs/background.jpg";
+const HERO_BACKGROUND_VIDEO = "/static/video/background-loop.mp4";
+const HERO_VIDEO_START_TIMEOUT_MS = 8000;
+const SLOW_CONNECTION_TYPES = new Set(["slow-2g", "2g", "3g"]);
+
+type NetworkInformationLike = { effectiveType?: string; saveData?: boolean };
+
+function canPlayHeroVideo() {
+    if (typeof window === "undefined") {
+        return false;
+    }
+
+    const connection = (navigator as Navigator & { connection?: NetworkInformationLike }).connection;
+    if (connection?.saveData) {
+        return false;
+    }
+
+    if (connection?.effectiveType && SLOW_CONNECTION_TYPES.has(connection.effectiveType)) {
+        return false;
+    }
+
+    return !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function announceHeroVideoSound(on: boolean) {
+    window.dispatchEvent(new CustomEvent(HERO_VIDEO_SOUND_EVENT, { detail: on }));
+}
+
+function HeroBackgroundVideo() {
+    const videoRef = useRef<HTMLVideoElement | null>(null);
+    const [enabled, setEnabled] = useState(canPlayHeroVideo);
+    const [playing, setPlaying] = useState(false);
+    const [withSound, setWithSound] = useState(false);
+
+    // Al irse del inicio (o si el video se corta) vuelve la música.
+    useEffect(() => () => announceHeroVideoSound(false), []);
+
+    const toggleSound = () => {
+        const video = videoRef.current;
+        if (!video) {
+            return;
+        }
+
+        const next = !withSound;
+        if (next) {
+            video.currentTime = 0;
+        }
+        video.muted = !next;
+        void video.play().catch(() => {});
+        setWithSound(next);
+        announceHeroVideoSound(next);
+    };
+
+    useEffect(() => {
+        if (!enabled || playing) {
+            return;
+        }
+
+        const timer = window.setTimeout(() => setEnabled(false), HERO_VIDEO_START_TIMEOUT_MS);
+        return () => window.clearTimeout(timer);
+    }, [enabled, playing]);
+
+    if (!enabled) {
+        return null;
+    }
+
+    return (
+        <>
+        <video
+            ref={videoRef}
+            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${
+                playing ? "opacity-100" : "opacity-0"
+            }`}
+            src={HERO_BACKGROUND_VIDEO}
+            poster={HERO_BACKGROUND_IMAGE}
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+            disablePictureInPicture
+            aria-hidden="true"
+            onPlaying={() => setPlaying(true)}
+        />
+        {playing ? (
+            <button
+                type="button"
+                onClick={toggleSound}
+                aria-pressed={withSound}
+                aria-label={withSound ? "Silenciar el video" : "Ver el video con sonido"}
+                title={withSound ? "Silenciar el video" : "Ver el video con sonido"}
+                className="absolute bottom-8 right-6 z-10 inline-flex items-center gap-2 rounded-full border border-amber-200/25 bg-black/45 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-stone-300 backdrop-blur-sm transition hover:border-amber-200/50 hover:text-amber-200"
+            >
+                {withSound ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                Video
+            </button>
+        ) : null}
+        </>
+    );
+}
+
 export default function HomePage() {
+    const [logoLoaded, setLogoLoaded] = useState(false);
     const { session, loading } = useAuthRedirect({
         redirectTo: "/login",
         when: "unauthenticated",
@@ -15,6 +132,7 @@ export default function HomePage() {
     if (loading || !session) {
         return (
             <main className="flex min-h-screen items-center justify-center bg-[#050302] px-4 text-stone-100">
+                {heroLogoPreload}
                 <div className="rounded-[10px] border border-amber-200/15 bg-black/60 px-6 py-5 text-sm tracking-wide text-stone-300 shadow-2xl backdrop-blur-md">
                     Cargando inicio...
                 </div>
@@ -24,12 +142,14 @@ export default function HomePage() {
 
     return (
         <main className="min-h-screen overflow-y-auto bg-[#050302] text-stone-100">
+            {heroLogoPreload}
             {/* ---------- HERO ---------- */}
             <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4 py-24">
                 <div
                     className="absolute inset-0 bg-cover bg-center"
-                    style={{ backgroundImage: "url(/static/imgs/background.jpg)" }}
+                    style={{ backgroundImage: `url(${HERO_BACKGROUND_IMAGE})` }}
                 />
+                <HeroBackgroundVideo />
                 <div className="absolute inset-0 bg-black/55" />
                 <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(3,2,1,0.35)_0%,rgba(3,2,1,0.15)_35%,rgba(3,2,1,0.75)_78%,#050302_100%)]" />
                 <div className="pointer-events-none absolute -top-24 left-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-amber-400/10 blur-[140px]" />
@@ -44,12 +164,17 @@ export default function HomePage() {
 
                     <div className="relative mt-8 w-full max-w-2xl">
                         <Image
-                            src="/static/imgs/woaoicon.png"
+                            src={HERO_LOGO}
                             alt="World of Argentum Online"
-                            width={1536}
-                            height={1024}
-                            priority
-                            className="w-full drop-shadow-[0_0_45px_rgba(0,0,0,0.65)]"
+                            width={1344}
+                            height={896}
+                            unoptimized
+                            loading="eager"
+                            fetchPriority="high"
+                            onLoad={() => setLogoLoaded(true)}
+                            className={`w-full drop-shadow-[0_0_45px_rgba(0,0,0,0.65)] transition-opacity duration-500 ${
+                                logoLoaded ? "opacity-100" : "opacity-0"
+                            }`}
                         />
                     </div>
 
@@ -144,64 +269,37 @@ export default function HomePage() {
 
             {/* ---------- DE QUE SE TRATA ---------- */}
             <section className="relative mx-auto max-w-4xl px-4 py-20">
-                <SectionHeading eyebrow="De qué se trata" title="AOWeb Beta" />
+                <SectionHeading eyebrow="De qué se trata" title="World of Argentum" />
 
                 <div className="relative mt-12 space-y-6 rounded-[6px] border border-amber-200/12 bg-black/40 p-6 text-[15px] leading-8 text-stone-300 shadow-2xl backdrop-blur-sm md:p-10">
                     <p>
-                        AOWeb es un proyecto que aun está en Beta, es
-                        probable que tenga varios errores y salió de
-                        varios años como ex jugador de querer armar un
-                        AO pero que funcione 100% en web y fluido, este
-                        proyecto lo hice hace unos 12 años pero hoy las
-                        tecnologías son otras y se puede tener un AO que
-                        ande fluido en web y ese es mi objetivo.
+                        World of Argentum es un MMORPG 2D de fantasía clásica
+                        que se juega gratis desde el navegador, en la compu o
+                        en el celular, sin descargar nada.
                     </p>
 
                     <p>
-                        Actualmente faltan muchas funciones que las voy
-                        a ir agregando día a día hasta que podamos tener
-                        un juego solido, vamos a tener sonidos,
-                        carpinteria, poder ordenar hechizos/items, todo
-                        lo necesario para una mejor jugabilidad.
+                        Hay mundo abierto con clanes, guerras de facciones y
+                        eventos, mazmorras con acertijos y jefes, y una Arena
+                        todos contra todos para pelear al toque.
                     </p>
 
                     <p>
-                        Cualquier tipo de feedback o reporte de bug es
-                        bienvenido, me lo pueden mandar a mi Twitter:{" "}
-                        <a
-                            href="https://x.com/DamianCatanzaro"
-                            target="_blank"
-                            rel="noreferrer"
-                            className="font-medium text-amber-300 underline decoration-amber-300/50 underline-offset-4 transition hover:text-amber-200 hover:decoration-amber-200"
-                        >
-                            @DamianCatanzaro
-                        </a>
-                    </p>
-
-                    <p>
-                        Tambien pueden ingresar al Discord para recibir
-                        novedades:{" "}
+                        Las{" "}
+                        <Link href="/updates" prefetch={false} className="font-medium text-amber-300 underline decoration-amber-300/50 underline-offset-4 transition hover:text-amber-200 hover:decoration-amber-200">
+                            novedades
+                        </Link>{" "}
+                        salen seguido. Para reportar errores o sugerir cambios,
+                        sumate a nuestro{" "}
                         <a
                             href="https://discord.gg/YpJ9XrMdg"
                             target="_blank"
                             rel="noreferrer"
                             className="font-medium text-amber-300 underline decoration-amber-300/50 underline-offset-4 transition hover:text-amber-200 hover:decoration-amber-200"
                         >
-                            unirse al Discord
+                            Discord
                         </a>
-                    </p>
-
-                    <p>
-                        O pueden enviar con mas detalle a este Form de
-                        Google:{" "}
-                        <a
-                            href="https://forms.gle/Df2cmGExTBjjJhAR8"
-                            target="_blank"
-                            rel="noreferrer"
-                            className="font-medium text-amber-300 underline decoration-amber-300/50 underline-offset-4 transition hover:text-amber-200 hover:decoration-amber-200"
-                        >
-                            abrir formulario
-                        </a>
+                        .
                     </p>
                 </div>
             </section>
@@ -223,27 +321,39 @@ export default function HomePage() {
                             label="Discord"
                             icon={<MessageCircle className="h-5 w-5" />}
                         />
-                        <SocialIconLink
-                            href="https://x.com/DamianCatanzaro"
-                            label="X / Twitter"
-                            icon={<XIcon className="h-5 w-5" />}
-                        />
-                        <SocialIconLink
-                            href="https://forms.gle/Df2cmGExTBjjJhAR8"
-                            label="Formulario de feedback"
-                            icon={<Sparkles className="h-5 w-5" />}
-                        />
+                    </div>
+
+                    <div className="mt-6 flex items-center gap-6 text-xs font-semibold uppercase tracking-[0.18em]">
+                        <Link
+                            href="/updates"
+                            prefetch={false}
+                            className="text-amber-200/75 transition hover:text-amber-100"
+                        >
+                            Novedades
+                        </Link>
+                        <Link
+                            href="/wiki"
+                            className="text-amber-200/75 transition hover:text-amber-100"
+                        >
+                            Wiki oficial
+                        </Link>
                     </div>
 
                     <p className="mt-10 text-xs tracking-wide text-stone-500">
-                        World of Argentum Online &middot; Proyecto de fans, sin fines de lucro
+                        World of Argentum &middot; Proyecto de fans, sin fines de lucro
                     </p>
-                    <Link
-                        href="/wiki"
-                        className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-amber-200/75 transition hover:text-amber-100"
-                    >
-                        Wiki oficial
-                    </Link>
+                    <p className="mt-2 inline-flex items-center gap-1.5 text-xs tracking-wide text-stone-500">
+                        Créditos al proyecto original de
+                        <a
+                            href="https://x.com/DamianCatanzaro"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 font-semibold text-stone-300 transition hover:text-amber-100"
+                        >
+                            <XIcon className="h-3 w-3" />
+                            @DamianCatanzaro
+                        </a>
+                    </p>
                 </div>
             </section>
         </main>

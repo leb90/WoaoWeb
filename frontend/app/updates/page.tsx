@@ -1,19 +1,18 @@
 import type { Metadata } from "next";
 import UpdatesPanel from "@/components/UpdatesPanel";
 import changelogEntries from "@/data/changelog.json";
-import roadmapEntries from "@/data/roadmap.json";
 import { buildPageMetadata } from "@/lib/seo";
 
-const latestFeatures = changelogEntries[0]?.features ?? [];
-const nextFocus = roadmapEntries[0];
+// El changelog va de la más vieja a la más nueva.
+const latest = changelogEntries[changelogEntries.length - 1];
 
-const updatesDescription = `Segui el changelog de AOWeb y el roadmap publico con mejoras como ${latestFeatures[0] ?? "nuevas funciones"}, ${latestFeatures[1] ?? "ajustes continuos"} y proximos objetivos en ${nextFocus?.title ?? "el juego"}.`;
+const updatesDescription = `Seguí las novedades de World of Argentum. Última actualización: ${latest?.titulo ?? "nuevas mejoras en camino"}.`;
 
 export const metadata: Metadata = buildPageMetadata({
-    title: "Updates, changelog y roadmap",
+    title: "Novedades y changelog",
     description: updatesDescription,
     path: "/updates",
-    keywords: ["updates AOWeb", "roadmap Argentum Online", "changelog MMORPG"],
+    keywords: ["novedades World of Argentum", "changelog World of Argentum", "changelog MMORPG"],
     imagePath: "/updates/opengraph-image",
     twitterImagePath: "/updates/twitter-image",
 });
@@ -24,10 +23,10 @@ export default function UpdatesPage() {
             <div className="mx-auto max-w-4xl">
                 <div className="mb-8">
                     <p className="text-[11px] uppercase tracking-[0.34em] text-amber-200/75">
-                        AOWeb
+                        World of Argentum
                     </p>
                     <h1 className="mt-3 text-3xl font-semibold text-white md:text-4xl">
-                        Changelog y roadmap
+                        Novedades
                     </h1>
                 </div>
 

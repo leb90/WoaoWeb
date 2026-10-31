@@ -10,6 +10,9 @@ import { MENU_MUSIC, MusicPlaylist } from "../lib/worldMusic";
 // aparte del volumen de música del juego (que arranca al 10%); el botón la silencia y se recuerda.
 
 const MUTED_STORAGE_KEY = "ao-menu-music-muted";
+// El video de fondo del inicio avisa con este evento (detail: true/false) cuando se escucha con sonido: mientras
+// tanto la música se pausa.
+export const HERO_VIDEO_SOUND_EVENT = "woao:hero-video-sound";
 const MENU_MUSIC_VOLUME = 0.3;
 const HOME_ROUTES = new Set(["/", "/login", "/register", "/characters"]);
 
@@ -22,7 +25,15 @@ export default function MenuMusic({ pathname }: { pathname: string }) {
     const playlistRef = React.useRef<MusicPlaylist | null>(null);
     const [muted, setMuted] = React.useState(false);
     const [unlocked, setUnlocked] = React.useState(false);
+    const [videoSound, setVideoSound] = React.useState(false);
     const kind = musicForPath(pathname);
+
+    React.useEffect(() => {
+        const onVideoSound = (event: Event) =>
+            setVideoSound(Boolean((event as CustomEvent<boolean>).detail));
+        window.addEventListener(HERO_VIDEO_SOUND_EVENT, onVideoSound);
+        return () => window.removeEventListener(HERO_VIDEO_SOUND_EVENT, onVideoSound);
+    }, []);
 
     React.useEffect(() => {
         try {
@@ -45,7 +56,7 @@ export default function MenuMusic({ pathname }: { pathname: string }) {
         playlistRef.current ??= new MusicPlaylist();
         const playlist = playlistRef.current;
         playlist.setVolume(MENU_MUSIC_VOLUME);
-        if (!unlocked || muted || !kind) {
+        if (!unlocked || muted || !kind || videoSound) {
             playlist.play(null, null);
             return;
         }
@@ -54,7 +65,7 @@ export default function MenuMusic({ pathname }: { pathname: string }) {
             restMs: kind === "creacion" ? [0, 0] : [4_000, 8_000],
             startDelayMs: 300,
         });
-    }, [kind, muted, unlocked]);
+    }, [kind, muted, unlocked, videoSound]);
 
     React.useEffect(() => () => playlistRef.current?.stop(), []);
 

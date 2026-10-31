@@ -18,12 +18,10 @@ export const siteDescription =
 export const siteKeywords = [
     "World of Argentum",
     "World of Argentum Wiki",
-    "AOWeb",
-    "AO Web",
+    "Argentum Online",
     "MMORPG web",
-    "AOWeb beta",
-    "changelog AOWeb",
-    "roadmap AOWeb",
+    "MMORPG 2D gratis",
+    "changelog World of Argentum",
 ];
 
 export function absoluteUrl(path = "/"): string {
@@ -72,7 +70,6 @@ export function buildPageMetadata({
         },
         twitter: {
             card: "summary_large_image",
-            creator: "@DamianCatanzaro",
             title,
             description,
             images: [absoluteUrl(twitterImagePath)],

@@ -1,6 +1,5 @@
 import { ImageResponse } from "next/og";
 import changelogEntries from "@/data/changelog.json";
-import roadmapEntries from "@/data/roadmap.json";
 import {
     SocialCard,
     getSocialLogoSrc,
@@ -8,25 +7,21 @@ import {
     socialImageSize,
 } from "@/lib/social-card";
 
-export const alt = "Updates de AOWeb";
+export const alt = "Novedades de World of Argentum";
 export const size = socialImageSize;
 export const contentType = socialImageContentType;
 
 export default async function UpdatesOpenGraphImage() {
-    const latestChangelog = changelogEntries[0]?.features ?? [];
-    const firstRoadmap = roadmapEntries[0];
+    // El changelog va de la más vieja a la más nueva.
+    const latest = changelogEntries[changelogEntries.length - 1];
     const logoSrc = await getSocialLogoSrc();
 
     return new ImageResponse(
         <SocialCard
-            eyebrow="Updates"
-            title="Changelog y roadmap de AOWeb"
-            description={`Ultimo update: ${latestChangelog[0] ?? "Nuevas mejoras en progreso"}. Proximo foco: ${firstRoadmap?.title ?? "roadmap activo"}.`}
-            bullets={[
-                ...latestChangelog.slice(0, 2),
-                firstRoadmap?.items[0] ??
-                    "Seguimiento publico de proximas funciones",
-            ]}
+            eyebrow="Novedades"
+            title="Changelog de World of Argentum"
+            description={`Última actualización: ${latest?.titulo ?? "nuevas mejoras en camino"}.`}
+            bullets={latest?.features.slice(0, 3) ?? []}
             accent="#fbbf24"
             logoSrc={logoSrc}
         />,

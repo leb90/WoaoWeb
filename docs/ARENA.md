@@ -19,7 +19,7 @@ Reemplazó a las salas de arena (con contraseña, link y plantillas viejas), que
   - no se pueden tirar items y no se pierde nada al morir;
   - no hay zona segura, experiencia, oro, puntos de facción, hambre ni sed.
 - **Hechizos:** como en argentumonline.io, van en los últimos casilleros de la lista (del 50 para arriba). El que tiene hechizos entra con la pestaña abierta y la lista ya al final.
-  - La lista termina siempre en: Remover Parálisis, Paralizar, el hechizo más poderoso, el que le sigue y la curación más poderosa. Van los que la clase tenga, en ese orden.
+  - De abajo para arriba van: Remover Parálisis (el último de todos), Paralizar, el hechizo más poderoso, el que le sigue y la curación más poderosa. Van los que la clase tenga.
   - El resto va arriba de esos cinco.
   - `server/src/arenaClasses.test.ts` controla el orden con el daño y la curación de `spells.json`.
 - **Panel:** Transfigurar, Tienda, Party, Clanes, Misiones, Montura, Premios, Ranked, Viajes, WoAO, los castillos y la montura quedan deshabilitados (`arenaMode` en `InventoryFloatingPanel`).

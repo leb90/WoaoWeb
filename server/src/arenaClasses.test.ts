@@ -105,9 +105,9 @@ test("la plantilla lleva el equipo puesto, pociones y una cabeza de la raza", ()
     assert.equal(buildArenaTemplate(5), null, "el ladrón no es una clase de la arena");
 });
 
-// Pedido de Leandro: la lista termina en Remover Parálisis, Paralizar, el hechizo más poderoso, el que le sigue
-// y la curación más poderosa, en ese orden y con los que la clase tenga.
-test("los hechizos terminan en remover, paralizar, los dos más fuertes y la mejor curación", () => {
+// Pedido de Leandro, como en argentumonline.io: de abajo para arriba van Remover Parálisis (el último de todos),
+// Paralizar, el hechizo más poderoso, el que le sigue y la curación más poderosa, con los que la clase tenga.
+test("de abajo para arriba: remover, paralizar, los dos más fuertes y la mejor curación", () => {
     const REMOVER = 10;
     const PARALIZAR = 9;
     const average = (spell: Record<string, number>) => (Number(spell.minHp) + Number(spell.maxHp)) / 2;
@@ -123,9 +123,10 @@ test("los hechizos terminan en remover, paralizar, los dos más fuertes y la mej
         const bestHeal = list
             .filter((spell) => Number(spell.subeHp) === 1)
             .sort((left, right) => average(right) - average(left))[0];
-        const expected = [list.find((spell) => spell.id === REMOVER), paralyze, ...strongest, bestHeal]
+        const fromBottom = [list.find((spell) => spell.id === REMOVER), paralyze, ...strongest, bestHeal]
             .filter((spell) => spell)
             .map((spell) => spell!.id);
+        const expected = [...fromBottom].reverse();
 
         assert.deepEqual(arenaClass.hechizos.slice(-expected.length), expected, arenaClass.nombre);
     }
@@ -140,4 +141,5 @@ test("los hechizos van en los últimos casilleros, como en argentumonline.io", (
     assert.equal(Math.max(...slots), ARENA_SPELL_SLOTS);
     assert.equal(Math.min(...slots), ARENA_SPELL_SLOTS - hechizos.length + 1);
     assert.equal(mage.spells[String(ARENA_SPELL_SLOTS)].idSpell, hechizos[hechizos.length - 1]);
+    assert.equal(mage.spells[String(ARENA_SPELL_SLOTS)].idSpell, 10, "Remover Parálisis queda en el último casillero");
 });

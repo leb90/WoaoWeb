@@ -18,8 +18,8 @@ export type ArenaClass = {
     equipo: number[];
     /**
      * De arriba hacia abajo, como se ven en la lista. Van en los últimos casilleros, igual que en
-     * argentumonline.io, y terminan siempre en: Remover Parálisis, Paralizar, el hechizo más poderoso,
-     * el que le sigue y la curación más poderosa (los que la clase tenga). Arriba van los demás.
+     * argentumonline.io. De abajo para arriba: Remover Parálisis (el último de todos), Paralizar, el hechizo
+     * más poderoso, el que le sigue y la curación más poderosa (los que la clase tenga). Arriba van los demás.
      */
     hechizos: number[];
 };
@@ -51,8 +51,8 @@ export const ARENA_CLASSES: ArenaClass[] = [
         // Set Arcano y Anillo de Energía.
         equipo: [1750, 1752, 1749, 1751, 1221],
         // Ceguera, Estupidez, Fuerza II, Celeridad II, Invisibilidad, Implosión, Lluvia Arcana, Apocalipsis |
-        // Remover Parálisis, Paralizar, Llama de Dragón, Lluvia de Sangre, Curación Milagrosa.
-        hechizos: [30, 31, 22, 40, 14, 41, 84, 25, 10, 9, 45, 44, 32],
+        // Curación Milagrosa, Lluvia de Sangre, Llama de Dragón, Paralizar, Remover Parálisis.
+        hechizos: [30, 31, 22, 40, 14, 41, 84, 25, 32, 44, 45, 9, 10],
     },
     {
         idClase: 2,
@@ -63,8 +63,8 @@ export const ARENA_CLASSES: ArenaClass[] = [
         // Set Templario.
         equipo: [1758, 1760, 1757, 1759],
         // Ceguera, Estupidez, Fuerza II, Celeridad II, Invisibilidad, Curación Milagrosa, Apocalipsis |
-        // Remover Parálisis, Paralizar, Purificar, Martillo de luz celestial, Curación Divina.
-        hechizos: [30, 31, 22, 40, 14, 32, 25, 10, 9, 75, 85, 39],
+        // Curación Divina, Martillo de luz celestial, Purificar, Paralizar, Remover Parálisis.
+        hechizos: [30, 31, 22, 40, 14, 32, 25, 39, 85, 75, 9, 10],
     },
     {
         idClase: 3,
@@ -85,8 +85,8 @@ export const ARENA_CLASSES: ArenaClass[] = [
         // Set del Umbral.
         equipo: [1778, 1780, 1777, 1779],
         // Fuerza II, Celeridad II, Invisibilidad, Inmovilizar |
-        // Remover Parálisis, Paralizar, Destello infernal, Apocalipsis, Restauración.
-        hechizos: [22, 40, 14, 66, 10, 9, 73, 25, 60],
+        // Restauración, Apocalipsis, Destello infernal, Paralizar, Remover Parálisis.
+        hechizos: [22, 40, 14, 66, 60, 25, 73, 9, 10],
     },
     {
         idClase: 6,
@@ -97,8 +97,8 @@ export const ARENA_CLASSES: ArenaClass[] = [
         // Set Bardo.
         equipo: [1766, 1768, 1765, 1767],
         // Ceguera, Estupidez, Fuerza II, Celeridad II, Invisibilidad, Inmovilizar |
-        // Remover Parálisis, Paralizar, Apocalipsis, MINIApocalipsis, Curación Milagrosa.
-        hechizos: [30, 31, 22, 40, 14, 66, 10, 9, 25, 33, 32],
+        // Curación Milagrosa, MINIApocalipsis, Apocalipsis, Paralizar, Remover Parálisis.
+        hechizos: [30, 31, 22, 40, 14, 66, 32, 33, 25, 9, 10],
     },
     {
         idClase: 7,
@@ -109,8 +109,8 @@ export const ARENA_CLASSES: ArenaClass[] = [
         // Set Silvestre y Anillo de Energía.
         equipo: [1754, 1756, 1753, 1755, 1221],
         // Fuerza II, Celeridad II, Invisibilidad, Implosión, Apocalipsis, Enredar |
-        // Remover Parálisis, Paralizar, Lluvia de Sangre, Lluvia Arcana, Curación Milagrosa.
-        hechizos: [22, 40, 14, 41, 25, 49, 10, 9, 44, 84, 32],
+        // Curación Milagrosa, Lluvia Arcana, Lluvia de Sangre, Paralizar, Remover Parálisis.
+        hechizos: [22, 40, 14, 41, 25, 49, 32, 84, 44, 9, 10],
     },
     {
         idClase: 8,
@@ -121,8 +121,8 @@ export const ARENA_CLASSES: ArenaClass[] = [
         // Set Paladín.
         equipo: [1762, 1764, 1761, 1763],
         // Fuerza II, Celeridad II, Invisibilidad, Inmovilizar |
-        // Remover Parálisis, Paralizar, Apocalipsis, MINIApocalipsis, Restauración.
-        hechizos: [22, 40, 14, 66, 10, 9, 25, 33, 60],
+        // Restauración, MINIApocalipsis, Apocalipsis, Paralizar, Remover Parálisis.
+        hechizos: [22, 40, 14, 66, 60, 33, 25, 9, 10],
     },
     {
         idClase: 9,
@@ -142,9 +142,9 @@ export const ARENA_CLASSES: ArenaClass[] = [
         cuerpo: 32,
         // No tiene set: Espada, Casco y Escudo del Caído (legendarios) y Placas Azules.
         equipo: [1503, 705, 1490, 1466],
-        // Bomba de Humo, Disparo Tóxico | Disparo de Conmoción (paraliza), Disparo Certero, Restauración.
+        // Bomba de Humo, Disparo Tóxico | Restauración, Disparo Certero, Disparo de Conmoción (paraliza).
         // El pirata no tiene Remover Parálisis y Disparo Certero es su único hechizo de daño.
-        hechizos: [35, 46, 71, 72, 60],
+        hechizos: [35, 46, 60, 72, 71],
     },
     {
         idClase: 20,
@@ -166,8 +166,8 @@ export const ARENA_CLASSES: ArenaClass[] = [
         equipo: [1818, 1820, 1817, 1819, 1221],
         // Curar efectos, Invisibilidad, Evasión de viento, Escudo de energía, Escudo físico, Escudo mágico,
         // Prisión de agua, Ráfaga de viento, Rayo de Fuego, Descarga eléctrica, Rayo Eléctrico, Llamarada |
-        // Remover Parálisis, Petrificar (paraliza), Incinerar, Ventisca. El chamán no tiene curaciones.
-        hechizos: [1, 14, 83, 78, 77, 76, 80, 79, 63, 23, 64, 51, 10, 65, 61, 62],
+        // Ventisca, Incinerar, Petrificar (paraliza), Remover Parálisis. El chamán no tiene curaciones.
+        hechizos: [1, 14, 83, 78, 77, 76, 80, 79, 63, 23, 64, 51, 62, 61, 65, 10],
     },
 ];
 

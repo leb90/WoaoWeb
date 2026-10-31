@@ -42,6 +42,8 @@ export interface ObjectData {
     subtipo?: number;
     /** Cuerpo que pone la armadura al equiparla (solo armaduras; ver rendering/armorWarp.ts). */
     anim?: number;
+    /** 1 = prop fijo del mapa (árbol, puerta, cartel...): no se agarra salvo que se haya tirado. */
+    agarrable?: number;
     clasesNoPermitidas?: number[];
 }
 

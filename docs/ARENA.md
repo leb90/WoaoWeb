@@ -22,6 +22,10 @@ Reemplazó a las salas de arena (con contraseña, link y plantillas viejas), que
   - De abajo para arriba van: Remover Parálisis (el último de todos), Paralizar, el hechizo más poderoso, el que le sigue y la curación más poderosa. Van los que la clase tenga.
   - El resto va arriba de esos cinco.
   - `server/src/arenaClasses.test.ts` controla el orden con el daño y la curación de `spells.json`.
+- **Mobile:** los accesos rápidos vienen puestos con lo de la clase (`accesos` en `arenaClasses.ts`, mandado en `arenaState`). No se guardan.
+  - El arco de hechizos lleva Remover Parálisis, Paralizar, el más poderoso y la mejor curación (o el segundo de daño si la clase no cura).
+  - Los dos items llevan Poción Roja y Azul. El arquero y el cazador llevan el arco, que es con lo que disparan; el guerrero, la Poción de Fuerza.
+  - Las cantidades de pociones y flechas se muestran como ∞. El Top 3 va arriba al centro, fijo a la pantalla.
 - **Panel:** Transfigurar, Tienda, Party, Clanes, Misiones, Montura, Premios, Ranked, Viajes, WoAO, los castillos y la montura quedan deshabilitados (`arenaMode` en `InventoryFloatingPanel`).
 - **Salir:** es instantáneo, aunque estés paralizado. En el mundo abierto se sale al instante en zona segura o muerto; en el resto hay que esperar 10 segundos.
 - **Muerte:** no se pasa al mundo de los muertos. A los 5 segundos se revive solo, con vida y maná llenos, en otro lugar del mapa. El cliente muestra quién te mató y la cuenta regresiva.

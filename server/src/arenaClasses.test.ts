@@ -143,3 +143,44 @@ test("los hechizos van en los últimos casilleros, como en argentumonline.io", (
     assert.equal(mage.spells[String(ARENA_SPELL_SLOTS)].idSpell, hechizos[hechizos.length - 1]);
     assert.equal(mage.spells[String(ARENA_SPELL_SLOTS)].idSpell, 10, "Remover Parálisis queda en el último casillero");
 });
+
+test("los accesos rápidos de mobile: remover, paralizar, el más fuerte y la mejor curación", () => {
+    const REMOVER = 10;
+    const PARALIZAR = 9;
+    const average = (spell: Record<string, number>) => (Number(spell.minHp) + Number(spell.maxHp)) / 2;
+
+    for (const arenaClass of ARENA_CLASSES) {
+        const { hechizos, items } = arenaClass.accesos;
+        const list = arenaClass.hechizos.map((id) => ({ id, ...spells[String(id)] }));
+        const paralyze =
+            list.find((spell) => spell.id === PARALIZAR) ?? list.find((spell) => Number(spell.paraliza) === 1);
+        const strongest = list
+            .filter((spell) => Number(spell.subeHp) === 2)
+            .sort((left, right) => average(right) - average(left));
+        const bestHeal = list
+            .filter((spell) => Number(spell.subeHp) === 1)
+            .sort((left, right) => average(right) - average(left))[0];
+        const expected = [list.find((spell) => spell.id === REMOVER), paralyze, strongest[0], bestHeal ?? strongest[1]]
+            .filter((spell) => spell)
+            .map((spell) => spell!.id);
+
+        assert.ok(hechizos.length <= 4, `${arenaClass.nombre}: el arco de mobile tiene 4 lugares`);
+        assert.deepEqual(hechizos.slice(0, expected.length), expected, arenaClass.nombre);
+        assert.ok(
+            hechizos.every((id) => arenaClass.hechizos.includes(id)),
+            `${arenaClass.nombre}: un acceso no está en sus hechizos`,
+        );
+
+        const template = buildArenaTemplate(arenaClass.idClase);
+        const carried = Object.values(template?.inv ?? {}).map((item) => item.idItem);
+        assert.equal(items.length, 2, `${arenaClass.nombre}: mobile tiene 2 lugares de items`);
+        assert.ok(
+            items.every((id) => carried.includes(id)),
+            `${arenaClass.nombre}: un item rápido no está en su inventario`,
+        );
+    }
+
+    // El arquero y el cazador atacan con el arco: va en un acceso.
+    assert.equal(getArenaClass(20)?.accesos.items[0], getArenaClass(20)?.equipo[0]);
+    assert.equal(getArenaClass(9)?.accesos.items[0], getArenaClass(9)?.equipo[0]);
+});

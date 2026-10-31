@@ -1348,6 +1348,8 @@ export interface ArenaStatePayload {
     reviveEn: number;
     /** Mientras está muerto: quién lo mató (null si murió solo) y cuántos puntos perdió. */
     muerte?: { asesino: string | null; perdidos: number } | null;
+    /** Accesos rápidos de mobile de la clase (ids de hechizos e items), para ponerlos al entrar. */
+    accesos?: { hechizos: number[]; items: number[] } | null;
 }
 
 export interface FactionWarStatePayload {

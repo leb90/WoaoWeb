@@ -114,6 +114,18 @@ html.game-targeting body *::after {
     cursor: var(--cursor-juego-apuntar) !important;
 }
 
+/* Botoncito de agarrar de mobile: sale del botón de ataque (MobileAttackButton.tsx). */
+@keyframes woao-pop {
+    from {
+        transform: scale(0.3);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
 /* Full screen optimization for mobile */
 @media screen and (max-width: 768px) {
     .game-shell {

@@ -3,6 +3,7 @@
 // al morir: se revive solo a los pocos segundos en otro lugar del mapa. En vez de subir de nivel se sube en el
 // ranking de la partida (arenaScore.ts) y el Top 3 se ve en pantalla.
 import type { EntityId, RuntimeCharacter } from "./types/runtime";
+import { getArenaClass } from "./arenaClasses";
 import { applyDeath, applyKill, createScore, pruneLastKills, standings, type ArenaScore } from "./arenaScore";
 
 const vars = require("./vars");
@@ -148,6 +149,8 @@ function buildPayload(ranking: ArenaScore[], idUser: string) {
             : null,
         reviveEn: Math.max(0, (state.reviveAt.get(idUser) ?? 0) - Date.now()),
         muerte: state.deaths.get(idUser) ?? null,
+        // Para que el cliente ponga los accesos rápidos de mobile de la clase (arenaClasses.ts).
+        accesos: mine ? (getArenaClass(mine.idClase)?.accesos ?? null) : null,
     };
 }
 

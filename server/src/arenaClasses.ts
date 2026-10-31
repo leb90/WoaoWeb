@@ -22,6 +22,12 @@ export type ArenaClass = {
      * más poderoso, el que le sigue y la curación más poderosa (los que la clase tenga). Arriba van los demás.
      */
     hechizos: number[];
+    /**
+     * Lo que ya viene puesto en los accesos rápidos de mobile: 4 hechizos (Remover Parálisis, Paralizar, el más
+     * poderoso y la mejor curación, o el que le sigue si la clase no cura) y 2 items (las pociones; el arquero y el
+     * cazador llevan el arco, que es con lo que atacan).
+     */
+    accesos: { hechizos: number[]; items: number[] };
 };
 
 const POCION_ROJA = 38;
@@ -53,6 +59,7 @@ export const ARENA_CLASSES: ArenaClass[] = [
         // Ceguera, Estupidez, Fuerza II, Celeridad II, Invisibilidad, Implosión, Lluvia Arcana, Apocalipsis |
         // Curación Milagrosa, Lluvia de Sangre, Llama de Dragón, Paralizar, Remover Parálisis.
         hechizos: [30, 31, 22, 40, 14, 41, 84, 25, 32, 44, 45, 9, 10],
+        accesos: { hechizos: [10, 9, 45, 32], items: [POCION_ROJA, POCION_AZUL] },
     },
     {
         idClase: 2,
@@ -65,6 +72,7 @@ export const ARENA_CLASSES: ArenaClass[] = [
         // Ceguera, Estupidez, Fuerza II, Celeridad II, Invisibilidad, Curación Milagrosa, Apocalipsis |
         // Curación Divina, Martillo de luz celestial, Purificar, Paralizar, Remover Parálisis.
         hechizos: [30, 31, 22, 40, 14, 32, 25, 39, 85, 75, 9, 10],
+        accesos: { hechizos: [10, 9, 75, 39], items: [POCION_ROJA, POCION_AZUL] },
     },
     {
         idClase: 3,
@@ -75,6 +83,7 @@ export const ARENA_CLASSES: ArenaClass[] = [
         // Set del Verdugo.
         equipo: [1770, 1772, 1769, 1771],
         hechizos: [],
+        accesos: { hechizos: [], items: [POCION_ROJA, POCION_SUPER_FUERZA] },
     },
     {
         idClase: 4,
@@ -87,6 +96,7 @@ export const ARENA_CLASSES: ArenaClass[] = [
         // Fuerza II, Celeridad II, Invisibilidad, Inmovilizar |
         // Restauración, Apocalipsis, Destello infernal, Paralizar, Remover Parálisis.
         hechizos: [22, 40, 14, 66, 60, 25, 73, 9, 10],
+        accesos: { hechizos: [10, 9, 73, 60], items: [POCION_ROJA, POCION_AZUL] },
     },
     {
         idClase: 6,
@@ -99,6 +109,7 @@ export const ARENA_CLASSES: ArenaClass[] = [
         // Ceguera, Estupidez, Fuerza II, Celeridad II, Invisibilidad, Inmovilizar |
         // Curación Milagrosa, MINIApocalipsis, Apocalipsis, Paralizar, Remover Parálisis.
         hechizos: [30, 31, 22, 40, 14, 66, 32, 33, 25, 9, 10],
+        accesos: { hechizos: [10, 9, 25, 32], items: [POCION_ROJA, POCION_AZUL] },
     },
     {
         idClase: 7,
@@ -111,6 +122,7 @@ export const ARENA_CLASSES: ArenaClass[] = [
         // Fuerza II, Celeridad II, Invisibilidad, Implosión, Apocalipsis, Enredar |
         // Curación Milagrosa, Lluvia Arcana, Lluvia de Sangre, Paralizar, Remover Parálisis.
         hechizos: [22, 40, 14, 41, 25, 49, 32, 84, 44, 9, 10],
+        accesos: { hechizos: [10, 9, 44, 32], items: [POCION_ROJA, POCION_AZUL] },
     },
     {
         idClase: 8,
@@ -123,6 +135,7 @@ export const ARENA_CLASSES: ArenaClass[] = [
         // Fuerza II, Celeridad II, Invisibilidad, Inmovilizar |
         // Restauración, MINIApocalipsis, Apocalipsis, Paralizar, Remover Parálisis.
         hechizos: [22, 40, 14, 66, 60, 33, 25, 9, 10],
+        accesos: { hechizos: [10, 9, 25, 60], items: [POCION_ROJA, POCION_AZUL] },
     },
     {
         idClase: 9,
@@ -133,6 +146,7 @@ export const ARENA_CLASSES: ArenaClass[] = [
         // No tiene set: Arco Desterrado, Placas Doradas, Casco y Escudo del Caído (legendarios) y Flecha Del Diablo.
         equipo: [1518, 729, 1493, 1469, 606],
         hechizos: [],
+        accesos: { hechizos: [], items: [1518, POCION_ROJA] },
     },
     {
         idClase: 18,
@@ -145,6 +159,7 @@ export const ARENA_CLASSES: ArenaClass[] = [
         // Bomba de Humo, Disparo Tóxico | Restauración, Disparo Certero, Disparo de Conmoción (paraliza).
         // El pirata no tiene Remover Parálisis y Disparo Certero es su único hechizo de daño.
         hechizos: [35, 46, 60, 72, 71],
+        accesos: { hechizos: [71, 72, 60, 46], items: [POCION_ROJA, POCION_AZUL] },
     },
     {
         idClase: 20,
@@ -155,6 +170,7 @@ export const ARENA_CLASSES: ArenaClass[] = [
         // Set Silvano y Flecha De Los Dioses.
         equipo: [1774, 1776, 1773, 1775, 607],
         hechizos: [],
+        accesos: { hechizos: [], items: [1774, POCION_ROJA] },
     },
     {
         idClase: 22,
@@ -168,6 +184,7 @@ export const ARENA_CLASSES: ArenaClass[] = [
         // Prisión de agua, Ráfaga de viento, Rayo de Fuego, Descarga eléctrica, Rayo Eléctrico, Llamarada |
         // Ventisca, Incinerar, Petrificar (paraliza), Remover Parálisis. El chamán no tiene curaciones.
         hechizos: [1, 14, 83, 78, 77, 76, 80, 79, 63, 23, 64, 51, 62, 61, 65, 10],
+        accesos: { hechizos: [10, 65, 61, 62], items: [POCION_ROJA, POCION_AZUL] },
     },
 ];
 

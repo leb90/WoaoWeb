@@ -136,7 +136,12 @@ function HeroVideoModal({ onClose }: { onClose: () => void }) {
             className="fixed inset-0 z-[70] flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
             onClick={onClose}
         >
-            <div className="relative w-full max-w-5xl" onClick={(event) => event.stopPropagation()}>
+            {/* El cuadro mide lo mismo que el video (16:9, hasta el 80% del alto): así el logo cae sobre la imagen
+                y no sobre bandas negras en pantallas bajas. */}
+            <div
+                className="relative aspect-video w-[min(100%,calc(80vh*16/9))] max-w-5xl"
+                onClick={(event) => event.stopPropagation()}
+            >
                 <button
                     ref={closeRef}
                     type="button"
@@ -152,7 +157,19 @@ function HeroVideoModal({ onClose }: { onClose: () => void }) {
                     autoPlay
                     controls
                     playsInline
-                    className="aspect-video max-h-[80vh] w-full rounded-[6px] border border-amber-200/15 bg-black object-contain shadow-2xl"
+                    className="h-full w-full rounded-[6px] border border-amber-200/15 bg-black object-contain shadow-2xl"
+                />
+                {/* Logo entero y chico arriba a la izquierda, como el de un canal de TV: 11% del alto del video
+                    (64 px de alto con el video a 1024 de ancho). */}
+                <Image
+                    src={HERO_LOGO}
+                    alt=""
+                    width={1344}
+                    height={896}
+                    unoptimized
+                    aria-hidden="true"
+                    data-tv-logo
+                    className="pointer-events-none absolute left-[2%] top-[3%] h-[11.2%] w-auto opacity-85 drop-shadow-[0_2px_6px_rgba(0,0,0,0.8)]"
                 />
             </div>
         </div>,

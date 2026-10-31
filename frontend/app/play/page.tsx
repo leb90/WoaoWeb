@@ -4277,6 +4277,7 @@ function HomeContent() {
                                         ),
                                     )}
                                     isTargeting={isMobileTargeting}
+                                    chatOpen={isChatOpen}
                                     onOpenSkills={() =>
                                         setIsMobileSkillsOpen(true)
                                     }

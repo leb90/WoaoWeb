@@ -42,12 +42,12 @@ const SPELL_SLOT_POSITIONS = [
     { left: 142, top: 30 },
 ];
 
-// Columna de accesos (inventario, lista de hechizos, editar) encima del
-// último hechizo del arco (el de arriba, centrado en x=170).
+// Fila de accesos (inventario, lista de hechizos, editar) encima del arco,
+// pegada al borde derecho. En columna pisaba los botones de arriba en
+// pantallas de unos 340 de alto (Safari con sus barras).
 const SIDE_BUTTON_SIZE = 38;
 const SIDE_BUTTON_GAP = 6;
-const SIDE_COLUMN_LEFT = 170 - SIDE_BUTTON_SIZE / 2;
-const SIDE_COLUMN_BOTTOM_GAP = 8;
+const SIDE_ROW_BOTTOM_GAP = 8;
 
 const ITEM_SLOT_SIZE = 46;
 const ITEM_SLOT_POSITIONS = [
@@ -259,15 +259,14 @@ export function MobileHud({
                 }}
             >
                 <div
-                    className={`pointer-events-none absolute flex flex-col transition-opacity ${
+                    className={`pointer-events-none absolute right-0 flex transition-opacity ${
                         isTargeting ? "opacity-25" : ""
                     }`}
                     style={{
-                        left: SIDE_COLUMN_LEFT,
                         bottom:
                             ACTION_CLUSTER_SIZE -
                             SPELL_SLOT_POSITIONS[3].top +
-                            SIDE_COLUMN_BOTTOM_GAP,
+                            SIDE_ROW_BOTTOM_GAP,
                         gap: SIDE_BUTTON_GAP,
                     }}
                 >

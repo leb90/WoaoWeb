@@ -82,10 +82,11 @@ import type {
     TradeState,
 } from "../../lib/aowProtocol";
 import type { AuthErrorResponse } from "../../lib/auth";
-import type {
-    ArenaGameTicketResponse,
-    ArenaRoomDetails,
-} from "../../lib/arenas";
+import type { ArenaGameTicketResponse } from "../../lib/arenas";
+import {
+    ARENA_SCOREBOARD_HEIGHT,
+    ArenaScoreboard,
+} from "@/components/game/ArenaScoreboard";
 import {
     applyRuntimeTimingEnvironmentOverrides,
     mergeClientRuntimeTiming,
@@ -815,10 +816,9 @@ function ScaledHudFrame({
 function HomeContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const arenaRoomId = searchParams.get("room")?.trim() || "";
-    const arenaTicket = searchParams.get("ticket")?.trim() || "";
     const arenaMode = searchParams.get("mode") === "arena";
-    const arenaTemplateId = Number(searchParams.get("idChar") || "0");
+    // Arena: la clase elegida en /arenas. Cada vez que se abre la página se pide un ticket nuevo.
+    const arenaClassId = Number(searchParams.get("clase") || "0");
     const [status, setStatus] = useState<RendererStatus>({
         connected: false,
         connecting: false,
@@ -1210,17 +1210,10 @@ function HomeContent() {
         }
     }, []);
 
-    const switchCharacterHref = arenaMode
-        ? arenaRoomId
-            ? `/arenas?room=${encodeURIComponent(arenaRoomId)}`
-            : "/arenas"
-        : "/characters";
-    const deathHomeTitle = arenaMode
-        ? "Volver al sacerdote"
-        : "Volver a la ciudad";
-    const deathHomeDescription = arenaMode
-        ? "También puedes volver al sacerdote con el comando /hogar"
-        : "También puedes volver con el comando /hogar";
+    const switchCharacterHref = arenaMode ? "/arenas" : "/characters";
+    // En la arena se revive solo: este cartel no aparece.
+    const deathHomeTitle = "Volver a la ciudad";
+    const deathHomeDescription = "También puedes volver con el comando /hogar";
 
     useEffect(() => {
         activeChatTabRef.current = activeChatTab;
@@ -1584,64 +1577,11 @@ function HomeContent() {
     }, [authSession]);
 
     useEffect(() => {
-        if (
-            !arenaMode ||
-            !!arenaRoomId ||
-            !arenaTicket ||
-            status.connecting ||
-            status.connected
-        ) {
+        if (!arenaMode || status.connecting || status.connected) {
             return;
         }
 
-        const nextKey = `arena:${arenaTicket}:${arenaTemplateId}`;
-
-        if (autoConnectKeyRef.current === nextKey) {
-            return;
-        }
-
-        autoConnectKeyRef.current = nextKey;
-        setHud(null);
-        setChatEntriesByTab(createEmptyChatEntriesByTab());
-        setStatus({
-            connected: false,
-            connecting: true,
-            worldName: undefined,
-            error: undefined,
-            consoleLine: undefined,
-        });
-        setForm((current) => ({
-            ...current,
-            ticket: arenaTicket,
-        }));
-        setConnectionSeed((current) => current + 1);
-        setActiveConnection({
-            wsUrl: form.wsUrl,
-            ticket: arenaTicket,
-            typeGame: 2,
-            idChar: Number.isFinite(arenaTemplateId) ? arenaTemplateId : 0,
-        });
-    }, [
-        arenaMode,
-        arenaRoomId,
-        arenaTemplateId,
-        arenaTicket,
-        form.wsUrl,
-        status.connected,
-        status.connecting,
-    ]);
-
-    useEffect(() => {
-        if (
-            !arenaMode ||
-            !arenaRoomId ||
-            status.connecting ||
-            status.connected
-        ) {
-            return;
-        }
-
-        const nextKey = `arena-room:${arenaRoomId}`;
+        const nextKey = `arena:${arenaClassId}`;
 
         if (autoConnectKeyRef.current === nextKey) {
             return;
@@ -1661,43 +1601,13 @@ function HomeContent() {
             });
 
             try {
-                const roomResponse = await fetch(
-                    `/api/arenas/rooms/${arenaRoomId}`,
-                    {
-                        cache: "no-store",
+                const ticketResponse = await fetch("/api/arenas/ticket", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
                     },
-                );
-                const roomResult = (await roomResponse.json()) as
-                    | ArenaRoomDetails
-                    | AuthErrorResponse;
-
-                if (!roomResponse.ok || "error" in roomResult) {
-                    throw new Error(
-                        "error" in roomResult
-                            ? roomResult.error
-                            : "No se pudo recuperar la sala",
-                    );
-                }
-
-                const templateId = roomResult.member?.selectedPvpTemplateId;
-
-                if (templateId === null || templateId === undefined) {
-                    router.replace(
-                        `/arenas?room=${encodeURIComponent(arenaRoomId)}`,
-                    );
-                    return;
-                }
-
-                const ticketResponse = await fetch(
-                    `/api/arenas/rooms/${arenaRoomId}/select-template`,
-                    {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({ templateId }),
-                    },
-                );
+                    body: JSON.stringify({ idClase: arenaClassId }),
+                });
                 const ticketResult = (await ticketResponse.json()) as
                     | ArenaGameTicketResponse
                     | AuthErrorResponse;
@@ -1706,7 +1616,7 @@ function HomeContent() {
                     throw new Error(
                         "error" in ticketResult
                             ? ticketResult.error
-                            : "No se pudo regenerar el ticket de arena",
+                            : "No se pudo entrar a la arena",
                     );
                 }
 
@@ -1719,7 +1629,7 @@ function HomeContent() {
                     wsUrl: form.wsUrl,
                     ticket: ticketResult.ticket,
                     typeGame: 2,
-                    idChar: templateId,
+                    idChar: arenaClassId,
                 });
             } catch (error) {
                 autoConnectKeyRef.current = null;
@@ -1730,18 +1640,16 @@ function HomeContent() {
                     error:
                         error instanceof Error
                             ? error.message
-                            : "No se pudo reingresar a la arena",
+                            : "No se pudo entrar a la arena",
                 });
-                router.replace(
-                    `/arenas?room=${encodeURIComponent(arenaRoomId)}`,
-                );
+                router.replace("/arenas");
             }
         };
 
         void startArenaConnection();
     }, [
         arenaMode,
-        arenaRoomId,
+        arenaClassId,
         form.wsUrl,
         router,
         status.connected,
@@ -2022,15 +1930,10 @@ function HomeContent() {
             resetConnectionState();
 
             if (arenaMode) {
-                router.replace(
-                    nextHref ??
-                        (arenaRoomId
-                            ? `/arenas?room=${encodeURIComponent(arenaRoomId)}`
-                            : "/arenas"),
-                );
+                router.replace(nextHref ?? "/arenas");
             }
         },
-        [arenaMode, arenaRoomId, resetConnectionState, router],
+        [arenaMode, resetConnectionState, router],
     );
 
     const appendConsoleEntry = useCallback(
@@ -2847,21 +2750,18 @@ function HomeContent() {
                 Number(hud.map) === Number(hud.factionWarState.map),
         );
 
-        if (
-            previousDeadRef.current !== true &&
-            isDead &&
-            !isInChallengeInstance &&
-            !isFactionWarDeath
-        ) {
+        const revivesAlone = isInChallengeInstance || isFactionWarDeath || arenaMode;
+
+        if (previousDeadRef.current !== true && isDead && !revivesAlone) {
             setDeathHomePromptOpen(true);
         }
 
-        if (!isDead || isInChallengeInstance || isFactionWarDeath) {
+        if (!isDead || revivesAlone) {
             setDeathHomePromptOpen(false);
         }
 
         previousDeadRef.current = isDead;
-    }, [hud]);
+    }, [arenaMode, hud]);
 
     const tradePlayerItems = useMemo<TradeItem[]>(() => {
         if (!tradeState) {
@@ -3303,6 +3203,9 @@ function HomeContent() {
     const activeFactionWarState = hud?.factionWarState?.active
         ? hud.factionWarState
         : null;
+    const activeArenaState = arenaMode ? (hud?.arenaState ?? null) : null;
+    // Los avisos de arriba a la derecha se corren para no tapar el Top 3 de la arena.
+    const arenaBoardOffset = activeArenaState ? ARENA_SCOREBOARD_HEIGHT : 0;
 
     if (isMobile && !isStandalonePwa) {
         return (
@@ -3619,6 +3522,13 @@ function HomeContent() {
                                     </div>
                                 ) : null}
 
+                                {activeArenaState ? (
+                                    <ArenaScoreboard
+                                        state={activeArenaState}
+                                        dead={Boolean(hud?.dead)}
+                                    />
+                                ) : null}
+
                                 {!arenaMode &&
                                 logoutPending &&
                                 logoutSecondsRemaining > 0 &&
@@ -3794,9 +3704,7 @@ function HomeContent() {
                                     <div
                                         className="absolute right-4 z-30 max-w-[min(360px,calc(100%-2rem))]"
                                         style={{
-                                            top: challengeOverlayText
-                                                ? "88px"
-                                                : "16px",
+                                            top: `${(challengeOverlayText ? 88 : 16) + arenaBoardOffset}px`,
                                         }}
                                     >
                                         <div
@@ -3849,13 +3757,15 @@ function HomeContent() {
                                 <div
                                     className="pointer-events-none absolute right-4 z-30"
                                     style={{
-                                        top: globalCanvasNotice
-                                            ? challengeOverlayText
-                                                ? "172px"
-                                                : "112px"
-                                            : challengeOverlayText
-                                              ? "88px"
-                                              : "16px",
+                                        top: `${
+                                            (globalCanvasNotice
+                                                ? challengeOverlayText
+                                                    ? 172
+                                                    : 112
+                                                : challengeOverlayText
+                                                  ? 88
+                                                  : 16) + arenaBoardOffset
+                                        }px`,
                                     }}
                                 >
                                     {!isDesktopConsoleLayout &&

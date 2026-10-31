@@ -8,7 +8,6 @@ const funct = require("./functions");
 const vars = require("./vars");
 const worldLayout = require("./worldLayout");
 const pkg = require("./package") as PackageApi;
-const arenaManager = require("./arenaManager");
 const challengeManager = require("./challengeManager");
 const mapInstanceManager = require("./mapInstanceManager");
 
@@ -526,7 +525,7 @@ const socket: SocketApi = {
                         funct.sendTelegramMessage(`[Servidor-PVP] Usuarios online: ${vars.usuariosOnlinePvP}`);
                     }
 
-                    await arenaManager.onPlayerDisconnected(personajeWS);
+                    require("./arena").onDisconnected(personajeWS);
                 }
 
                 challengeManager.onPlayerDisconnected(personajeWS);

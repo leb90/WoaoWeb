@@ -39,33 +39,11 @@ export type GameTicketRecord = {
     character_id: string | null;
     auth_token: string;
     mode: string;
-    arena_room_id: string | null;
+    /** En los tickets de la arena, la clase elegida. */
     pvp_template_id: number | null;
     created_at: Date;
     expires_at: Date;
     consumed_at: Date | null;
-};
-
-export type ArenaRoomRecord = {
-    id: string;
-    owner_account_id: string;
-    name: string;
-    is_public: boolean;
-    password_hash: string | null;
-    join_token: string;
-    map_id: number;
-    capacity: number;
-    created_at: Date;
-    updated_at: Date;
-};
-
-export type ArenaRoomMemberRecord = {
-    room_id: string;
-    account_id: string;
-    selected_pvp_template_id: number | null;
-    connected: boolean;
-    joined_at: Date;
-    updated_at: Date;
 };
 
 export type UserOnlineStatRecord = {
@@ -484,28 +462,6 @@ export type GameTicketResponse = {
     expiresAt: Date;
 };
 
-export type ArenaRoomSummary = {
-    id: string;
-    name: string;
-    isPublic: boolean;
-    joinToken: string;
-    mapId: number;
-    capacity: number;
-    connectedPlayers: number;
-    owner: {
-        _id: string;
-        name: string;
-    };
-};
-
-export type ArenaRoomDetails = ArenaRoomSummary & {
-    isOwner: boolean;
-    member: {
-        selectedPvpTemplateId: number | null;
-        connected: boolean;
-    } | null;
-};
-
 export type ArenaGameTicketConsumeResponse = {
     mode: "arena";
     account: {
@@ -514,11 +470,33 @@ export type ArenaGameTicketConsumeResponse = {
         email: string;
     };
     arena: {
-        roomId: string;
-        roomName: string;
-        mapId: number;
-        pvpTemplateId: number;
+        idClase: number;
     };
+};
+
+export type ArenaLiveEntry = {
+    nombre: string;
+    idClase: number;
+    puntos: number;
+    kills: number;
+    muertes: number;
+};
+
+export type ArenaRankingEntry = {
+    nombre: string;
+    kills: number;
+    muertes: number;
+    mejorPuntaje: number;
+    mejorRacha: number;
+};
+
+export type ArenaOverviewResponse = {
+    enVivo: {
+        jugadores: number;
+        top: ArenaLiveEntry[];
+        actualizado: string | null;
+    };
+    ranking: ArenaRankingEntry[];
 };
 
 export type UserOnlineStatResponse = {

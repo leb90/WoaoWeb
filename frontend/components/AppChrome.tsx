@@ -26,7 +26,7 @@ type AppChromeProps = {
 const navItems = [
     { href: "/", label: "Inicio", icon: Home },
     { href: "/characters", label: "Personajes", icon: UserRound },
-    { href: "/arenas", label: "Arenas", icon: Swords },
+    { href: "/arenas", label: "Arena", icon: Swords },
     { href: "/ranking", label: "Ranking", icon: Trophy },
     { href: "/wiki", label: "Wiki", icon: BookOpen },
     { href: "/donaciones", label: "Donaciones", icon: Gem },

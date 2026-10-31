@@ -265,7 +265,8 @@ export type RuntimeCharacter = {
     id: EntityId;
     _id?: string;
     idAccount?: string;
-    arenaRoomId?: string | null;
+    /** Personaje del modo Arena (todos contra todos, arena.ts). */
+    arenaFfa?: boolean;
     spawnMap?: number;
     spawnPos?: Position;
     homeMap?: number;

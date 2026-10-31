@@ -128,16 +128,13 @@ export type ClanOverviewPayload = {
     }>;
 };
 
-export type ArenaRoomPayload = {
-    id: string;
-    name: string;
-    isPublic: boolean;
-    joinToken: string;
-    capacity: number;
-    connectedPlayers: number;
-    isOwner?: boolean;
-    owner: { _id: string; name: string };
-    member: { selectedPvpTemplateId: number | null; connected: boolean } | null;
+export type ArenaOverviewPayload = {
+    enVivo: {
+        jugadores: number;
+        top: Array<{ nombre: string; idClase: number; puntos: number; kills: number; muertes: number }>;
+        actualizado: string | null;
+    };
+    ranking: Array<{ nombre: string; kills: number; muertes: number; mejorPuntaje: number; mejorRacha: number }>;
 };
 
 export type ClanOverviewResponse = {
@@ -158,7 +155,7 @@ export type AuthErrorResponse = {
 export type ConsumedGameTicketPayload = {
     account?: { _id: string; name: string; email: string };
     character?: { _id: string; name: string };
-    arena?: { roomId: string; pvpTemplateId: number };
+    arena?: { idClase: number };
     mode?: string;
 };
 
@@ -660,128 +657,30 @@ export async function transferClanLeadership(payload: unknown) {
     });
 }
 
-export async function listArenaRooms(sessionToken: string) {
-    return requestJson<{ rooms?: ArenaRoomPayload[]; error?: string }>(
-        "/arenas/rooms",
-        {
-            headers: {
-                Authorization: `Bearer ${sessionToken}`,
-            },
-        },
-    );
+export async function getArenaOverview() {
+    return requestJson<ArenaOverviewPayload>("/arenas");
 }
 
-export async function createArenaRoom(sessionToken: string, payload: unknown) {
-    return requestJson<ArenaRoomPayload | AuthErrorResponse>("/arenas/rooms", {
+export async function createArenaTicket(sessionToken: string, idClase: number) {
+    return requestJson<GameTicketResponse | AuthErrorResponse>("/arenas/ticket", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${sessionToken}`,
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ idClase }),
     });
 }
 
-export async function getArenaRoom(sessionToken: string, roomId: string) {
-    return requestJson<ArenaRoomPayload | AuthErrorResponse>(
-        `/arenas/rooms/${encodeURIComponent(roomId)}`,
-        {
-            headers: {
-                Authorization: `Bearer ${sessionToken}`,
-            },
+export async function sendArenaState(payload: unknown, authHeader = API_AUTH) {
+    return requestJson<{ ok?: boolean; error?: string }>("/internal/arenas/estado", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: authHeader,
         },
-    );
-}
-
-export async function joinArenaRoom(
-    sessionToken: string,
-    roomId: string,
-    payload: unknown,
-) {
-    return requestJson<ArenaRoomPayload | AuthErrorResponse>(
-        `/arenas/rooms/${encodeURIComponent(roomId)}/join`,
-        {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${sessionToken}`,
-            },
-            body: JSON.stringify(payload),
-        },
-    );
-}
-
-export async function joinArenaRoomByLink(
-    sessionToken: string,
-    joinToken: string,
-) {
-    return requestJson<ArenaRoomPayload | AuthErrorResponse>(
-        `/arenas/join/${encodeURIComponent(joinToken)}`,
-        {
-            method: "POST",
-            headers: {
-                Authorization: `Bearer ${sessionToken}`,
-            },
-        },
-    );
-}
-
-export async function leaveArenaRoom(sessionToken: string, roomId: string) {
-    return requestJson<{ ok?: boolean; error?: string }>(
-        `/arenas/rooms/${encodeURIComponent(roomId)}/leave`,
-        {
-            method: "POST",
-            headers: {
-                Authorization: `Bearer ${sessionToken}`,
-            },
-        },
-    );
-}
-
-export async function createArenaTicket(
-    sessionToken: string,
-    roomId: string,
-    templateId: number,
-) {
-    return requestJson<GameTicketResponse | AuthErrorResponse>(
-        `/arenas/rooms/${encodeURIComponent(roomId)}/select-template`,
-        {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${sessionToken}`,
-            },
-            body: JSON.stringify({ templateId }),
-        },
-    );
-}
-
-export async function connectArenaRoom(roomId: string, accountId: string) {
-    return requestJson<{ ok?: boolean; error?: string }>(
-        `/internal/arenas/rooms/${encodeURIComponent(roomId)}/connect`,
-        {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: API_AUTH,
-            },
-            body: JSON.stringify({ accountId }),
-        },
-    );
-}
-
-export async function disconnectArenaRoom(roomId: string, accountId: string) {
-    return requestJson<{ ok?: boolean; error?: string }>(
-        `/internal/arenas/rooms/${encodeURIComponent(roomId)}/disconnect`,
-        {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: API_AUTH,
-            },
-            body: JSON.stringify({ accountId }),
-        },
-    );
+        body: JSON.stringify(payload),
+    });
 }
 
 export async function banCharacter(
@@ -1330,35 +1229,6 @@ export async function getCharacterBankAndSpells(characterId: string): Promise<{
             idPos: row.id_pos,
             idSpell: row.id_spell,
         })),
-    };
-}
-
-export async function getArenaMembership(accountId: string): Promise<{
-    roomId: string | null;
-    connected: boolean | null;
-    selectedPvpTemplateId: number | null;
-}> {
-    const result = await pool.query<{
-        room_id: string;
-        connected: boolean;
-        selected_pvp_template_id: number | null;
-    }>(
-        `
-            SELECT room_id, connected, selected_pvp_template_id
-            FROM arena_room_members
-            WHERE account_id = $1
-            ORDER BY updated_at DESC
-            LIMIT 1
-        `,
-        [accountId],
-    );
-
-    const row = result.rows[0];
-
-    return {
-        roomId: row?.room_id ?? null,
-        connected: row?.connected ?? null,
-        selectedPvpTemplateId: row?.selected_pvp_template_id ?? null,
     };
 }
 

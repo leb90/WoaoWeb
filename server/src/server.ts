@@ -763,6 +763,7 @@ function trackClientActivity(ws: RuntimeClient, packageID: number) {
     require("./clanMeta").initialize();
     require("./clanCastles").initialize();
     require("./factionWars").initialize();
+    require("./arena").initialize();
     require("./diaEspecial").initialize();
     require("./bossEvents").initialize();
     require("./mountEggDrops").initialize();

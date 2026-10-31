@@ -102,8 +102,8 @@ export const WIKI_CATEGORIES = [
     {
         slug: "competitivo",
         label: "Competitivo",
-        description: "Ranked, ELO, arenas, retos y combates por equipos.",
-        links: ["Ranked 1v1", "Ranked 2v2", "Arenas", "Retos"],
+        description: "Ranked, ELO, la Arena todos contra todos, retos y combates por equipos.",
+        links: ["Ranked 1v1", "Ranked 2v2", "Arena", "Retos"],
     },
     {
         slug: "eventos",

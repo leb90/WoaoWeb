@@ -137,6 +137,7 @@ const clientPacketID = {
     dungeonBoss: 102,
     afflictionState: 103,
     targetState: 104,
+    arenaState: 105,
 } as const;
 
 const serverPacketID = {

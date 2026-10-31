@@ -368,8 +368,6 @@ async function spawnOneBot(hubIndex: number, ordinal: number): Promise<void> {
             name,
             `population-bot:${Date.now()}:${ordinal}`,
             templateIndex,
-            undefined,
-            undefined,
             {
                 spawn: { mapId: hub.map, x: spawnPos.x, y: spawnPos.y },
                 markAsBot: true,

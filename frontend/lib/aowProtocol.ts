@@ -102,6 +102,7 @@ export const CLIENT_PACKET_ID = {
     dungeonBoss: 102,
     afflictionState: 103,
     targetState: 104,
+    arenaState: 105,
 } as const;
 
 export const CHARACTER_SWING_WEAPON = 1;
@@ -1062,6 +1063,8 @@ export interface PlayerHudState {
     elemental?: ElementalEntityState;
     castleState?: CastleStatePayload;
     factionWarState?: FactionWarStatePayload;
+    // Modo Arena (todos contra todos): Top 3 y puesto propio; receivedAt es Date.now() del cliente al llegar.
+    arenaState?: ArenaStatePayload & { receivedAt: number };
     rankedState?: RankedStatePayload;
     huntersGameState?: HuntersGameStatePayload;
     bossEventState?: BossEventStatePayload;
@@ -1329,6 +1332,23 @@ const DEFAULT_RANKED_STATE: RankedStatePayload = {
     match: null,
     confirmation: null,
 };
+
+export interface ArenaStatePayload {
+    jugadores: number;
+    top: Array<{ nombre: string; idClase: number; puntos: number; kills: number }>;
+    yo: {
+        puesto: number;
+        puntos: number;
+        kills: number;
+        muertes: number;
+        racha: number;
+        mejorPuntaje: number;
+    } | null;
+    /** Milisegundos que faltaban para revivir cuando salió el paquete (0 si está vivo). */
+    reviveEn: number;
+    /** Mientras está muerto: quién lo mató (null si murió solo) y cuántos puntos perdió. */
+    muerte?: { asesino: string | null; perdidos: number } | null;
+}
 
 export interface FactionWarStatePayload {
     active: boolean;
@@ -1655,6 +1675,7 @@ export type ParsedServerPacket =
     | { type: "dungeonBoss"; payload: DungeonBossPayload }
     | { type: "castleState"; payload: CastleStatePayload }
     | { type: "factionWarState"; payload: FactionWarStatePayload }
+    | { type: "arenaState"; payload: ArenaStatePayload }
     | { type: "rankedState"; payload: RankedStatePayload }
     | { type: "huntersGameState"; payload: HuntersGameStatePayload }
     | { type: "bossEventState"; payload: BossEventStatePayload }
@@ -3012,6 +3033,22 @@ function parseServerPacketById(
                         hordeKills: 0,
                         allianceKills: 0,
                     },
+                };
+            }
+        }
+
+        case CLIENT_PACKET_ID.arenaState: {
+            const rawPayload = reader.getString();
+
+            try {
+                return {
+                    type: "arenaState",
+                    payload: JSON.parse(rawPayload) as ArenaStatePayload,
+                };
+            } catch {
+                return {
+                    type: "arenaState",
+                    payload: { jugadores: 0, top: [], yo: null, reviveEn: 0 },
                 };
             }
         }

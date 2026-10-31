@@ -39,7 +39,7 @@ export default function WikiPrimerosPasos() {
             <WikiSection title="Cuenta">
                 <Prose>
                     <p>
-                        La cuenta se crea en Registrate. Pedís un nombre de usuario, un email y una contraseña de 8 a 100 caracteres, y la confirmás. El nombre de usuario lleva entre 3 y 15 caracteres, solo letras de la A a la Z y espacios. Ese nombre es el que se muestra por defecto en Arenas.
+                        La cuenta se crea en Registrate. Pedís un nombre de usuario, un email y una contraseña de 8 a 100 caracteres, y la confirmás. El nombre de usuario lleva entre 3 y 15 caracteres, solo letras de la A a la Z y espacios. Ese nombre es el que se usa en la Arena.
                     </p>
                     <GuideFigure
                         src="/wiki/primeros-pasos/crear-cuenta.png"

@@ -1261,8 +1261,6 @@ async function spawnAdminSummonedBot(idUser: EntityId, classInput: string, level
             botName,
             `admin-bot:${String(idUser)}:${Date.now()}`,
             templateIndex,
-            undefined,
-            undefined,
             {
                 spawn: {
                     mapId: user.map,

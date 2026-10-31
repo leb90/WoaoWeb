@@ -1,195 +1,88 @@
 import assert from "node:assert/strict";
 import { beforeAll, test } from "vitest";
 import {
-    type ArenaRoomPayload,
     type ConsumedGameTicketPayload,
     type GameTicketResponse,
-    connectArenaRoom,
     consumeGameTicket,
     createAccountFixture,
-    createArenaRoom,
     createArenaTicket,
-    disconnectArenaRoom,
     ensureApiReady,
     expectErrorPayload,
     expectSuccessPayload,
-    getArenaMembership,
-    getArenaRoom,
-    joinArenaRoom,
-    joinArenaRoomByLink,
-    leaveArenaRoom,
-    listArenaRooms,
+    getArenaOverview,
+    sendArenaState,
 } from "./helpers/api";
 
 beforeAll(async () => {
     await ensureApiReady();
 });
 
-test("public arena rooms can be created and listed", async () => {
-    const owner = await createAccountFixture();
+test("an arena ticket carries the chosen class and the account name", async () => {
+    const player = await createAccountFixture();
 
-    const created = await createArenaRoom(owner.session.sessionToken, {
-        name: "Sala Publica",
-        isPublic: true,
-        capacity: 4,
-    });
-    assert.equal(created.status, 201);
-    const createdRoom = expectSuccessPayload<ArenaRoomPayload>(created.data);
-
-    const listed = await listArenaRooms(owner.session.sessionToken);
-    assert.equal(listed.status, 200);
-    assert.equal(
-        listed.data.rooms?.some((room) => room.id === createdRoom.id),
-        true,
-    );
-});
-
-test("private arena rooms require the correct password", async () => {
-    const owner = await createAccountFixture();
-    const guest = await createAccountFixture();
-
-    const created = await createArenaRoom(owner.session.sessionToken, {
-        name: "Sala Privada",
-        isPublic: false,
-        password: "Secreta123",
-        capacity: 4,
-    });
-    const roomId = expectSuccessPayload<ArenaRoomPayload>(created.data).id;
-
-    const noPassword = await joinArenaRoom(
-        guest.session.sessionToken,
-        roomId,
-        {},
-    );
-    const wrongPassword = await joinArenaRoom(
-        guest.session.sessionToken,
-        roomId,
-        {
-            password: "mala",
-        },
-    );
-    const joined = await joinArenaRoom(guest.session.sessionToken, roomId, {
-        password: "Secreta123",
-    });
-
-    assert.equal(noPassword.status, 400);
-    assert.equal(
-        expectErrorPayload(noPassword.data).error,
-        "La sala privada requiere password",
-    );
-    assert.equal(wrongPassword.status, 400);
-    assert.equal(expectErrorPayload(wrongPassword.data).error, "Password invalida");
-    assert.equal(joined.status, 200);
-    assert.equal(expectSuccessPayload<ArenaRoomPayload>(joined.data).id, roomId);
-});
-
-test("joining by link moves the account into the room", async () => {
-    const owner = await createAccountFixture();
-    const guest = await createAccountFixture();
-
-    const created = await createArenaRoom(owner.session.sessionToken, {
-        name: "Sala Link",
-        isPublic: true,
-        capacity: 4,
-    });
-    const createdRoom = expectSuccessPayload<ArenaRoomPayload>(created.data);
-
-    const joined = await joinArenaRoomByLink(
-        guest.session.sessionToken,
-        createdRoom.joinToken,
-    );
-
-    assert.equal(joined.status, 200);
-    const membership = await getArenaMembership(guest.session.account._id);
-    assert.equal(membership.roomId, createdRoom.id);
-});
-
-test("arena ticket creation requires membership and can be consumed", async () => {
-    const owner = await createAccountFixture();
-    const guest = await createAccountFixture();
-
-    const created = await createArenaRoom(owner.session.sessionToken, {
-        name: "Arena Ticket",
-        isPublic: true,
-        capacity: 4,
-    });
-    const roomId = expectSuccessPayload<ArenaRoomPayload>(created.data).id;
-
-    const noMembership = await createArenaTicket(
-        guest.session.sessionToken,
-        roomId,
-        2,
-    );
-    assert.equal(noMembership.status, 400);
-    assert.equal(
-        expectErrorPayload(noMembership.data).error,
-        "Primero debes unirte a la sala",
-    );
-
-    await joinArenaRoom(guest.session.sessionToken, roomId, {});
-    const ticketResponse = await createArenaTicket(
-        guest.session.sessionToken,
-        roomId,
-        2,
-    );
+    const ticketResponse = await createArenaTicket(player.session.sessionToken, 22);
     assert.equal(ticketResponse.status, 200);
-    const ticket = expectSuccessPayload<GameTicketResponse>(ticketResponse.data).ticket;
+    const { ticket } = expectSuccessPayload<GameTicketResponse>(ticketResponse.data);
 
-    const consumed = await consumeGameTicket(
-        ticket,
-        "198.51.100.44",
-    );
+    const consumed = await consumeGameTicket(ticket, "127.0.0.1");
     assert.equal(consumed.status, 200);
-    const consumedTicket = expectSuccessPayload<ConsumedGameTicketPayload>(
-        consumed.data,
-    );
+    const consumedTicket = expectSuccessPayload<ConsumedGameTicketPayload>(consumed.data);
     assert.equal(consumedTicket.mode, "arena");
-    assert.equal(consumedTicket.arena?.roomId, roomId);
-    assert.equal(consumedTicket.arena?.pvpTemplateId, 2);
+    assert.equal(consumedTicket.arena?.idClase, 22);
+    assert.equal(consumedTicket.account?.name, player.name);
+    assert.equal(consumedTicket.character, undefined);
+
+    const consumedAgain = await consumeGameTicket(ticket, "127.0.0.1");
+    assert.notEqual(consumedAgain.status, 200);
 });
 
-test("internal arena connect and disconnect update membership state", async () => {
-    const owner = await createAccountFixture();
-    const guest = await createAccountFixture();
+test("an arena ticket needs a session and a playable class", async () => {
+    const player = await createAccountFixture();
 
-    const created = await createArenaRoom(owner.session.sessionToken, {
-        name: "Arena Conn",
-        isPublic: true,
-        capacity: 4,
-    });
-    const roomId = expectSuccessPayload<ArenaRoomPayload>(created.data).id;
+    const noSession = await createArenaTicket("", 1);
+    const thief = await createArenaTicket(player.session.sessionToken, 5);
 
-    await joinArenaRoom(guest.session.sessionToken, roomId, {});
-
-    const connect = await connectArenaRoom(roomId, guest.session.account._id);
-    assert.equal(connect.status, 200);
-    let membership = await getArenaMembership(guest.session.account._id);
-    assert.equal(membership.connected, true);
-
-    const disconnect = await disconnectArenaRoom(
-        roomId,
-        guest.session.account._id,
-    );
-    assert.equal(disconnect.status, 200);
-    membership = await getArenaMembership(guest.session.account._id);
-    assert.equal(membership.connected, false);
+    assert.equal(noSession.status, 401);
+    assert.equal(thief.status, 400);
+    assert.match(expectErrorPayload(thief.data).error ?? "", /Clase invalida/);
 });
 
-test("leaving an arena room removes membership", async () => {
-    const owner = await createAccountFixture();
-    const guest = await createAccountFixture();
+test("the game server reports who is playing and the account ranking keeps the best run", async () => {
+    const first = await createAccountFixture();
+    const second = await createAccountFixture();
+    const top = [
+        { nombre: first.name, idClase: 1, puntos: 9_000_040, kills: 3, muertes: 1 },
+        { nombre: second.name, idClase: 3, puntos: 10, kills: 1, muertes: 2 },
+    ];
 
-    const created = await createArenaRoom(owner.session.sessionToken, {
-        name: "Arena Leave",
-        isPublic: true,
-        capacity: 4,
+    const denied = await sendArenaState({ jugadores: 2, top, resultados: [] }, "wrong-token");
+    assert.equal(denied.status, 401);
+
+    const sent = await sendArenaState({
+        jugadores: 2,
+        top,
+        resultados: [
+            { accountId: first.session.account._id, kills: 3, muertes: 1, mejorPuntaje: 9_000_040, mejorRacha: 3 },
+            { accountId: second.session.account._id, kills: 1, muertes: 2, mejorPuntaje: 10, mejorRacha: 1 },
+        ],
     });
-    const roomId = expectSuccessPayload<ArenaRoomPayload>(created.data).id;
+    assert.equal(sent.status, 200);
 
-    await joinArenaRoom(guest.session.sessionToken, roomId, {});
-    const left = await leaveArenaRoom(guest.session.sessionToken, roomId);
-    assert.equal(left.status, 200);
+    // Un envío posterior suma kills y muertes, pero el mejor puntaje solo sube.
+    await sendArenaState({
+        jugadores: 1,
+        top: [top[0]],
+        resultados: [
+            { accountId: first.session.account._id, kills: 2, muertes: 4, mejorPuntaje: 25, mejorRacha: 2 },
+        ],
+    });
 
-    const membership = await getArenaMembership(guest.session.account._id);
-    assert.equal(membership.roomId, null);
+    const overview = await getArenaOverview();
+    assert.equal(overview.status, 200);
+    assert.equal(overview.data.enVivo.jugadores, 1);
+    assert.deepEqual(overview.data.enVivo.top, [top[0]]);
+
+    const firstRow = overview.data.ranking.find((row) => row.nombre === first.name);
+    assert.deepEqual(firstRow, { nombre: first.name, kills: 5, muertes: 5, mejorPuntaje: 9_000_040, mejorRacha: 3 });
+    assert.equal(overview.data.ranking[0]?.nombre, first.name);
 });

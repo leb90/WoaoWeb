@@ -550,34 +550,27 @@ CREATE TABLE IF NOT EXISTS game_tickets (
     account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     character_id UUID REFERENCES characters(id) ON DELETE CASCADE,
     mode TEXT NOT NULL DEFAULT 'world',
-    arena_room_id UUID,
+    -- En los tickets de la arena, la clase elegida.
     pvp_template_id INTEGER,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     expires_at TIMESTAMPTZ NOT NULL,
     consumed_at TIMESTAMPTZ
 );
 
-CREATE TABLE IF NOT EXISTS arena_rooms (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    owner_account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-    name TEXT NOT NULL,
-    is_public BOOLEAN NOT NULL DEFAULT TRUE,
-    password_hash TEXT,
-    join_token TEXT NOT NULL UNIQUE,
-    map_id INTEGER NOT NULL DEFAULT 272,
-    capacity INTEGER NOT NULL DEFAULT 50,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+-- La Arena dejó de tener salas: es un solo todos contra todos (server/src/arena.ts).
+DROP INDEX IF EXISTS idx_game_tickets_arena_room_id;
+ALTER TABLE game_tickets DROP COLUMN IF EXISTS arena_room_id;
+DROP TABLE IF EXISTS arena_room_members;
+DROP TABLE IF EXISTS arena_rooms;
 
-CREATE TABLE IF NOT EXISTS arena_room_members (
-    room_id UUID NOT NULL REFERENCES arena_rooms(id) ON DELETE CASCADE,
-    account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-    selected_pvp_template_id INTEGER,
-    connected BOOLEAN NOT NULL DEFAULT FALSE,
-    joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (room_id, account_id)
+-- Lo que hizo cada cuenta en la Arena: kills y muertes acumuladas, y su mejor puntaje y racha en una partida.
+CREATE TABLE IF NOT EXISTS arena_stats (
+    account_id UUID PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+    kills INTEGER NOT NULL DEFAULT 0,
+    deaths INTEGER NOT NULL DEFAULT 0,
+    best_points INTEGER NOT NULL DEFAULT 0,
+    best_streak INTEGER NOT NULL DEFAULT 0,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS user_online_stats (
@@ -744,10 +737,7 @@ CREATE INDEX IF NOT EXISTS idx_password_reset_requests_email_hash_created_at ON 
 CREATE INDEX IF NOT EXISTS idx_password_reset_requests_ip_created_at ON password_reset_requests(requested_ip, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_game_tickets_auth_token ON game_tickets(auth_token);
 CREATE INDEX IF NOT EXISTS idx_game_tickets_expires_at ON game_tickets(expires_at);
-CREATE INDEX IF NOT EXISTS idx_game_tickets_arena_room_id ON game_tickets(arena_room_id);
-CREATE INDEX IF NOT EXISTS idx_arena_rooms_owner_account_id ON arena_rooms(owner_account_id);
-CREATE INDEX IF NOT EXISTS idx_arena_rooms_is_public ON arena_rooms(is_public);
-CREATE INDEX IF NOT EXISTS idx_arena_room_members_account_id ON arena_room_members(account_id);
+CREATE INDEX IF NOT EXISTS idx_arena_stats_best_points ON arena_stats(best_points DESC);
 CREATE INDEX IF NOT EXISTS idx_user_online_stats_created_at ON user_online_stats(created_at);
 CREATE INDEX IF NOT EXISTS idx_game_objects_updated_at ON game_objects(updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_game_objects_obj_type ON game_objects(obj_type);

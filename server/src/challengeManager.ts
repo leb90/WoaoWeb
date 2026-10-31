@@ -141,7 +141,7 @@ function isInSafeZone(user: RuntimeCharacter | undefined) {
 }
 
 function isInPvpMode(user: RuntimeCharacter | undefined) {
-    return Boolean(user?.pvpChar || user?.arenaRoomId);
+    return Boolean(user?.pvpChar || user?.arenaFfa);
 }
 
 function buildParticipantSummary(user: RuntimeCharacter) {

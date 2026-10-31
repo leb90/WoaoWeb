@@ -22,6 +22,12 @@ Reemplazó a las salas de arena (con contraseña, link y plantillas viejas), que
   - De abajo para arriba van: Remover Parálisis (el último de todos), Paralizar, el hechizo más poderoso, el que le sigue y la curación más poderosa. Van los que la clase tenga.
   - El resto va arriba de esos cinco.
   - `server/src/arenaClasses.test.ts` controla el orden con el daño y la curación de `spells.json`.
+- **Mobile:** los accesos rápidos vienen puestos con lo de la clase (`accesos` en `arenaClasses.ts`, mandado en `arenaState`). No se guardan.
+  - El arco de hechizos lleva Remover Parálisis, Paralizar, el más poderoso y la mejor curación (o el segundo de daño si la clase no cura).
+  - Los dos items llevan Poción Roja y Azul. El arquero y el cazador llevan el arco, que es con lo que disparan; el guerrero, la Poción de Fuerza.
+  - Las cantidades de pociones y flechas se muestran como ∞. El Top 3 va arriba al centro, fijo a la pantalla.
+  - Mochila, lista de hechizos y editar van en fila encima del arco: en columna pisaban los botones de arriba en pantallas de unos 340 de alto (Safari con sus barras).
+  - El chat queda casi transparente (30 %) y deja tocar lo que hay debajo; se ve entero solo con el chat abierto para escribir. Es igual en el mundo abierto.
 - **Panel:** Transfigurar, Tienda, Party, Clanes, Misiones, Montura, Premios, Ranked, Viajes, WoAO, los castillos y la montura quedan deshabilitados (`arenaMode` en `InventoryFloatingPanel`).
 - **Salir:** es instantáneo, aunque estés paralizado. En el mundo abierto se sale al instante en zona segura o muerto; en el resto hay que esperar 10 segundos.
 - **Muerte:** no se pasa al mundo de los muertos. A los 5 segundos se revive solo, con vida y maná llenos, en otro lugar del mapa. El cliente muestra quién te mató y la cuenta regresiva.
@@ -30,7 +36,7 @@ Reemplazó a las salas de arena (con contraseña, link y plantillas viejas), que
   - quien te mata se los lleva, más 10 de base;
   - matar dos veces a la misma persona en menos de un minuto no suma ni le saca nada.
   - Desempata quién llegó primero a ese puntaje.
-- **Top 3:** el server manda el paquete `arenaState` (105) a cada jugador de la arena cuando algo cambia. El cliente lo dibuja arriba a la derecha (`components/game/ArenaScoreboard.tsx`).
+- **Top 3:** el server manda el paquete `arenaState` (105) a cada jugador de la arena cuando algo cambia. El cliente lo dibuja arriba a la derecha (`components/game/ArenaScoreboard.tsx`) como una lista chica de texto, sin caja: puesto, nombre y puntos, y tu puesto abajo si no estás en el Top 3.
 - **Ranking por cuenta:** el server manda a la API, cada 5 segundos si hubo cambios:
   - quién está jugando;
   - lo que hizo cada cuenta (`POST /internal/arenas/estado`).

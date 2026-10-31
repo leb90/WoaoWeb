@@ -8,6 +8,7 @@ import {
     type PlayerHudState,
 } from "../../../lib/aowProtocol";
 import { formatNumber } from "../../../lib/number-format";
+import { formatStackAmount } from "../../../lib/itemAmount";
 import { screenDeltaToLocal } from "../../../lib/viewportRotation";
 import { loadGraphicsDB, loadObjectsDB } from "../../../utils/gameLoader";
 import type { GraphicData, ObjectsDB } from "../../../types/game";
@@ -58,6 +59,8 @@ type MobileInventoryModalProps = {
     onEquip: (slot: number) => void;
     onRangeAttack: () => void;
     onMove: (sourceSlot: number, targetSlot: number) => void;
+    // Arena: las pociones y las flechas no se gastan; las cantidades se muestran como ∞.
+    infiniteItems?: boolean;
 };
 
 export function MobileInventoryModal({
@@ -67,6 +70,7 @@ export function MobileInventoryModal({
     onEquip,
     onRangeAttack,
     onMove,
+    infiniteItems = false,
 }: MobileInventoryModalProps) {
     const [graphicsDB, setGraphicsDB] = React.useState<Record<
         string,
@@ -443,7 +447,10 @@ export function MobileInventoryModal({
                                         />
                                         {item.amount > 1 ? (
                                             <span className="pointer-events-none absolute left-1 top-0.5 text-[9px] font-bold text-stone-100 drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]">
-                                                {item.amount}
+                                                {formatStackAmount(
+                                                    item.amount,
+                                                    infiniteItems,
+                                                )}
                                             </span>
                                         ) : null}
                                         {item.equipped ? (
@@ -459,6 +466,7 @@ export function MobileInventoryModal({
                     </div>
                     <div className="shrink-0 landscape:w-[300px]">
                         <EquipmentPanel
+                            infiniteItems={infiniteItems}
                             items={items}
                             objectsDB={objectsDB}
                             graphicsDB={graphicsDB}
@@ -511,7 +519,9 @@ export function MobileInventoryModal({
                                 </p>
                                 <p className="text-[11px] text-stone-400">
                                     {selectedItem.amount > 1
-                                        ? `x${formatNumber(selectedItem.amount)}`
+                                        ? infiniteItems
+                                            ? "x∞ (en la Arena no se gasta)"
+                                            : `x${formatNumber(selectedItem.amount)}`
                                         : "Arrastralo para moverlo de lugar"}
                                 </p>
                             </div>

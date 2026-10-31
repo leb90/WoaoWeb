@@ -144,6 +144,8 @@ type PerformanceSample = {
     pingMs: number | null;
 };
 
+export type GroundItem = { idItem: number; name: string };
+
 interface MapRendererProps {
     mapNumber: number;
     width?: number;
@@ -155,6 +157,9 @@ interface MapRendererProps {
     hideStatusText?: boolean;
     touchMovementDirection?: "up" | "down" | "left" | "right" | null;
     meleeAttackRequest?: { token: number } | null;
+    pickupItemRequest?: { token: number } | null;
+    // Lo que hay para agarrar en la baldosa del personaje (null si nada): el botón de agarrar de mobile.
+    onGroundItemChange?: (item: GroundItem | null) => void;
     cancelTargetingRequest?: { token: number } | null;
     equipRequest?: { slot: number; token: number } | null;
     useItemClickRequest?: { slot: number; token: number } | null;
@@ -669,6 +674,8 @@ export default function MapRenderer({
     hideStatusText = false,
     touchMovementDirection = null,
     meleeAttackRequest,
+    pickupItemRequest,
+    onGroundItemChange,
     cancelTargetingRequest,
     equipRequest,
     useItemClickRequest,
@@ -1535,7 +1542,37 @@ export default function MapRenderer({
         rangeAttackRequest,
         spellTargetRequest,
         meleeAttackRequest,
+        pickupItemRequest,
     });
+
+    // Item agarrable bajo los pies. Se mira cada 200 ms: el personaje se mueve y los items aparecen y desaparecen
+    // por paquetes que no pasan por React.
+    useEffect(() => {
+        if (!onGroundItemChange) {
+            return;
+        }
+
+        let lastKey = "";
+        const timer = window.setInterval(() => {
+            const engine = engineRef.current;
+            const user = engine?.user;
+            const tile =
+                engine && user && !user.dead
+                    ? engine.mapData?.[String(engine.mapNumber)]?.[String(user.pos.y)]?.[String(user.pos.x)]
+                    : null;
+            const idItem = Number(tile?.objInfo?.objIndex ?? 0);
+            const object = idItem ? engine?.objectsDB?.[String(idItem)] : undefined;
+            const groundItem = object && !object.agarrable ? { idItem, name: object.name } : null;
+            const key = groundItem ? String(idItem) : "";
+
+            if (key !== lastKey) {
+                lastKey = key;
+                onGroundItemChange(groundItem);
+            }
+        }, 200);
+
+        return () => window.clearInterval(timer);
+    }, [onGroundItemChange]);
 
     const lastCancelTargetingTokenRef = useRef<number | null>(null);
     useEffect(() => {

@@ -6,6 +6,7 @@ import {
     createCraftItemPacket,
     createDepositBankGoldPacket,
     createDropItemPacket,
+    createPickupItemPacket,
     createEquipItemPacket,
     createMarketActionPacket,
     createReorderBankItemPacket,
@@ -101,6 +102,8 @@ type OutgoingRequestProps = {
     } | null;
     rangeAttackRequest?: { token: number } | null;
     meleeAttackRequest?: { token: number } | null;
+    // Botón de agarrar de mobile (el mismo paquete que la tecla de agarrar).
+    pickupItemRequest?: { token: number } | null;
     spellTargetRequest?: {
         slot: number;
         manaRequired: number;
@@ -246,6 +249,7 @@ export function useOutgoingRequests({
     rangeAttackRequest,
     spellTargetRequest,
     meleeAttackRequest,
+    pickupItemRequest,
 }: UseOutgoingRequestsOptions) {
     const useItemClickQueueRef = useRef<number[]>([]);
     const useItemUQueueRef = useRef<number[]>([]);
@@ -655,6 +659,28 @@ export function useOutgoingRequests({
         hasProcessedRequestToken,
         markRequestTokenProcessed,
         meleeAttackRequest,
+    ]);
+
+    useEffect(() => {
+        const request = pickupItemRequest;
+        if (!request || hasProcessedRequestToken("pickupItem", request.token)) {
+            return;
+        }
+
+        const socket = getSocket(websocketRef);
+        if (!socket) {
+            return;
+        }
+
+        socket.send(createPickupItemPacket());
+        recordClientGameAction("pickup_item", { source: "touch" });
+        markRequestTokenProcessed("pickupItem", request.token);
+    }, [
+        hasProcessedRequestToken,
+        markRequestTokenProcessed,
+        pickupItemRequest,
+        recordClientGameAction,
+        websocketRef,
     ]);
 
     useEffect(() => {

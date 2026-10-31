@@ -12,6 +12,7 @@ import {
 import { ItemGraphic } from "./MacroBar";
 import type { InventoryItem } from "../lib/aowProtocol";
 import { formatItemNameWithRarity, getRaritySlotClasses } from "../lib/itemRarity";
+import { formatStackAmount } from "../lib/itemAmount";
 import type { GraphicData, ObjectsDB } from "../types/game";
 
 import {
@@ -50,7 +51,7 @@ const SLOT_META: Record<
     flechas: { label: "Flechas", hint: "Munición para arcos", Icon: ArrowIcon },
 };
 
-function ArrowIcon({ className }: { className?: string }) {
+export function ArrowIcon({ className }: { className?: string }) {
     return (
         <svg
             viewBox="0 0 24 24"
@@ -103,6 +104,8 @@ type EquipmentPanelProps = {
     onHover: (item: InventoryItem) => void;
     onLeave: () => void;
     onViewStats?: () => void;
+    // Arena: las flechas no se gastan y la cantidad se muestra como ∞.
+    infiniteItems?: boolean;
 };
 
 /**
@@ -123,6 +126,7 @@ export default function EquipmentPanel({
     onHover,
     onLeave,
     onViewStats,
+    infiniteItems = false,
 }: EquipmentPanelProps) {
     const equippedByKind = React.useMemo(() => {
         const result: Partial<Record<EquipmentKind, InventoryItem>> = {};
@@ -218,7 +222,7 @@ export default function EquipmentPanel({
                         />
                         {item.amount > 1 ? (
                             <span className="pointer-events-none absolute left-0.5 top-0 text-[9px] font-bold text-stone-100 drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]">
-                                {item.amount}
+                                {formatStackAmount(item.amount, infiniteItems)}
                             </span>
                         ) : null}
                     </>

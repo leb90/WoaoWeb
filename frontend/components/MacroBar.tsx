@@ -12,6 +12,7 @@ import {
 } from "../lib/aowProtocol";
 import type { MacroTargetType, StoredMacro } from "../lib/character-settings";
 import { formatNumber } from "../lib/number-format";
+import { formatStackAmount } from "../lib/itemAmount";
 import {
     expandHotkeyCode,
     formatHotkeyCode,
@@ -71,6 +72,8 @@ type MacroBarProps = {
     editorTitle?: string;
     // Con editMode activo, tocar un slot abre el editor en vez de usarlo.
     editMode?: boolean;
+    // Arena: las pociones y las flechas no se gastan; las cantidades se muestran como ∞.
+    infiniteItems?: boolean;
     // En mobile no hay teclado - pedir una tecla para activar el boton
     // (como en desktop) no tiene sentido. Cuando es false se oculta la
     // seccion de "Tecla" del editor y se autogenera una keyCode sintetica
@@ -240,10 +243,19 @@ export default function MacroBar({
     editorTitle,
     editMode = false,
     requireHotkey = true,
+    infiniteItems = false,
 }: MacroBarProps) {
     const items = React.useMemo(
         () => (hud?.inventory ?? []).slice().sort((a, b) => a.slot - b.slot),
         [hud?.inventory],
+    );
+    // Flechas equipadas: el acceso del arco muestra cuántas quedan.
+    const equippedArrows = React.useMemo(
+        () =>
+            items.find(
+                (item) => item.equipped && item.objType === OBJECT_TYPE.flechas,
+            )?.amount ?? 0,
+        [items],
     );
     const spells = React.useMemo(
         () => (hud?.spells ?? []).slice().sort((a, b) => a.slot - b.slot),
@@ -1091,9 +1103,31 @@ export default function MacroBar({
                                 {isPositioned &&
                                 macro?.targetType === "item" &&
                                 resolvedItem &&
-                                resolvedItem.amount > 1 ? (
+                                rangedWeaponIds.has(resolvedItem.idItem) &&
+                                objectsDB?.[resolvedItem.idItem.toString()]
+                                    ?.proyectil ? (
+                                    <span
+                                        className={`pointer-events-none absolute inset-x-0 bottom-0.5 text-center text-[9px] font-bold leading-none drop-shadow-[0_1px_1px_rgba(0,0,0,1)] ${
+                                            infiniteItems || equippedArrows > 0
+                                                ? "text-amber-50"
+                                                : "text-rose-300"
+                                        }`}
+                                        title="Flechas"
+                                    >
+                                        {formatStackAmount(
+                                            equippedArrows,
+                                            infiniteItems,
+                                        )}
+                                    </span>
+                                ) : isPositioned &&
+                                  macro?.targetType === "item" &&
+                                  resolvedItem &&
+                                  resolvedItem.amount > 1 ? (
                                     <span className="pointer-events-none absolute inset-x-0 bottom-0.5 text-center text-[9px] font-bold leading-none text-amber-50 drop-shadow-[0_1px_1px_rgba(0,0,0,1)]">
-                                        {resolvedItem.amount}
+                                        {formatStackAmount(
+                                            resolvedItem.amount,
+                                            infiniteItems,
+                                        )}
                                     </span>
                                 ) : null}
 

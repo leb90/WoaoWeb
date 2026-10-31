@@ -4,22 +4,29 @@ import {
     Backpack,
     BookOpen,
     Check,
+    Flower2,
     Lock,
     LockOpen,
     MessageCircle,
     Pencil,
     Settings,
 } from "lucide-react";
-import type { PlayerHudState, SpellEntry } from "../../../lib/aowProtocol";
+import {
+    OBJECT_TYPE,
+    type PlayerHudState,
+    type SpellEntry,
+} from "../../../lib/aowProtocol";
+import { formatStackAmount } from "../../../lib/itemAmount";
+import { ArrowIcon } from "../../EquipmentPanel";
 import type { HotkeySettings } from "../../../lib/hotkeys";
 import type { StoredMacro } from "../../../lib/character-settings";
 import MacroBar from "../../MacroBar";
 import { TouchJoystick, type JoystickDirection } from "./TouchJoystick";
-import { MobileAttackButton } from "./MobileAttackButton";
+import { MobileAttackButton, MobilePickupButton } from "./MobileAttackButton";
 import { TapButton } from "./TapButton";
 
-const SPELL_QUICK_SLOT_INDICES = [0, 1, 2, 3];
-const ITEM_QUICK_SLOT_INDICES = [4, 5];
+export const SPELL_QUICK_SLOT_INDICES = [0, 1, 2, 3];
+export const ITEM_QUICK_SLOT_INDICES = [4, 5];
 
 // Arco de 4 hechizos alrededor del botón de ataque (esquina inferior
 // derecha del cluster): centro del ataque en (170,170), radio 112, ángulos
@@ -35,12 +42,12 @@ const SPELL_SLOT_POSITIONS = [
     { left: 142, top: 30 },
 ];
 
-// Columna de accesos (inventario, lista de hechizos, editar) encima del
-// último hechizo del arco (el de arriba, centrado en x=170).
+// Fila de accesos (inventario, lista de hechizos, editar) encima del arco,
+// pegada al borde derecho. En columna pisaba los botones de arriba en
+// pantallas de unos 340 de alto (Safari con sus barras).
 const SIDE_BUTTON_SIZE = 38;
 const SIDE_BUTTON_GAP = 6;
-const SIDE_COLUMN_LEFT = 170 - SIDE_BUTTON_SIZE / 2;
-const SIDE_COLUMN_BOTTOM_GAP = 8;
+const SIDE_ROW_BOTTOM_GAP = 8;
 
 const ITEM_SLOT_SIZE = 46;
 const ITEM_SLOT_POSITIONS = [
@@ -80,6 +87,14 @@ type MobileHudProps = {
     // Mientras se apunta un hechizo, los accesos secundarios se vuelven
     // transparentes y dejan pasar el toque al mapa que está debajo.
     isTargeting: boolean;
+    // Lo que hay para agarrar bajo los pies: aparece el botoncito de agarrar pegado al de atacar.
+    groundItemName: string | null;
+    onPickup: () => void;
+    // Solo los que tienen maná meditan.
+    canMeditate: boolean;
+    onMeditate: () => void;
+    // Arena: las pociones y las flechas no se gastan (cantidades en ∞).
+    infiniteItems?: boolean;
 };
 
 export function MobileHud({
@@ -104,6 +119,11 @@ export function MobileHud({
     isOrientationLocked,
     onToggleOrientationLock,
     isTargeting,
+    groundItemName,
+    onPickup,
+    canMeditate,
+    onMeditate,
+    infiniteItems = false,
 }: MobileHudProps) {
     const sharedMacroProps = {
         hud,
@@ -119,14 +139,24 @@ export function MobileHud({
         touchMode: true,
         requireHotkey: false,
         editMode: isQuickSlotEditMode,
+        infiniteItems,
     };
+
+    // Flechas equipadas (arquero, cazador): cuántas quedan, arriba de los items rápidos. En la Arena, ∞.
+    const equippedArrows =
+        hud?.inventory.find(
+            (item) => item.equipped && item.objType === OBJECT_TYPE.flechas,
+        ) ?? null;
 
     const sideButtonStyle = {
         width: SIDE_BUTTON_SIZE,
         height: SIDE_BUTTON_SIZE,
     };
     const sideButtonClass = isTargeting
-        ? ROUND_BUTTON_CLASS.replace("pointer-events-auto", "pointer-events-none")
+        ? ROUND_BUTTON_CLASS.replace(
+              "pointer-events-auto",
+              "pointer-events-none",
+          )
         : ROUND_BUTTON_CLASS;
 
     return (
@@ -135,6 +165,16 @@ export function MobileHud({
                 className="pointer-events-none fixed top-3 z-40 flex gap-2"
                 style={{ right: `calc(${SAFE_RIGHT} + 12px)` }}
             >
+                {canMeditate ? (
+                    <TapButton
+                        onTap={onMeditate}
+                        className={`${ROUND_BUTTON_CLASS} h-9 w-9 border-sky-300/40 text-sky-100`}
+                        aria-label="Meditar"
+                        title="Meditar"
+                    >
+                        <Flower2 className="h-4 w-4" />
+                    </TapButton>
+                ) : null}
                 <TapButton
                     onTap={onToggleChat}
                     className={`${ROUND_BUTTON_CLASS} h-9 w-9`}
@@ -184,6 +224,18 @@ export function MobileHud({
                     right: `calc(${SAFE_RIGHT} + ${ACTION_CLUSTER_SIZE + 16}px)`,
                 }}
             >
+                {equippedArrows ? (
+                    <div
+                        className="pointer-events-none absolute -top-6 left-0 flex items-center gap-1 rounded-full border border-amber-200/25 bg-black/60 px-2 py-0.5 text-[11px] font-bold tabular-nums text-amber-50"
+                        aria-label={`Flechas: ${formatStackAmount(equippedArrows.amount, infiniteItems)}`}
+                    >
+                        <ArrowIcon className="h-3 w-3 text-amber-200" />
+                        {formatStackAmount(
+                            equippedArrows.amount,
+                            infiniteItems,
+                        )}
+                    </div>
+                ) : null}
                 <MacroBar
                     {...sharedMacroProps}
                     visibleSlotIndices={ITEM_QUICK_SLOT_INDICES}
@@ -207,15 +259,14 @@ export function MobileHud({
                 }}
             >
                 <div
-                    className={`pointer-events-none absolute flex flex-col transition-opacity ${
+                    className={`pointer-events-none absolute right-0 flex transition-opacity ${
                         isTargeting ? "opacity-25" : ""
                     }`}
                     style={{
-                        left: SIDE_COLUMN_LEFT,
                         bottom:
                             ACTION_CLUSTER_SIZE -
                             SPELL_SLOT_POSITIONS[3].top +
-                            SIDE_COLUMN_BOTTOM_GAP,
+                            SIDE_ROW_BOTTOM_GAP,
                         gap: SIDE_BUTTON_GAP,
                     }}
                 >
@@ -276,6 +327,12 @@ export function MobileHud({
                         size={ATTACK_BUTTON_SIZE}
                     />
                 </div>
+                {groundItemName ? (
+                    <MobilePickupButton
+                        itemName={groundItemName}
+                        onPickup={onPickup}
+                    />
+                ) : null}
             </div>
         </>
     );

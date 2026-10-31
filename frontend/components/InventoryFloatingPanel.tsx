@@ -5,6 +5,7 @@
 import React from "react";
 import { createPortal } from "react-dom";
 import { formatNumber } from "../lib/number-format";
+import { formatStackAmount } from "../lib/itemAmount";
 import {
     ChevronDown,
     ChevronUp,
@@ -3611,9 +3612,10 @@ export default function InventoryFloatingPanel({
                                                                 {item.amount >
                                                                     1 && (
                                                                     <span className="pointer-events-none absolute left-1 top-0.5 text-[10px] font-bold text-stone-100 drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]">
-                                                                        {
-                                                                            item.amount
-                                                                        }
+                                                                        {formatStackAmount(
+                                                                            item.amount,
+                                                                            arenaMode,
+                                                                        )}
                                                                     </span>
                                                                 )}
                                                                 {item.equipped && (
@@ -3633,6 +3635,7 @@ export default function InventoryFloatingPanel({
                                     </div>
 
                                     <EquipmentPanel
+                                        infiniteItems={arenaMode}
                                         items={items}
                                         objectsDB={objectsDB}
                                         graphicsDB={graphicsDB}

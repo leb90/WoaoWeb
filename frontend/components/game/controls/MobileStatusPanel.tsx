@@ -21,6 +21,9 @@ type MobileStatusPanelProps = {
     // Mientras se apunta un hechizo: el log se oculta y las barras quedan
     // semitransparentes y sin capturar toques, para poder apuntar debajo.
     isTargeting: boolean;
+    // El log casi no se ve y deja tocar lo que hay debajo; al abrir el chat
+    // para escribir aparece entero y se puede scrollear.
+    chatOpen: boolean;
     onOpenSkills: () => void;
 };
 
@@ -29,6 +32,7 @@ export function MobileStatusPanel({
     consoleLog,
     skillPoints,
     isTargeting,
+    chatOpen,
     onOpenSkills,
 }: MobileStatusPanelProps) {
     const logRef = React.useRef<HTMLDivElement | null>(null);
@@ -122,9 +126,12 @@ export function MobileStatusPanel({
             <div
                 ref={logRef}
                 onScroll={handleLogScroll}
-                className={`pointer-events-auto max-h-[88px] overflow-y-auto overscroll-contain rounded-xl border border-amber-200/10 bg-black/45 px-2 py-1.5 text-[10px] leading-[13px] text-stone-200/90 [scrollbar-width:thin] ${
-                    isTargeting ? "hidden" : ""
-                }`}
+                aria-label="Mensajes"
+                className={`max-h-[88px] overflow-y-auto overscroll-contain rounded-xl border px-2 py-1.5 text-[10px] leading-[13px] text-stone-200/90 transition-opacity [scrollbar-width:thin] ${
+                    chatOpen
+                        ? "pointer-events-auto border-amber-200/20 bg-black/70"
+                        : "pointer-events-none border-transparent opacity-30 [text-shadow:0_1px_1px_rgba(0,0,0,0.9)]"
+                } ${isTargeting ? "hidden" : ""}`}
                 style={{ touchAction: "pan-y" }}
             >
                 {consoleLog}

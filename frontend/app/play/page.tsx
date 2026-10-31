@@ -13,6 +13,8 @@ import React, {
     useState,
 } from "react";
 import { MapRenderer } from "../../components/game";
+import type { GroundItem } from "../../components/game/core/MapRendererCore";
+import { buildArenaQuickSlotMacros } from "../../components/game/controls/arenaQuickSlots";
 import AdminIntervalsModal from "../../components/AdminIntervalsModal";
 import BuffStatusSidebar from "../../components/BuffStatusSidebar";
 import PlayerUnitFrame from "../../components/PlayerUnitFrame";
@@ -887,6 +889,12 @@ function HomeContent() {
         useState<RangeAttackRequest | null>(null);
     const [meleeAttackRequest, setMeleeAttackRequest] =
         useState<MeleeAttackRequest | null>(null);
+    const [pickupItemRequest, setPickupItemRequest] = useState<{
+        token: number;
+    } | null>(null);
+    // Mobile: lo que hay para agarrar bajo los pies (aparece el botoncito de agarrar junto al de atacar).
+    const [groundItem, setGroundItem] = useState<GroundItem | null>(null);
+    const arenaQuickSlotsAppliedRef = useRef(false);
     const [touchMovementDirection, setTouchMovementDirection] =
         useState<JoystickDirection | null>(null);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -1275,6 +1283,29 @@ function HomeContent() {
             token: (current?.token ?? 0) + 1,
         }));
     }, []);
+
+    const handleMobilePickup = useCallback(() => {
+        setPickupItemRequest((current) => ({
+            token: (current?.token ?? 0) + 1,
+        }));
+    }, []);
+
+    // Arena: los accesos rápidos de mobile vienen puestos con los hechizos y las pociones de la clase.
+    useEffect(() => {
+        const accesos = hud?.arenaState?.accesos;
+        if (!arenaMode || arenaQuickSlotsAppliedRef.current || !accesos) {
+            return;
+        }
+
+        const spells = hud?.spells ?? [];
+        const inventory = hud?.inventory ?? [];
+        if ((accesos.hechizos.length > 0 && spells.length === 0) || inventory.length === 0) {
+            return;
+        }
+
+        arenaQuickSlotsAppliedRef.current = true;
+        setMacros(buildArenaQuickSlotMacros(accesos, spells, inventory));
+    }, [arenaMode, hud?.arenaState?.accesos, hud?.inventory, hud?.spells]);
 
     const sendChatMessage = useCallback(
         (message: string) => {
@@ -3205,7 +3236,8 @@ function HomeContent() {
         : null;
     const activeArenaState = arenaMode ? (hud?.arenaState ?? null) : null;
     // Los avisos de arriba a la derecha se corren para no tapar el Top 3 de la arena.
-    const arenaBoardOffset = activeArenaState ? ARENA_SCOREBOARD_HEIGHT : 0;
+    const arenaBoardOffset =
+        activeArenaState && !isMobile ? ARENA_SCOREBOARD_HEIGHT : 0;
 
     if (isMobile && !isStandalonePwa) {
         return (
@@ -3422,6 +3454,10 @@ function HomeContent() {
                                         touchMovementDirection
                                     }
                                     meleeAttackRequest={meleeAttackRequest}
+                                    pickupItemRequest={pickupItemRequest}
+                                    onGroundItemChange={
+                                        isMobile ? setGroundItem : undefined
+                                    }
                                     equipRequest={equipRequest}
                                     useItemClickRequest={useItemClickRequest}
                                     useItemURequest={useItemURequest}
@@ -3522,7 +3558,7 @@ function HomeContent() {
                                     </div>
                                 ) : null}
 
-                                {activeArenaState ? (
+                                {activeArenaState && !isMobile ? (
                                     <ArenaScoreboard
                                         state={activeArenaState}
                                         dead={Boolean(hud?.dead)}
@@ -4116,6 +4152,14 @@ function HomeContent() {
                                 onSendCommand={sendChatMessage}
                             />
 
+                            {isMobile && activeArenaState ? (
+                                <ArenaScoreboard
+                                    state={activeArenaState}
+                                    dead={Boolean(hud?.dead)}
+                                    isMobile
+                                />
+                            ) : null}
+
                             {isMobile ? (
                                 <MobileHud
                                     hud={hud}
@@ -4148,6 +4192,15 @@ function HomeContent() {
                                         setTouchMovementDirection
                                     }
                                     onAttack={handleMobileAttack}
+                                    groundItemName={groundItem?.name ?? null}
+                                    onPickup={handleMobilePickup}
+                                    canMeditate={
+                                        Number(hud?.maxMana ?? 0) > 0
+                                    }
+                                    onMeditate={() =>
+                                        sendChatMessage("/meditar")
+                                    }
+                                    infiniteItems={arenaMode}
                                     onOpenInventory={() =>
                                         setIsMobileMenuOpen((current) => !current)
                                     }
@@ -4224,6 +4277,7 @@ function HomeContent() {
                                         ),
                                     )}
                                     isTargeting={isMobileTargeting}
+                                    chatOpen={isChatOpen}
                                     onOpenSkills={() =>
                                         setIsMobileSkillsOpen(true)
                                     }
@@ -4283,6 +4337,7 @@ function HomeContent() {
                                         }));
                                     }}
                                     onMove={handleMoveInventoryItem}
+                                    infiniteItems={arenaMode}
                                 />
                             ) : null}
 

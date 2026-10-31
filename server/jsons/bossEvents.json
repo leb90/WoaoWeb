@@ -1,30 +1,23 @@
 {
   "mummyPharaoh": {
-<<<<<<< HEAD
-    "nextSpawnAt": 1793078554799
-  },
-  "iceKnight": {
-    "nextSpawnAt": 1793085754799
-  },
-  "darkKnight": {
-    "nextSpawnAt": 1793100154799
-  },
-  "gollum": {
-    "nextSpawnAt": 1793085754799
-=======
     "nextSpawnAt": 0,
-    "activeNpcId": 1793068978507,
-    "spawnedAt": 1793068978507,
+    "activeNpcId": 1793394329470,
+    "spawnedAt": 1793394329470,
     "despawnAt": 0
   },
   "iceKnight": {
-    "nextSpawnAt": 1793076178200
+    "nextSpawnAt": 0,
+    "activeNpcId": 1793393565006,
+    "spawnedAt": 1793393565006,
+    "despawnAt": 0
   },
   "darkKnight": {
-    "nextSpawnAt": 1793090578200
+    "nextSpawnAt": 0,
+    "activeNpcId": 1793407965523,
+    "spawnedAt": 1793407965523,
+    "despawnAt": 0
   },
   "gollum": {
-    "nextSpawnAt": 1793076178200
->>>>>>> 0f3332fc8770aff62732a1845e08eeb17274f375
+    "nextSpawnAt": 1793425966605
   }
 }

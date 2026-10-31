@@ -1,0 +1,34 @@
+[Servidor] Personajes marcados como desconectados al iniciar: 0.
+[GAME DATA] Objs cargados desde fuente configurada: 1898.
+[GAME DATA] Crafting cargado desde archivos locales: 101.
+[GAME DATA] Fundicion cargada desde archivos locales: 3.
+Objs Cargados.
+Spells Cargados.
+Recetas de crafting cargadas.
+Recetas de fundicion cargadas.
+Mapas Cargados.
+[GAME DATA] NPC templates cargados desde fuente configurada: 758.
+NPCS Cargados.
+[GAME DATA] Balance hidratado desde DB: 1. Version aplicada: 3811. Personajes refrescados: 0.
+Balance cargado.
+[Quests] Cargadas 36 misiones y 3 NPCs entregadores.
+[Monturas] Cargados 12 tipos de mascota.
+[Conquista] Ciudades cargadas: defaults Alianza
+[Castillos] Dueños cargados: 5
+[Guerras] Automaticas cada 90 minutos.
+[DiaEspecial] Evento del dia: +40% de experiencia global. Bicho destacado: Pescador Tutor.
+[MountEggDrops] Cargadas 10 reglas.
+[MountEggDrops] Pool "continent": 35 mapas habilitados (2, 4, 8, 9, 10, 11, 12, 14, 16, 17, 20, 21, 26, 27, 29, 30, 31, 32, 35, 39, 53, 54, 56, 66, 67, 68, 69, 70, 71, 75, 82, 86, 102, 166, 190).
+[MountEggDrops] Unicornio aparecio en el mapa 31.
+[MountEggDrops] Caballo Negro aparecio en el mapa 39.
+[MountEggDrops] Tigre Blanco aparecio en el mapa 27.
+[MountEggDrops] Elefante aparecio en el mapa 16.
+[MountEggDrops] Dragon Dorado aparecio en el mapa 9.
+[MountEggDrops] Jabato aparecio en el mapa 75.
+[MountEggDrops] Rinosaurio aparecio en el mapa 39.
+[MountEggDrops] Cerbero aparecio en el mapa 31.
+[MountEggDrops] Wyvern aparecio en el mapa 9.
+[MountEggDrops] Avestruz aparecio en el mapa 39.
+[MountEggDrops] Spawneados 10 NPCs de huevos en mapas asignados (mapa 9: 2, mapa 16: 1, mapa 27: 1, mapa 31: 2, mapa 39: 3, mapa 75: 1).
+[Servidor] Iniciado en 5824ms.
+[Online Record] Nuevo record: 1 jugadores en simultáneo (mundo abierto: 1, arena: 0)

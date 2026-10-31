@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { MessageCircle, Sparkles, Swords, Users, Volume2, VolumeX, X as XIcon } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { MessageCircle, Play, Sparkles, Swords, Users, X as XIcon } from "lucide-react";
 import { HERO_VIDEO_SOUND_EVENT } from "../components/MenuMusic";
 import { useAuthRedirect } from "../hooks/useAuthRedirect";
 
@@ -18,8 +19,8 @@ const heroLogoPreload = (
 // Fondo del inicio: video en bucle y en silencio (3,7 MB, 720p). Su primer cuadro es igual a background.jpg, que
 // queda debajo: el video aparece recién cuando se reproduce. Con conexión mala o ahorro de datos no se baja, y si no
 // arranca en unos segundos (navegadores sin navigator.connection, autoplay bloqueado) se corta la descarga. En todos
-// esos casos queda la imagen. El botón de abajo a la derecha lo pasa a verse con sonido desde el principio y pausa la
-// música del inicio (HERO_VIDEO_SOUND_EVENT de MenuMusic).
+// esos casos queda la imagen. "Ver video" lo abre entero, con sonido y controles, en una ventana; mientras está
+// abierta se pausan el fondo y la música del inicio (HERO_VIDEO_SOUND_EVENT de MenuMusic).
 const HERO_BACKGROUND_IMAGE = "/static/imgs/background.jpg";
 const HERO_BACKGROUND_VIDEO = "/static/video/background-loop.mp4";
 const HERO_VIDEO_START_TIMEOUT_MS = 8000;
@@ -48,30 +49,12 @@ function announceHeroVideoSound(on: boolean) {
     window.dispatchEvent(new CustomEvent(HERO_VIDEO_SOUND_EVENT, { detail: on }));
 }
 
-function HeroBackgroundVideo() {
+function HeroBackground() {
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const [enabled, setEnabled] = useState(canPlayHeroVideo);
     const [playing, setPlaying] = useState(false);
-    const [withSound, setWithSound] = useState(false);
-
-    // Al irse del inicio (o si el video se corta) vuelve la música.
-    useEffect(() => () => announceHeroVideoSound(false), []);
-
-    const toggleSound = () => {
-        const video = videoRef.current;
-        if (!video) {
-            return;
-        }
-
-        const next = !withSound;
-        if (next) {
-            video.currentTime = 0;
-        }
-        video.muted = !next;
-        void video.play().catch(() => {});
-        setWithSound(next);
-        announceHeroVideoSound(next);
-    };
+    const [modalOpen, setModalOpen] = useState(false);
+    const closeModal = useCallback(() => setModalOpen(false), []);
 
     useEffect(() => {
         if (!enabled || playing) {
@@ -82,42 +65,98 @@ function HeroBackgroundVideo() {
         return () => window.clearTimeout(timer);
     }, [enabled, playing]);
 
-    if (!enabled) {
-        return null;
-    }
+    // Con la ventana abierta se pausan el fondo y la música del inicio; al cerrarla (o al irse del inicio) vuelven.
+    useEffect(() => {
+        if (!modalOpen) {
+            return;
+        }
+
+        const background = videoRef.current;
+        background?.pause();
+        announceHeroVideoSound(true);
+        return () => {
+            announceHeroVideoSound(false);
+            void background?.play().catch(() => {});
+        };
+    }, [modalOpen]);
 
     return (
         <>
-        <video
-            ref={videoRef}
-            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${
-                playing ? "opacity-100" : "opacity-0"
-            }`}
-            src={HERO_BACKGROUND_VIDEO}
-            poster={HERO_BACKGROUND_IMAGE}
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
-            disablePictureInPicture
-            aria-hidden="true"
-            onPlaying={() => setPlaying(true)}
-        />
-        {playing ? (
+            {enabled ? (
+                <video
+                    ref={videoRef}
+                    className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${
+                        playing ? "opacity-100" : "opacity-0"
+                    }`}
+                    src={HERO_BACKGROUND_VIDEO}
+                    poster={HERO_BACKGROUND_IMAGE}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    preload="auto"
+                    disablePictureInPicture
+                    aria-hidden="true"
+                    onPlaying={() => setPlaying(true)}
+                />
+            ) : null}
             <button
                 type="button"
-                onClick={toggleSound}
-                aria-pressed={withSound}
-                aria-label={withSound ? "Silenciar el video" : "Ver el video con sonido"}
-                title={withSound ? "Silenciar el video" : "Ver el video con sonido"}
+                onClick={() => setModalOpen(true)}
                 className="absolute bottom-8 right-6 z-10 inline-flex items-center gap-2 rounded-full border border-amber-200/25 bg-black/45 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-stone-300 backdrop-blur-sm transition hover:border-amber-200/50 hover:text-amber-200"
             >
-                {withSound ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-                Video
+                <Play className="h-3.5 w-3.5" />
+                Ver video
             </button>
-        ) : null}
+            {modalOpen ? <HeroVideoModal onClose={closeModal} /> : null}
         </>
+    );
+}
+
+// El video entero, con sonido y controles, en una ventana sobre todo el sitio.
+function HeroVideoModal({ onClose }: { onClose: () => void }) {
+    const closeRef = useRef<HTMLButtonElement | null>(null);
+
+    useEffect(() => {
+        closeRef.current?.focus();
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === "Escape") {
+                onClose();
+            }
+        };
+        window.addEventListener("keydown", onKeyDown);
+        return () => window.removeEventListener("keydown", onKeyDown);
+    }, [onClose]);
+
+    return createPortal(
+        <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Video de World of Argentum"
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
+            onClick={onClose}
+        >
+            <div className="relative w-full max-w-5xl" onClick={(event) => event.stopPropagation()}>
+                <button
+                    ref={closeRef}
+                    type="button"
+                    onClick={onClose}
+                    aria-label="Cerrar video"
+                    className="absolute right-2 top-2 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full border border-amber-200/25 bg-black/60 text-stone-300 transition hover:border-amber-200/50 hover:text-amber-200"
+                >
+                    <XIcon className="h-4 w-4" />
+                </button>
+                <video
+                    src={HERO_BACKGROUND_VIDEO}
+                    poster={HERO_BACKGROUND_IMAGE}
+                    autoPlay
+                    controls
+                    playsInline
+                    className="aspect-video max-h-[80vh] w-full rounded-[6px] border border-amber-200/15 bg-black object-contain shadow-2xl"
+                />
+            </div>
+        </div>,
+        document.body,
     );
 }
 
@@ -149,7 +188,7 @@ export default function HomePage() {
                     className="absolute inset-0 bg-cover bg-center"
                     style={{ backgroundImage: `url(${HERO_BACKGROUND_IMAGE})` }}
                 />
-                <HeroBackgroundVideo />
+                <HeroBackground />
                 <div className="absolute inset-0 bg-black/55" />
                 <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(3,2,1,0.35)_0%,rgba(3,2,1,0.15)_35%,rgba(3,2,1,0.75)_78%,#050302_100%)]" />
                 <div className="pointer-events-none absolute -top-24 left-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-amber-400/10 blur-[140px]" />

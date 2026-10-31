@@ -10,6 +10,7 @@ import type { EntityId, RuntimeCharacter, RuntimeClient } from "./types/runtime"
 export {};
 
 const vars = require("./vars");
+const WATER_COMBAT_ITEMS = new Set(["polvo_de_fuego", "gancho", "arco", "polvo_magico", "bombas", "campo_de_proteccion"]);
 
 export const DASH_ITEM = "botas_de_pegaso";
 export const JUMP_ITEM = "pluma";
@@ -123,7 +124,7 @@ export function canAct(sessionId: EntityId, user: MotionUser, itemId: string, it
         tell(sessionId, "No te podés mover.");
         return false;
     }
-    if (getGame().hayAgua(Number(user.map), user.pos)) {
+    if (getGame().hayAgua(Number(user.map), user.pos) && !WATER_COMBAT_ITEMS.has(itemId)) {
         tell(sessionId, "Nadando no se puede.");
         return false;
     }

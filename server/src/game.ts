@@ -3260,7 +3260,7 @@ function forEachMapOccupant(
     }
 }
 
-function isAreaNpcImmune(npc: GameNpc): boolean {
+function isAreaNpcImmune(npc: GameNpc, attacker: GameCharacter): boolean {
     return Boolean(
         npc.npcType == 6 ||
             Number(npc.attackable ?? 1) === 0 ||
@@ -3268,7 +3268,7 @@ function isAreaNpcImmune(npc: GameNpc): boolean {
             Number(npc.raid ?? 0) > 0 ||
             Number(npc.hp ?? 0) <= 0 ||
             require("./npcPowers").hasSpecialPower(npc, 2) ||
-            require("./dungeons").getNpcInvulnerableReason(npc) !== null,
+            require("./dungeons").getNpcInvulnerableReason(npc, attacker, "hechizo") !== null,
     );
 }
 
@@ -3280,6 +3280,7 @@ function applyNpcSpellDamage(
     npc: GameNpc,
     datSpell: { minHp?: number; maxHp?: number; elemental?: unknown },
 ): number {
+    if (require("./dungeons").getNpcInvulnerableReason(npc, user, "hechizo")) return 0;
     const magicCalc = applyMagicBonuses(funct.randomIntFromInterval(datSpell.minHp, datSpell.maxHp), user);
     let dmg = isElementalSpell(datSpell)
         ? magicCalc.damage
@@ -3471,7 +3472,7 @@ function applyAreaSpellDamageToNpcs(
     }
 
     forEachMapOccupant(user.map, user.pos, range.x, range.y, (occupant) => {
-        if (!occupant.isNpc || !occupant.npc || isSameEntityId(occupant.id, primaryNpcId) || isAreaNpcImmune(occupant.npc)) {
+        if (!occupant.isNpc || !occupant.npc || isSameEntityId(occupant.id, primaryNpcId) || isAreaNpcImmune(occupant.npc, user)) {
             return;
         }
 
@@ -9673,7 +9674,7 @@ function Game(this: GameApi) {
             if (isHostileSpell) {
                 const castleDeniedMessage =
                     require("./clanCastles").getCastleAttackDeniedMessage(user, npc) ||
-                    require("./dungeons").getNpcInvulnerableReason(npc);
+                    require("./dungeons").getNpcInvulnerableReason(npc, user, "hechizo");
                 if (castleDeniedMessage) {
                     withUserClient(idUser, (userClient) => {
                         handleProtocol.console(castleDeniedMessage, "white", 1, 0, userClient);

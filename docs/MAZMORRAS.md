@@ -227,7 +227,7 @@ Todas salen del plano: el generador las guarda en la clave `dungeon` de `special
 | `_` | Placa | Apretada con un jugador o un bloque encima. Con todas las placas del mapa apretadas a la vez se abren las puertas `=`, y quedan abiertas. |
 | `B` | Bloque | Clic estando al lado: se corre una baldosa hacia el otro lado si hay piso libre de la misma sala (no pozo, lava, agua ni otro objeto; sí una placa). Así se resuelve una placa jugando solo. |
 | `?` | Losa | Clic a 2 baldosas o menos: muestra su texto (`losas` en `leyenda.json`, en orden de lectura). |
-| `~` | Agua profunda | Solo se nada con las Patas de rana: el personaje se ve medio sumergido y nadando no se puede atacar ni lanzar hechizos. Sin ellas el cliente no deja pisarla. |
+| `~` | Agua profunda | Solo se nada con las Patas de rana y el personaje se ve medio sumergido. Se puede combatir nadando. Las criaturas bajo el agua no reciben ataques desde tierra ni daño de bombas. Sin las Patas el cliente no deja entrar. |
 | `K` `N` `M` `X` | Cofres de llave chica, llave del jefe, mapa y brújula | Clic al lado. Las llaves quedan en la franja del que abrió el cofre; el mapa y la brújula, en la de todos. |
 | `$` | Cofre de oro | El oro (`oro` en `leyenda.json`, 250 si no está) es para el que lo abre. |
 | `R` | Cofre principal | Da el ítem de la mazmorra (`itemMazmorra` en `dungeons.json`) a todos los que están en la corrida, para siempre. |
@@ -309,10 +309,10 @@ Mientras corre o salta no camina ni ataca. El server decide el movimiento entero
 | Símbolo | Qué es |
 |---|---|
 | `*` | Bloque de cristal: lo rompe la Carrera |
-| `:` | Piso que se desmorona: se cae 150 ms después de pisarlo (caminando, un paso tarda 200) y vuelve a los 5 s. Se cruza corriendo o saltando |
+| `:` | Piso frágil: la primera pisada lo agrieta y la segunda abre el hueco y provoca la caída. Se repone a los 5 s de abrirse. Saltarlo no lo agrieta |
 | `P` / `Q` | Runa con tiempo y su reja: la runa abre las rejas del mapa por 3 s |
 | `W` | Pared rajada |
-| `Z` | Aplastador: baja 0,6 s de cada 2 y saca el 15 % de la vida |
+| `Z` | Aplastador: cada corrida sortea una posición de piso libre en su sala. Espera oculto hasta que se pisa su baldosa; al bajar saca el 15 % de la vida a quien siga debajo y vuelve a ocultarse |
 | `<` `>` `{` `}` | Puerta de un solo sentido, hacia el oeste, el este, el norte y el sur |
 | `G` | Cofre de oro grande (`oroGrande` en `leyenda.json`) |
 | `Y` | Cofre del jefe: el trofeo de la serie y el oro, una vez por día por personaje, para todos los que están adentro |

@@ -196,7 +196,6 @@ test("las mecánicas de cada mapa están bien armadas y la mazmorra se puede res
 test("afuera de una mazmorra no se nada ni cambia ningún bloqueo", () => {
     const user = { id: 1, _id: "x", map: 34, pos: { x: 50, y: 50 } } as never;
     assert.equal(dungeons.canSwim(user), false);
-    assert.equal(dungeons.getSwimBlockReason(user), null);
     assert.equal(dungeons.getDynamicBlocked(34, 50, 50), null);
     assert.equal(dungeons.getWaterStepDeniedReason(user, false), null);
 });

@@ -3814,7 +3814,6 @@ function attackMele(ws: RuntimeClient) {
 
         const meleeBlock =
             elementalEffects.getActionBlockReason(user, "melee") ??
-            dungeons.getSwimBlockReason(user) ??
             require("./dungeonMotion").getMotionBlockReason(user);
         if (meleeBlock) {
             handleProtocol.console(meleeBlock, "white", 0, 0, ws);
@@ -4033,7 +4032,6 @@ function attackRange(ws: RuntimeClient) {
 
         const rangedBlock =
             elementalEffects.getActionBlockReason(user, "ranged") ??
-            dungeons.getSwimBlockReason(user) ??
             require("./dungeonMotion").getMotionBlockReason(user);
         if (rangedBlock) {
             handleProtocol.console(rangedBlock, "white", 0, 0, ws);
@@ -4457,7 +4455,6 @@ function attackSpell(ws: RuntimeClient) {
 
         const elementalBlock =
             elementalEffects.getActionBlockReason(user, isHostileCombatSpell(datSpell) || isSummonSpell ? "spell" : "support", now) ??
-            dungeons.getSwimBlockReason(user) ??
             require("./dungeonMotion").getMotionBlockReason(user);
         if (elementalBlock) {
             handleProtocol.console(elementalBlock, "white", 0, 0, ws);

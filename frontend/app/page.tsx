@@ -49,12 +49,11 @@ function announceHeroVideoSound(on: boolean) {
     window.dispatchEvent(new CustomEvent(HERO_VIDEO_SOUND_EVENT, { detail: on }));
 }
 
-function HeroBackground() {
+// Fondo del hero; `paused` lo frena mientras está abierta la ventana del video.
+function HeroBackground({ paused }: { paused: boolean }) {
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const [enabled, setEnabled] = useState(canPlayHeroVideo);
     const [playing, setPlaying] = useState(false);
-    const [modalOpen, setModalOpen] = useState(false);
-    const closeModal = useCallback(() => setModalOpen(false), []);
 
     useEffect(() => {
         if (!enabled || playing) {
@@ -65,57 +64,51 @@ function HeroBackground() {
         return () => window.clearTimeout(timer);
     }, [enabled, playing]);
 
-    // Con la ventana abierta se pausan el fondo y la música del inicio; al cerrarla (o al irse del inicio) vuelven.
     useEffect(() => {
-        if (!modalOpen) {
+        const background = videoRef.current;
+        if (!paused || !background) {
             return;
         }
 
-        const background = videoRef.current;
-        background?.pause();
-        announceHeroVideoSound(true);
+        background.pause();
         return () => {
-            announceHeroVideoSound(false);
-            void background?.play().catch(() => {});
+            void background.play().catch(() => {});
         };
-    }, [modalOpen]);
+    }, [paused]);
+
+    if (!enabled) {
+        return null;
+    }
 
     return (
-        <>
-            {enabled ? (
-                <video
-                    ref={videoRef}
-                    className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${
-                        playing ? "opacity-100" : "opacity-0"
-                    }`}
-                    src={HERO_BACKGROUND_VIDEO}
-                    poster={HERO_BACKGROUND_IMAGE}
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                    preload="auto"
-                    disablePictureInPicture
-                    aria-hidden="true"
-                    onPlaying={() => setPlaying(true)}
-                />
-            ) : null}
-            <button
-                type="button"
-                onClick={() => setModalOpen(true)}
-                className="absolute bottom-8 right-6 z-10 inline-flex items-center gap-2 rounded-full border border-amber-200/25 bg-black/45 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-stone-300 backdrop-blur-sm transition hover:border-amber-200/50 hover:text-amber-200"
-            >
-                <Play className="h-3.5 w-3.5" />
-                Ver video
-            </button>
-            {modalOpen ? <HeroVideoModal onClose={closeModal} /> : null}
-        </>
+        <video
+            ref={videoRef}
+            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${
+                playing ? "opacity-100" : "opacity-0"
+            }`}
+            src={HERO_BACKGROUND_VIDEO}
+            poster={HERO_BACKGROUND_IMAGE}
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+            disablePictureInPicture
+            aria-hidden="true"
+            onPlaying={() => setPlaying(true)}
+        />
     );
 }
 
 // El video entero, con sonido y controles, en una ventana sobre todo el sitio.
 function HeroVideoModal({ onClose }: { onClose: () => void }) {
     const closeRef = useRef<HTMLButtonElement | null>(null);
+
+    // Mientras está abierta, la música del inicio se pausa; al cerrarla (o al irse del inicio) vuelve.
+    useEffect(() => {
+        announceHeroVideoSound(true);
+        return () => announceHeroVideoSound(false);
+    }, []);
 
     useEffect(() => {
         closeRef.current?.focus();
@@ -179,6 +172,8 @@ function HeroVideoModal({ onClose }: { onClose: () => void }) {
 
 export default function HomePage() {
     const [logoLoaded, setLogoLoaded] = useState(false);
+    const [videoOpen, setVideoOpen] = useState(false);
+    const closeVideo = useCallback(() => setVideoOpen(false), []);
     const { session, loading } = useAuthRedirect({
         redirectTo: "/login",
         when: "unauthenticated",
@@ -200,12 +195,12 @@ export default function HomePage() {
         <main className="min-h-screen overflow-y-auto bg-[#050302] text-stone-100">
             {heroLogoPreload}
             {/* ---------- HERO ---------- */}
-            <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4 py-24">
+            <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4 pb-24 pt-12 md:pt-24">
                 <div
                     className="absolute inset-0 bg-cover bg-center"
                     style={{ backgroundImage: `url(${HERO_BACKGROUND_IMAGE})` }}
                 />
-                <HeroBackground />
+                <HeroBackground paused={videoOpen} />
                 <div className="absolute inset-0 bg-black/55" />
                 <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(3,2,1,0.35)_0%,rgba(3,2,1,0.15)_35%,rgba(3,2,1,0.75)_78%,#050302_100%)]" />
                 <div className="pointer-events-none absolute -top-24 left-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-amber-400/10 blur-[140px]" />
@@ -218,7 +213,9 @@ export default function HomePage() {
                         MMORPG 2D &middot; Gratis &middot; En tu navegador
                     </p>
 
-                    <div className="relative mt-8 w-full max-w-2xl">
+                    {/* El logo toma el alto que sobra (470 px son el resto del hero), así "Jugar gratis" y "Ver video"
+                        entran sin scrollear en notebooks; en pantallas altas queda en su tamaño de siempre. */}
+                    <div className="relative mt-8 flex w-full max-w-2xl justify-center">
                         <Image
                             src={HERO_LOGO}
                             alt="World of Argentum Online"
@@ -228,7 +225,7 @@ export default function HomePage() {
                             loading="eager"
                             fetchPriority="high"
                             onLoad={() => setLogoLoaded(true)}
-                            className={`w-full drop-shadow-[0_0_45px_rgba(0,0,0,0.65)] transition-opacity duration-500 ${
+                            className={`h-auto max-h-[max(200px,calc(100svh-470px))] w-auto max-w-full drop-shadow-[0_0_45px_rgba(0,0,0,0.65)] transition-opacity duration-500 ${
                                 logoLoaded ? "opacity-100" : "opacity-0"
                             }`}
                         />
@@ -259,6 +256,15 @@ export default function HomePage() {
                             <Swords className="h-4 w-4 text-amber-200" />
                             Entrar a la arena
                         </Link>
+
+                        <button
+                            type="button"
+                            onClick={() => setVideoOpen(true)}
+                            className="group inline-flex items-center gap-2 rounded-[4px] border border-white/25 bg-white/5 px-9 py-3.5 text-sm font-semibold uppercase tracking-[0.2em] text-stone-100 backdrop-blur-sm transition hover:border-amber-200/50 hover:bg-white/10"
+                        >
+                            <Play className="h-4 w-4 text-amber-200" />
+                            Ver video
+                        </button>
                     </div>
                 </div>
 
@@ -267,6 +273,8 @@ export default function HomePage() {
                     <span className="h-8 w-px animate-pulse bg-gradient-to-b from-amber-200/70 to-transparent" />
                 </div>
             </section>
+
+            {videoOpen ? <HeroVideoModal onClose={closeVideo} /> : null}
 
             {/* ---------- ELEGÍ TU CAMINO ---------- */}
             <section className="relative mx-auto max-w-6xl px-4 py-20">

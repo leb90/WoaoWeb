@@ -125,7 +125,10 @@ function Respawn(this: any) {
                 const rankedCombatDeath = !pjSelected.isNpc && isRankedOpponentKill(user, pjSelected);
                 const huntersCombatDeath =
                     !pjSelected.isNpc && require("./huntersGame").shouldUseHuntersDeathFlow(String(idPersonaje));
-                const isolatedDuelDeath = challengeCombatDeath || rankedCombatDeath || huntersCombatDeath;
+                // En la arena tampoco se gana experiencia, oro ni puntos de facción: solo puntos de la arena.
+                const arenaCombatDeath = !pjSelected.isNpc && require("./arena").isArenaCharacter(pjSelected);
+                const isolatedDuelDeath =
+                    challengeCombatDeath || rankedCombatDeath || huntersCombatDeath || arenaCombatDeath;
 
                 if (!pjSelected.isNpc) {
                     game.putBodyAndHeadDead(idPersonaje);
@@ -305,12 +308,22 @@ function Respawn(this: any) {
                     },
                 });
 
+                const arena = require("./arena");
+                const arenaDeath = arena.isArenaCharacter(pjSelected);
                 const useWarDeathFlow = require("./factionWars").shouldUseWarDeathFlow(String(idPersonaje));
                 const useHuntersDeathFlow = huntersCombatDeath;
 
                 if (clientPersonaje) {
                     handleProtocol.console((useHuntersDeathFlow ? "Jugador" : nameWs) + " te ha matado!", "red", 1, 0, clientPersonaje);
-                    if (!useWarDeathFlow && !useHuntersDeathFlow) {
+                    if (arenaDeath) {
+                        handleProtocol.console(
+                            `Revivís en ${Math.ceil(arena.getReviveDelayMs(idPersonaje) / 1000)} segundos en otro lugar de la arena.`,
+                            "gray",
+                            1,
+                            0,
+                            clientPersonaje,
+                        );
+                    } else if (!useWarDeathFlow && !useHuntersDeathFlow) {
                         handleProtocol.console(
                             "En 15 segundos entraras al mundo de los muertos.",
                             "gray",
@@ -325,6 +338,7 @@ function Respawn(this: any) {
 
                 require("./huntersGame").onUserKilled(String(ws.id), String(idPersonaje));
                 require("./factionWars").onUserKilled(String(ws.id), String(idPersonaje));
+                arena.onUserKilled(ws.id, idPersonaje);
                 require("./clanMeta").onPlayerKill(String(ws.id), String(idPersonaje));
                 require("./cityConquest").tryConquer(Number(user.map), user.faction);
                 challengeManager.onCharacterDeath(pjSelected);

@@ -1,6 +1,7 @@
 import type { EntityId, InventoryItem, RuntimeCharacter, RuntimeClient, SpellSlot } from "./types/runtime";
 import type { SocketApi } from "./socket";
 import { type CharacterFaction, getFactionColor } from "./factions";
+import { ARENA_SKILLS, ARENA_SKILL_VALUE, buildArenaTemplate, getArenaClass } from "./arenaClasses";
 import {
     getEquipmentStorageSlotForObjectType,
     normalizeEquipmentStorage,
@@ -16,7 +17,6 @@ const itemKinds = require("./itemKinds") as {
 };
 const socket = require("./socket") as SocketApi;
 const handleProtocol = require("./handleProtocol");
-const arenaManager = require("./arenaManager");
 const mapInstanceManager = require("./mapInstanceManager");
 const balance = require("./balance");
 const safeZone = require("./safeZone");
@@ -342,10 +342,7 @@ type ArenaTicketResponse = {
         email: string;
     };
     arena: {
-        roomId: string;
-        roomName: string;
-        mapId: number;
-        pvpTemplateId: number;
+        idClase: number;
     };
 };
 
@@ -375,6 +372,22 @@ const LOAD_BOT_HASTE_SPELL_ID = 18;
 const LOAD_BOT_HASTE_SLOT = 10;
 const LOAD_BOT_MIN_MANA = 2000;
 
+type PvPConnectOptions = {
+    spawn?: {
+        mapId: number;
+        x: number;
+        y: number;
+    };
+    markAsBot?: boolean;
+    adminSummonedBot?: {
+        ownerId: EntityId;
+        level: number;
+    };
+    pvpChar?: boolean;
+    /** Modo Arena (todos contra todos): plantilla por clase y lugar al azar del mapa de la arena. */
+    arena?: boolean;
+};
+
 export type LoginApi = {
     disconnectAllCharacters: (account: LoginAccount) => Promise<void>;
     connect: (ws: RuntimeClient, ticket: string, typeGame: number, idChar: number) => Promise<void>;
@@ -383,21 +396,7 @@ export type LoginApi = {
         nameCharacter: string,
         idAccount: string,
         idChar: number,
-        arenaRoomId?: string,
-        arenaMapId?: number,
-        options?: {
-            spawn?: {
-                mapId: number;
-                x: number;
-                y: number;
-            };
-            markAsBot?: boolean;
-            adminSummonedBot?: {
-                ownerId: EntityId;
-                level: number;
-            };
-            pvpChar?: boolean;
-        },
+        options?: PvPConnectOptions,
     ) => Promise<void>;
     createId: () => number;
 };
@@ -583,8 +582,6 @@ function Login(this: LoginApi) {
                     String(botPayload.name || `LoadBot-${Date.now()}`),
                     `bot:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`,
                     botTemplateId,
-                    undefined,
-                    undefined,
                     {
                         spawn:
                             spawnMapId > 0 && spawnX > 0 && spawnY > 0
@@ -622,36 +619,18 @@ function Login(this: LoginApi) {
                 }
 
                 if (typeGame == 2) {
-                    const templateId = arenaResult.arena?.pvpTemplateId ?? idChar;
-                    const baseMapId = arenaResult.arena?.mapId ?? 272;
-                    const arenaRoomId = arenaResult.arena?.roomId;
-                    const arenaMapId = arenaRoomId
-                        ? arenaManager.getOrCreateInstance(arenaRoomId, baseMapId).mapId
-                        : baseMapId;
+                    // Arena: todos contra todos con el nombre de la cuenta y la clase elegida en /arenas.
+                    const idClase = Number(arenaResult.arena?.idClase ?? 0);
 
-                    if (arenaRoomId) {
-                        arenaManager.beginHandover(arenaRoomId, account._id);
+                    if (arenaResult.mode !== "arena" || !getArenaClass(idClase)) {
+                        handleProtocol.error("Elegí una clase en /arenas para entrar.", ws);
+                        ws.close();
+                        return;
                     }
 
                     await login.disconnectAllCharacters(account);
 
-                    try {
-                        return await this.connectCharacterPvP(
-                            ws,
-                            account.name,
-                            account._id,
-                            templateId,
-                            arenaRoomId,
-                            arenaMapId,
-                        );
-                    } catch (error) {
-                        if (arenaRoomId) {
-                            arenaManager.endHandover(arenaRoomId, account._id);
-                            await arenaManager.disconnectRoom(arenaRoomId, account._id);
-                        }
-
-                        throw error;
-                    }
+                    return await this.connectCharacterPvP(ws, account.name, account._id, idClase, { arena: true });
                 }
 
                 await login.disconnectAllCharacters(account);
@@ -1211,23 +1190,14 @@ function Login(this: LoginApi) {
         nameCharacter: string,
         idAccount: string,
         idChar: number,
-        arenaRoomId?: string,
-        arenaMapId?: number,
-        options?: {
-            spawn?: {
-                mapId: number;
-                x: number;
-                y: number;
-            };
-            markAsBot?: boolean;
-            adminSummonedBot?: {
-                ownerId: EntityId;
-                level: number;
-            };
-            pvpChar?: boolean;
-        },
+        options?: PvPConnectOptions,
     ) => {
-        const character = _.cloneDeep(vars.charactersPvP[idChar]) as PvPCharacterTemplate | undefined;
+        // En la arena, idChar es la clase (arenaClasses.ts); los bots usan las plantillas viejas de vars.
+        const isArena = Boolean(options?.arena);
+        const arena = require("./arena") as typeof import("./arena");
+        const character = (
+            isArena ? buildArenaTemplate(idChar) : _.cloneDeep(vars.charactersPvP[idChar])
+        ) as PvPCharacterTemplate | undefined | null;
 
         if (!character) {
             throw new Error(`Plantilla PvP invalida: ${idChar}`);
@@ -1254,9 +1224,10 @@ function Login(this: LoginApi) {
         const minHit = balance.getMinHitForLevel(character.idClase, targetLevel);
         const maxHit = balance.getMaxHitForLevel(character.idClase, targetLevel);
 
-        const mapId = options?.spawn?.mapId || arenaMapId || 272;
-        const spawnX = options?.spawn?.x || 77;
-        const spawnY = options?.spawn?.y || 48;
+        const arenaSpawn = isArena ? arena.pickSpawn() : null;
+        const mapId = arenaSpawn ? arena.ensureArenaMap() : options?.spawn?.mapId || 272;
+        const spawnX = arenaSpawn?.x || options?.spawn?.x || 77;
+        const spawnY = arenaSpawn?.y || options?.spawn?.y || 48;
 
         ws.id = login.createId();
 
@@ -1276,7 +1247,7 @@ function Login(this: LoginApi) {
 
         const newCharacter = {
             idAccount: idAccount,
-            arenaRoomId: arenaRoomId || null,
+            arenaFfa: isArena,
             pvpChar: isPvpCharacter,
             botLoad: isSyntheticBot,
             adminSummonedBot: isAdminSummonedBot,
@@ -1425,7 +1396,19 @@ function Login(this: LoginApi) {
         hydrateEquipmentState(newCharacter as unknown as StoredCharacter);
 
         require("./woaoProgress").hydrateUser(newCharacter);
-        require("./skills").ensureSkills(newCharacter);
+        const skills = require("./skills");
+        const skillValues = skills.ensureSkills(newCharacter) as number[];
+
+        if (isArena) {
+            // Entrenado como un nivel 50 y con el bono del set sumado a la vida y al maná, igual que el login normal.
+            for (const name of ARENA_SKILLS) {
+                skillValues[skills.SKILLS[name] - 1] = ARENA_SKILL_VALUE;
+            }
+            game.refreshEquipmentVitals(newCharacter, false);
+            newCharacter.hp = newCharacter.maxHp;
+            newCharacter.mana = newCharacter.maxMana;
+        }
+
         vars.personajes[ws.id] = newCharacter;
 
         vars.clients[ws.id] = ws;
@@ -1487,9 +1470,9 @@ function Login(this: LoginApi) {
             funct.sendTelegramMessage(`[Servidor-PVP] Usuarios online: ${vars.usuariosOnlinePvP}`);
         }
 
-        if (arenaRoomId) {
-            await arenaManager.connectRoom(arenaRoomId, idAccount);
-            arenaManager.endHandover(arenaRoomId, idAccount);
+        if (isArena) {
+            arena.onConnected(ws.id);
+            arena.sendState(ws.id);
         }
 
         funct.logOnlineRecord();

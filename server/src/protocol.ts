@@ -167,7 +167,7 @@ function canCitizenSupportCriminal(caster: RuntimeCharacter, target: RuntimeChar
 }
 
 function isArenaCombatCharacter(user: RuntimeCharacter | RuntimeNpc | undefined) {
-    return Boolean(user && !user.isNpc && (user.pvpChar || user.arenaRoomId || user.challengeMatchId));
+    return Boolean(user && !user.isNpc && (user.pvpChar || user.arenaFfa || user.challengeMatchId));
 }
 
 function shouldHideSpellProjectile(caster: RuntimeCharacter, target: RuntimeCharacter | RuntimeNpc) {

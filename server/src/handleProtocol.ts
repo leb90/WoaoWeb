@@ -490,6 +490,7 @@ export type HandleProtocolApi = {
     castleState: (payload: unknown, client: RuntimeClient) => void;
     factionWarState: (payload: FactionWarStatePayload, client: RuntimeClient) => void;
     rankedState: (payload: unknown, client: RuntimeClient) => void;
+    arenaState: (payload: unknown, client: RuntimeClient) => void;
     huntersGameState: (payload: unknown, client: RuntimeClient) => void;
     bossEventState: (payload: unknown, client: RuntimeClient) => void;
     levelUpNotice: (payload: unknown, client: RuntimeClient) => void;
@@ -1679,6 +1680,12 @@ const handleServer: HandleProtocolApi = {
 
     factionWarState(payload, client) {
         pkg.setPackageID(pkg.clientPacketID.factionWarState);
+        pkg.writeString(JSON.stringify(payload));
+        socket.send(client);
+    },
+
+    arenaState(payload, client) {
+        pkg.setPackageID(pkg.clientPacketID.arenaState);
         pkg.writeString(JSON.stringify(payload));
         socket.send(client);
     },

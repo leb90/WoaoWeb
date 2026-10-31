@@ -338,7 +338,7 @@ function isUnsafeArenaPosition(mapId: number | undefined, pos: Position | undefi
 }
 
 function isArenaCombatCharacter(user: PlayerCharacter | undefined) {
-    return Boolean(user && (user.pvpChar || user.arenaRoomId || user.challengeMatchId));
+    return Boolean(user && (user.pvpChar || user.arenaFfa || user.challengeMatchId));
 }
 
 function canRenderCharacter(viewerId: EntityId, character: PlayerCharacter | undefined) {

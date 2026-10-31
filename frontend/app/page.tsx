@@ -76,7 +76,7 @@ export default function HomePage() {
                             className="group inline-flex items-center gap-2 rounded-[4px] border border-white/25 bg-white/5 px-9 py-3.5 text-sm font-semibold uppercase tracking-[0.2em] text-stone-100 backdrop-blur-sm transition hover:border-amber-200/50 hover:bg-white/10"
                         >
                             <Swords className="h-4 w-4 text-amber-200" />
-                            Ver arenas
+                            Entrar a la arena
                         </Link>
                     </div>
                 </div>
@@ -130,13 +130,13 @@ export default function HomePage() {
                             className="mt-2 text-2xl text-stone-50"
                             style={{ fontFamily: "var(--font-cinzel)" }}
                         >
-                            Entrá a las arenas
+                            Entrá a la arena
                         </h3>
                         <p className="mt-3 text-sm leading-6 text-stone-300/80">
-                            Medí tu fuerza contra otros jugadores en combates 1v1 y por equipos.
+                            Todos contra todos en nivel 50 y con el mejor equipo de tu clase. Matá, subí en el ranking y llegá al Top 3.
                         </p>
                         <div className="mt-6 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.2em] text-amber-200 transition group-hover:gap-3">
-                            Ir a Arenas <span aria-hidden>&rarr;</span>
+                            Ir a la Arena <span aria-hidden>&rarr;</span>
                         </div>
                     </Link>
                 </div>

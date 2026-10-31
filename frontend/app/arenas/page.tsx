@@ -1,719 +1,432 @@
 "use client";
 
-import { Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import type { AuthErrorResponse } from "../../lib/auth";
+import {
+    Crown,
+    Flame,
+    HeartPulse,
+    Shield,
+    Skull,
+    Swords,
+    Trophy,
+    Users,
+} from "lucide-react";
+import CharacterSpritePreview from "@/components/CharacterSpritePreview";
+import { formatNumber } from "@/lib/number-format";
 import { useAuthRedirect } from "../../hooks/useAuthRedirect";
 import {
-    PVP_CHARACTER_TEMPLATES,
-    type ArenaGameTicketResponse,
-    type ArenaRoomDetails,
-    type ArenaRoomsResponse,
-    type ArenaRoomSummary,
+    ARENA_CLASSES,
+    getArenaClassOption,
+    type ArenaOverviewResponse,
 } from "../../lib/arenas";
 
-type CreateRoomForm = {
-    name: string;
-    isPublic: boolean;
-    password: string;
-    capacity: string;
-};
+const SELECTED_CLASS_STORAGE_KEY = "woao.arena.clase";
+const OVERVIEW_REFRESH_MS = 15_000;
+const PREVIEW_DIRECTIONS = ["2", "3", "1", "4"] as const;
 
-function ArenasPageContent() {
+const RULES = [
+    {
+        icon: Shield,
+        title: "Nivel 50, equipo completo",
+        text: "Cada clase entra con su mejor raza, su set y sus hechizos.",
+    },
+    {
+        icon: Swords,
+        title: "Todos contra todos",
+        text: "Sin zona segura, sin clanes ni facciones.",
+    },
+    {
+        icon: Flame,
+        title: "Subís en el ranking",
+        text: "Cada muerte te da 10 puntos y la mitad de los de tu víctima.",
+    },
+    {
+        icon: HeartPulse,
+        title: "Revivís solo",
+        text: "A los 5 segundos, en otro lugar. No se pierde nada.",
+    },
+];
+
+const PODIUM_COLORS = ["text-amber-300", "text-stone-200", "text-orange-300"];
+
+function readStoredClass(): number {
+    try {
+        const stored = Number(
+            window.localStorage.getItem(SELECTED_CLASS_STORAGE_KEY),
+        );
+        return getArenaClassOption(stored) ? stored : ARENA_CLASSES[0].idClase;
+    } catch {
+        return ARENA_CLASSES[0].idClase;
+    }
+}
+
+export default function ArenasPage() {
     const router = useRouter();
-    const searchParams = useSearchParams();
-    const roomId = searchParams.get("room")?.trim() || "";
-    useAuthRedirect({
+    const { session } = useAuthRedirect({
         redirectTo: "/login",
         when: "unauthenticated",
         preserveRedirect: true,
     });
-    const [rooms, setRooms] = useState<ArenaRoomSummary[]>([]);
-    const [activeRoom, setActiveRoom] = useState<ArenaRoomDetails | null>(null);
-    const [createForm, setCreateForm] = useState<CreateRoomForm>({
-        name: "",
-        isPublic: true,
-        password: "",
-        capacity: "50",
-    });
-    const [joinPasswords, setJoinPasswords] = useState<Record<string, string>>(
-        {},
+    const [selectedClassId, setSelectedClassId] = useState<number>(
+        ARENA_CLASSES[0].idClase,
     );
-    const [error, setError] = useState<string | null>(null);
-    const [info, setInfo] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [actionRoomId, setActionRoomId] = useState<string | null>(null);
+    const [overview, setOverview] = useState<ArenaOverviewResponse | null>(
+        null,
+    );
+    const [overviewError, setOverviewError] = useState(false);
+    const [directionIndex, setDirectionIndex] = useState(0);
+    const [entering, setEntering] = useState(false);
 
-    const shareLink = useMemo(() => {
-        if (!activeRoom || typeof window === "undefined") {
-            return "";
-        }
+    const selectedClass = useMemo(
+        () => getArenaClassOption(selectedClassId) ?? ARENA_CLASSES[0],
+        [selectedClassId],
+    );
 
-        return `${window.location.origin}/arenas/join/${activeRoom.joinToken}`;
-    }, [activeRoom]);
+    useEffect(() => {
+        setSelectedClassId(readStoredClass());
+    }, []);
 
     useEffect(() => {
         let cancelled = false;
 
         const load = async () => {
-            setLoading(true);
-
             try {
-                const roomsResponse = await fetch("/api/arenas/rooms", {
+                const response = await fetch("/api/arenas", {
                     cache: "no-store",
                 });
-
-                const roomsResult = roomsResponse.ok
-                    ? ((await roomsResponse.json()) as
-                          | ArenaRoomsResponse
-                          | AuthErrorResponse)
-                    : { rooms: [] };
-
-                if (!cancelled) {
-                    setRooms("rooms" in roomsResult ? roomsResult.rooms : []);
+                if (!response.ok) {
+                    throw new Error("No se pudo cargar la arena");
                 }
-            } catch (loadError) {
+                const result = (await response.json()) as ArenaOverviewResponse;
                 if (!cancelled) {
-                    setError(
-                        loadError instanceof Error
-                            ? loadError.message
-                            : "No se pudo cargar Arenas",
-                    );
+                    setOverview(result);
+                    setOverviewError(false);
                 }
-            } finally {
+            } catch {
                 if (!cancelled) {
-                    setLoading(false);
+                    setOverviewError(true);
                 }
             }
         };
 
         void load();
+        const timer = window.setInterval(
+            () => void load(),
+            OVERVIEW_REFRESH_MS,
+        );
 
         return () => {
             cancelled = true;
+            window.clearInterval(timer);
         };
     }, []);
 
+    // La vista previa gira sola para mostrar el equipo de todos los lados.
     useEffect(() => {
-        if (!roomId) {
-            setActiveRoom(null);
-            return;
-        }
+        const timer = window.setInterval(
+            () =>
+                setDirectionIndex(
+                    (current) => (current + 1) % PREVIEW_DIRECTIONS.length,
+                ),
+            1600,
+        );
+        return () => window.clearInterval(timer);
+    }, []);
 
-        let cancelled = false;
-
-        const loadRoom = async () => {
-            try {
-                const response = await fetch(`/api/arenas/rooms/${roomId}`, {
-                    cache: "no-store",
-                });
-                const result = (await response.json()) as
-                    | ArenaRoomDetails
-                    | AuthErrorResponse;
-
-                if (!response.ok || "error" in result) {
-                    throw new Error(
-                        "error" in result ? result.error : "Sala no encontrada",
-                    );
-                }
-
-                if (!cancelled) {
-                    setActiveRoom(result);
-                }
-            } catch (loadError) {
-                if (!cancelled) {
-                    setActiveRoom(null);
-                    setError(
-                        loadError instanceof Error
-                            ? loadError.message
-                            : "No se pudo abrir la sala",
-                    );
-                }
-            }
-        };
-
-        void loadRoom();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [roomId]);
-
-    const refreshRooms = async () => {
-        const response = await fetch("/api/arenas/rooms", {
-            cache: "no-store",
-        });
-        const result = (await response.json()) as
-            | ArenaRoomsResponse
-            | AuthErrorResponse;
-
-        if (response.ok && "rooms" in result) {
-            setRooms(result.rooms);
-        }
-    };
-
-    const fetchRoomDetails = async (targetRoomId: string) => {
-        const response = await fetch(`/api/arenas/rooms/${targetRoomId}`, {
-            cache: "no-store",
-        });
-        const result = (await response.json()) as
-            | ArenaRoomDetails
-            | AuthErrorResponse;
-
-        if (!response.ok || "error" in result) {
-            throw new Error(
-                "error" in result ? result.error : "Sala no encontrada",
-            );
-        }
-
-        return result;
-    };
-
-    const openRoom = (nextRoomId: string) => {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set("room", nextRoomId);
-        router.push(`/arenas?${params.toString()}`);
-    };
-
-    const clearRoom = () => {
-        router.push("/arenas");
-    };
-
-    const createRoom = async () => {
-        setError(null);
-        setInfo(null);
-        setActionRoomId("create");
-
+    const selectClass = (idClase: number) => {
+        setSelectedClassId(idClase);
         try {
-            const response = await fetch("/api/arenas/rooms", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    name: createForm.name,
-                    isPublic: createForm.isPublic,
-                    password: createForm.isPublic
-                        ? undefined
-                        : createForm.password,
-                    capacity: Number(createForm.capacity),
-                }),
-            });
-
-            const result = (await response.json()) as
-                | ArenaRoomDetails
-                | AuthErrorResponse;
-
-            if (!response.ok || "error" in result) {
-                throw new Error(
-                    "error" in result
-                        ? result.error
-                        : "No se pudo crear la sala",
-                );
-            }
-
-            await refreshRooms();
-            openRoom(result.id);
-            setInfo(
-                "Sala creada. Ya podes compartir el link o elegir tu personaje PvP.",
+            window.localStorage.setItem(
+                SELECTED_CLASS_STORAGE_KEY,
+                String(idClase),
             );
-        } catch (createError) {
-            setError(
-                createError instanceof Error
-                    ? createError.message
-                    : "No se pudo crear la sala",
-            );
-        } finally {
-            setActionRoomId(null);
-        }
-    };
-
-    const joinRoom = async (targetRoom: ArenaRoomSummary) => {
-        setError(null);
-        setInfo(null);
-        setActionRoomId(targetRoom.id);
-
-        try {
-            const response = await fetch(
-                `/api/arenas/rooms/${targetRoom.id}/join`,
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        password: targetRoom.isPublic
-                            ? undefined
-                            : joinPasswords[targetRoom.id],
-                    }),
-                },
-            );
-
-            const result = (await response.json()) as
-                | ArenaRoomDetails
-                | AuthErrorResponse;
-
-            if (!response.ok || "error" in result) {
-                throw new Error(
-                    "error" in result
-                        ? result.error
-                        : "No se pudo entrar a la sala",
-                );
-            }
-
-            await refreshRooms();
-            openRoom(result.id);
-        } catch (joinError) {
-            setError(
-                joinError instanceof Error
-                    ? joinError.message
-                    : "No se pudo entrar a la sala",
-            );
-        } finally {
-            setActionRoomId(null);
-        }
-    };
-
-    const leaveRoom = async () => {
-        if (!activeRoom) {
-            return;
-        }
-
-        setError(null);
-        setInfo(null);
-        setActionRoomId(activeRoom.id);
-
-        try {
-            await fetch(`/api/arenas/rooms/${activeRoom.id}/leave`, {
-                method: "POST",
-            });
-            await refreshRooms();
-            clearRoom();
         } catch {
-            setError("No se pudo salir de la sala");
-        } finally {
-            setActionRoomId(null);
+            // Sin almacenamiento la elección dura hasta recargar.
         }
     };
 
-    const selectTemplate = async (templateId: number) => {
-        if (!activeRoom) {
-            return;
-        }
-
-        setError(null);
-        setInfo(null);
-        setActionRoomId(`template:${templateId}`);
-
-        try {
-            let room = activeRoom;
-
-            if (!room.member) {
-                const joinResponse = await fetch(
-                    `/api/arenas/join/${room.joinToken}`,
-                    {
-                        method: "POST",
-                    },
-                );
-                const joinResult = (await joinResponse.json()) as
-                    | ArenaRoomDetails
-                    | AuthErrorResponse;
-
-                if (!joinResponse.ok || "error" in joinResult) {
-                    throw new Error(
-                        "error" in joinResult
-                            ? joinResult.error
-                            : "No se pudo entrar a la sala",
-                    );
-                }
-
-                room = await fetchRoomDetails(joinResult.id);
-                setActiveRoom(room);
-            }
-
-            const response = await fetch(
-                `/api/arenas/rooms/${room.id}/select-template`,
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({ templateId }),
-                },
-            );
-
-            const result = (await response.json()) as
-                | ArenaGameTicketResponse
-                | AuthErrorResponse;
-
-            if (!response.ok || "error" in result) {
-                throw new Error(
-                    "error" in result
-                        ? result.error
-                        : "No se pudo entrar a la arena",
-                );
-            }
-
-            router.push(
-                `/play?mode=arena&room=${encodeURIComponent(room.id)}&ticket=${encodeURIComponent(result.ticket)}&idChar=${templateId}`,
-            );
-        } catch (selectionError) {
-            setError(
-                selectionError instanceof Error
-                    ? selectionError.message
-                    : "No se pudo entrar a la arena",
-            );
-        } finally {
-            setActionRoomId(null);
-        }
+    const enterArena = () => {
+        setEntering(true);
+        router.push(`/play?mode=arena&clase=${selectedClass.idClase}`);
     };
+
+    const live = overview?.enVivo;
+    const ranking = overview?.ranking ?? [];
 
     return (
         <main className="min-h-screen overflow-y-auto bg-[#050302] px-4 py-10 text-stone-100">
             <div className="mx-auto max-w-6xl space-y-6">
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                    <div>
-                        <h1 className="mt-2 text-3xl font-semibold text-white">
-                            Arenas
-                        </h1>
-                    </div>
-                </div>
-
-                {error ? (
-                    <div className="rounded-2xl bg-rose-500/12 px-4 py-3 text-sm text-rose-200">
-                        {error}
-                    </div>
-                ) : null}
-                {info ? (
-                    <div className="rounded-2xl bg-emerald-500/12 px-4 py-3 text-sm text-emerald-200">
-                        {info}
-                    </div>
-                ) : null}
-
-                <div className="grid gap-6 xl:grid-cols-[1.05fr,1.3fr]">
-                    <section className="rounded-[28px] border border-white/8 bg-stone-950/80 p-5 shadow-2xl backdrop-blur-md">
-                        <div className="flex items-center justify-between gap-3">
-                            <div>
-                                <p className="text-xs uppercase tracking-[0.24em] text-stone-400">
-                                    Crear sala
-                                </p>
-                                <h2 className="mt-2 text-xl font-semibold text-white">
-                                    Nueva arena
-                                </h2>
-                            </div>
+                <section className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                    <div className="flex items-start gap-3">
+                        <div className="rounded-2xl border border-amber-300/20 bg-amber-400/10 p-3 text-amber-300">
+                            <Swords className="h-6 w-6" />
                         </div>
+                        <div>
+                            <h1 className="text-3xl font-semibold text-white md:text-4xl">
+                                Arena
+                            </h1>
+                            <p className="mt-1 max-w-xl text-sm text-stone-400">
+                                Elegí una clase y entrá a pelear contra todos.
+                                No hay niveles que subir: se sube en el ranking
+                                de la partida.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2 self-start rounded-2xl border border-white/8 bg-stone-950/80 px-4 py-2 text-sm md:self-auto">
+                        <Users className="h-4 w-4 text-emerald-300" />
+                        <span className="text-stone-300">
+                            Ahora en la arena:
+                        </span>
+                        <span className="font-semibold text-white tabular-nums">
+                            {live ? formatNumber(live.jugadores) : "—"}
+                        </span>
+                    </div>
+                </section>
 
-                        <div className="mt-5 space-y-3">
-                            <div>
-                                <p className="mb-2 px-1 text-xs uppercase tracking-[0.24em] text-stone-400">
-                                    Nombre de sala
-                                </p>
-                                <input
-                                    autoComplete="off"
-                                    value={createForm.name}
-                                    onChange={(event) =>
-                                        setCreateForm((current) => ({
-                                            ...current,
-                                            name: event.target.value,
-                                        }))
-                                    }
-                                    placeholder="Nombre de la sala"
-                                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300/40"
-                                />
+                <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    {RULES.map(({ icon: Icon, title, text }) => (
+                        <div
+                            key={title}
+                            className="rounded-2xl border border-white/8 bg-stone-950/70 p-4"
+                        >
+                            <div className="flex items-center gap-2 text-sm font-semibold text-amber-100">
+                                <Icon className="h-4 w-4 text-amber-300" />
+                                {title}
                             </div>
+                            <p className="mt-1.5 text-xs leading-5 text-stone-400">
+                                {text}
+                            </p>
+                        </div>
+                    ))}
+                </section>
 
-                            <div className="grid gap-3 sm:grid-cols-2">
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        setCreateForm((current) => ({
-                                            ...current,
-                                            isPublic: true,
-                                        }))
-                                    }
-                                    className={`rounded-2xl border px-4 py-3 text-sm transition ${
-                                        createForm.isPublic
-                                            ? "border-amber-300/55 bg-amber-300/12 text-amber-100"
-                                            : "border-white/10 bg-white/5 text-stone-300"
-                                    }`}
-                                >
-                                    Sala publica
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        setCreateForm((current) => ({
-                                            ...current,
-                                            isPublic: false,
-                                        }))
-                                    }
-                                    className={`rounded-2xl border px-4 py-3 text-sm transition ${
-                                        !createForm.isPublic
-                                            ? "border-amber-300/55 bg-amber-300/12 text-amber-100"
-                                            : "border-white/10 bg-white/5 text-stone-300"
-                                    }`}
-                                >
-                                    Sala privada
-                                </button>
-                            </div>
+                <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+                    <section className="rounded-[28px] border border-white/8 bg-stone-950/80 p-5 shadow-2xl backdrop-blur-md">
+                        <h2 className="text-xl font-semibold text-white">
+                            Elegí tu clase
+                        </h2>
+                        <p className="mt-1 text-sm text-stone-400">
+                            Cada una va con la raza que mejor le rinde y con
+                            todo su equipo puesto.
+                        </p>
 
-                            <div>
-                                <p className="mb-2 px-1 text-xs uppercase tracking-[0.24em] text-stone-400">
-                                    Maxima cantidad de jugadores
-                                </p>
-                                <input
-                                    autoComplete="off"
-                                    value={createForm.capacity}
-                                    onChange={(event) =>
-                                        setCreateForm((current) => ({
-                                            ...current,
-                                            capacity: event.target.value,
-                                        }))
-                                    }
-                                    placeholder="Cantidad maxima de jugadores"
-                                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300/40"
-                                />
-                            </div>
-
-                            {!createForm.isPublic ? (
-                                <div>
-                                    <p className="mb-2 px-1 text-xs uppercase tracking-[0.24em] text-stone-400">
-                                        Password
-                                    </p>
-                                    <input
-                                        autoComplete="off"
-                                        value={createForm.password}
-                                        onChange={(event) =>
-                                            setCreateForm((current) => ({
-                                                ...current,
-                                                password: event.target.value,
-                                            }))
+                        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                            {ARENA_CLASSES.map((option) => {
+                                const active =
+                                    option.idClase === selectedClass.idClase;
+                                return (
+                                    <button
+                                        key={option.idClase}
+                                        type="button"
+                                        onClick={() =>
+                                            selectClass(option.idClase)
                                         }
-                                        placeholder="Password de la sala"
-                                        className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300/40"
-                                    />
+                                        aria-pressed={active}
+                                        className={`rounded-2xl border p-3 text-left transition ${
+                                            active
+                                                ? "border-amber-300/60 bg-amber-300/10"
+                                                : "border-white/8 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.06]"
+                                        }`}
+                                    >
+                                        <div className="flex items-baseline justify-between gap-2">
+                                            <span
+                                                className={`text-base font-semibold ${
+                                                    active
+                                                        ? "text-amber-100"
+                                                        : "text-white"
+                                                }`}
+                                            >
+                                                {option.nombre}
+                                            </span>
+                                            <span className="text-xs text-stone-400">
+                                                {option.raza}
+                                            </span>
+                                        </div>
+                                        <p className="mt-1.5 text-xs text-stone-300">
+                                            {option.equipo}
+                                        </p>
+                                        <p className="mt-1 text-xs text-stone-500">
+                                            {option.destacado}
+                                        </p>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </section>
+
+                    <aside className="space-y-6">
+                        <section className="rounded-[28px] border border-amber-300/20 bg-stone-950/85 p-5 shadow-2xl backdrop-blur-md">
+                            <div className="flex items-center gap-4">
+                                <CharacterSpritePreview
+                                    bodyId={selectedClass.look.bodyId}
+                                    headId={selectedClass.look.headId}
+                                    weaponId={selectedClass.look.weaponId}
+                                    shieldId={selectedClass.look.shieldId}
+                                    helmetId={selectedClass.look.helmetId}
+                                    direction={
+                                        PREVIEW_DIRECTIONS[directionIndex]
+                                    }
+                                    scale={1.3}
+                                    className="shrink-0"
+                                />
+                                <div className="min-w-0">
+                                    <p className="text-[11px] uppercase tracking-[0.24em] text-amber-200/75">
+                                        Nivel 50
+                                    </p>
+                                    <p className="mt-1 text-2xl font-semibold text-white">
+                                        {selectedClass.nombre}
+                                    </p>
+                                    <p className="text-sm text-stone-300">
+                                        {selectedClass.raza}
+                                    </p>
                                 </div>
-                            ) : null}
+                            </div>
+                            <p className="mt-3 text-xs leading-5 text-stone-400">
+                                {selectedClass.porQueRaza}
+                            </p>
 
                             <button
                                 type="button"
-                                onClick={() => void createRoom()}
-                                disabled={loading || actionRoomId === "create"}
-                                className="w-full rounded-[4px] border border-amber-300/60 bg-[linear-gradient(180deg,#f7d488,#c9922f)] px-4 py-3 text-sm font-bold uppercase tracking-[0.1em] text-[#2a1704] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
+                                onClick={enterArena}
+                                disabled={!session || entering}
+                                className="mt-4 w-full rounded-2xl bg-amber-300 px-4 py-3 text-sm font-semibold text-stone-950 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                                {actionRoomId === "create"
-                                    ? "Creando..."
-                                    : "Crear sala"}
+                                {entering ? "Entrando..." : "Entrar a la arena"}
                             </button>
-                        </div>
-                    </section>
+                            <p className="mt-2 text-center text-xs text-stone-500">
+                                {session
+                                    ? `Vas a pelear como ${session.account.name}.`
+                                    : "Cargando tu cuenta..."}
+                            </p>
+                        </section>
 
-                    <section className="rounded-[28px] border border-white/8 bg-stone-950/80 p-5 shadow-2xl backdrop-blur-md">
-                        {activeRoom ? (
-                            <div className="space-y-5">
-                                <div className="flex flex-wrap items-center justify-between gap-3">
-                                    <div>
-                                        <p className="text-xs uppercase tracking-[0.24em] text-stone-400">
-                                            Sala activa
-                                        </p>
-                                        <h2 className="mt-2 text-2xl font-semibold text-white">
-                                            {activeRoom.name}
-                                        </h2>
-                                        <p className="mt-2 text-sm text-stone-300">
-                                            {activeRoom.connectedPlayers}{" "}
-                                            conectados - Mapa {activeRoom.mapId}
-                                        </p>
-                                    </div>
-
-                                    <div className="flex gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => void leaveRoom()}
-                                            disabled={
-                                                actionRoomId === activeRoom.id
-                                            }
-                                            className="rounded-full border border-white/10 px-4 py-2 text-sm text-stone-200 transition hover:border-white/25 hover:bg-white/5"
-                                        >
-                                            Salir
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="rounded-2xl border border-white/8 bg-white/5 p-4 text-sm text-stone-300">
-                                    <p>
-                                        Creador:{" "}
-                                        <span className="font-semibold text-white">
-                                            {activeRoom.owner.name}
-                                        </span>
-                                    </p>
-                                    <p className="mt-2 break-all">
-                                        Link privado:{" "}
-                                        <span className="text-amber-200">
-                                            {shareLink || "Generando..."}
-                                        </span>
-                                    </p>
-                                </div>
-
-                                <div>
-                                    <p className="text-xs uppercase tracking-[0.24em] text-stone-400">
-                                        Elegir personaje PvP
-                                    </p>
-                                    <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                                        {PVP_CHARACTER_TEMPLATES.map(
-                                            (template) => {
-                                                const isSelected =
-                                                    activeRoom.member
-                                                        ?.selectedPvpTemplateId ===
-                                                    template.id;
-
-                                                return (
-                                                    <button
-                                                        key={template.id}
-                                                        type="button"
-                                                        onClick={() =>
-                                                            void selectTemplate(
-                                                                template.id,
-                                                            )
-                                                        }
-                                                        disabled={Boolean(
-                                                            actionRoomId?.startsWith(
-                                                                "template:",
-                                                            ),
-                                                        )}
-                                                        className={`rounded-[24px] border p-4 text-left transition ${
-                                                            isSelected
-                                                                ? "border-amber-300/60 bg-amber-300/10"
-                                                                : "border-white/10 bg-white/5 hover:border-white/25 hover:bg-white/8"
-                                                        }`}
-                                                    >
-                                                        <p className="text-lg font-semibold text-white">
-                                                            {template.name}
-                                                        </p>
-                                                    </button>
-                                                );
-                                            },
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        ) : (
-                            <div>
-                                <div className="flex items-center justify-between gap-3">
-                                    <div>
-                                        <p className="text-xs uppercase tracking-[0.24em] text-stone-400">
-                                            Salas publicas
-                                        </p>
-                                        <h2 className="mt-2 text-2xl font-semibold text-white">
-                                            Unirse a una arena
-                                        </h2>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => void refreshRooms()}
-                                        className="rounded-full border border-white/10 px-4 py-2 text-sm text-stone-200 transition hover:border-white/25 hover:bg-white/5"
-                                    >
-                                        Actualizar
-                                    </button>
-                                </div>
-
-                                <div className="mt-5 space-y-3">
-                                    {rooms.length > 0 ? (
-                                        rooms.map((room) => (
-                                            <div
-                                                key={room.id}
-                                                className="rounded-[24px] border border-white/8 bg-white/5 p-4"
+                        <section className="rounded-[28px] border border-white/8 bg-stone-950/80 p-5 shadow-2xl backdrop-blur-md">
+                            <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
+                                <Crown className="h-4 w-4 text-amber-300" />
+                                Top 3 en vivo
+                            </h2>
+                            {live && live.top.length > 0 ? (
+                                <ol className="mt-3 space-y-1.5">
+                                    {live.top
+                                        .slice(0, 3)
+                                        .map((entry, index) => (
+                                            <li
+                                                key={`${entry.nombre}-${index}`}
+                                                className="flex items-center gap-3 rounded-xl bg-white/[0.04] px-3 py-2 text-sm"
                                             >
-                                                <div className="flex flex-wrap items-start justify-between gap-3">
-                                                    <div>
-                                                        <p className="text-lg font-semibold text-white">
-                                                            {room.name}
-                                                        </p>
-                                                        <p className="mt-2 text-xs uppercase tracking-[0.24em] text-stone-400">
-                                                            {
-                                                                room.connectedPlayers
-                                                            }{" "}
-                                                            conectados -
-                                                            capacidad{" "}
-                                                            {room.capacity}
-                                                        </p>
-                                                        <p className="mt-2 text-sm text-stone-300">
-                                                            Creador:{" "}
-                                                            {room.owner.name}
-                                                        </p>
-                                                    </div>
-
-                                                    <div className="flex min-w-[220px] flex-col gap-2">
-                                                        {!room.isPublic ? (
-                                                            <input
-                                                                autoComplete="off"
-                                                                value={
-                                                                    joinPasswords[
-                                                                        room.id
-                                                                    ] || ""
-                                                                }
-                                                                onChange={(
-                                                                    event,
-                                                                ) =>
-                                                                    setJoinPasswords(
-                                                                        (
-                                                                            current,
-                                                                        ) => ({
-                                                                            ...current,
-                                                                            [room.id]:
-                                                                                event
-                                                                                    .target
-                                                                                    .value,
-                                                                        }),
-                                                                    )
-                                                                }
-                                                                placeholder="Password"
-                                                                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white outline-none transition focus:border-amber-300/40"
-                                                            />
-                                                        ) : null}
-
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                void joinRoom(
-                                                                    room,
-                                                                )
-                                                            }
-                                                            disabled={
-                                                                actionRoomId ===
-                                                                room.id
-                                                            }
-                                                            className="rounded-[4px] border border-amber-300/60 bg-[linear-gradient(180deg,#f7d488,#c9922f)] px-4 py-2.5 text-sm font-bold uppercase tracking-[0.08em] text-[#2a1704] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
-                                                        >
-                                                            {actionRoomId ===
-                                                            room.id
-                                                                ? "Entrando..."
-                                                                : "Unirse"}
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <div className="rounded-[24px] border border-dashed border-white/10 bg-white/4 p-6 text-sm text-stone-400">
-                                            No hay salas publicas activas. Crea
-                                            la primera.
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </section>
+                                                <span
+                                                    className={`w-4 font-black tabular-nums ${PODIUM_COLORS[index]}`}
+                                                >
+                                                    {index + 1}
+                                                </span>
+                                                <span className="min-w-0 flex-1 truncate text-white">
+                                                    {entry.nombre}
+                                                    <span className="ml-1.5 text-xs text-stone-500">
+                                                        {getArenaClassOption(
+                                                            entry.idClase,
+                                                        )?.nombre ?? ""}
+                                                    </span>
+                                                </span>
+                                                <span
+                                                    className={`font-semibold tabular-nums ${PODIUM_COLORS[index]}`}
+                                                >
+                                                    {formatNumber(entry.puntos)}
+                                                </span>
+                                            </li>
+                                        ))}
+                                </ol>
+                            ) : (
+                                <p className="mt-3 text-sm text-stone-400">
+                                    {overviewError
+                                        ? "No se pudo cargar la arena."
+                                        : live && live.jugadores > 0
+                                          ? "Todavía nadie sumó puntos."
+                                          : "No hay nadie peleando. Entrá primero."}
+                                </p>
+                            )}
+                        </section>
+                    </aside>
                 </div>
+
+                <section className="rounded-[28px] border border-white/8 bg-stone-950/80 p-5 shadow-2xl backdrop-blur-md md:p-6">
+                    <h2 className="flex items-center gap-2 text-xl font-semibold text-white">
+                        <Trophy className="h-5 w-5 text-amber-300" />
+                        Salón de la fama
+                    </h2>
+                    <p className="mt-1 text-sm text-stone-400">
+                        El mejor puntaje que llegó a tener cada cuenta en una
+                        partida.
+                    </p>
+
+                    {ranking.length > 0 ? (
+                        <div className="mt-4 overflow-x-auto">
+                            <table className="w-full min-w-[480px] text-sm">
+                                <thead>
+                                    <tr className="text-left text-xs uppercase tracking-[0.18em] text-stone-500">
+                                        <th className="px-3 py-2 font-medium">
+                                            #
+                                        </th>
+                                        <th className="px-3 py-2 font-medium">
+                                            Cuenta
+                                        </th>
+                                        <th className="px-3 py-2 text-right font-medium">
+                                            Récord
+                                        </th>
+                                        <th className="px-3 py-2 text-right font-medium">
+                                            Mejor racha
+                                        </th>
+                                        <th className="px-3 py-2 text-right font-medium">
+                                            Kills
+                                        </th>
+                                        <th className="px-3 py-2 text-right font-medium">
+                                            <Skull className="ml-auto h-3.5 w-3.5" />
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {ranking.map((row, index) => (
+                                        <tr
+                                            key={row.nombre}
+                                            className="border-t border-white/6"
+                                        >
+                                            <td
+                                                className={`px-3 py-2 font-bold tabular-nums ${
+                                                    PODIUM_COLORS[index] ??
+                                                    "text-stone-400"
+                                                }`}
+                                            >
+                                                {index + 1}
+                                            </td>
+                                            <td className="px-3 py-2 text-white">
+                                                {row.nombre}
+                                            </td>
+                                            <td className="px-3 py-2 text-right font-semibold text-amber-200 tabular-nums">
+                                                {formatNumber(row.mejorPuntaje)}
+                                            </td>
+                                            <td className="px-3 py-2 text-right tabular-nums text-stone-300">
+                                                {formatNumber(row.mejorRacha)}
+                                            </td>
+                                            <td className="px-3 py-2 text-right tabular-nums text-stone-300">
+                                                {formatNumber(row.kills)}
+                                            </td>
+                                            <td className="px-3 py-2 text-right tabular-nums text-stone-500">
+                                                {formatNumber(row.muertes)}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <p className="mt-4 rounded-2xl border border-dashed border-white/10 p-5 text-sm text-stone-400">
+                            {overviewError
+                                ? "No se pudo cargar el ranking."
+                                : "Todavía no hay récords. El primero en entrar se lo lleva."}
+                        </p>
+                    )}
+                </section>
             </div>
         </main>
-    );
-}
-
-export default function ArenasPage() {
-    return (
-        <Suspense fallback={<main className="min-h-screen bg-black" />}>
-            <ArenasPageContent />
-        </Suspense>
     );
 }

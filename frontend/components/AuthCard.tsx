@@ -125,8 +125,8 @@ export default function AuthCard({ mode }: AuthCardProps) {
                 </h1>
                 {mode === "register" ? (
                     <p className="mt-2 text-sm text-stone-300/80">
-                        Tu nombre de usuario sera el nombre visible por defecto
-                        en Arenas.
+                        Tu nombre de usuario es el nombre con el que peleás en
+                        la Arena.
                     </p>
                 ) : null}
             </div>

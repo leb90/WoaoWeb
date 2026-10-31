@@ -1435,7 +1435,7 @@ function resetFuerzaAgilidadBuffs(user: GameCharacter, client?: RuntimeClient) {
 
 function isArenaCombat(user: GameCharacter | undefined, userAttacked: GameCharacter | undefined): boolean {
     return Boolean(
-        (user?.pvpChar && userAttacked?.pvpChar && user.arenaRoomId && user.arenaRoomId === userAttacked.arenaRoomId) ||
+        (user?.arenaFfa && userAttacked?.arenaFfa && user.map === userAttacked.map) ||
         getHuntersGame().isHuntersCombat(user?.id, userAttacked?.id) ||
         (user?.rankedMatchId &&
             userAttacked?.rankedMatchId &&
@@ -3994,6 +3994,7 @@ export type GameApi = {
         options?: {
             hp?: number;
             mana?: number;
+            full?: boolean;
         },
     ) => void;
     resetFuerzaAgilidadBuffs: (idUser: EntityId) => void;
@@ -8902,7 +8903,10 @@ function Game(this: GameApi) {
             user.idShield = 0;
             resetFuerzaAgilidadBuffs(user, userClient ?? undefined);
             user.dead = 1;
-            const useWarDeathFlow = require("./factionWars").shouldUseWarDeathFlow(String(idUser));
+            // En la guerra y en la arena se revive solo: no se pasa al mundo de los muertos.
+            const arena = require("./arena");
+            const useWarDeathFlow =
+                require("./factionWars").shouldUseWarDeathFlow(String(idUser)) || arena.isArenaCharacter(user);
             require("./summonRoom").scheduleDeadUserExit(idUser);
             require("./bloodCastle").onUserDied(String(idUser));
             require("./hungerGames").onUserDied(String(idUser));
@@ -8910,6 +8914,7 @@ function Game(this: GameApi) {
             require("./tournamentAuto").onUserDied(String(idUser));
             require("./rankedArena").onUserDied(String(idUser));
             require("./factionWars").onUserDied(String(idUser));
+            arena.onUserDied(idUser);
             require("./playerTrade").onUserLeft(String(idUser));
             user.deadWorldActive = false;
             user.invisibleSpell = false;
@@ -9277,6 +9282,8 @@ function Game(this: GameApi) {
         options?: {
             hp?: number;
             mana?: number;
+            /** Revive con la vida y el maná al máximo, ya con el bono del equipo que vuelve a ponerse. */
+            full?: boolean;
         },
     ) {
         try {
@@ -9312,6 +9319,13 @@ function Game(this: GameApi) {
                 user.nextUseItemAfterMeleeAt = 0;
             } else {
                 rebuildEquippedInventoryState(user);
+            }
+
+            // Al morir se desequipa todo y el máximo pierde el bono del set: vuelve con el equipo.
+            refreshEquipmentVitals(user, false);
+            if (options?.full) {
+                user.hp = safeNumber(user.maxHp);
+                user.mana = safeNumber(user.maxMana);
             }
 
             if (user.navegando && reviveOnWater) {
@@ -11734,7 +11748,9 @@ function Game(this: GameApi) {
             const maxExpandedDropRadius = 5;
             let droppedItemsCount = 0;
 
-            if (!user || user.populationBot) {
+            // Los personajes PvP (arena y bots) no pierden items: quitarUserInvItem no les descuenta nada,
+            // así que tirar dejaba una copia en el piso.
+            if (!user || user.populationBot || user.pvpChar) {
                 return;
             }
 
@@ -13314,7 +13330,8 @@ function Game(this: GameApi) {
         if (!user.dead) {
             const hungerInterval = user.coldExposure > 0 ? HUNGER_DRAIN_COLD_INTERVAL_MS : HUNGER_DRAIN_INTERVAL_MS;
             const lastHunger = Number(user.lastHungerDrainAt ?? 0);
-            if (now - lastHunger >= hungerInterval) {
+            // En la arena no hay comida: el hambre y la sed no bajan.
+            if (!user.arenaFfa && now - lastHunger >= hungerInterval) {
                 user.lastHungerDrainAt = now;
                 const nextHambre = Math.max(0, Number(user.hambre ?? 0) - 1);
                 const nextSed = Math.max(0, Number(user.sed ?? 0) - 1);

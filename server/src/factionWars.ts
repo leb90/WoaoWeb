@@ -189,10 +189,7 @@ function reviveIfDead(idUser: string) {
         return;
     }
 
-    game.revivirUsuario(idUser, {
-        hp: Number(user.maxHp ?? 0),
-        mana: Number(user.maxMana ?? user.mana ?? 0),
-    });
+    game.revivirUsuario(idUser, { full: true });
 }
 
 function moveParticipantToWarSpawn(idUser: string) {

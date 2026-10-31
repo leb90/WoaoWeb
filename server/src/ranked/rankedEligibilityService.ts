@@ -60,7 +60,7 @@ export function getRankedEligibility(
         return result("IN_RANKED", "Ya estas participando en Ranked.");
     }
 
-    if (user.pvpChar || user.arenaRoomId) {
+    if (user.pvpChar || user.arenaFfa) {
         return result("IN_PVP_ARENA", "No puedes buscar Ranked desde una arena PvP.");
     }
 

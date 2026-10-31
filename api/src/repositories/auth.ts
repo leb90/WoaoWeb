@@ -1254,7 +1254,7 @@ export async function consumeGameTicket(
 
         const ticketResult = await client.query<GameTicketRecord>(
             `
-        SELECT ticket, account_id, character_id, auth_token, mode, arena_room_id, pvp_template_id, created_at, expires_at, consumed_at
+        SELECT ticket, account_id, character_id, auth_token, mode, pvp_template_id, created_at, expires_at, consumed_at
         FROM game_tickets
         WHERE ticket = $1
           AND consumed_at IS NULL
@@ -1344,30 +1344,7 @@ export async function consumeGameTicket(
         await client.query("COMMIT");
 
         if (storedTicket.mode === "arena") {
-            if (
-                !storedTicket.arena_room_id ||
-                storedTicket.pvp_template_id === null
-            ) {
-                return null;
-            }
-
-            const roomResult = await pool.query<{
-                id: string;
-                name: string;
-                map_id: number;
-            }>(
-                `
-          SELECT id, name, map_id
-          FROM arena_rooms
-          WHERE id = $1
-          LIMIT 1
-        `,
-                [storedTicket.arena_room_id],
-            );
-
-            const room = roomResult.rows[0];
-
-            if (!room) {
+            if (storedTicket.pvp_template_id === null) {
                 return null;
             }
 
@@ -1379,10 +1356,7 @@ export async function consumeGameTicket(
                     email: account.email,
                 },
                 arena: {
-                    roomId: room.id,
-                    roomName: room.name,
-                    mapId: room.map_id,
-                    pvpTemplateId: storedTicket.pvp_template_id,
+                    idClase: storedTicket.pvp_template_id,
                 },
             };
         }

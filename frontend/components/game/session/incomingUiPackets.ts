@@ -327,6 +327,10 @@ export async function handleIncomingUiPacket({
             ctx.mergeHud({ factionWarState: packet.payload });
             return true;
 
+        case "arenaState":
+            ctx.mergeHud({ arenaState: { ...packet.payload, receivedAt: Date.now() } });
+            return true;
+
         case "rankedState":
             ctx.mergeHud({ rankedState: packet.payload });
             return true;

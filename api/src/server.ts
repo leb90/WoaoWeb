@@ -83,17 +83,9 @@ import {
     transferClanPointForPvp,
 } from "./repositories/clanPoints";
 import {
-    connectArenaRoomByAccount,
     createArenaGameTicket,
-    createArenaRoom,
-    disconnectArenaRoomByAccount,
-    getArenaRoom,
-    joinArenaRoom,
-    joinArenaRoomByLink,
-    leaveArenaRoom,
-    leaveArenaRoomByAccount,
-    listPublicArenaRooms,
-    resetAllArenaRoomMembersConnectedStatus,
+    getArenaOverview,
+    saveArenaState,
 } from "./repositories/arenas";
 import {
     banCharacterByName,
@@ -1667,26 +1659,10 @@ app.get("/auth/clans/:clanId", async (request, response) => {
     }
 });
 
-app.get("/arenas/rooms", async (request, response) => {
+// Arena: todos contra todos. Cualquiera ve quién está y el ranking; para entrar hace falta la sesión.
+app.get("/arenas", async (_request, response) => {
     try {
-        const authorization = request.header("Authorization") || "";
-        const token = authorization.startsWith("Bearer ")
-            ? authorization.slice(7).trim()
-            : "";
-
-        if (!token) {
-            response.status(401).json({ error: "Unauthorized" });
-            return;
-        }
-
-        const rooms = await listPublicArenaRooms(token);
-
-        if (!rooms) {
-            response.status(401).json({ error: "Unauthorized" });
-            return;
-        }
-
-        response.json({ rooms });
+        response.json(await getArenaOverview());
     } catch (error) {
         response.status(500).json({
             error: error instanceof Error ? error.message : "Unexpected error",
@@ -1694,7 +1670,7 @@ app.get("/arenas/rooms", async (request, response) => {
     }
 });
 
-app.post("/arenas/rooms", async (request, response) => {
+app.post("/arenas/ticket", async (request, response) => {
     try {
         const authorization = request.header("Authorization") || "";
         const token = authorization.startsWith("Bearer ")
@@ -1706,121 +1682,7 @@ app.post("/arenas/rooms", async (request, response) => {
             return;
         }
 
-        const room = await createArenaRoom(token, request.body);
-
-        if (!room) {
-            response.status(401).json({ error: "Unauthorized" });
-            return;
-        }
-
-        response.status(201).json(room);
-    } catch (error) {
-        const message =
-            error instanceof Error ? error.message : "Unexpected error";
-        response.status(400).json({ error: message });
-    }
-});
-
-app.get("/arenas/rooms/:roomId", async (request, response) => {
-    try {
-        const authorization = request.header("Authorization") || "";
-        const token = authorization.startsWith("Bearer ")
-            ? authorization.slice(7).trim()
-            : "";
-
-        if (!token) {
-            response.status(401).json({ error: "Unauthorized" });
-            return;
-        }
-
-        const room = await getArenaRoom(token, request.params.roomId);
-
-        if (!room) {
-            response.status(404).json({ error: "Sala no encontrada" });
-            return;
-        }
-
-        response.json(room);
-    } catch (error) {
-        response.status(500).json({
-            error: error instanceof Error ? error.message : "Unexpected error",
-        });
-    }
-});
-
-app.post("/arenas/rooms/:roomId/join", async (request, response) => {
-    try {
-        const authorization = request.header("Authorization") || "";
-        const token = authorization.startsWith("Bearer ")
-            ? authorization.slice(7).trim()
-            : "";
-
-        if (!token) {
-            response.status(401).json({ error: "Unauthorized" });
-            return;
-        }
-
-        const room = await joinArenaRoom(
-            token,
-            request.params.roomId,
-            request.body,
-        );
-
-        if (!room) {
-            response.status(401).json({ error: "Unauthorized" });
-            return;
-        }
-
-        response.json(room);
-    } catch (error) {
-        const message =
-            error instanceof Error ? error.message : "Unexpected error";
-        const status = message === "Sala no encontrada" ? 404 : 400;
-        response.status(status).json({ error: message });
-    }
-});
-
-app.post("/arenas/join/:joinToken", async (request, response) => {
-    try {
-        const authorization = request.header("Authorization") || "";
-        const token = authorization.startsWith("Bearer ")
-            ? authorization.slice(7).trim()
-            : "";
-
-        if (!token) {
-            response.status(401).json({ error: "Unauthorized" });
-            return;
-        }
-
-        const room = await joinArenaRoomByLink(token, request.params.joinToken);
-
-        if (!room) {
-            response.status(401).json({ error: "Unauthorized" });
-            return;
-        }
-
-        response.json(room);
-    } catch (error) {
-        const message =
-            error instanceof Error ? error.message : "Unexpected error";
-        const status = message === "Sala no encontrada" ? 404 : 400;
-        response.status(status).json({ error: message });
-    }
-});
-
-app.post("/arenas/rooms/:roomId/leave", async (request, response) => {
-    try {
-        const authorization = request.header("Authorization") || "";
-        const token = authorization.startsWith("Bearer ")
-            ? authorization.slice(7).trim()
-            : "";
-
-        if (!token) {
-            response.status(401).json({ error: "Unauthorized" });
-            return;
-        }
-
-        const result = await leaveArenaRoom(token, request.params.roomId);
+        const result = await createArenaGameTicket(token, request.body);
 
         if (!result) {
             response.status(401).json({ error: "Unauthorized" });
@@ -1829,41 +1691,9 @@ app.post("/arenas/rooms/:roomId/leave", async (request, response) => {
 
         response.json(result);
     } catch (error) {
-        response.status(500).json({
+        response.status(400).json({
             error: error instanceof Error ? error.message : "Unexpected error",
         });
-    }
-});
-
-app.post("/arenas/rooms/:roomId/select-template", async (request, response) => {
-    try {
-        const authorization = request.header("Authorization") || "";
-        const token = authorization.startsWith("Bearer ")
-            ? authorization.slice(7).trim()
-            : "";
-
-        if (!token) {
-            response.status(401).json({ error: "Unauthorized" });
-            return;
-        }
-
-        const result = await createArenaGameTicket(
-            token,
-            request.params.roomId,
-            request.body,
-        );
-
-        if (!result) {
-            response.status(401).json({ error: "Unauthorized" });
-            return;
-        }
-
-        response.json(result);
-    } catch (error) {
-        const message =
-            error instanceof Error ? error.message : "Unexpected error";
-        const status = message === "Sala no encontrada" ? 404 : 400;
-        response.status(status).json({ error: message });
     }
 });
 
@@ -2013,63 +1843,16 @@ app.post(
     },
 );
 
-app.post(
-    "/internal/arenas/rooms/:roomId/disconnect",
-    requireAuth,
-    async (request, response) => {
-        try {
-            const roomId = Array.isArray(request.params.roomId)
-                ? request.params.roomId[0]
-                : request.params.roomId;
-            const accountId =
-                typeof request.body?.accountId === "string"
-                    ? request.body.accountId.trim()
-                    : "";
-
-            if (!roomId || !accountId) {
-                response.status(400).json({ error: "accountId es requerido" });
-                return;
-            }
-
-            await disconnectArenaRoomByAccount(roomId, accountId);
-            response.json({ ok: true });
-        } catch (error) {
-            response.status(500).json({
-                error:
-                    error instanceof Error ? error.message : "Unexpected error",
-            });
-        }
-    },
-);
-
-app.post(
-    "/internal/arenas/rooms/:roomId/connect",
-    requireAuth,
-    async (request, response) => {
-        try {
-            const roomId = Array.isArray(request.params.roomId)
-                ? request.params.roomId[0]
-                : request.params.roomId;
-            const accountId =
-                typeof request.body?.accountId === "string"
-                    ? request.body.accountId.trim()
-                    : "";
-
-            if (!roomId || !accountId) {
-                response.status(400).json({ error: "accountId es requerido" });
-                return;
-            }
-
-            await connectArenaRoomByAccount(roomId, accountId);
-            response.json({ ok: true });
-        } catch (error) {
-            response.status(500).json({
-                error:
-                    error instanceof Error ? error.message : "Unexpected error",
-            });
-        }
-    },
-);
+app.post("/internal/arenas/estado", requireAuth, async (request, response) => {
+    try {
+        await saveArenaState(request.body);
+        response.json({ ok: true });
+    } catch (error) {
+        response.status(400).json({
+            error: error instanceof Error ? error.message : "Unexpected error",
+        });
+    }
+});
 
 app.get("/character", requireAuth, async (request, response) => {
     try {
@@ -2305,16 +2088,12 @@ app.post(
     requireAuth,
     async (_request, response) => {
         try {
-            const [updatedCharacters, updatedArenaMembers] = await Promise.all([
-                resetAllCharactersConnectedStatus(),
-                resetAllArenaRoomMembersConnectedStatus(),
-            ]);
+            const updatedCharacters = await resetAllCharactersConnectedStatus();
 
             response.json({
                 ok: true,
-                updated: updatedCharacters + updatedArenaMembers,
+                updated: updatedCharacters,
                 updatedCharacters,
-                updatedArenaMembers,
             });
         } catch (error) {
             response.status(500).json({

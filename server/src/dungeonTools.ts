@@ -165,6 +165,11 @@ function damageNpc(user: ToolUser, npcId: EntityId, amount: number, source: stri
     const npc = vars.npcs?.[npcId];
     const ws = vars.clients?.[user.id] as RuntimeClient | undefined;
     if (!npc || !ws) return false;
+    const denied = getDungeons().getNpcWaterDeniedReason(npc, user, source);
+    if (denied) {
+        tell(user.id, denied);
+        return false;
+    }
     // Una flecha, una bomba o algo tirado a la botella con el Genio adentro también la aturde.
     if (require("./dungeonGrotto").onNpcStruck(npc)) return false;
     // Una bomba o algo tirado mata a un hechicero de una (Santuario del Rostro).
@@ -179,8 +184,8 @@ function damageNpc(user: ToolUser, npcId: EntityId, amount: number, source: stri
         tell(user.id, masked);
         return false;
     }
-    if (!getDungeons().canToolHitNpc(npc, source)) {
-        const reason = getDungeons().getNpcInvulnerableReason(npc, undefined, source);
+    if (!getDungeons().canToolHitNpc(npc, source, user)) {
+        const reason = getDungeons().getNpcInvulnerableReason(npc, user, source);
         if (reason) tell(user.id, reason);
         return false;
     }
@@ -295,7 +300,7 @@ export function hookshot(sessionId: EntityId) {
 // El Gancho en una criatura: la aturde un momento y le saca un poco de vida.
 function stunNpc(user: ToolUser, npcId: EntityId) {
     const npc = vars.npcs?.[npcId];
-    if (!npc || !getDungeons().canToolHitNpc(npc, "gancho")) return;
+    if (!npc || !getDungeons().canToolHitNpc(npc, "gancho", user)) return;
     damageNpc(user, npcId, toolDamage(user, 5, 1), "gancho");
     const stunned = vars.npcs?.[npcId];
     if (!stunned || Number(stunned.hp ?? 0) <= 0 || stunned.customMotion || stunned.paralizado) return;

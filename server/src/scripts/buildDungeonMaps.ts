@@ -248,6 +248,8 @@ type Skin = {
     puertasLaterales?: { abierta: { izquierda: string; derecha: string }; cerrada: { izquierda: string; derecha: string } };
 };
 type Legend = {
+    // En el banco de pruebas los pozos arrancan cubiertos y ceden a la segunda pisada.
+    pozosCubiertos?: number[];
     criaturas?: Record<string, number | { npc: number; movimiento?: number }>;
     // Torre del Águila: escaleras que aparecen al tirar los cuatro pilares, y si romper los ojos de una sala abre sus puertas.
     escalerasTrasPilares?: string[];
@@ -419,11 +421,21 @@ function roomsOf(plan: Plan): { room: Map<string, number>; rank: number[] } {
 // hacia esa misma sala.
 function sharedWallSide(plan: Plan, lx: number, rx: number, y: number): "izquierda" | "derecha" {
     const { room, rank } = roomsOf(plan);
-    const left = room.get(`${lx},${y}`);
-    const right = room.get(`${rx},${y}`);
-    if (left === undefined) return "izquierda";
-    if (right === undefined) return "derecha";
-    return rank[right] < rank[left] ? "izquierda" : "derecha";
+    const center = Math.floor((lx + rx) / 2);
+    let top = y;
+    let bottom = y;
+    while (top > 1 && isSolid(plan, center, top - 1)) top--;
+    while (bottom < SIZE && isSolid(plan, center, bottom + 1)) bottom++;
+    // La orientación pertenece al muro completo, incluso cuando cambia la sala de uno de sus lados.
+    let leftRank = Infinity;
+    let rightRank = Infinity;
+    for (let row = top; row <= bottom; row++) {
+        const left = room.get(`${lx},${row}`);
+        const right = room.get(`${rx},${row}`);
+        if (left !== undefined) leftRank = Math.min(leftRank, rank[left]);
+        if (right !== undefined) rightRank = Math.min(rightRank, rank[right]);
+    }
+    return rightRank < leftRank ? "izquierda" : "derecha";
 }
 
 function floorDistance(plan: Plan, x: number, y: number, dx: number, dy: number): number {
@@ -462,6 +474,32 @@ function computeWallTile(plan: Plan, x: number, y: number): WallTile | null {
     const n = floorDistance(plan, x, y, 0, -1);
     const e = floorDistance(plan, x, y, 1, 0);
     const w = floorDistance(plan, x, y, -1, 0);
+    // En una unión en T el muro vertical sigue de largo. La cara horizontal de la sala vecina
+    // no debe mover su borde a la otra columna durante tres filas.
+    if (s || (!e && !w)) {
+        const sample = (direction: number) => {
+            for (let distance = 1; distance <= 6; distance++) {
+                const row = y + direction * distance;
+                if (!isSolid(plan, x, row)) break;
+                const east = floorDistance(plan, x, row, 1, 0);
+                const west = floorDistance(plan, x, row, -1, 0);
+                if (east && west && east + west - 1 === 3) return { east, west, row };
+            }
+            return null;
+        };
+        const above = sample(-1);
+        const below = sample(1);
+        if (above && below && above.east === below.east && above.west === below.west) {
+            const side = sharedWallSide(plan, x - above.west, x + above.east, above.row);
+            return {
+                piece: side,
+                col: side === "izquierda" ? 3 - above.east : above.west - 1,
+                row: y - 1,
+                floor: [x + (side === "izquierda" ? above.east : -above.west), y],
+                thin: true,
+            };
+        }
+    }
     if (s) {
         // Grosor entre la sala de abajo y la de arriba (si hay una a tres o menos): con tres o más, borde, cara y la
         // fila que toca el piso; con dos, borde y la que toca el piso; con una, el borde.
@@ -762,12 +800,13 @@ function tileSkin(plan: Plan, x: number, y: number): Record<number, number> {
     const skin: Record<number, number> = {};
     if (!SKIN) return skin;
     const c = charAt(plan, x, y);
-    if (isBarrier(c) && BARRIER_TYPE[c] !== "bomba") {
+    if (isBarrier(c) && (BARRIER_TYPE[c] !== "bomba" || SKIN.puertas?.bomba)) {
         const horizontal = isWall(charAt(plan, x - 1, y)) && isWall(charAt(plan, x + 1, y));
         if (horizontal) {
             const closed = skinId(SKIN.puertas?.[BARRIER_TYPE[c]]);
             const open = skinId(SKIN.puertas?.abierta);
             if (closed) skin[DUNGEON_OBJECTS.puerta.id] = closed;
+            if (closed && BARRIER_TYPE[c] === "bomba") skin[DUNGEON_OBJECTS.paredBombeable.id] = closed;
             if (open) skin[DUNGEON_OBJECTS.puertaAbierta.id] = open;
         } else if (SKIN.puertasLaterales && isThickSideDoor(plan, x, y)) {
             // La de la pared de la sala a la que se llega primero (sharedWallSide): abre hacia esa sala.
@@ -895,11 +934,11 @@ function buildMechanics(plan: Plan) {
                 });
             }
             if (c === "*") data.crystals.push(key);
-            if (c === ":") data.fragile.push(key);
+            if (c === ":" || (c === "O" && legend.pozosCubiertos?.includes(plan.mapId))) data.fragile.push(key);
             if (c === "P") data.timedPlates.push(key);
             if (c === "W") data.crackedWalls.push(key);
             if (c === "Z") data.crushers.push(key);
-            if (c === "O") data.pits.push(key);
+            if (c === "O" && !legend.pozosCubiertos?.includes(plan.mapId)) data.pits.push(key);
             if (c === "^") data.lava.push(key);
             if (c === "%") data.lavaPeriodica.push(key);
             if (c === "_" || c === "V" || c === "-") data.plates.push(key);
@@ -973,7 +1012,7 @@ function buildTile(plan: Plan, x: number, y: number): Tile {
     }
     // El agua baja es agua con un reflejo encima (capa 2): así el juego no la toma como agua y se camina.
     if (c === "≈") return { graphics: block4(WATER_GRH, x, y), graphics2: block4(SHALLOW_WATER_GRH, x, y) };
-    if (c === "O") return { graphics: VOID_GRH, trigger: NO_NPC_TRIGGER };
+    if (c === "O") return { graphics: legend.pozosCubiertos?.includes(plan.mapId) ? block4(FLOOR_GRH, x, y) : VOID_GRH, trigger: NO_NPC_TRIGGER };
     if (c === "^" || c === "%") return { graphics: LAVA_GRHS[(x * 7 + y * 3) % LAVA_GRHS.length], trigger: NO_NPC_TRIGGER };
     const tile: Tile = { graphics: block4(FLOOR_GRH, x, y) };
     if (c === "S") tile.object = PORTAL_OBJ;
@@ -1005,11 +1044,9 @@ function buildTile(plan: Plan, x: number, y: number): Tile {
     }
     // Las criaturas no pisan el piso que se desmorona ni los aplastadores.
     if (c === ":") {
-        tile.object = DUNGEON_OBJECTS.pisoRajado.id;
         tile.trigger = NO_NPC_TRIGGER;
     }
     if (c === "Z") {
-        tile.object = DUNGEON_OBJECTS.losaAplastador.id;
         tile.trigger = NO_NPC_TRIGGER;
     }
     if (c === ",") tile.trigger = NO_NPC_TRIGGER;
@@ -1328,7 +1365,7 @@ function upsertDungeonObjects() {
         }
         fs.writeFileSync(fullPath, `${JSON.stringify(objects)}${raw.endsWith("\n") ? "\n" : ""}`, "utf8");
     }
-    execFileSync("pnpm", ["exec", "tsx", "src/scripts/exportClientObjs.ts"], { cwd: path.join(ROOT, "server"), stdio: "ignore" });
+    execFileSync(process.execPath, [path.join(ROOT, "server/node_modules/tsx/dist/cli.mjs"), "src/scripts/exportClientObjs.ts"], { cwd: path.join(ROOT, "server"), stdio: "ignore" });
     console.log(`objetos de mazmorra: ${Object.values(DUNGEON_OBJECTS).map((entry) => entry.id).join(", ")}`);
 }
 upsertDungeonObjects();

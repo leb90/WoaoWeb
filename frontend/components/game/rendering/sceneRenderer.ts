@@ -24,6 +24,7 @@ import {
     type TreeSpriteEntry,
 } from "./visibility";
 import { isTileCoveredByOtherMap } from "../world/worldLayout";
+import { renderDungeonFloor } from "./dungeonFloor";
 
 function waitForNextFrame(): Promise<void> {
     return new Promise((resolve) => {
@@ -454,8 +455,8 @@ export function renderTileLayer(
         }
     }
 
-    sprite.x = Math.round(sprite.x);
-    sprite.y = Math.round(sprite.y);
+    sprite.x = Math.round(sprite.x + Number(graphicData.offset?.x ?? 0));
+    sprite.y = Math.round(sprite.y + Number(graphicData.offset?.y ?? 0));
     sprite.zIndex = zIndex;
 
     registerCullEntry(engine, sprite, "scene");
@@ -634,7 +635,8 @@ export async function syncTileObjectVisual(
         return;
     }
 
-    await loadTextures(engine, [grhIndex.toString()]);
+    const dungeonFloor = objIndex === 1842 || objIndex === 1843;
+    if (!dungeonFloor) await loadTextures(engine, [grhIndex.toString()]);
 
     if (
         isStaleRender() ||
@@ -659,7 +661,7 @@ export async function syncTileObjectVisual(
         return;
     }
 
-    const sprite = params.renderTileLayer(
+    const sprite = dungeonFloor ? renderDungeonFloor(engine, objIndex === 1843, mapNumber, x, y) : params.renderTileLayer(
         engine,
         canUseEngineContainer,
         Number(grhIndex),
@@ -670,6 +672,11 @@ export async function syncTileObjectVisual(
         "bottom",
         mapNumber,
     );
+    if (dungeonFloor && sprite) {
+        sprite.zIndex = getRowZIndex(y, Z_INDEX_LAYERS.OBJECT);
+        registerCullEntry(engine, sprite, "scene");
+        objectLayerContainer.addChild(sprite);
+    }
 
     if (isStaleRender()) {
         if (sprite) {

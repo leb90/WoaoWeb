@@ -42,6 +42,7 @@ El piso (`graficos.piso`) es un bloque de 4 × 4.
 - **Una pared vertical entre dos salas es entera de una sola: la primera a la que se llega** desde la entrada o desde la escalera del mapa anterior. Se ve con su cara hacia esa sala y el borde contra la otra. Su puerta lateral usa la misma versión y abre hacia esa sala. Las dos cosas las hace el generador (`sharedWallSide`).
   - *Error que evita:* el borde quedaba en el medio de la pared y la puerta quedaba al revés.
   - Las paredes horizontales no tienen este problema: "Horizontal Superior" e "Inferior" son el mismo dibujo, con el borde arriba (vista de tres cuartos).
+  - En las uniones en T, el borde del muro vertical continúa en la misma columna por encima y por debajo del encuentro.
 - **Las puertas metidas en una pared, y el pasillo que la cruza con ellas, cuentan como pared al dibujar.** La pared sigue de largo y el dibujo de la puerta tapa el pasillo.
   - *Error que evita:* alrededor de cada puerta se armaba un marco de caras que cruzaba la pared.
 - **Las piezas traen unos 7 px transparentes del lado de la sala.** Se corren hacia la sala para que la pared toque el piso, y el otro lado se completa con el reflejo del borde.
@@ -57,6 +58,7 @@ El piso (`graficos.piso`) es un bloque de 4 × 4.
   - *Error que evita:* `require("./dungeons").x` daba undefined y rompía el `renderItem` de todo el juego.
 - **Al entrar a un mapa, los objetos llegan en `areaItemsSnapshot`, no en `renderItem`.** La traducción de la piel tiene que estar en los dos.
 - **Las puertas laterales van giradas 90° a propósito,** para encajar con las paredes: miden 3 de ancho y 2 de alto.
+  - Su índice lleva un desplazamiento vertical de 16 px para centrar la abertura en la baldosa de paso; el renderizador respeta el `offset` del gráfico.
   - Abiertas también se ven (`puertaAbierta`), no desaparecen.
   - Cada una tiene versión izquierda y derecha (ver el punto de la pared entre dos salas).
 - **Las animaciones de una sola vez** (el cofre que se abre, el aplastador) llevan `unaVez` en el gráfico, que es `"u":1` en el índice compacto. Si no, se repiten en bucle.

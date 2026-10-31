@@ -29,6 +29,7 @@
   ]
  },
  "oro": 300,
+ "pozosCubiertos": [590],
  "trampa": [
   9835,
   9835
@@ -531,6 +532,7 @@
    "abierto": "cofreJefeAbriendose"
   },
   "puertas": {
+   "bomba": "puertaReja",
    "abierta": "puertaAbierta",
    "sala": "puertaSala",
    "llave": "puertaLlave",

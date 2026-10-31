@@ -6,6 +6,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { EntityId, RuntimeCharacter, RuntimeClient } from "./types/runtime";
+import { pickTrapTiles } from "./dungeonHazardLogic";
 
 export {};
 
@@ -124,15 +125,13 @@ const WATCHERS_TTL_MS = 500;
 const READ_RANGE = 2;
 const DOOR_RANGE = 2;
 const WATER_MESSAGE_MS = 2_000;
-// Piso que se desmorona: se cae un instante después de pisarlo caminando (un paso tarda 200 ms; corriendo, 55) y
-// vuelve a los 5 s.
-const CRUMBLE_DELAY_MS = 150;
+// El piso abierto vuelve a cubrirse a los cinco segundos.
 const CRUMBLE_RESTORE_MS = 5_000;
 // Placa con tiempo: abre las puertas con tiempo del mapa por 3 s.
 const TIMED_DOOR_MS = 3_000;
-// Aplastadores: bajan 0,6 s de cada 2 s y sacan el 15 % de la vida al que agarran.
-const CRUSHER_CYCLE_MS = 2_000;
-const CRUSHER_DOWN_MS = 600;
+// Aplastadores: bajan al pisarlos y sacan el 15 % de la vida al que agarran.
+const CRUSHER_DOWN_MS = 450;
+const CRUSHER_UP_MS = 500;
 const CRUSHER_DAMAGE = 0.15;
 // Estatuas que despiertan: a esta distancia de un jugador.
 const WAKE_RADIUS = 2;
@@ -304,9 +303,11 @@ type MapState = {
     // Puertas que se tienen que cerrar pero tenían a alguien encima: se cierran apenas queden libres.
     pendingClose: Set<string>;
     brokenCrystals: Set<string>;
-    // Piso que se desmorona: cuándo se cae cada baldosa pisada y cuándo vuelve cada una caída.
-    crumbling: Map<string, number>;
+    // Baldosas agrietadas y momento en que se repone cada hueco abierto.
+    cracked: Set<string>;
     collapsed: Map<string, number>;
+    crusherTiles: Set<string>;
+    activeCrushers: Map<string, { until: number; rising: boolean }>;
     // Hasta cuándo están abiertas las puertas con tiempo (0: cerradas).
     timedUntil: number;
     litTorches: Set<string>;
@@ -355,7 +356,6 @@ type DungeonRun = {
     nextBurnAt: Map<string, number>;
     hazardTimer: ReturnType<typeof setInterval> | null;
     lavaActive: boolean;
-    crusherDown: boolean;
     // Criaturas en pareja: por grupo, las que siguen vivas (si muere una y la otra sigue viva, la revive).
     pairs: Map<string, Set<string>>;
     // Jefe que flota hasta que lo bajan con la Carrera.
@@ -874,7 +874,6 @@ function createRun(def: DungeonDef, group: boolean, playerCount: number): Dungeo
         nextBurnAt: new Map(),
         hazardTimer: null,
         lavaActive: false,
-        crusherDown: false,
         pairs: new Map(),
         floatingBoss: null,
         hiddenExits: new Map(),
@@ -896,6 +895,16 @@ function createRun(def: DungeonDef, group: boolean, playerCount: number): Dungeo
         if (index) hideExits(run, mapId, index);
     }
     runs.set(run.id, run);
+    for (const mapId of Object.values(run.maps)) {
+        const ctx = contextOf(mapId);
+        if (ctx) {
+            for (const key of ctx.index.fragile) {
+                const { x, y } = parseCoord(key);
+                setObject(mapId, x, y, 0);
+            }
+            initializeCrushers(ctx);
+        }
+    }
     // Las criaturas especiales se registran con la corrida armada: el rodillo y el Ciempiés buscan su sala.
     for (const mapId of Object.values(run.maps)) {
         for (const npc of Object.values(vars.npcs ?? {}) as any[]) {
@@ -1281,8 +1290,10 @@ function createMapState(index: MapIndex): MapState {
         solvedPlateRooms: new Set(),
         pendingClose: new Set(),
         brokenCrystals: new Set(),
-        crumbling: new Map(),
+        cracked: new Set(),
         collapsed: new Map(),
+        crusherTiles: new Set(),
+        activeCrushers: new Map(),
         timedUntil: 0,
         litTorches: new Set([...index.torches.values()].filter((torch) => torch.encendida).map((torch) => coordKey(torch.x, torch.y))),
         solvedTorchRooms: new Set(),
@@ -1907,7 +1918,10 @@ export function afterStep(ws: RuntimeClient, user: RuntimeCharacter) {
         ctx.run.nextBurnAt.set(key, now + LAVA_BURST_BURN_MS);
         hurt(user, LAVA_BURST_DAMAGE, "La erupción te quema:", LAVA_FX);
     }
-    crumbleLater(ctx, tileKey);
+    if (!require("./dungeonMotion").isAirborne(user)) {
+        if (stepOnFragileFloor(ws, user, ctx, tileKey)) return;
+        triggerCrusher(ctx, tileKey);
+    }
     if (ctx.index.timedPlates.has(tileKey)) pressTimedPlate(ctx, tileKey);
     updatePlates(ctx);
     // Los imitadores de la sala copian el paso, al revés.
@@ -1963,12 +1977,6 @@ export function getWaterStepDeniedReason(user: RuntimeCharacter, destinationIsWa
     if (now - (lastWaterMessageAt.get(key) ?? 0) < WATER_MESSAGE_MS) return "";
     lastWaterMessageAt.set(key, now);
     return "El agua es muy profunda: necesitás las Patas de rana.";
-}
-
-// Nadando no se pelea.
-export function getSwimBlockReason(user: RuntimeCharacter | undefined): string | null {
-    if (!user || !isDungeonInstanceMap(user.map)) return null;
-    return getGame().hayAgua(Number(user.map), user.pos) ? "Nadando no podés atacar ni lanzar hechizos." : null;
 }
 
 // Bloqueo actual de las baldosas que cambian en la corrida (para la foto del área), o null si la baldosa no cambia.
@@ -2031,7 +2039,7 @@ function tickRun(run: DungeonRun) {
             if (now < restoreAt || isOccupied(ctx.mapId, parseCoord(key).x, parseCoord(key).y)) continue;
             ctx.state.collapsed.delete(key);
             const { x, y } = parseCoord(key);
-            setObject(ctx.mapId, x, y, OBJ.pisoRajado);
+            setObject(ctx.mapId, x, y, 0);
         }
     }
     updateCrushers(run, now);
@@ -2290,7 +2298,7 @@ export function isHazard(mapId: number, x: number, y: number): boolean {
         ctx.index.pits.has(key) ||
         ctx.index.lava.has(key) ||
         ctx.index.lavaPeriodica.has(key) ||
-        ctx.index.crushers.has(key) ||
+        ctx.state.crusherTiles.has(key) ||
         ctx.state.collapsed.has(key) ||
         ctx.state.openedPits.has(key)
     );
@@ -2582,9 +2590,10 @@ export function bombBlast(mapId: number, x: number, y: number): number {
 export function canToolHitNpc(
     npc: { id?: EntityId; map?: number; hp?: number; attackable?: number | boolean; dormant?: boolean } | undefined,
     source?: string,
+    attacker?: RuntimeCharacter,
 ): boolean {
     if (!npc || Number(npc.hp ?? 0) <= 0 || !npc.attackable) return false;
-    return !getNpcInvulnerableReason(npc, undefined, source);
+    return !getNpcInvulnerableReason(npc, attacker, source);
 }
 
 // Una sala está a oscuras del todo si tiene antorchas y ninguna está encendida (los fantasmas no se dejan tocar).
@@ -2599,6 +2608,7 @@ function isRoomDarkAt(mapId: number, pos: { x: number; y: number }): boolean {
 // retrocede): la empuja. Devuelve true si el golpe ya quedó resuelto así.
 export function onNpcStruck(npc: any, attacker: RuntimeCharacter): boolean {
     if (!npc || !isDungeonInstanceMap(npc.map)) return false;
+    if (getNpcWaterDeniedReason(npc, attacker)) return false;
     // El Genio metido en la botella: el golpe aturde la botella.
     if (require("./dungeonGrotto").onNpcStruck(npc)) return true;
     // Los hechiceros del Santuario del Rostro: el golpe solo los empuja.
@@ -2617,7 +2627,10 @@ export function getNpcInvulnerableReason(
     attacker?: RuntimeCharacter,
     source?: string,
 ): string | null {
-    if (!npc || !isDungeonInstanceMap(npc.map)) return null;
+    if (!npc) return null;
+    const waterDenied = getNpcWaterDeniedReason(npc, attacker, source);
+    if (waterDenied) return waterDenied;
+    if (!isDungeonInstanceMap(npc.map)) return null;
     const template = templateOf(npc as { templateNpcIndex?: number });
     if (template.fantasma && npc.pos && isRoomDarkAt(Number(npc.map), npc.pos)) return "El fantasma se escurre en la oscuridad: encendé una antorcha.";
     if (template.orejudo && !(source && THROWN_SOURCES.has(source))) {
@@ -2647,6 +2660,20 @@ export function getNpcInvulnerableReason(
     const boss = runOfMap(Number(npc.map))?.floatingBoss;
     if (boss && boss.npcId === String(npc.id) && Date.now() >= boss.stunnedUntil) {
         return `${npc.nameCharacter ?? "El jefe"} flota fuera de tu alcance: hacelo caer.`;
+    }
+    return null;
+}
+
+// El agua no puede usarse como una barrera que solo protege al jugador.
+export function getNpcWaterDeniedReason(
+    npc: { map?: number; pos?: { x: number; y: number } } | undefined,
+    attacker?: RuntimeCharacter,
+    source?: string,
+): string | null {
+    if (!npc || (!isDungeonInstanceMap(npc.map) && !isDungeonBaseMap(npc.map)) || !npc.pos || !getGame().hayAgua(Number(npc.map), npc.pos)) return null;
+    if (source === "bomba") return "Las bombas no dañan a las criaturas bajo el agua.";
+    if (attacker && (Number(attacker.map) !== Number(npc.map) || !getGame().hayAgua(Number(attacker.map), attacker.pos))) {
+        return "Tenés que estar en el agua para atacar a esa criatura.";
     }
     return null;
 }
@@ -2717,22 +2744,21 @@ function releaseEmptyRoom(ctx: MapContext, roomId: number) {
     }
 }
 
-// Piso que se desmorona: se cae un instante después de pisarlo (corriendo o saltando se pasa antes).
-function crumbleLater(ctx: MapContext, key: string) {
-    if (!ctx.index.fragile.has(key) || ctx.state.collapsed.has(key) || ctx.state.crumbling.has(key)) return;
-    ctx.state.crumbling.set(key, Date.now() + CRUMBLE_DELAY_MS);
-    setTimeout(() => {
-        if (!runs.has(ctx.run.id)) return;
-        ctx.state.crumbling.delete(key);
-        ctx.state.collapsed.set(key, Date.now() + CRUMBLE_RESTORE_MS);
-        const { x, y } = parseCoord(key);
-        setObject(ctx.mapId, x, y, OBJ.hueco);
-        playSoundAt(ctx.mapId, { x, y }, DUNGEON_SOUNDS.derrumbe);
-        const user = playerAt(ctx.mapId, x, y) as (RuntimeCharacter & { dungeonMotion?: { tipo: string; until: number } | null }) | null;
-        const airborne = user?.dungeonMotion && user.dungeonMotion.until > Date.now();
-        const client = user ? (vars.clients?.[user.id] as RuntimeClient | undefined) : undefined;
-        if (user && client && !airborne && !(user as { dead?: boolean }).dead) fallIntoPit(client, user, ctx);
-    }, CRUMBLE_DELAY_MS);
+// Una pisada agrieta el piso; la segunda abre el pozo y hace caer al jugador.
+function stepOnFragileFloor(ws: RuntimeClient, user: RuntimeCharacter, ctx: MapContext, key: string): boolean {
+    if (!ctx.index.fragile.has(key) || ctx.state.collapsed.has(key)) return false;
+    const { x, y } = parseCoord(key);
+    if (!ctx.state.cracked.has(key)) {
+        ctx.state.cracked.add(key);
+        setObject(ctx.mapId, x, y, OBJ.pisoRajado);
+        return false;
+    }
+    ctx.state.cracked.delete(key);
+    ctx.state.collapsed.set(key, Date.now() + CRUMBLE_RESTORE_MS);
+    setObject(ctx.mapId, x, y, OBJ.hueco);
+    playSoundAt(ctx.mapId, { x, y }, DUNGEON_SOUNDS.derrumbe);
+    fallIntoPit(ws, user, ctx);
+    return true;
 }
 
 // Placa con tiempo: abre las puertas con tiempo del mapa por unos segundos.
@@ -2770,26 +2796,51 @@ function closeTimedDoors(ctx: MapContext) {
     }
 }
 
-// Aplastadores: bajan a la vez en toda la corrida.
+function initializeCrushers(ctx: MapContext) {
+    const byRoom = new Map<number, number>();
+    for (const key of ctx.index.crushers) {
+        const room = ctx.index.mech.roomOf[key];
+        if (room !== undefined) byRoom.set(room, (byRoom.get(room) ?? 0) + 1);
+        const { x, y } = parseCoord(key);
+        setObject(ctx.mapId, x, y, 0);
+    }
+    for (const [room, count] of byRoom) {
+        const candidates = Object.entries(ctx.index.mech.roomOf).filter(([key, id]) => {
+            if (id !== room || ctx.index.fragile.has(key) || ctx.index.pits.has(key) || ctx.index.lava.has(key) || ctx.index.lavaPeriodica.has(key)) return false;
+            const { x, y } = parseCoord(key);
+            const tile = vars.mapa[ctx.mapId]?.[y]?.[x];
+            return tile && !tile.blocked && !tile.objInfo && !tile.tileExit && !isOccupied(ctx.mapId, x, y) && !getGame().hayAgua(ctx.mapId, { x, y });
+        }).map(([key]) => key);
+        for (const key of pickTrapTiles(candidates, count)) ctx.state.crusherTiles.add(key);
+    }
+}
+
+function triggerCrusher(ctx: MapContext, key: string) {
+    if (!ctx.state.crusherTiles.has(key) || ctx.state.activeCrushers.has(key)) return;
+    ctx.state.activeCrushers.set(key, { until: Date.now() + CRUSHER_DOWN_MS, rising: false });
+    const pos = parseCoord(key);
+    setObject(ctx.mapId, pos.x, pos.y, OBJ.aplastador);
+    playSoundAt(ctx.mapId, pos, DUNGEON_SOUNDS.aplastador);
+}
+
+// Solo se animan las trampas que alguien pisó; se daña únicamente al que sigue en esa baldosa al impacto.
 function updateCrushers(run: DungeonRun, now: number) {
-    const down = (now - run.createdAt) % CRUSHER_CYCLE_MS < CRUSHER_DOWN_MS;
-    if (down === run.crusherDown) return;
-    run.crusherDown = down;
     for (const mapId of Object.values(run.maps)) {
         const ctx = contextOf(mapId);
-        if (!ctx || !ctx.index.crushers.size) continue;
-        const watched = playersInside(run).some((user) => Number(user.map) === mapId);
-        if (!watched) continue;
-        for (const key of ctx.index.crushers) {
+        if (!ctx) continue;
+        for (const [key, active] of ctx.state.activeCrushers) {
+            if (now < active.until) continue;
             const { x, y } = parseCoord(key);
-            setObject(mapId, x, y, down ? OBJ.aplastador : OBJ.losaAplastador);
-            if (!down) continue;
-            const user = playerAt(mapId, x, y);
-            if (user) hurt(user, CRUSHER_DAMAGE, "Te agarró un aplastador:");
-        }
-        if (down) {
-            const first = parseCoord(ctx.index.crushers.values().next().value!);
-            playSoundAt(mapId, first, DUNGEON_SOUNDS.aplastador);
+            if (active.rising) {
+                setObject(mapId, x, y, 0);
+                ctx.state.activeCrushers.delete(key);
+            } else {
+                const user = playerAt(mapId, x, y);
+                if (user && !require("./dungeonMotion").isAirborne(user)) hurt(user, CRUSHER_DAMAGE, "Te agarró un aplastador:");
+                setObject(mapId, x, y, OBJ.losaAplastador);
+                active.rising = true;
+                active.until = now + CRUSHER_UP_MS;
+            }
         }
     }
 }
@@ -3228,6 +3279,7 @@ module.exports = {
     breakCrystal,
     onDashImpact,
     getNpcInvulnerableReason,
+    getNpcWaterDeniedReason,
     canPassOneWay,
     getOneWayDeniedReason,
     wakeIfPlayerNear,
@@ -3243,7 +3295,6 @@ module.exports = {
     handleMapClick,
     canSwim,
     getWaterStepDeniedReason,
-    getSwimBlockReason,
     getDynamicBlocked,
     isObjectRemoved,
     onLeftParty,

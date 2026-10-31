@@ -11,6 +11,18 @@ import type { HoverRelation } from "@/components/game/rendering/hoverHighlight";
 // (--cursor-juego-presionado) y el prohibido en los botones deshabilitados.
 export type GameCursor = "normal" | "clic" | "enemigo" | "amigo" | "apuntar";
 
+// Las mismas URLs de globals.css. El layout las precarga: el navegador baja un cursor recién la primera vez que lo
+// usa y, mientras tanto, muestra la flecha del sistema.
+export const CURSOR_URLS = [
+    "/cursors/guantelete.png?v=2",
+    "/cursors/guantelete-oro.png?v=2",
+    "/cursors/guantelete-presionado.png?v=2",
+    "/cursors/guantelete-rojo.png?v=2",
+    "/cursors/guantelete-azul.png?v=2",
+    "/cursors/cruceta.png?v=2",
+    "/cursors/prohibido.png?v=2",
+];
+
 export const GAME_CURSOR_CSS: Record<GameCursor, string> = {
     normal: "var(--cursor-juego)",
     clic: "var(--cursor-juego-clic)",

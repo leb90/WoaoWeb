@@ -138,6 +138,8 @@ type InventoryFloatingPanelProps = {
     compactSettings?: boolean;
     // Salir del juego (desconecta con la espera de /salir y vuelve al home).
     onLogoutRequest?: () => void;
+    // Arena (todos contra todos): los accesos del mundo abierto quedan deshabilitados.
+    arenaMode?: boolean;
     auctionPanel?: React.ReactNode;
     onOpenAuctionHouse?: () => void;
     onCloseAuctionHouse?: () => void;
@@ -426,7 +428,9 @@ const HOVER_DELAY_MS = 450;
 const DOUBLE_ACTIVATE_WINDOW_MS = 240;
 const MINIMAP_PREVIEW_SIZE = 100;
 const HUD_ACTION_BUTTON_CLASS =
-    "inline-flex min-h-[24px] min-w-0 items-center justify-center gap-0.5 rounded-sm border border-[#6a5132] bg-[linear-gradient(180deg,#3a2a1c_0%,#1a120c_100%)] px-1.5 text-[9px] font-semibold uppercase tracking-[0.04em] text-[#f0e0c4] shadow-[inset_0_1px_0_rgba(255,220,180,0.12)] transition hover:border-[#c49a62] hover:text-amber-50";
+    "inline-flex min-h-[24px] min-w-0 items-center justify-center gap-0.5 rounded-sm border border-[#6a5132] bg-[linear-gradient(180deg,#3a2a1c_0%,#1a120c_100%)] px-1.5 text-[9px] font-semibold uppercase tracking-[0.04em] text-[#f0e0c4] shadow-[inset_0_1px_0_rgba(255,220,180,0.12)] transition hover:border-[#c49a62] hover:text-amber-50 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:border-[#6a5132] disabled:hover:text-[#f0e0c4]";
+// En la Arena los accesos del mundo abierto (tienda, party, misiones, castillos...) no se usan.
+const ARENA_DISABLED_CLASS = "disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:brightness-100";
 const CASTLE_HUD_ENTRIES = [
     { id: "norte", short: "N", label: "Norte", command: "/castillo norte" },
     { id: "sur", short: "S", label: "Sur", command: "/castillo sur" },
@@ -867,12 +871,18 @@ function ActiveMountHud({
 function CastleHud({
     onSendCommand,
     castleState,
+    disabled = false,
 }: {
     onSendCommand?: (message: string) => void;
     castleState?: PlayerHudState["castleState"];
+    disabled?: boolean;
 }) {
     return (
-        <div className="flex w-[104px] shrink-0 items-end justify-end gap-0.5">
+        <div
+            className={`flex w-[104px] shrink-0 items-end justify-end gap-0.5 ${
+                disabled ? "opacity-35" : ""
+            }`}
+        >
             {CASTLE_HUD_ENTRIES.map((entry) => {
                 const isFortress = entry.id === "fortaleza";
                 const underAttack = Boolean(
@@ -884,7 +894,8 @@ function CastleHud({
                         key={entry.id}
                         type="button"
                         onClick={() => onSendCommand?.(entry.command)}
-                        className="group flex w-5 shrink-0 flex-col items-center gap-0.5 text-[8px] font-semibold text-[#d7c4a4] transition hover:text-amber-100"
+                        disabled={disabled}
+                        className="group flex w-5 shrink-0 flex-col items-center gap-0.5 text-[8px] font-semibold text-[#d7c4a4] transition hover:text-amber-100 disabled:pointer-events-none"
                         title={entry.label}
                         aria-label={entry.label}
                     >
@@ -1359,6 +1370,7 @@ export default function InventoryFloatingPanel({
     openSettingsRequest,
     compactSettings = false,
     onLogoutRequest,
+    arenaMode = false,
     auctionPanel,
     onOpenAuctionHouse,
     onCloseAuctionHouse,
@@ -1588,7 +1600,9 @@ export default function InventoryFloatingPanel({
     >(null);
     const hoverTimerRef = React.useRef<number | null>(null);
     const spellListRef = React.useRef<HTMLDivElement | null>(null);
-    const spellListScrollTopRef = React.useRef(0);
+    // En la Arena los hechizos van en los últimos casilleros (como en argentumonline.io): la lista arranca al final.
+    const spellListScrollTopRef = React.useRef(arenaMode ? Number.MAX_SAFE_INTEGER : 0);
+    const arenaSpellsTabOpenedRef = React.useRef(false);
     const skipNextSpellDoubleClickRef = React.useRef(false);
     const heldUseItemTimerRef = React.useRef<number | null>(null);
     const heldUseItemKeyRef = React.useRef<string | null>(null);
@@ -2739,6 +2753,16 @@ export default function InventoryFloatingPanel({
         window.addEventListener("mouseup", handleMouseUp);
         return () => window.removeEventListener("mouseup", handleMouseUp);
     }, [isSpellListDragging]);
+
+    // En la Arena, quien tiene hechizos entra con la pestaña de hechizos abierta, lista para pelear.
+    React.useEffect(() => {
+        if (!arenaMode || arenaSpellsTabOpenedRef.current || spells.length === 0) {
+            return;
+        }
+
+        arenaSpellsTabOpenedRef.current = true;
+        setActiveTab("spells");
+    }, [arenaMode, spells.length]);
 
     React.useEffect(() => {
         if (activeTab !== "spells") {
@@ -4008,7 +4032,8 @@ export default function InventoryFloatingPanel({
                                 <button
                                     type="button"
                                     onClick={openTransmog}
-                                    className="inline-flex min-h-[26px] items-center justify-center gap-1.5 rounded-sm border border-fuchsia-300/45 bg-[linear-gradient(180deg,#3d1f45_0%,#1a0f1d_100%)] px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-fuchsia-50 shadow-[inset_0_1px_0_rgba(255,200,255,0.14)] transition hover:border-fuchsia-200/80 hover:text-white"
+                                    disabled={arenaMode}
+                                    className={`inline-flex min-h-[26px] items-center justify-center gap-1.5 rounded-sm border border-fuchsia-300/45 bg-[linear-gradient(180deg,#3d1f45_0%,#1a0f1d_100%)] px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-fuchsia-50 shadow-[inset_0_1px_0_rgba(255,200,255,0.14)] transition hover:border-fuchsia-200/80 hover:text-white ${ARENA_DISABLED_CLASS} disabled:hover:border-fuchsia-300/45 disabled:hover:text-fuchsia-50`}
                                 >
                                     <Sparkles className="h-3.5 w-3.5 text-fuchsia-200" />
                                     Transfigurar
@@ -4016,7 +4041,8 @@ export default function InventoryFloatingPanel({
                                 <button
                                     type="button"
                                     onClick={openShop}
-                                    className="inline-flex min-h-[26px] items-center justify-center gap-1.5 rounded-sm border border-amber-300/60 bg-[linear-gradient(180deg,#6b4614_0%,#2a1a08_100%)] px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-amber-50 shadow-[inset_0_1px_0_rgba(255,230,170,0.18)] transition hover:border-amber-200 hover:text-white"
+                                    disabled={arenaMode}
+                                    className={`inline-flex min-h-[26px] items-center justify-center gap-1.5 rounded-sm border border-amber-300/60 bg-[linear-gradient(180deg,#6b4614_0%,#2a1a08_100%)] px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-amber-50 shadow-[inset_0_1px_0_rgba(255,230,170,0.18)] transition hover:border-amber-200 hover:text-white ${ARENA_DISABLED_CLASS} disabled:hover:border-amber-300/60 disabled:hover:text-amber-50`}
                                 >
                                     <ShoppingBag className="h-3.5 w-3.5 text-amber-200" />
                                     Tienda
@@ -4062,6 +4088,7 @@ export default function InventoryFloatingPanel({
                                             key={action.label}
                                             type="button"
                                             onClick={action.onClick}
+                                            disabled={arenaMode}
                                             className={HUD_ACTION_BUTTON_CLASS}
                                         >
                                             {action.icon}
@@ -4074,12 +4101,18 @@ export default function InventoryFloatingPanel({
                                 <CastleHud
                                     onSendCommand={onSendCommand}
                                     castleState={hud?.castleState}
+                                    disabled={arenaMode}
                                 />
-                                <ActiveMountHud
-                                    mount={activeMount}
-                                    objectsDB={objectsDB}
-                                    graphicsDB={graphicsDB}
-                                />
+                                <div
+                                    className={`contents ${arenaMode ? "[&>*]:opacity-35" : ""}`}
+                                    aria-disabled={arenaMode || undefined}
+                                >
+                                    <ActiveMountHud
+                                        mount={activeMount}
+                                        objectsDB={objectsDB}
+                                        graphicsDB={graphicsDB}
+                                    />
+                                </div>
                             </div>
                         </section>
                     </div>
@@ -4725,7 +4758,11 @@ export default function InventoryFloatingPanel({
                                                     setIsSettingsOpen(false);
                                                     action.onClick();
                                                 }}
-                                                className="flex h-10 items-center justify-center gap-1 rounded-xl border border-amber-300/20 bg-black/30 px-1 text-[11px] font-semibold text-amber-50"
+                                                disabled={
+                                                    arenaMode &&
+                                                    action.label !== "Mapa"
+                                                }
+                                                className={`flex h-10 items-center justify-center gap-1 rounded-xl border border-amber-300/20 bg-black/30 px-1 text-[11px] font-semibold text-amber-50 ${ARENA_DISABLED_CLASS}`}
                                             >
                                                 {action.icon}
                                                 {action.label}

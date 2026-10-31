@@ -1404,6 +1404,8 @@ function Login(this: LoginApi) {
             for (const name of ARENA_SKILLS) {
                 skillValues[skills.SKILLS[name] - 1] = ARENA_SKILL_VALUE;
             }
+            // Sin puntos para repartir: el "+" del nivel no tiene sentido en la arena.
+            Object.assign(newCharacter, { skillPts: 0 });
             game.refreshEquipmentVitals(newCharacter, false);
             newCharacter.hp = newCharacter.maxHp;
             newCharacter.mana = newCharacter.maxMana;

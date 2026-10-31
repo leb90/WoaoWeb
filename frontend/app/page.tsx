@@ -172,6 +172,17 @@ function HeroVideoModal({ onClose }: { onClose: () => void }) {
 
 export default function HomePage() {
     const [logoLoaded, setLogoLoaded] = useState(false);
+    // Distancia del hero al borde de arriba de la página: en tablets y celulares la barra de navegación va antes.
+    const [heroTop, setHeroTop] = useState(0);
+    const heroRef = useCallback((hero: HTMLElement | null) => {
+        if (!hero) {
+            return;
+        }
+        const measure = () => setHeroTop(Math.round(hero.getBoundingClientRect().top + window.scrollY));
+        measure();
+        window.addEventListener("resize", measure);
+        return () => window.removeEventListener("resize", measure);
+    }, []);
     const [videoOpen, setVideoOpen] = useState(false);
     const closeVideo = useCallback(() => setVideoOpen(false), []);
     const { session, loading } = useAuthRedirect({
@@ -195,7 +206,10 @@ export default function HomePage() {
         <main className="min-h-screen overflow-y-auto bg-[#050302] text-stone-100">
             {heroLogoPreload}
             {/* ---------- HERO ---------- */}
-            <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4 pb-24 pt-12 md:pt-24">
+            <section
+                ref={heroRef}
+                className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4 pb-36 pt-12 md:pb-24 md:pt-24"
+            >
                 <div
                     className="absolute inset-0 bg-cover bg-center"
                     style={{ backgroundImage: `url(${HERO_BACKGROUND_IMAGE})` }}
@@ -213,8 +227,8 @@ export default function HomePage() {
                         MMORPG 2D &middot; Gratis &middot; En tu navegador
                     </p>
 
-                    {/* El logo toma el alto que sobra (470 px son el resto del hero), así "Jugar gratis" y "Ver video"
-                        entran sin scrollear en notebooks; en pantallas altas queda en su tamaño de siempre. */}
+                    {/* El logo toma el alto que sobra (470 px son el resto del hero), así "Jugar gratis" entra sin
+                        scrollear en notebooks; en pantallas altas queda en su tamaño de siempre. */}
                     <div className="relative mt-8 flex w-full max-w-2xl justify-center">
                         <Image
                             src={HERO_LOGO}
@@ -256,17 +270,21 @@ export default function HomePage() {
                             <Swords className="h-4 w-4 text-amber-200" />
                             Entrar a la arena
                         </Link>
-
-                        <button
-                            type="button"
-                            onClick={() => setVideoOpen(true)}
-                            className="group inline-flex items-center gap-2 rounded-[4px] border border-white/25 bg-white/5 px-9 py-3.5 text-sm font-semibold uppercase tracking-[0.2em] text-stone-100 backdrop-blur-sm transition hover:border-amber-200/50 hover:bg-white/10"
-                        >
-                            <Play className="h-4 w-4 text-amber-200" />
-                            Ver video
-                        </button>
                     </div>
                 </div>
+
+                {/* En la esquina de abajo de la primera pantalla (no del hero, que en notebooks es más alto y lo dejaba
+                    fuera de la vista). En celulares queda al pie del hero, arriba de "Descubrí más", porque al final de
+                    la primera pantalla están los botones. */}
+                <button
+                    type="button"
+                    onClick={() => setVideoOpen(true)}
+                    style={{ "--hero-top": `${heroTop}px` } as React.CSSProperties}
+                    className="absolute bottom-24 right-6 z-10 md:bottom-auto md:top-[calc(100svh-5rem-var(--hero-top))] inline-flex items-center gap-2 rounded-full border border-amber-200/25 bg-black/45 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-stone-300 backdrop-blur-sm transition hover:border-amber-200/50 hover:text-amber-200"
+                >
+                    <Play className="h-3.5 w-3.5" />
+                    Ver video
+                </button>
 
                 <div className="absolute bottom-8 flex flex-col items-center gap-2 text-amber-100/50">
                     <span className="text-[10px] uppercase tracking-[0.4em]">Descubrí más</span>

@@ -285,7 +285,7 @@ export default function RankingView({
             <main className="min-h-screen overflow-y-auto bg-[#050302] px-4 py-12 text-stone-100">
                 <div className="mx-auto max-w-4xl rounded-[32px] border border-white/8 bg-stone-950/80 p-8 text-center shadow-2xl backdrop-blur-md">
                     <p className="text-[11px] uppercase tracking-[0.34em] text-amber-200/75">
-                        AOWeb
+                        World of Argentum
                     </p>
                     <h1 className="mt-3 text-3xl font-semibold text-white">
                         Ranking

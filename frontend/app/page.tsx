@@ -2,10 +2,20 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 import { MessageCircle, Sparkles, Swords, Users, X as XIcon } from "lucide-react";
 import { useAuthRedirect } from "../hooks/useAuthRedirect";
 
+// Logo del inicio ya achicado al doble de su ancho máximo en pantalla (672 px): el PNG original pesa 2,4 MB y tardaba
+// en aparecer. Se precarga desde que llega la página, mientras se chequea la sesión, y entra con un fundido.
+// (`preload()` de react-dom no sale en el HTML desde un componente cliente; el <link> sí, React lo sube al <head>.)
+const HERO_LOGO = "/static/imgs/woaoicon-hero.webp";
+const heroLogoPreload = (
+    <link rel="preload" as="image" href={HERO_LOGO} fetchPriority="high" />
+);
+
 export default function HomePage() {
+    const [logoLoaded, setLogoLoaded] = useState(false);
     const { session, loading } = useAuthRedirect({
         redirectTo: "/login",
         when: "unauthenticated",
@@ -15,6 +25,7 @@ export default function HomePage() {
     if (loading || !session) {
         return (
             <main className="flex min-h-screen items-center justify-center bg-[#050302] px-4 text-stone-100">
+                {heroLogoPreload}
                 <div className="rounded-[10px] border border-amber-200/15 bg-black/60 px-6 py-5 text-sm tracking-wide text-stone-300 shadow-2xl backdrop-blur-md">
                     Cargando inicio...
                 </div>
@@ -24,6 +35,7 @@ export default function HomePage() {
 
     return (
         <main className="min-h-screen overflow-y-auto bg-[#050302] text-stone-100">
+            {heroLogoPreload}
             {/* ---------- HERO ---------- */}
             <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4 py-24">
                 <div
@@ -44,12 +56,17 @@ export default function HomePage() {
 
                     <div className="relative mt-8 w-full max-w-2xl">
                         <Image
-                            src="/static/imgs/woaoicon.png"
+                            src={HERO_LOGO}
                             alt="World of Argentum Online"
-                            width={1536}
-                            height={1024}
-                            priority
-                            className="w-full drop-shadow-[0_0_45px_rgba(0,0,0,0.65)]"
+                            width={1344}
+                            height={896}
+                            unoptimized
+                            loading="eager"
+                            fetchPriority="high"
+                            onLoad={() => setLogoLoaded(true)}
+                            className={`w-full drop-shadow-[0_0_45px_rgba(0,0,0,0.65)] transition-opacity duration-500 ${
+                                logoLoaded ? "opacity-100" : "opacity-0"
+                            }`}
                         />
                     </div>
 
@@ -144,64 +161,37 @@ export default function HomePage() {
 
             {/* ---------- DE QUE SE TRATA ---------- */}
             <section className="relative mx-auto max-w-4xl px-4 py-20">
-                <SectionHeading eyebrow="De qué se trata" title="AOWeb Beta" />
+                <SectionHeading eyebrow="De qué se trata" title="World of Argentum" />
 
                 <div className="relative mt-12 space-y-6 rounded-[6px] border border-amber-200/12 bg-black/40 p-6 text-[15px] leading-8 text-stone-300 shadow-2xl backdrop-blur-sm md:p-10">
                     <p>
-                        AOWeb es un proyecto que aun está en Beta, es
-                        probable que tenga varios errores y salió de
-                        varios años como ex jugador de querer armar un
-                        AO pero que funcione 100% en web y fluido, este
-                        proyecto lo hice hace unos 12 años pero hoy las
-                        tecnologías son otras y se puede tener un AO que
-                        ande fluido en web y ese es mi objetivo.
+                        World of Argentum es un MMORPG 2D de fantasía clásica
+                        que se juega gratis desde el navegador, en la compu o
+                        en el celular, sin descargar nada.
                     </p>
 
                     <p>
-                        Actualmente faltan muchas funciones que las voy
-                        a ir agregando día a día hasta que podamos tener
-                        un juego solido, vamos a tener sonidos,
-                        carpinteria, poder ordenar hechizos/items, todo
-                        lo necesario para una mejor jugabilidad.
+                        Hay mundo abierto con clanes, guerras de facciones y
+                        eventos, mazmorras con acertijos y jefes, y una Arena
+                        todos contra todos para pelear al toque.
                     </p>
 
                     <p>
-                        Cualquier tipo de feedback o reporte de bug es
-                        bienvenido, me lo pueden mandar a mi Twitter:{" "}
-                        <a
-                            href="https://x.com/DamianCatanzaro"
-                            target="_blank"
-                            rel="noreferrer"
-                            className="font-medium text-amber-300 underline decoration-amber-300/50 underline-offset-4 transition hover:text-amber-200 hover:decoration-amber-200"
-                        >
-                            @DamianCatanzaro
-                        </a>
-                    </p>
-
-                    <p>
-                        Tambien pueden ingresar al Discord para recibir
-                        novedades:{" "}
+                        Las{" "}
+                        <Link href="/updates" prefetch={false} className="font-medium text-amber-300 underline decoration-amber-300/50 underline-offset-4 transition hover:text-amber-200 hover:decoration-amber-200">
+                            novedades
+                        </Link>{" "}
+                        salen seguido. Para reportar errores o sugerir cambios,
+                        sumate a nuestro{" "}
                         <a
                             href="https://discord.gg/YpJ9XrMdg"
                             target="_blank"
                             rel="noreferrer"
                             className="font-medium text-amber-300 underline decoration-amber-300/50 underline-offset-4 transition hover:text-amber-200 hover:decoration-amber-200"
                         >
-                            unirse al Discord
+                            Discord
                         </a>
-                    </p>
-
-                    <p>
-                        O pueden enviar con mas detalle a este Form de
-                        Google:{" "}
-                        <a
-                            href="https://forms.gle/Df2cmGExTBjjJhAR8"
-                            target="_blank"
-                            rel="noreferrer"
-                            className="font-medium text-amber-300 underline decoration-amber-300/50 underline-offset-4 transition hover:text-amber-200 hover:decoration-amber-200"
-                        >
-                            abrir formulario
-                        </a>
+                        .
                     </p>
                 </div>
             </section>
@@ -223,27 +213,39 @@ export default function HomePage() {
                             label="Discord"
                             icon={<MessageCircle className="h-5 w-5" />}
                         />
-                        <SocialIconLink
-                            href="https://x.com/DamianCatanzaro"
-                            label="X / Twitter"
-                            icon={<XIcon className="h-5 w-5" />}
-                        />
-                        <SocialIconLink
-                            href="https://forms.gle/Df2cmGExTBjjJhAR8"
-                            label="Formulario de feedback"
-                            icon={<Sparkles className="h-5 w-5" />}
-                        />
+                    </div>
+
+                    <div className="mt-6 flex items-center gap-6 text-xs font-semibold uppercase tracking-[0.18em]">
+                        <Link
+                            href="/updates"
+                            prefetch={false}
+                            className="text-amber-200/75 transition hover:text-amber-100"
+                        >
+                            Novedades
+                        </Link>
+                        <Link
+                            href="/wiki"
+                            className="text-amber-200/75 transition hover:text-amber-100"
+                        >
+                            Wiki oficial
+                        </Link>
                     </div>
 
                     <p className="mt-10 text-xs tracking-wide text-stone-500">
-                        World of Argentum Online &middot; Proyecto de fans, sin fines de lucro
+                        World of Argentum &middot; Proyecto de fans, sin fines de lucro
                     </p>
-                    <Link
-                        href="/wiki"
-                        className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-amber-200/75 transition hover:text-amber-100"
-                    >
-                        Wiki oficial
-                    </Link>
+                    <p className="mt-2 inline-flex items-center gap-1.5 text-xs tracking-wide text-stone-500">
+                        Créditos al proyecto original de
+                        <a
+                            href="https://x.com/DamianCatanzaro"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 font-semibold text-stone-300 transition hover:text-amber-100"
+                        >
+                            <XIcon className="h-3 w-3" />
+                            @DamianCatanzaro
+                        </a>
+                    </p>
                 </div>
             </section>
         </main>

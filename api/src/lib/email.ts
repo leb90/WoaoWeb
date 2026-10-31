@@ -55,7 +55,7 @@ function buildPasswordResetHtml({ displayName, resetUrl }: PasswordResetEmailInp
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;background:#111827;border:1px solid rgba(255,255,255,0.08);border-radius:28px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.45);">
             <tr>
               <td style="padding:28px 28px 20px;background:radial-gradient(circle at top,#f59e0b33,transparent 55%),linear-gradient(135deg,#1c1917,#0f172a);">
-                <div style="font-size:11px;letter-spacing:0.34em;text-transform:uppercase;color:#fde68a;opacity:0.85;">AOWeb</div>
+                <div style="font-size:11px;letter-spacing:0.34em;text-transform:uppercase;color:#fde68a;opacity:0.85;">World of Argentum</div>
                 <h1 style="margin:14px 0 8px;font-size:30px;line-height:1.2;color:#fafaf9;">Recupera tu acceso</h1>
                 <p style="margin:0;font-size:15px;line-height:1.7;color:#d6d3d1;">Hola ${safeName}, recibimos un pedido para cambiar la contraseña de tu cuenta.</p>
               </td>
@@ -90,7 +90,7 @@ function buildPasswordResetText({ displayName, resetUrl }: PasswordResetEmailInp
   return [
     `Hola ${displayName},`,
     "",
-    "Recibimos un pedido para cambiar la password de tu cuenta de AOWeb.",
+    "Recibimos un pedido para cambiar la password de tu cuenta de World of Argentum.",
     "",
     "Abre este link para elegir una nueva password:",
     resetUrl,
@@ -111,7 +111,7 @@ export async function sendPasswordResetEmail(input: PasswordResetEmailInput): Pr
     Content: {
       Simple: {
         Subject: {
-          Data: "AOWeb | Recuperacion de contraseña",
+          Data: "World of Argentum | Recuperación de contraseña",
           Charset: "UTF-8",
         },
         Body: {

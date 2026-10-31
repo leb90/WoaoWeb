@@ -1,8 +1,8 @@
-# AOWeb
+# World of Argentum
 
-Proyecto creado por Damián Catanzaro.
+MMORPG 2D de fantasía clásica que se juega en el navegador.
 
-X: [@DamianCatanzaro](https://x.com/DamianCatanzaro)
+Créditos al proyecto original de Damián Catanzaro ([@DamianCatanzaro](https://x.com/DamianCatanzaro)).
 
 ## Requisitos
 

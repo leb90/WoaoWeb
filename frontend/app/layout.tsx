@@ -44,8 +44,8 @@ export const metadata: Metadata = {
         template: "%s | World of Argentum",
     },
     description: siteDescription,
-    authors: [{ name: "Damian Catanzaro" }],
-    creator: "Damian Catanzaro",
+    authors: [{ name: "World of Argentum" }],
+    creator: "World of Argentum",
     publisher: "World of Argentum",
     category: "games",
     formatDetection: {

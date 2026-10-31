@@ -49,12 +49,12 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+ssh://git@github.com:dcatanzaro/argentumonlineweb-cliente.git"
+        "url": "git+https://github.com/leb90/WoaoWeb.git"
     },
-    "author": "Damián Catanzaro",
+    "author": "World of Argentum",
     "license": "ISC",
     "bugs": {
-        "url": "https://github.com/dcatanzaro/argentumonlineweb-servidor/issues"
+        "url": "https://github.com/leb90/WoaoWeb/issues"
     },
-    "homepage": "https://github.com/dcatanzaro/argentumonlineweb-servidor/blob/master/README.md"
+    "homepage": "https://github.com/leb90/WoaoWeb#readme"
 }

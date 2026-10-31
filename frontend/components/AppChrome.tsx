@@ -104,10 +104,10 @@ export default function AppChrome({ children }: AppChromeProps) {
                             className="h-9 w-9"
                         />
                         <span
-                            className="text-xl tracking-[0.08em] text-stone-100"
+                            className="whitespace-nowrap text-base tracking-[0.08em] text-stone-100 sm:text-xl"
                             style={{ fontFamily: "var(--font-cinzel)" }}
                         >
-                            World of AO
+                            World of Argentum
                         </span>
                     </Link>
 

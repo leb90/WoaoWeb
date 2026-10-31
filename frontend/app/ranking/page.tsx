@@ -10,9 +10,9 @@ export const revalidate = 300;
 export const metadata: Metadata = buildPageMetadata({
     title: "Ranking de jugadores",
     description:
-        "Consulta el ranking publico de AOWeb y segui a los mejores jugadores por nivel o kills.",
+        "Consultá el ranking público de World of Argentum y seguí a los mejores jugadores por nivel o kills.",
     path: "/ranking",
-    keywords: ["ranking AOWeb", "top kills", "top nivel"],
+    keywords: ["ranking World of Argentum", "top kills", "top nivel"],
 });
 
 async function getRanking(): Promise<RankingPageData> {

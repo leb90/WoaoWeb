@@ -201,12 +201,10 @@ const RETOS_ERROR_MESSAGES = new Set([
     "No puedes aceptar tu propio reto.",
 ]);
 const CONSOLE_DISCORD_URL = "https://discord.gg/YpJ9XrMdg";
-const CONSOLE_FEEDBACK_FORM_URL = "https://forms.gle/Df2cmGExTBjjJhAR8";
 const WELCOME_CONSOLE_MESSAGES = {
     discord:
-        "Bienvenido a AOWeb. Si quieres enterarte de las últimas actualizaciones del juego, puedes ingresar a nuestro Discord.",
-    feedback:
-        "- Si quieres reportar erorres o sugerir cambios, puedes hacerlo en: https://forms.gle/Df2cmGExTBjjJhAR8",
+        "Bienvenido a World of Argentum. Si querés enterarte de las últimas novedades del juego, podés entrar a nuestro Discord.",
+    feedback: "- Si querés reportar errores o sugerir cambios, escribinos en el Discord.",
     rules: "- Está completamente prohibido el uso de personajes cámara, cheats o cualquier programa externo que modifique el juego, como auto tomar pociones o auto removerse. El uso de los mismos terminará en un ban permanente, sin previo aviso.",
 } as const;
 const CONSOLE_COLOR_TAG_PATTERN =
@@ -623,7 +621,11 @@ function buildChatMessageForTab(
 }
 
 function renderConsoleEntryText(text: string) {
-    if (text === WELCOME_CONSOLE_MESSAGES.discord) {
+    // Los dos mensajes de bienvenida terminan en "Discord.": esa palabra es el link.
+    if (
+        text === WELCOME_CONSOLE_MESSAGES.discord ||
+        text === WELCOME_CONSOLE_MESSAGES.feedback
+    ) {
         const suffix = "Discord";
         const prefix = text.slice(0, -`${suffix}.`.length);
 
@@ -639,25 +641,6 @@ function renderConsoleEntryText(text: string) {
                     {suffix}
                 </a>
                 .
-            </>
-        );
-    }
-
-    if (text === WELCOME_CONSOLE_MESSAGES.feedback) {
-        const url = CONSOLE_FEEDBACK_FORM_URL;
-        const prefix = text.slice(0, -url.length);
-
-        return (
-            <>
-                {prefix}
-                <a
-                    href={url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="break-all font-semibold text-sky-300 underline underline-offset-2 hover:text-sky-200"
-                >
-                    {url}
-                </a>
             </>
         );
     }

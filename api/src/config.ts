@@ -98,7 +98,7 @@ const config: Config = {
   sesAccessKeyId: process.env.SES_ACCESS_KEY_ID?.trim() || null,
   sesSecretAccessKey: process.env.SES_SECRET_ACCESS_KEY?.trim() || null,
   sesFromEmail: process.env.SES_FROM_EMAIL?.trim() || null,
-  sesFromName: process.env.SES_FROM_NAME?.trim() || "AOWeb",
+  sesFromName: process.env.SES_FROM_NAME?.trim() || "World of Argentum",
   gameDataAdminEmail: (process.env.GAME_DATA_ADMIN_EMAIL?.trim() || "").toLowerCase(),
   gameDataAdminAccountId: process.env.GAME_DATA_ADMIN_ACCOUNT_ID?.trim() || null,
   gameDataAdminProxyToken: process.env.GAME_DATA_ADMIN_PROXY_TOKEN?.trim() || null,

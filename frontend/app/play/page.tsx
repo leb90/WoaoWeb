@@ -4548,6 +4548,7 @@ function HomeContent() {
                                     openSettingsRequest={openSettingsRequest}
                                     compactSettings={isMobile}
                                     onLogoutRequest={handleLogoutRequest}
+                                    arenaMode={arenaMode}
                                 />
                             </div>
                         </ScaledHudFrame>

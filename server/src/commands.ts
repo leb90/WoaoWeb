@@ -3918,7 +3918,7 @@ const command: CommandApi = {
                         break;
                     }
 
-                    if (!user.dead && (user.paralizado || user.inmovilizado)) {
+                    if (!user.dead && !user.arenaFfa && (user.paralizado || user.inmovilizado)) {
                         handleProtocol.console(
                             "[Servidor] No puedes salir mientras estás paralizado o inmovilizado.",
                             "#E69500",
@@ -3929,7 +3929,8 @@ const command: CommandApi = {
                         break;
                     }
 
-                    if (user.dead || userInSafeZone) {
+                    // Muerto, en zona segura o en la Arena (que es para pelear y no guarda nada) se sale de una.
+                    if (user.dead || userInSafeZone || user.arenaFfa) {
                         handleProtocol.console(LOGOUT_CLOSING_MESSAGE, "#E69500", 0, 0, ws as CommandClient);
                         await game.closeForce(clientId);
                         break;

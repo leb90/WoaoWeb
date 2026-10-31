@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
-import { ARENA_CLASSES, buildArenaTemplate, getArenaClass } from "./arenaClasses";
+import { ARENA_CLASSES, ARENA_SPELL_SLOTS, buildArenaTemplate, getArenaClass } from "./arenaClasses";
 
 const root = path.resolve(__dirname, "../..");
 const readJson = (relativePath: string) => JSON.parse(fs.readFileSync(path.join(root, relativePath), "utf8"));
@@ -103,4 +103,43 @@ test("la plantilla lleva el equipo puesto, pociones y una cabeza de la raza", ()
     assert.deepEqual(warrior.spells, {});
 
     assert.equal(buildArenaTemplate(5), null, "el ladrón no es una clase de la arena");
+});
+
+// Pedido de Leandro, como en argentumonline.io: de abajo para arriba van Remover Parálisis (el último de todos),
+// Paralizar, el hechizo más poderoso, el que le sigue y la curación más poderosa, con los que la clase tenga.
+test("de abajo para arriba: remover, paralizar, los dos más fuertes y la mejor curación", () => {
+    const REMOVER = 10;
+    const PARALIZAR = 9;
+    const average = (spell: Record<string, number>) => (Number(spell.minHp) + Number(spell.maxHp)) / 2;
+
+    for (const arenaClass of ARENA_CLASSES) {
+        const list = arenaClass.hechizos.map((id) => ({ id, ...spells[String(id)] }));
+        const paralyze =
+            list.find((spell) => spell.id === PARALIZAR) ?? list.find((spell) => Number(spell.paraliza) === 1);
+        const strongest = list
+            .filter((spell) => Number(spell.subeHp) === 2)
+            .sort((left, right) => average(right) - average(left))
+            .slice(0, 2);
+        const bestHeal = list
+            .filter((spell) => Number(spell.subeHp) === 1)
+            .sort((left, right) => average(right) - average(left))[0];
+        const fromBottom = [list.find((spell) => spell.id === REMOVER), paralyze, ...strongest, bestHeal]
+            .filter((spell) => spell)
+            .map((spell) => spell!.id);
+        const expected = [...fromBottom].reverse();
+
+        assert.deepEqual(arenaClass.hechizos.slice(-expected.length), expected, arenaClass.nombre);
+    }
+});
+
+test("los hechizos van en los últimos casilleros, como en argentumonline.io", () => {
+    const mage = buildArenaTemplate(1);
+    assert.ok(mage);
+    const slots = Object.keys(mage.spells).map(Number);
+    const hechizos = getArenaClass(1)?.hechizos ?? [];
+
+    assert.equal(Math.max(...slots), ARENA_SPELL_SLOTS);
+    assert.equal(Math.min(...slots), ARENA_SPELL_SLOTS - hechizos.length + 1);
+    assert.equal(mage.spells[String(ARENA_SPELL_SLOTS)].idSpell, hechizos[hechizos.length - 1]);
+    assert.equal(mage.spells[String(ARENA_SPELL_SLOTS)].idSpell, 10, "Remover Parálisis queda en el último casillero");
 });

@@ -55,15 +55,16 @@ body {
 }
 
 /* Cursores del juego (lib/gameCursors.ts): el guantelete de itsmars (CC0) con borde de color según a quién señala, y
-   la cruceta y el prohibido de Kenney (CC0) repintados con el mismo acero. Créditos en docs/CREDITOS_GRAFICOS.md. */
+   la cruceta y el prohibido de Kenney (CC0) repintados con el mismo acero. Créditos en docs/CREDITOS_GRAFICOS.md.
+   El layout los precarga (CURSOR_URLS) y se sirven con caché larga: si cambia un archivo, subir el ?v= acá y allá. */
 :root {
-    --cursor-juego: url("/cursors/guantelete.png") 2 2, default;
-    --cursor-juego-clic: url("/cursors/guantelete-oro.png") 2 2, pointer;
-    --cursor-juego-presionado: url("/cursors/guantelete-presionado.png") 2 2, pointer;
-    --cursor-juego-enemigo: url("/cursors/guantelete-rojo.png") 2 2, default;
-    --cursor-juego-amigo: url("/cursors/guantelete-azul.png") 2 2, default;
-    --cursor-juego-apuntar: url("/cursors/cruceta.png") 16 16, crosshair;
-    --cursor-juego-prohibido: url("/cursors/prohibido.png") 16 16, not-allowed;
+    --cursor-juego: url("/cursors/guantelete.png?v=2") 2 2, default;
+    --cursor-juego-clic: url("/cursors/guantelete-oro.png?v=2") 2 2, pointer;
+    --cursor-juego-presionado: url("/cursors/guantelete-presionado.png?v=2") 2 2, pointer;
+    --cursor-juego-enemigo: url("/cursors/guantelete-rojo.png?v=2") 2 2, default;
+    --cursor-juego-amigo: url("/cursors/guantelete-azul.png?v=2") 2 2, default;
+    --cursor-juego-apuntar: url("/cursors/cruceta.png?v=2") 16 16, crosshair;
+    --cursor-juego-prohibido: url("/cursors/prohibido.png?v=2") 16 16, not-allowed;
 }
 
 /* En todo el sitio (inicio, creación de personaje, wiki y el juego): lo que se puede clickear muestra el borde dorado

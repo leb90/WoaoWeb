@@ -10,8 +10,8 @@ import { MENU_MUSIC, MusicPlaylist } from "../lib/worldMusic";
 // aparte del volumen de música del juego (que arranca al 10%); el botón la silencia y se recuerda.
 
 const MUTED_STORAGE_KEY = "ao-menu-music-muted";
-// El video de fondo del inicio avisa con este evento (detail: true/false) cuando se escucha con sonido: mientras
-// tanto la música se pausa.
+// El inicio avisa con este evento (detail: true/false) cuando se abre y se cierra la ventana del video con sonido:
+// mientras tanto la música se pausa.
 export const HERO_VIDEO_SOUND_EVENT = "woao:hero-video-sound";
 const MENU_MUSIC_VOLUME = 0.3;
 const HOME_ROUTES = new Set(["/", "/login", "/register", "/characters"]);

@@ -4,7 +4,7 @@ Gráficos que no son del Argentum original y que se usan en el juego. Los CC-BY 
 
 ## Cursores del juego
 
-`frontend/public/cursors/`, aplicados en `frontend/lib/gameCursors.ts` y `frontend/app/globals.css`. El guantelete brillante es la base; las variantes con borde se armaron pintando sobre él el contorno de las variantes oscuras del mismo pack.
+`frontend/public/cursors/`. Con mouse los dibuja la página (`frontend/components/DrawnCursor.tsx`, que sigue al mouse con el cursor del sistema oculto); sin mouse o sin JavaScript quedan las reglas de `frontend/app/globals.css`. El lienzo del juego elige el suyo en `frontend/lib/gameCursors.ts`. El guantelete brillante es la base; las variantes con borde se armaron pintando sobre él el contorno de las variantes oscuras del mismo pack.
 
 | Archivo | Uso en el juego | Original | Autor | Licencia |
 |---|---|---|---|---|

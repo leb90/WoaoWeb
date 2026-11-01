@@ -71,9 +71,17 @@ export function cursorForHoverRelation(relation: HoverRelation | null): GameCurs
     }
 }
 
+// El cursor dibujado (components/DrawnCursor.tsx) lee el que corresponde de data-cursor y se entera de los cambios con
+// este evento: el lienzo cambia de cursor aunque el mouse no se mueva (pasa alguien por debajo).
+export const GAME_CURSOR_EVENT = "woao:cursor";
+
 // Se llama en cada cuadro: solo toca el DOM cuando el cursor cambia.
 export function setElementCursor(element: HTMLElement | null | undefined, cursor: GameCursor) {
     if (!element) return;
     const value = GAME_CURSOR_CSS[cursor];
     if (element.style.cursor !== value) element.style.cursor = value;
+    if (element.dataset.cursor !== cursor) {
+        element.dataset.cursor = cursor;
+        window.dispatchEvent(new Event(GAME_CURSOR_EVENT));
+    }
 }

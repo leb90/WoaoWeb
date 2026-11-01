@@ -1,13 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import CharacterPreviewPanel from "./character-creation/CharacterPreviewPanel";
 import ClassSelector from "./character-creation/ClassSelector";
 import CreationActions from "./character-creation/CreationActions";
 import DerivedStats from "./character-creation/DerivedStats";
 import FactionRaceSelector from "./character-creation/FactionRaceSelector";
 import { ClassInfoPanel, RaceInfoPanel } from "./character-creation/InfoPanels";
+import MobileCharacterCreator from "./character-creation/MobileCharacterCreator";
 import { cinzel, focusRing } from "./character-creation/styles";
 import type { AuthErrorResponse, AuthSession } from "../lib/auth";
 import {
@@ -70,6 +71,23 @@ function isRenderableBody(bodyId: number, bodiesDB: BodiesDB, graphicsDB: Graphi
     return Boolean(resolveGraphicFrame(graphicsDB, bodyData["2"]));
 }
 
+// Las tres columnas de escritorio necesitan unos 1000 px; en pantallas más angostas va MobileCharacterCreator.
+const DESKTOP_LAYOUT_QUERY = "(min-width: 1024px)";
+
+function subscribeDesktopLayout(onChange: () => void) {
+    const query = window.matchMedia(DESKTOP_LAYOUT_QUERY);
+    query.addEventListener("change", onChange);
+    return () => query.removeEventListener("change", onChange);
+}
+
+function useDesktopLayout() {
+    return useSyncExternalStore(
+        subscribeDesktopLayout,
+        () => window.matchMedia(DESKTOP_LAYOUT_QUERY).matches,
+        () => true,
+    );
+}
+
 function usePreviewScale() {
     const [scale, setScale] = useState(2.15);
 
@@ -101,6 +119,7 @@ export default function CreateCharacterView() {
         preserveRedirect: true,
     });
     const previewScale = usePreviewScale();
+    const desktopLayout = useDesktopLayout();
     const [creatingCharacter, setCreatingCharacter] = useState(false);
     const [newCharacterName, setNewCharacterName] = useState("");
     const [nameAttempted, setNameAttempted] = useState(false);
@@ -284,6 +303,41 @@ export default function CreateCharacterView() {
             setCreatingCharacter(false);
         }
     };
+
+    if (session && !desktopLayout) {
+        return (
+            <main className="bg-black px-3 py-2 text-[#eee5d3]">
+                <MobileCharacterCreator
+                    name={newCharacterName}
+                    nameError={nameError}
+                    onNameChange={setNewCharacterName}
+                    alianza={getAlianzaRaces()}
+                    horda={getHordaRaces()}
+                    race={selectedRaceOption}
+                    onSelectRace={setSelectedRace}
+                    gender={selectedGender}
+                    onSelectGender={setSelectedGender}
+                    headIds={availableHeadIds}
+                    headIndex={selectedHeadIndex}
+                    onSelectHead={setSelectedHeadIndex}
+                    heading={heading}
+                    onRotate={rotateHeading}
+                    preview={{ ...classPreview, headId: selectedHeadId, canRender: hasRenderableBody }}
+                    classes={characterClassOptions}
+                    selectedClass={selectedClass}
+                    onSelectClass={(key) => {
+                        setSelectedClass(key);
+                        setError(null);
+                    }}
+                    combat={combatPreview}
+                    creating={creatingCharacter}
+                    error={error}
+                    onBack={() => router.push("/characters")}
+                    onCreate={() => void createCharacter()}
+                />
+            </main>
+        );
+    }
 
     return (
         <main className="min-h-[calc(100dvh-7.5rem)] bg-black px-3 py-3 text-[#eee5d3] min-[1400px]:px-6">

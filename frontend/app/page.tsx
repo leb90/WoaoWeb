@@ -7,6 +7,7 @@ import { createPortal } from "react-dom";
 import { MessageCircle, Play, Sparkles, Swords, Users, X as XIcon } from "lucide-react";
 import { HERO_VIDEO_SOUND_EVENT } from "../components/MenuMusic";
 import { useAuthRedirect } from "../hooks/useAuthRedirect";
+import { warmGameCursors } from "../lib/gameCursors";
 
 // Logo del inicio ya achicado al doble de su ancho máximo en pantalla (672 px): el PNG original pesa 2,4 MB y tardaba
 // en aparecer. Se precarga desde que llega la página, mientras se chequea la sesión, y entra con un fundido.
@@ -24,6 +25,9 @@ const heroLogoPreload = (
 const HERO_BACKGROUND_IMAGE = "/static/imgs/background.jpg";
 const HERO_BACKGROUND_VIDEO = "/static/video/background-loop.mp4";
 const HERO_VIDEO_START_TIMEOUT_MS = 8000;
+// El video espera a que los cursores estén cargados (si no, con 3,7 MB bajando, aparece la flecha del sistema), pero
+// no más que esto.
+const HERO_VIDEO_CURSOR_WAIT_MS = 1500;
 const SLOW_CONNECTION_TYPES = new Set(["slow-2g", "2g", "3g"]);
 
 type NetworkInformationLike = { effectiveType?: string; saveData?: boolean };
@@ -53,16 +57,32 @@ function announceHeroVideoSound(on: boolean) {
 function HeroBackground({ paused }: { paused: boolean }) {
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const [enabled, setEnabled] = useState(canPlayHeroVideo);
+    const [cursorsReady, setCursorsReady] = useState(false);
     const [playing, setPlaying] = useState(false);
 
     useEffect(() => {
-        if (!enabled || playing) {
+        let cancelled = false;
+        const ready = () => {
+            if (!cancelled) {
+                setCursorsReady(true);
+            }
+        };
+        const timer = window.setTimeout(ready, HERO_VIDEO_CURSOR_WAIT_MS);
+        void warmGameCursors().then(ready);
+        return () => {
+            cancelled = true;
+            window.clearTimeout(timer);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!enabled || !cursorsReady || playing) {
             return;
         }
 
         const timer = window.setTimeout(() => setEnabled(false), HERO_VIDEO_START_TIMEOUT_MS);
         return () => window.clearTimeout(timer);
-    }, [enabled, playing]);
+    }, [enabled, cursorsReady, playing]);
 
     useEffect(() => {
         const background = videoRef.current;
@@ -76,7 +96,7 @@ function HeroBackground({ paused }: { paused: boolean }) {
         };
     }, [paused]);
 
-    if (!enabled) {
+    if (!enabled || !cursorsReady) {
         return null;
     }
 

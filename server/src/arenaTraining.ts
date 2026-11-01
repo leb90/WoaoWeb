@@ -277,8 +277,16 @@ function prepararPersonaje(id: EntityId, map: number, lugar: { x: number; y: num
     user.hp = Number(user.maxHp ?? user.hp);
     user.mana = Number(user.maxMana ?? user.mana);
     user.sta = Number(user.maxSta ?? user.sta ?? 0);
+    // La parálisis se saca igual que cuando se termina o con Remover: avisándole al cliente. Si no, el cliente sigue
+    // creyendo que está paralizado y no deja caminar (el server ya no la ve, así que tampoco la saca por tiempo).
+    const estabaQuieto = Boolean(user.paralizado || user.inmovilizado);
     user.paralizado = 0;
     user.inmovilizado = 0;
+    user.cooldownParalizado = 0;
+    handleProtocol.inmo(id, 0, client);
+    if (estabaQuieto) {
+        game.broadcastCharacterSnapshot(user);
+    }
     handleProtocol.updateHP(user.hp, client);
     handleProtocol.updateMana(user.mana, client);
 }

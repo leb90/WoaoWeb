@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Cinzel, Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
+import { preload } from "react-dom";
 import AppChrome from "@/components/AppChrome";
+import CursorWarmup from "@/components/CursorWarmup";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import {
     buildPageMetadata,
@@ -9,7 +11,7 @@ import {
     siteTitle,
     siteUrl,
 } from "@/lib/seo";
-import "./cursors.css";
+import { CURSOR_URLS } from "@/lib/gameCursors";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -89,6 +91,12 @@ export default function RootLayout({
 }: Readonly<{
     children: React.ReactNode;
 }>) {
+    // Los cursores van en el <head> desde el principio, con prioridad alta: si no, el primero de cada tipo aparece con
+    // la flecha del sistema. CursorWarmup los deja decodificados en memoria toda la visita.
+    for (const href of CURSOR_URLS) {
+        preload(href, { as: "image", fetchPriority: "high" });
+    }
+
     return (
         <html lang="es-AR" suppressHydrationWarning>
             <body
@@ -112,6 +120,7 @@ export default function RootLayout({
                     `}
                 </Script>
                 <ServiceWorkerRegistration />
+                <CursorWarmup />
                 <AppChrome>{children}</AppChrome>
             </body>
         </html>

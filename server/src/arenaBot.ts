@@ -85,6 +85,13 @@ type Memoria = {
     pasosTrabado: number;
     destino: Position | null;
     destinoHasta: number;
+    /** Esquivar: cuándo puede dar el próximo paso al costado y hacia dónde fue el último. */
+    proximaEsquivaAt: number;
+    ultimaEsquiva: number;
+    /** Rodear: el lado del rival al que va después de pegar, y hasta cuándo lo intenta. */
+    rodeo: Position | null;
+    rodeoHasta: number;
+    ultimoGolpeAt: number;
 };
 
 export type ArenaBot = {
@@ -318,6 +325,11 @@ function memoriaNueva(): Memoria {
         pasosTrabado: 0,
         destino: null,
         destinoHasta: 0,
+        proximaEsquivaAt: 0,
+        ultimaEsquiva: 0,
+        rodeo: null,
+        rodeoHasta: 0,
+        ultimoGolpeAt: 0,
     };
 }
 
@@ -677,6 +689,7 @@ function pensarGolpe(bot: ArenaBot, m: Mirada) {
     }
     paqueteGolpe(bot);
     bot.acciones.golpes += 1;
+    bot.memoria.ultimoGolpeAt = m.ahora;
     bot.memoria.proximoGolpeAt = m.ahora + intervalo("meleeMs") + demora(bot);
 }
 
@@ -692,6 +705,84 @@ function pensarDisparo(bot: ArenaBot, m: Mirada) {
 function caminable(map: number, propio: EntityId) {
     const game = getGame();
     return (x: number, y: number) => x >= 1 && y >= 1 && x <= 100 && y <= 100 && game.legalPos(x, y, map, false, propio);
+}
+
+function pasoDeCaminar() {
+    return Number(vars.timing?.walkStepMs ?? 200);
+}
+
+/** El lado del rival que queda a su espalda (al revés de hacia donde mira). */
+function espaldaDe(rival: RuntimeCharacter): Position {
+    const dir = DIRECCIONES.find((d) => d.heading === Number(rival.heading)) ?? DIRECCIONES[1]!;
+    return { x: rival.pos.x - dir.dx, y: rival.pos.y - dir.dy };
+}
+
+/**
+ * Después de pegar, a qué lado del rival ir: uno de los dos que quedan a dos pasos (en ángulo), así tiene que girar
+ * para devolverle el golpe. El asesino prefiere la espalda (apuñala más fuerte) y los erráticos a veces también.
+ */
+function elegirRodeo(bot: ArenaBot, m: Mirada): Position | null {
+    const libre = caminable(Number(m.yo.map), m.yo.id);
+    const aca = m.yo.pos;
+    const lados = DIRECCIONES.map((d) => ({ x: m.rival.pos.x + d.dx, y: m.rival.pos.y + d.dy })).filter(
+        (pos) => !(pos.x === aca.x && pos.y === aca.y) && libre(pos.x, pos.y),
+    );
+    const espalda = espaldaDe(m.rival);
+    const espaldaLibre = lados.find((pos) => pos.x === espalda.x && pos.y === espalda.y);
+    if (espaldaLibre && (Number(m.yo.idClase) === 4 || bot.random() < bot.perfil.erratico * 0.5)) {
+        return espaldaLibre;
+    }
+    const enAngulo = lados.filter((pos) => Math.abs(pos.x - aca.x) + Math.abs(pos.y - aca.y) === 2);
+    return enAngulo.length ? enAngulo[Math.floor(bot.random() * enAngulo.length)]! : null;
+}
+
+/**
+ * Un paso al costado mientras pelea a distancia, para que cueste apuntarle. Con poco de errático va y viene de un
+ * lado al otro (fácil de leer); con mucho elige al azar, encadena pasos o amaga volviendo enseguida.
+ */
+function esquivar(bot: ArenaBot, m: Mirada, banda: { min: number; max: number }): boolean {
+    const { memoria, perfil } = bot;
+    if (perfil.esquiva <= 0 || m.ahora < memoria.proximaEsquivaAt) {
+        return false;
+    }
+    if (bot.random() >= perfil.esquiva) {
+        memoria.proximaEsquivaAt = m.ahora + 250 + bot.random() * 350;
+        return false;
+    }
+
+    const libre = caminable(Number(m.yo.map), m.yo.id);
+    const rival = m.rival.pos;
+    const opciones = DIRECCIONES.filter((dir) => {
+        const pos = { x: m.yo.pos.x + dir.dx, y: m.yo.pos.y + dir.dy };
+        const d = distancia(pos, rival);
+        return libre(pos.x, pos.y) && d >= banda.min && d <= banda.max && loVe(pos, rival);
+    });
+    if (!opciones.length) {
+        memoria.proximaEsquivaAt = m.ahora + 300;
+        return false;
+    }
+
+    // De costado respecto de la línea con el rival.
+    const horizontal = Math.abs(rival.x - m.yo.pos.x) >= Math.abs(rival.y - m.yo.pos.y);
+    const costados = opciones.filter((dir) => (horizontal ? dir.dx === 0 : dir.dy === 0));
+    let elegida: (typeof DIRECCIONES)[number];
+    if (bot.random() < perfil.erratico) {
+        elegida = opciones[Math.floor(bot.random() * opciones.length)]!;
+    } else {
+        // Va y viene: el costado contrario al último paso.
+        const lista = costados.length ? costados : opciones;
+        elegida = lista.find((dir) => dir.heading !== memoria.ultimaEsquiva) ?? lista[0]!;
+    }
+
+    paqueteCaminar(bot, elegida.heading);
+    bot.acciones.pasos += 1;
+    memoria.ultimaEsquiva = elegida.heading;
+    // Los erráticos a veces encadenan otro paso enseguida; si no, una pausa más corta cuanto más erráticos.
+    const encadena = bot.random() < perfil.erratico * 0.5;
+    const pausa = encadena ? 0 : (700 - 450 * perfil.erratico) * (0.5 + bot.random());
+    memoria.proximaEsquivaAt = m.ahora + pasoDeCaminar() + pausa;
+    memoria.proximoPasoAt = m.ahora + pasoDeCaminar();
+    return true;
 }
 
 function pensarMovimiento(bot: ArenaBot, m: Mirada) {
@@ -719,21 +810,38 @@ function pensarMovimiento(bot: ArenaBot, m: Mirada) {
     }
 
     const enCruz = headingHacia(m.yo.pos, m.rival.pos) !== null;
-    if (bot.estilo === "cuerpoACuerpo" && enCruz) {
-        return;
+    if (memoria.rodeo && (m.ahora > memoria.rodeoHasta || (memoria.rodeo.x === m.yo.pos.x && memoria.rodeo.y === m.yo.pos.y))) {
+        memoria.rodeo = null;
+    }
+    if (bot.estilo === "cuerpoACuerpo" && enCruz && !memoria.rodeo) {
+        // Recién pegó: a veces se mueve a otro lado del rival para que tenga que girar.
+        const recienPego = m.ahora - memoria.ultimoGolpeAt < 300;
+        if (perfil.rodea && recienPego && bot.random() < perfil.esquiva * 0.7) {
+            memoria.rodeo = elegirRodeo(bot, m);
+            memoria.rodeoHasta = m.ahora + 1_500;
+        }
+        if (!memoria.rodeo) {
+            return;
+        }
     }
     if (bot.estilo !== "cuerpoACuerpo" && m.dist >= banda.min && m.dist <= banda.max && m.veoAlRival) {
         memoria.destino = null;
+        esquivar(bot, m, banda);
         return;
     }
 
     const rival = m.rival.pos;
+    const rodeo = memoria.rodeo;
     const puntaje = (pos: Position, pasos: number) => {
         const d = distancia(pos, rival);
+        if (rodeo) {
+            return (pos.x === rodeo.x && pos.y === rodeo.y ? 0 : 100 + (Math.abs(pos.x - rodeo.x) + Math.abs(pos.y - rodeo.y)) * 10) + pasos;
+        }
         if (bot.estilo === "cuerpoACuerpo") {
-            // Cualquier camino que llegue al lado le gana a acercarse en línea recta contra una pared.
+            // Cualquier camino que llegue al lado le gana a acercarse en línea recta contra una pared. Los erráticos no
+            // van en línea recta: zigzaguean para que cueste pararlos con un hechizo.
             const cruz = Math.abs(pos.x - rival.x) + Math.abs(pos.y - rival.y) === 1;
-            return (cruz ? 0 : 1000 + d * 10) + pasos;
+            return (cruz ? 0 : 1000 + d * 10) + pasos + bot.random() * perfil.erratico * 4;
         }
         const fuera = d < banda.min ? (banda.min - d) * 12 : d > banda.max ? (d - banda.max) * 10 : 0;
         const ve = loVe(pos, rival) ? 0 : 30;

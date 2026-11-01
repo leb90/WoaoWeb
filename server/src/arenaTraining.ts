@@ -705,6 +705,27 @@ export function initialize() {
     state.flushTimer = setInterval(() => void flushToApi(), API_FLUSH_MS);
 }
 
+/** Solo fuera de producción (server.ts, /debug/arena-bots/nivel): pasa las sesiones al nivel pedido y arranca la ronda. */
+export function setTrainingLevel(nivel: number, nombre?: string) {
+    let cambiadas = 0;
+    for (const sesion of state.sesiones.values()) {
+        if (nombre && sesion.nombre !== nombre) {
+            continue;
+        }
+        for (const timer of sesion.timers) {
+            clearTimeout(timer);
+        }
+        sesion.timers.clear();
+        sesion.nivel = Math.max(1, Math.floor(nivel));
+        sesion.ultimo = null;
+        if (sesion.bot) {
+            empezarRonda(sesion);
+            cambiadas += 1;
+        }
+    }
+    return cambiadas;
+}
+
 /** Para los tests y el comando de GM. */
 export function getSessions() {
     return [...state.sesiones.values()].map((sesion) => ({

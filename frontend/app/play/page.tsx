@@ -164,6 +164,21 @@ function readLandscapeRotation(): 90 | -90 | null {
     return null;
 }
 
+// iPhone con la app instalada (barra de estado translúcida), en vertical: innerHeight es el alto de la pantalla menos la
+// barra de estado (59 px en un iPhone 15 Pro), pero la página se dibuja desde el borde de arriba, debajo de la barra. La
+// vista girada quedaba con el reloj encima del joystick y una franja vacía abajo: se corre hacia abajo lo que mide la
+// barra. En horizontal iOS esconde la barra y no hace falta.
+function readStatusBarGap(viewportHeight: number): number {
+    const standalone = (window.navigator as Navigator & { standalone?: boolean }).standalone;
+    if (!standalone) {
+        return 0;
+    }
+
+    const screenLongSide = Math.max(window.screen?.width ?? 0, window.screen?.height ?? 0);
+    const gap = screenLongSide - viewportHeight;
+    return gap > 0 && gap <= 80 ? gap : 0;
+}
+
 function readStoredOrientationLock(): boolean {
     if (typeof window === "undefined") {
         return false;
@@ -1164,6 +1179,7 @@ function HomeContent() {
     const [viewport, setViewport] = useState({
         width: 0,
         height: 0,
+        statusBarGap: 0,
     });
     const lastConsoleEntryIdRef = useRef(0);
     const autoConnectKeyRef = useRef<string | null>(null);
@@ -1413,6 +1429,7 @@ function HomeContent() {
             setViewport({
                 width: window.innerWidth,
                 height: window.innerHeight,
+                statusBarGap: readStatusBarGap(window.innerHeight),
             });
 
             // Tras girar, iOS puede dejar la página desplazada unos px; con
@@ -3251,7 +3268,7 @@ function HomeContent() {
                           // como una app nativa bloqueada en landscape. Todo el
                           // HUD fijo vive adentro, así que rota junto con ella.
                           position: "fixed",
-                          top: "50%",
+                          top: `${viewport.statusBarGap + viewport.height / 2}px`,
                           left: "50%",
                           width: `${viewport.height}px`,
                           height: `${viewport.width}px`,

@@ -11,6 +11,7 @@ import React, {
     useMemo,
     useRef,
     useState,
+    useSyncExternalStore,
 } from "react";
 import { MapRenderer } from "../../components/game";
 import type { GroundItem } from "../../components/game/core/MapRendererCore";
@@ -5075,10 +5076,25 @@ function HomeContent() {
     );
 }
 
+const subscribeNothing = () => () => {};
+
+// El juego decide celular o escritorio en su primer render (useIsMobile, isStandaloneDisplayMode): se dibuja solo en
+// el cliente. Si no, el HTML del server, que no sabe qué pantalla hay, no coincide con el del celular al hidratar.
+function useIsClient() {
+    return useSyncExternalStore(
+        subscribeNothing,
+        () => true,
+        () => false,
+    );
+}
+
 export default function Home() {
+    const isClient = useIsClient();
+    const fallback = <main className="min-h-screen bg-black" />;
+
     return (
-        <Suspense fallback={<main className="min-h-screen bg-black" />}>
-            <HomeContent />
+        <Suspense fallback={fallback}>
+            {isClient ? <HomeContent /> : fallback}
         </Suspense>
     );
 }

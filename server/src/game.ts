@@ -4071,6 +4071,7 @@ export type GameApi = {
     depositBankGold: (idUser: EntityId, amount: number) => Promise<void>;
     withdrawBankGold: (idUser: EntityId, amount: number) => Promise<void>;
     persistCharacterSnapshot: (user: RuntimeCharacter, options?: CharacterSnapshotPersistOptions) => Promise<void>;
+    broadcastCharacterSnapshot: (user: GameCharacter | undefined) => void;
     refreshEquipmentVitals: (user: RuntimeCharacter, notify?: boolean) => boolean;
     getEquippedSetBonus: (user: RuntimeCharacter) => ReturnType<typeof tierSets.getEquippedSetBonus>;
     resistsParalysisBySet: (user: RuntimeCharacter | undefined) => boolean;
@@ -12563,6 +12564,9 @@ function Game(this: GameApi) {
     this.getEquippedSetBonus = function (user: RuntimeCharacter) {
         return getEquippedSetBonus(user as GameCharacter);
     };
+
+    // Reenvía el personaje a quienes lo ven (por ejemplo, después de sacarle una parálisis desde otro módulo).
+    this.broadcastCharacterSnapshot = broadcastCharacterSnapshot;
 
     this.persistCharacterSnapshot = async function (
         user: RuntimeCharacter,

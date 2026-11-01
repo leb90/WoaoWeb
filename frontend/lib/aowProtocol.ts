@@ -1350,6 +1350,23 @@ export interface ArenaStatePayload {
     muerte?: { asesino: string | null; perdidos: number } | null;
     /** Accesos rápidos de mobile de la clase (ids de hechizos e items), para ponerlos al entrar. */
     accesos?: { hechizos: number[]; items: number[] } | null;
+    /** Entrenamiento contra el bot (server/src/arenaTraining.ts); en el todos contra todos no viene. */
+    entrenamiento?: ArenaTrainingState | null;
+}
+
+export interface ArenaTrainingState {
+    /** Nivel del bot en la ronda actual (o en la próxima, entre rondas). */
+    nivel: number;
+    puntaje: number;
+    /** El mejor puntaje de la cuenta (o el de esta racha, si es mayor). */
+    record: number;
+    /** A cuántos niveles les ganó en esta racha. */
+    ganados: number;
+    idClaseBot: number;
+    estado: "preparando" | "peleando" | "entreRondas" | "perdiste";
+    /** Milisegundos hasta que arranca la ronda cuando salió el paquete (cuenta regresiva). */
+    empiezaEn: number;
+    ultimo: { tipo: "victoria" | "derrota"; nivel: number; puntos: number } | null;
 }
 
 export interface FactionWarStatePayload {

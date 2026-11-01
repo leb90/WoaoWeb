@@ -212,6 +212,17 @@ export type ArenaRankingEntry = {
     mejorRacha: number;
 };
 
+/** Mejor racha de una cuenta contra el bot de entrenamiento (server/src/arenaTraining.ts). */
+export type ArenaTrainingRankingEntry = {
+    nombre: string;
+    puntaje: number;
+    /** A cuántos niveles del bot le ganó en esa racha. */
+    nivel: number;
+    idClase: number;
+    idClaseBot: number;
+    fecha: string;
+};
+
 export type ArenaOverviewResponse = {
     enVivo: {
         jugadores: number;
@@ -219,6 +230,7 @@ export type ArenaOverviewResponse = {
         actualizado: string | null;
     };
     ranking: ArenaRankingEntry[];
+    entrenamiento?: ArenaTrainingRankingEntry[];
 };
 
 export type ArenaGameTicketResponse = {

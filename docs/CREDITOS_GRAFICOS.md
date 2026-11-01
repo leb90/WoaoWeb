@@ -173,3 +173,13 @@ Arte propio del equipo, hecho por Ezequiel para la Gruta del Abisal (`Recursos/M
 | `330049.png` | Paredes (cara norte, pared sur, oeste, este y las cuatro esquinas en L enteras, de 6 × 6) y piso | `graficos` de la misma leyenda |
 
 No se usaron los duplicados: `Esqueleto ataque.png.png` (va `Esqueleto Ataque.png`), las cuatro `Imagen de ChatGPT…` (los originales del murciélago y el calamar) y la carpeta vieja `Recursos/Dungeon/1/`. Faltan, para una próxima tanda: el agua profunda animada con sus orillas, el pozo, la pared rajada de las bombas, la piedra de invocación, la tortuga rodando y aturdida, y el Abisal saliendo a morder y el pez chico que llama.
+
+## Muñecos de entrenamiento de Nix
+
+`frontend/public/graphics/330050.png`, indexado por `server/src/scripts/applyTrainingDummiesData.ts` (cuerpos 600 y 601, gráficos 43265 a 43270). Ver [docs/MUNECOS_DE_ENTRENAMIENTO.md](MUNECOS_DE_ENTRENAMIENTO.md).
+
+| Archivo | Uso en el juego | Original | Autor | Licencia |
+|---|---|---|---|---|
+| `330050.png` | Muñeco quieto (cuerpo 600) y tambaleándose cuando le pegan (cuerpo 601, 4 cuadros) | "combat dummy", `lpc_entry/png/combat_dummy/BODY_animation.png` de *[LPC] Medieval fantasy character sprites*, https://opengameart.org/content/lpc-medieval-fantasy-character-sprites | Johannes Sjölund (wulax) | [OGA-BY 3.0](http://static.opengameart.org/OGA-BY-3.0.txt) (la página también ofrece CC-BY-SA 3.0 y GPL 3.0) |
+
+Cambios: sin reescalar (el muñeco mide 59 × 55, como un personaje con cabeza); el lienzo se recortó a 64 × 56 y se le sumaron 3 px abajo para que la base quede a la altura de los pies de los personajes. Los cuadros del golpe salen del giro original combinados con una inclinación por franjas: el tocón queda plantado y la parte de arriba se corre. No se cambiaron colores. OGA-BY pide nombrar al autor: va acá y en el PR.

@@ -385,6 +385,33 @@ function handleHttpRequest(request: any, response: any) {
         return;
     }
 
+    // Duelos de bot contra bot del entrenamiento de la arena, para medir la dificultad (arenaTraining.runBotDuel):
+    //   /debug/arena-bots/duelo?a=1&na=10&b=3&nb=10&n=4&ms=90000
+    if ((config.isTestDeployment || config.nodeEnv !== "production") && request.url?.startsWith("/debug/arena-bots/duelo")) {
+        const url = new URL(request.url, "http://localhost");
+        const numero = (name: string, fallback: number) => Number(url.searchParams.get(name) ?? fallback) || fallback;
+        const veces = Math.min(20, numero("n", 1));
+        const opciones = {
+            claseA: numero("a", 1),
+            nivelA: numero("na", 1),
+            claseB: numero("b", 3),
+            nivelB: numero("nb", 1),
+            maxMs: Math.min(180_000, numero("ms", 90_000)),
+        };
+        void Promise.all(Array.from({ length: veces }, () => require("./arenaTraining").runBotDuel(opciones)))
+            .then((resultados) => {
+                response.statusCode = 200;
+                response.setHeader("Content-Type", "application/json; charset=utf-8");
+                response.end(JSON.stringify({ opciones, resultados }));
+            })
+            .catch((error) => {
+                funct.dumpError(error);
+                response.statusCode = 500;
+                response.end(String(error));
+            });
+        return;
+    }
+
     if (config.isTestDeployment && request.url?.startsWith("/debug/population-bots")) {
         const url = new URL(request.url, "http://localhost");
         const action = url.searchParams.get("action");
@@ -1325,6 +1352,8 @@ createDynamicScheduler(
         const populationBotsTickStart = process.hrtime.bigint();
         populationBots.processPopulationBotTick(now);
         populationBotsTickSamplesMs.push(Number(process.hrtime.bigint() - populationBotsTickStart) / 1e6);
+        require("./arenaTraining").tick(now);
+        require("./trainingDummies").tick(now);
 
         if (now >= nextPlayerStatusTickAt) {
             processPlayerStatusTick(now);

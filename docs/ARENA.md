@@ -43,6 +43,37 @@ Reemplazó a las salas de arena (con contraseña, link y plantillas viejas), que
 
   La tabla `arena_stats` acumula kills y muertes, y guarda el mejor puntaje y la mejor racha de una partida. `/arenas` lo muestra como Salón de la fama (`GET /arenas`).
 
+## Entrenamiento contra el bot
+
+En `/arenas`, además de entrar al todos contra todos, se puede entrenar uno contra uno con un bot. Se elige la clase propia y la del bot. Pedido de Leandro: que el bot sea "muy bueno y no algo hecho así nomás", que suba de dificultad cada vez que le ganás y que los mejores puntajes queden en una lista.
+
+- **Dónde:** cada entrenamiento es una copia privada del mapa de la arena (`30000 + 115 × 50 + 1` a `+ 49`; la `+ 0` es el todos contra todos). El jugador y el bot tienen las mismas reglas de la arena (`arenaFfa`) y además `arenaEntrenamiento`. `arena.ts` le pasa sus conexiones, muertes y desconexiones a `server/src/arenaTraining.ts`.
+- **Rondas:** los dos aparecen a 7 baldosas, con la vida y el maná llenos. Hay una cuenta regresiva de 3 segundos en la que nadie se mueve ni pega: es el mismo bloqueo que las rondas de ranked (`rankedLockedUntil`), con el aviso "[Entrenamiento]".
+  - Si le ganás, sumás puntos, el bot sube un nivel y a los 2,5 segundos arranca la ronda siguiente.
+  - Si te gana, la racha se anota en el ranking y a los 5 segundos volvés a empezar del nivel 1.
+- **Puntaje** (`arenaTrainingRules.puntosPorVictoria`): ganarle al nivel N da 100 × N, más hasta la mitad de eso según la vida que te quedó.
+- **El bot** (`server/src/arenaBot.ts`) es un personaje de arena de verdad, con el equipo y los hechizos de su clase. Juega mandando los mismos paquetes que el cliente (caminar, girar, golpear, disparar, hechizos y pociones), así que el server le aplica las mismas reglas que a cualquiera: intervalos, maná, parálisis y visión.
+  - Según su clase pelea de cerca (guerrero, paladín, asesino, pirata), a distancia (arquero, cazador) o con hechizos (mago, clérigo, bardo, druida, chamán).
+  - Sabe sacarse la parálisis con Remover, tomar rojas y azules intercaladas, paralizar para que no lo alcancen o para alcanzar, mantener la distancia de tiro, curarse con hechizos, ponerse Fuerza y Celeridad y elegir el hechizo que remata.
+  - No ve a los invisibles y con ceguera no apunta.
+- **Dificultad** (`arenaTrainingRules.botProfile`):
+  - Del nivel 1 al 10 aprende a jugar:
+    - la reacción baja de 1,1 s a 0,15 s;
+    - la demora para usar cada intervalo baja de 0,7 s a 0,03 s;
+    - toma pociones antes y más seguido;
+    - comete menos errores;
+    - suma tácticas: paraliza desde el 2, mantiene la distancia desde el 3, se pone buffs desde el 4, combina desde el 5, elige el mejor hechizo desde el 6, vuelve a paralizar apenas lo sacás desde el 7 y se cura antes de estar bajo desde el 8.
+  - Desde el 11 juega igual y suma 8 % de vida y 4 % de daño por nivel, hasta +150 % y +80 %. El daño de más lo lee `game.ts` (`arenaBotDanoPct`), solo contra jugadores.
+  - En los duelos de prueba, el bot con 2 niveles más le gana al otro entre el 80 % y el 100 % de las veces, con magos y con guerreros.
+- **HUD:** el paquete `arenaState` trae `entrenamiento` (nivel, puntaje, récord, clase del bot, estado y cuenta regresiva). `ArenaScoreboard.tsx` lo muestra:
+  - como texto chico arriba a la derecha, o arriba al centro en mobile;
+  - con carteles en el centro para la cuenta regresiva, la ronda ganada y la derrota.
+- **Ranking:** al terminar una racha (o al salir), el server la manda a `POST /internal/arenas/entrenamiento`.
+  - La tabla `arena_training_records` guarda la mejor de cada cuenta: puntaje, niveles ganados y clases.
+  - `/arenas` la muestra en "Mejores contra el bot".
+  - El ticket de la arena lleva la clase del bot (`game_tickets.arena_bot_class_id`) y, al consumirlo, el récord de la cuenta.
+- **Duelos de prueba:** fuera de producción, `GET /debug/arena-bots/duelo?a=1&na=10&b=3&nb=8&n=5&ms=60000` en el server de juego hace pelear a dos bots. Los parámetros son la clase y el nivel de cada uno, cuántos duelos en paralelo y el tiempo máximo. Devuelve quién ganó, cuánto duró, la vida que les quedó y qué hizo cada uno.
+
 ## Clases
 
 Cada clase va con la raza que mejor le rinde según `docs/balance/RAZAS.md`. La excepción son mago y clérigo: van con Humano, porque Gnomo y Goblin son razas bajas y no pueden ponerse las túnicas, armaduras ni escudos de tier.
@@ -74,5 +105,5 @@ Los datos están en dos lugares que hay que cambiar juntos:
 3. Entrar a `/arenas`, elegir clase y "Entrar a la arena".
 
 Los tests:
-- `npx tsx --test src/arenaClasses.test.ts src/arenaScore.test.ts` en `server/`;
+- `npx tsx --test src/arenaClasses.test.ts src/arenaScore.test.ts src/arenaTrainingRules.test.ts` en `server/`;
 - `npx vitest run src/tests/arenas.integration.test.ts` en `api/`, con la API levantada.

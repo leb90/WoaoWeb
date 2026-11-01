@@ -135,6 +135,14 @@ export type ArenaOverviewPayload = {
         actualizado: string | null;
     };
     ranking: Array<{ nombre: string; kills: number; muertes: number; mejorPuntaje: number; mejorRacha: number }>;
+    entrenamiento: Array<{
+        nombre: string;
+        puntaje: number;
+        nivel: number;
+        idClase: number;
+        idClaseBot: number;
+        fecha: string;
+    }>;
 };
 
 export type ClanOverviewResponse = {
@@ -155,7 +163,7 @@ export type AuthErrorResponse = {
 export type ConsumedGameTicketPayload = {
     account?: { _id: string; name: string; email: string };
     character?: { _id: string; name: string };
-    arena?: { idClase: number };
+    arena?: { idClase: number; idClaseBot?: number | null; recordEntrenamiento?: number };
     mode?: string;
 };
 
@@ -661,14 +669,25 @@ export async function getArenaOverview() {
     return requestJson<ArenaOverviewPayload>("/arenas");
 }
 
-export async function createArenaTicket(sessionToken: string, idClase: number) {
+export async function createArenaTicket(sessionToken: string, idClase: number, idClaseBot?: number) {
     return requestJson<GameTicketResponse | AuthErrorResponse>("/arenas/ticket", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${sessionToken}`,
         },
-        body: JSON.stringify({ idClase }),
+        body: JSON.stringify(idClaseBot === undefined ? { idClase } : { idClase, idClaseBot }),
+    });
+}
+
+export async function sendArenaTrainingResults(payload: unknown, authHeader = API_AUTH) {
+    return requestJson<{ ok?: boolean; error?: string }>("/internal/arenas/entrenamiento", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: authHeader,
+        },
+        body: JSON.stringify(payload),
     });
 }
 

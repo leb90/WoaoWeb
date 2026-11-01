@@ -267,6 +267,16 @@ export type RuntimeCharacter = {
     idAccount?: string;
     /** Personaje del modo Arena (todos contra todos, arena.ts). */
     arenaFfa?: boolean;
+    /** Entrenamiento contra el bot (arenaTraining.ts): el jugador y el bot, en una copia privada de la arena. */
+    arenaEntrenamiento?: {
+        map: number;
+        idClaseBot: number;
+        record?: number;
+        esBot?: boolean;
+        jugadorId?: string;
+    } | null;
+    /** Daño de más (en %) del bot de entrenamiento desde el nivel 11. */
+    arenaBotDanoPct?: number;
     spawnMap?: number;
     spawnPos?: Position;
     homeMap?: number;

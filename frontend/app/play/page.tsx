@@ -804,6 +804,8 @@ function HomeContent() {
     const arenaMode = searchParams.get("mode") === "arena";
     // Arena: la clase elegida en /arenas. Cada vez que se abre la página se pide un ticket nuevo.
     const arenaClassId = Number(searchParams.get("clase") || "0");
+    // Entrenamiento contra el bot: la clase del bot (sin ella, es el todos contra todos).
+    const arenaBotClassId = Number(searchParams.get("bot") || "0");
     const [status, setStatus] = useState<RendererStatus>({
         connected: false,
         connecting: false,
@@ -1595,7 +1597,7 @@ function HomeContent() {
             return;
         }
 
-        const nextKey = `arena:${arenaClassId}`;
+        const nextKey = `arena:${arenaClassId}:${arenaBotClassId}`;
 
         if (autoConnectKeyRef.current === nextKey) {
             return;
@@ -1620,7 +1622,12 @@ function HomeContent() {
                     headers: {
                         "Content-Type": "application/json",
                     },
-                    body: JSON.stringify({ idClase: arenaClassId }),
+                    body: JSON.stringify({
+                        idClase: arenaClassId,
+                        ...(arenaBotClassId
+                            ? { idClaseBot: arenaBotClassId }
+                            : {}),
+                    }),
                 });
                 const ticketResult = (await ticketResponse.json()) as
                     | ArenaGameTicketResponse
@@ -1664,6 +1671,7 @@ function HomeContent() {
     }, [
         arenaMode,
         arenaClassId,
+        arenaBotClassId,
         form.wsUrl,
         router,
         status.connected,

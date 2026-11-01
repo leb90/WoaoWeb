@@ -86,6 +86,7 @@ import {
     createArenaGameTicket,
     getArenaOverview,
     saveArenaState,
+    saveArenaTrainingResults,
 } from "./repositories/arenas";
 import {
     banCharacterByName,
@@ -1842,6 +1843,17 @@ app.post(
         }
     },
 );
+
+app.post("/internal/arenas/entrenamiento", requireAuth, async (request, response) => {
+    try {
+        await saveArenaTrainingResults(request.body);
+        response.json({ ok: true });
+    } catch (error) {
+        response.status(400).json({
+            error: error instanceof Error ? error.message : "Unexpected error",
+        });
+    }
+});
 
 app.post("/internal/arenas/estado", requireAuth, async (request, response) => {
     try {

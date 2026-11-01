@@ -874,6 +874,12 @@ function getCombatAgilidad(user: GameCharacter, pvp: boolean): number {
     return pvp ? Math.min(PVP_ATTRIBUTE_CAP, value) : value;
 }
 
+// Daño de más del bot de entrenamiento de la arena desde el nivel 11 (arenaTraining.ts), solo contra jugadores.
+function getArenaBotDamagePct(user: GameCharacter): number {
+    const value = Number((user as { arenaBotDanoPct?: number }).arenaBotDanoPct ?? 0);
+    return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
 // Factor de daño solo contra jugadores (tablas modDmgPvp* del balance). Sección 7.2.
 function getPvpDamageFactor(table: unknown, classId: number): number {
     const value = Number((table as Record<number, number> | undefined)?.[classId] ?? 1);
@@ -3315,7 +3321,11 @@ function applyUserSpellDamage(
     }
 
     // Solo contra jugadores: factor PvP mágico de la clase y bono de daño del set de tier.
-    dmg = Math.floor(dmg * getPvpDamageFactor(vars.modDmgPvpMagia, user.idClase) * (1 + getEquippedSetBonus(user).dmgPct / 100));
+    dmg = Math.floor(
+        dmg *
+            getPvpDamageFactor(vars.modDmgPvpMagia, user.idClase) *
+            (1 + (getEquippedSetBonus(user).dmgPct + getArenaBotDamagePct(user)) / 100),
+    );
 
     if (dmg < 1) {
         dmg = 1;
@@ -10601,7 +10611,7 @@ function Game(this: GameApi) {
 
             // Solo contra jugadores: factor PvP de la clase y bono de daño del set de tier.
             const pvpFactor = getPvpDamageFactor(isRanged ? vars.modDmgPvpProyectiles : vars.modDmgPvpArmas, user.idClase);
-            const setDamagePct = getEquippedSetBonus(user).dmgPct;
+            const setDamagePct = getEquippedSetBonus(user).dmgPct + getArenaBotDamagePct(user);
             return Math.max(1, Math.floor(outgoing * pvpFactor * (1 + setDamagePct / 100)));
         } catch (err) {
             funct.dumpError(err);

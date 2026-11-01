@@ -343,6 +343,9 @@ type ArenaTicketResponse = {
     };
     arena: {
         idClase: number;
+        /** Entrenamiento contra el bot: la clase del bot y el mejor puntaje de la cuenta. */
+        idClaseBot?: number | null;
+        recordEntrenamiento?: number;
     };
 };
 
@@ -386,6 +389,8 @@ type PvPConnectOptions = {
     pvpChar?: boolean;
     /** Modo Arena (todos contra todos): plantilla por clase y lugar al azar del mapa de la arena. */
     arena?: boolean;
+    /** Entrenamiento contra el bot (arenaTraining.ts): copia privada de la arena; el bot lleva `esBot`. */
+    entrenamiento?: { map: number; idClaseBot: number; record?: number; esBot?: boolean; jugadorId?: string };
 };
 
 export type LoginApi = {
@@ -629,6 +634,36 @@ function Login(this: LoginApi) {
                     }
 
                     await login.disconnectAllCharacters(account);
+
+                    const idClaseBot = Number(arenaResult.arena?.idClaseBot ?? 0);
+                    if (idClaseBot) {
+                        if (!getArenaClass(idClaseBot)) {
+                            handleProtocol.error("Elegí la clase del bot en /arenas para entrenar.", ws);
+                            ws.close();
+                            return;
+                        }
+                        const arenaTraining = require("./arenaTraining") as typeof import("./arenaTraining");
+                        const reserva = arenaTraining.reserveInstance();
+                        if (!reserva) {
+                            handleProtocol.error("Las salas de entrenamiento están todas ocupadas. Probá en un rato.", ws);
+                            ws.close();
+                            return;
+                        }
+                        try {
+                            return await this.connectCharacterPvP(ws, account.name, account._id, idClase, {
+                                arena: true,
+                                spawn: { mapId: reserva.map, x: reserva.x, y: reserva.y },
+                                entrenamiento: {
+                                    map: reserva.map,
+                                    idClaseBot,
+                                    record: Number(arenaResult.arena?.recordEntrenamiento ?? 0),
+                                },
+                            });
+                        } catch (error) {
+                            arenaTraining.releaseInstance(reserva.map);
+                            throw error;
+                        }
+                    }
 
                     return await this.connectCharacterPvP(ws, account.name, account._id, idClase, { arena: true });
                 }
@@ -1211,7 +1246,8 @@ function Login(this: LoginApi) {
                 Math.floor(Number(options?.adminSummonedBot?.level ?? PVP_TEMPLATE_LEVEL) || PVP_TEMPLATE_LEVEL),
             ),
         );
-        const isSyntheticBot = Boolean(options?.markAsBot || isAdminSummonedBot);
+        const entrenamiento = options?.entrenamiento;
+        const isSyntheticBot = Boolean(options?.markAsBot || isAdminSummonedBot || entrenamiento?.esBot);
         const isPvpCharacter = options?.pvpChar ?? true;
 
         const baseAttrFuerza = 18 + vars.balanceRazas[character.idRaza].fuerza;
@@ -1224,7 +1260,8 @@ function Login(this: LoginApi) {
         const minHit = balance.getMinHitForLevel(character.idClase, targetLevel);
         const maxHit = balance.getMaxHitForLevel(character.idClase, targetLevel);
 
-        const arenaSpawn = isArena ? arena.pickSpawn() : null;
+        // El entrenamiento va en su propia copia de la arena, con el lugar que le dio arenaTraining.
+        const arenaSpawn = isArena && !entrenamiento ? arena.pickSpawn() : null;
         const mapId = arenaSpawn ? arena.ensureArenaMap() : options?.spawn?.mapId || 272;
         const spawnX = arenaSpawn?.x || options?.spawn?.x || 77;
         const spawnY = arenaSpawn?.y || options?.spawn?.y || 48;
@@ -1248,6 +1285,7 @@ function Login(this: LoginApi) {
         const newCharacter = {
             idAccount: idAccount,
             arenaFfa: isArena,
+            arenaEntrenamiento: entrenamiento ?? null,
             pvpChar: isPvpCharacter,
             botLoad: isSyntheticBot,
             adminSummonedBot: isAdminSummonedBot,

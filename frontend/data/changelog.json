@@ -147,5 +147,15 @@
             "En el celular: accesos de la Arena puestos, flechas a la vista y botones de agarrar y meditar.",
             "Arreglos de puertas, trampas, pisos y combate en el agua de las mazmorras."
         ]
+    },
+    {
+        "fecha": "2026-11-01",
+        "titulo": "Entrenamiento: bot de la arena y muñecos",
+        "features": [
+            "Entrenamiento uno contra uno con un bot en la Arena: elegís tu clase y la del bot, y cada vez que le ganás sube de nivel.",
+            "El bot juega como una persona: se saca la parálisis, toma pociones, paraliza, mantiene la distancia y elige qué hechizo tirar; del nivel 11 en adelante gana vida y daño.",
+            "Ranking \"Mejores contra el bot\" en la página de la Arena.",
+            "Seis muñecos de entrenamiento en Nix, al lado del salón de los entrenadores: no se rompen y te dicen cuánto daño hiciste."
+        ]
     }
 ]

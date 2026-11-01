@@ -385,6 +385,20 @@ function handleHttpRequest(request: any, response: any) {
         return;
     }
 
+    // Entrenamiento de la arena: pasar al nivel pedido para probar (arenaTraining.setTrainingLevel).
+    //   /debug/arena-bots/nivel?nivel=8&nombre=Cuenta
+    if ((config.isTestDeployment || config.nodeEnv !== "production") && request.url?.startsWith("/debug/arena-bots/nivel")) {
+        const url = new URL(request.url, "http://localhost");
+        const cambiadas = require("./arenaTraining").setTrainingLevel(
+            Number(url.searchParams.get("nivel") ?? 1) || 1,
+            url.searchParams.get("nombre") ?? undefined,
+        );
+        response.statusCode = 200;
+        response.setHeader("Content-Type", "application/json; charset=utf-8");
+        response.end(JSON.stringify({ cambiadas }));
+        return;
+    }
+
     // Duelos de bot contra bot del entrenamiento de la arena, para medir la dificultad (arenaTraining.runBotDuel):
     //   /debug/arena-bots/duelo?a=1&na=10&b=3&nb=10&n=4&ms=90000
     if ((config.isTestDeployment || config.nodeEnv !== "production") && request.url?.startsWith("/debug/arena-bots/duelo")) {

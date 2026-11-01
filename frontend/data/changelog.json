@@ -154,6 +154,7 @@
         "features": [
             "Entrenamiento uno contra uno con un bot en la Arena: elegís tu clase y la del bot, y cada vez que le ganás sube de nivel.",
             "El bot juega como una persona: se saca la parálisis, toma pociones, paraliza, mantiene la distancia y elige qué hechizo tirar; del nivel 11 en adelante gana vida y daño.",
+            "El bot se mueve al pelear para que cueste pegarle: cuanto más le ganás, más errático; los de cuerpo a cuerpo te rodean y el asesino busca la espalda.",
             "Ranking \"Mejores contra el bot\" en la página de la Arena.",
             "Seis muñecos de entrenamiento en Nix, al lado del salón de los entrenadores: no se rompen y te dicen cuánto daño hiciste."
         ]

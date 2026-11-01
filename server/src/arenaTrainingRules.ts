@@ -37,6 +37,18 @@ export type BotProfile = {
     anticipaCuras: boolean;
     /** Probabilidad de equivocarse en una decisión (tirar un hechizo flojo, quedarse quieto). */
     errorPct: number;
+    /**
+     * Cuánto se mueve en vez de quedarse quieto mientras pelea (0 a 1): pasos al costado para que cueste más apuntarle
+     * un hechizo o pegarle. En el nivel 1 no esquiva.
+     */
+    esquiva: number;
+    /**
+     * Qué tan impredecible es al moverse (0 a 1). En 0 va y viene de un lado al otro, fácil de leer; en 1 cambia de
+     * dirección al azar, encadena pasos y amaga.
+     */
+    erratico: number;
+    /** Los de cuerpo a cuerpo, después de pegar, se mueven a otro lado del rival (y el asesino, a la espalda). */
+    rodea: boolean;
     /** Vida y daño de más (en %) a partir del nivel 11. */
     vidaExtraPct: number;
     danoExtraPct: number;
@@ -67,6 +79,11 @@ export function botProfile(nivelPedido: number): BotProfile {
         reparaliza: nivel >= 7,
         anticipaCuras: nivel >= 8,
         errorPct: Number(lerp(0.25, 0, t).toFixed(3)),
+        esquiva:
+            nivel < 2 ? 0 : Number(Math.min(1, lerp(0.15, 0.85, Math.min(1, (nivel - 2) / 8)) + extra * 0.03).toFixed(3)),
+        erratico:
+            nivel < 3 ? 0 : Number(Math.min(1, lerp(0.1, 0.7, Math.min(1, (nivel - 3) / 7)) + extra * 0.06).toFixed(3)),
+        rodea: nivel >= 4,
         vidaExtraPct: Math.min(150, extra * 8),
         danoExtraPct: Math.min(80, extra * 4),
     };

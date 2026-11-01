@@ -63,7 +63,14 @@ En `/arenas`, además de entrar al todos contra todos, se puede entrenar uno con
     - toma pociones antes y más seguido;
     - comete menos errores;
     - suma tácticas: paraliza desde el 2, mantiene la distancia desde el 3, se pone buffs desde el 4, combina desde el 5, elige el mejor hechizo desde el 6, vuelve a paralizar apenas lo sacás desde el 7 y se cura antes de estar bajo desde el 8.
-  - Desde el 11 juega igual y suma 8 % de vida y 4 % de daño por nivel, hasta +150 % y +80 %. El daño de más lo lee `game.ts` (`arenaBotDanoPct`), solo contra jugadores.
+  - Se mueve al pelear para que cueste apuntarle (pedido de Leandro: "a medida que más veces lo derrotás, se mueve con patrones más erráticos"):
+    - `esquiva`: cuánto se mueve en vez de quedarse quieto. Es 0 en el nivel 1, 0,15 en el 2 y llega a 0,85 en el 10.
+    - `erratico`: qué tan impredecible es. Con poco va y viene de costado, fácil de leer; con mucho cambia de dirección al azar, encadena pasos y amaga. Arranca en el nivel 3 y llega a 0,7 en el 10.
+    - Los lanzadores y los de distancia esquivan de costado sin salirse de su distancia de tiro ni de la visión.
+    - Los de cuerpo a cuerpo zigzaguean al acercarse.
+    - Desde el nivel 4 (`rodea`), los de cuerpo a cuerpo, después de pegar, se pasan a otro lado del rival para que tenga que girar. El asesino va a la espalda, donde apuñala más fuerte.
+    - En duelos: 0 pasos por segundo en el nivel 1, unos 0,7 en el 5 y 1,7 en el 10.
+  - Desde el 11 juega igual y suma 8 % de vida y 4 % de daño por nivel, hasta +150 % y +80 %. La esquiva y lo errático siguen subiendo hasta 1. El daño de más lo lee `game.ts` (`arenaBotDanoPct`), solo contra jugadores.
   - En los duelos de prueba, el bot con 2 niveles más le gana al otro entre el 80 % y el 100 % de las veces, con magos y con guerreros.
 - **HUD:** el paquete `arenaState` trae `entrenamiento` (nivel, puntaje, récord, clase del bot, estado y cuenta regresiva). `ArenaScoreboard.tsx` lo muestra:
   - como texto chico arriba a la derecha, o arriba al centro en mobile;
@@ -72,6 +79,7 @@ En `/arenas`, además de entrar al todos contra todos, se puede entrenar uno con
   - La tabla `arena_training_records` guarda la mejor de cada cuenta: puntaje, niveles ganados y clases.
   - `/arenas` la muestra en "Mejores contra el bot".
   - El ticket de la arena lleva la clase del bot (`game_tickets.arena_bot_class_id`) y, al consumirlo, el récord de la cuenta.
+- **Probar un nivel:** fuera de producción, `GET /debug/arena-bots/nivel?nivel=8&nombre=<cuenta>` en el server de juego pasa el entrenamiento de esa cuenta al nivel pedido y arranca la ronda.
 - **Duelos de prueba:** fuera de producción, `GET /debug/arena-bots/duelo?a=1&na=10&b=3&nb=8&n=5&ms=60000` en el server de juego hace pelear a dos bots. Los parámetros son la clase y el nivel de cada uno, cuántos duelos en paralelo y el tiempo máximo. Devuelve quién ganó, cuánto duró, la vida que les quedó y qué hizo cada uno.
 
 ## Clases

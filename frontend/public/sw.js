@@ -4,7 +4,9 @@
 // páginas, /api/*, /play, datos del juego) va siempre a la red — nunca
 // queremos servir de caché una sesión vieja, oro/inventario viejo, etc.
 
-const CACHE_VERSION = "woaoweb-static-v1";
+// Subir la versión borra todo lo guardado en los navegadores (activate). La v1 guardaba para siempre los mapas y las
+// hojas de gráficos que cambian sin cambiar de nombre: se seguían viendo las mazmorras viejas después de cada deploy.
+const CACHE_VERSION = "woaoweb-static-v2";
 
 const PRECACHE_URLS = [
     "/favicon.ico",
@@ -63,6 +65,62 @@ function isStaticAsset(url) {
     return STATIC_PATH_PREFIXES.some((prefix) => url.pathname.startsWith(prefix));
 }
 
+// Lo que lleva versión en la URL (?v=) o hash en el nombre (/_next/static/) no cambia nunca: va directo de la caché.
+function isImmutable(url) {
+    return url.pathname.startsWith("/_next/static/") || url.searchParams.has("v");
+}
+
+// Solo respuestas enteras: las parciales (206, el video pedido por partes) no se pueden guardar.
+function canStore(response) {
+    return response.status === 200 && response.type === "basic";
+}
+
+async function cacheFirst(request) {
+    const cache = await caches.open(CACHE_VERSION);
+    const cached = await cache.match(request);
+    if (cached) {
+        return cached;
+    }
+    const response = await fetch(request);
+    if (canStore(response)) {
+        cache.put(request, response.clone());
+    }
+    return response;
+}
+
+// Los mapas tienen que coincidir con los del server: primero la red y, sin conexión, lo guardado.
+async function networkFirst(request) {
+    const cache = await caches.open(CACHE_VERSION);
+    try {
+        const response = await fetch(request);
+        if (canStore(response)) {
+            cache.put(request, response.clone());
+        }
+        return response;
+    } catch (error) {
+        return (await cache.match(request)) || Response.error();
+    }
+}
+
+// Las demás imágenes sin versión: lo guardado para que cargue rápido y, por detrás, la de la red para la próxima vez.
+async function staleWhileRevalidate(event) {
+    const cache = await caches.open(CACHE_VERSION);
+    const cached = await cache.match(event.request);
+    const update = fetch(event.request)
+        .then((response) => {
+            if (canStore(response)) {
+                cache.put(event.request, response.clone());
+            }
+            return response;
+        })
+        .catch(() => cached || Response.error());
+    if (cached) {
+        event.waitUntil(update.then(() => undefined));
+        return cached;
+    }
+    return update;
+}
+
 self.addEventListener("fetch", (event) => {
     const { request } = event;
 
@@ -76,34 +134,25 @@ self.addEventListener("fetch", (event) => {
         return;
     }
 
-    // Nunca cachear API, sockets del juego, ni las páginas del juego en sí.
+    // Nunca cachear API, sockets del juego, ni las páginas del juego en sí. Tampoco los videos: el navegador los pide
+    // por partes.
     if (
         url.pathname.startsWith("/api/") ||
         url.pathname.startsWith("/play") ||
-        url.pathname.startsWith("/_next/data/")
+        url.pathname.startsWith("/_next/data/") ||
+        url.pathname.startsWith("/static/video/")
     ) {
         return;
     }
 
     if (isStaticAsset(url)) {
-        event.respondWith(
-            caches.open(CACHE_VERSION).then(async (cache) => {
-                const cached = await cache.match(request);
-                if (cached) {
-                    return cached;
-                }
-
-                try {
-                    const response = await fetch(request);
-                    if (response.ok) {
-                        cache.put(request, response.clone());
-                    }
-                    return response;
-                } catch (error) {
-                    return cached || Response.error();
-                }
-            }),
-        );
+        if (url.pathname.startsWith("/static/maps_local/")) {
+            event.respondWith(networkFirst(request));
+        } else if (isImmutable(url)) {
+            event.respondWith(cacheFirst(request));
+        } else {
+            event.respondWith(staleWhileRevalidate(event));
+        }
         return;
     }
 

@@ -62,6 +62,9 @@ const MAP_ASSET_VERSIONS: Partial<Record<number, string>> = {
     286: "1.2",
     287: "1.2",
     288: "1.2",
+    // Mazmorra de prueba de Nix, con los arreglos de Ezequiel del 31/10.
+    590: "2",
+    591: "2",
 };
 
 function cloneMapData(mapData: MapData): MapData {
@@ -634,8 +637,8 @@ export async function loadMapData(
                 dynamicBaseMapNumber < 600
             ) {
                 const data = await fetchJsonWithFallback<MapData>(
-                    `/static/maps_local/mapa_${dynamicBaseMapNumber}.json`,
-                    `/static/maps_local/mapa_${dynamicBaseMapNumber}.json`,
+                    withMapAssetVersion(`/static/maps_local/mapa_${dynamicBaseMapNumber}.json`, dynamicBaseMapNumber),
+                    withMapAssetVersion(`/static/maps_local/mapa_${dynamicBaseMapNumber}.json`, dynamicBaseMapNumber),
                     `local map ${dynamicBaseMapNumber}`,
                     { preferLocal: true },
                 );
@@ -674,8 +677,8 @@ export async function loadMapData(
 
             if (mapNumber >= 500 && mapNumber < 600) {
                 const localMapData = await fetchJsonWithFallback<MapData>(
-                    `/static/maps_local/mapa_${mapNumber}.json`,
-                    `/static/maps_local/mapa_${mapNumber}.json`,
+                    withMapAssetVersion(`/static/maps_local/mapa_${mapNumber}.json`, mapNumber),
+                    withMapAssetVersion(`/static/maps_local/mapa_${mapNumber}.json`, mapNumber),
                     `local map ${mapNumber}`,
                     { preferLocal: true },
                 );
@@ -808,8 +811,12 @@ export function getTexturePath(graphicData: GraphicData): string {
     if (fileNumber === 9896) {
         return `/graphics/${fileNumber}.png?v=4`;
     }
-    if (fileNumber === 330049) {
+    // Mazmorra de prueba (arte de Ezequiel): se cambiaron después de publicarse.
+    if (fileNumber === 330048) {
         return `/graphics/${fileNumber}.png?v=2`;
+    }
+    if (fileNumber === 330049) {
+        return `/graphics/${fileNumber}.png?v=3`;
     }
     return `/graphics/${fileNumber}.png`;
 }

@@ -86,7 +86,9 @@ El piso (`graficos.piso`) es un bloque de 4 × 4.
 2. **Reiniciar el server de juego.** Si no, su `areaItemsSnapshot` con los mapas viejos pisa lo que dibuja el cliente.
 3. **Subir las versiones de caché en `frontend/utils/gameLoader.ts`:**
    - `graficos_optimized`, `bodies`, `objs` y `npcs`;
-   - si cambió un PNG que ya existía, su versión en `getTexturePath`.
+   - si cambió un PNG que ya existía, su versión en `getTexturePath`;
+   - si cambió un mapa de mazmorra que ya existía, su versión en `MAP_ASSET_VERSIONS`.
+   - *Error que evita:* hasta el 1/11 el service worker (`public/sw.js`, caché v1) guardaba para siempre los mapas y las hojas que cambian sin cambiar de nombre. Leandro seguía viendo la mazmorra de prueba de antes del arte nuevo. Ahora los mapas van primero a la red, y las imágenes sin versión se corrigen en la carga siguiente; con la versión se ven bien desde la primera.
 4. **Recorrer el mapa entero, esquina por esquina,** con el GM (`/telepme <corrida>@x@y`) o con un render del mapa. Hay que mirar cada esquina, cada cruce de paredes, cada pared entre dos salas y cada puerta, y compararlos con la pieza original del artista.
 5. **Probar en vivo entrando por la piedra.** Eso crea la corrida, que es una instancia (por ejemplo, 59500).
    - El GM entra invisible y las criaturas no lo atacan: `/invi` para ver los ataques.

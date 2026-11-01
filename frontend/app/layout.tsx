@@ -4,6 +4,7 @@ import Script from "next/script";
 import { preload } from "react-dom";
 import AppChrome from "@/components/AppChrome";
 import CursorWarmup from "@/components/CursorWarmup";
+import DrawnCursor from "@/components/DrawnCursor";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import {
     buildPageMetadata,
@@ -121,6 +122,7 @@ export default function RootLayout({
                 </Script>
                 <ServiceWorkerRegistration />
                 <CursorWarmup />
+                <DrawnCursor />
                 <AppChrome>{children}</AppChrome>
             </body>
         </html>

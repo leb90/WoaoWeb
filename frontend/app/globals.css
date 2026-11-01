@@ -103,15 +103,52 @@ html
     cursor: text;
 }
 
-html.game-targeting,
-html.game-targeting body,
-html.game-targeting body *,
-html.game-targeting body *:hover,
-html.game-targeting body *:active,
-html.game-targeting body *:focus,
-html.game-targeting body *::before,
-html.game-targeting body *::after {
+html.game-targeting:not(.cursor-dibujado),
+html.game-targeting:not(.cursor-dibujado) body,
+html.game-targeting:not(.cursor-dibujado) body *,
+html.game-targeting:not(.cursor-dibujado) body *:hover,
+html.game-targeting:not(.cursor-dibujado) body *:active,
+html.game-targeting:not(.cursor-dibujado) body *:focus,
+html.game-targeting:not(.cursor-dibujado) body *::before,
+html.game-targeting:not(.cursor-dibujado) body *::after {
     cursor: var(--cursor-juego-apuntar) !important;
+}
+
+/* Con mouse, el cursor lo dibuja la página (components/DrawnCursor.tsx) y el del sistema se oculta: con los cursores de
+   imagen, Chrome en la Mac alternaba el guantelete con la flecha. Las reglas de arriba quedan para cuando no hay
+   mouse o no cargó el script. En los campos de texto se ve la barra de texto del sistema. */
+html.cursor-dibujado,
+html.cursor-dibujado *,
+html.cursor-dibujado *::before,
+html.cursor-dibujado *::after {
+    cursor: none !important;
+}
+
+html.cursor-dibujado
+    :is(
+        input:not([type="checkbox"], [type="radio"], [type="range"], [type="button"], [type="submit"], [type="color"]),
+        textarea,
+        [contenteditable="true"]
+    ) {
+    cursor: text !important;
+}
+
+.drawn-cursor {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 2147483647;
+    pointer-events: none;
+    will-change: transform;
+    transform: translate3d(-100px, -100px, 0);
+}
+
+.drawn-cursor img {
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    max-width: none;
+    user-select: none;
 }
 
 /* Botoncito de agarrar de mobile: sale del botón de ataque (MobileAttackButton.tsx). */

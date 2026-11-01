@@ -11,6 +11,7 @@ import React, {
     useMemo,
     useRef,
     useState,
+    useSyncExternalStore,
 } from "react";
 import { MapRenderer } from "../../components/game";
 import type { GroundItem } from "../../components/game/core/MapRendererCore";
@@ -804,6 +805,8 @@ function HomeContent() {
     const arenaMode = searchParams.get("mode") === "arena";
     // Arena: la clase elegida en /arenas. Cada vez que se abre la página se pide un ticket nuevo.
     const arenaClassId = Number(searchParams.get("clase") || "0");
+    // Entrenamiento contra el bot: la clase del bot (sin ella, es el todos contra todos).
+    const arenaBotClassId = Number(searchParams.get("bot") || "0");
     const [status, setStatus] = useState<RendererStatus>({
         connected: false,
         connecting: false,
@@ -1595,7 +1598,7 @@ function HomeContent() {
             return;
         }
 
-        const nextKey = `arena:${arenaClassId}`;
+        const nextKey = `arena:${arenaClassId}:${arenaBotClassId}`;
 
         if (autoConnectKeyRef.current === nextKey) {
             return;
@@ -1620,7 +1623,12 @@ function HomeContent() {
                     headers: {
                         "Content-Type": "application/json",
                     },
-                    body: JSON.stringify({ idClase: arenaClassId }),
+                    body: JSON.stringify({
+                        idClase: arenaClassId,
+                        ...(arenaBotClassId
+                            ? { idClaseBot: arenaBotClassId }
+                            : {}),
+                    }),
                 });
                 const ticketResult = (await ticketResponse.json()) as
                     | ArenaGameTicketResponse
@@ -1664,6 +1672,7 @@ function HomeContent() {
     }, [
         arenaMode,
         arenaClassId,
+        arenaBotClassId,
         form.wsUrl,
         router,
         status.connected,
@@ -5067,10 +5076,25 @@ function HomeContent() {
     );
 }
 
+const subscribeNothing = () => () => {};
+
+// El juego decide celular o escritorio en su primer render (useIsMobile, isStandaloneDisplayMode): se dibuja solo en
+// el cliente. Si no, el HTML del server, que no sabe qué pantalla hay, no coincide con el del celular al hidratar.
+function useIsClient() {
+    return useSyncExternalStore(
+        subscribeNothing,
+        () => true,
+        () => false,
+    );
+}
+
 export default function Home() {
+    const isClient = useIsClient();
+    const fallback = <main className="min-h-screen bg-black" />;
+
     return (
-        <Suspense fallback={<main className="min-h-screen bg-black" />}>
-            <HomeContent />
+        <Suspense fallback={fallback}>
+            {isClient ? <HomeContent /> : fallback}
         </Suspense>
     );
 }

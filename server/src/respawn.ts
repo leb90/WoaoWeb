@@ -110,6 +110,13 @@ function Respawn(this: any) {
             return;
         }
 
+        // Los muñecos de entrenamiento no se rompen: anotan el daño y recuperan la vida.
+        const trainingDummies = require("./trainingDummies");
+        if (pjSelected.isNpc && trainingDummies.isTrainingDummy(pjSelected)) {
+            trainingDummies.onHit(pjSelected, ws.id);
+            return;
+        }
+
         //Compruebo si el personaje muere
         if (pjSelected.hp <= 0) {
             try {
@@ -316,13 +323,16 @@ function Respawn(this: any) {
                 if (clientPersonaje) {
                     handleProtocol.console((useHuntersDeathFlow ? "Jugador" : nameWs) + " te ha matado!", "red", 1, 0, clientPersonaje);
                     if (arenaDeath) {
-                        handleProtocol.console(
-                            `Revivís en ${Math.ceil(arena.getReviveDelayMs(idPersonaje) / 1000)} segundos en otro lugar de la arena.`,
-                            "gray",
-                            1,
-                            0,
-                            clientPersonaje,
-                        );
+                        // El entrenamiento contra el bot avisa solo cuándo se vuelve a empezar (arenaTraining.ts).
+                        if (!arena.isTrainingUser(idPersonaje)) {
+                            handleProtocol.console(
+                                `Revivís en ${Math.ceil(arena.getReviveDelayMs(idPersonaje) / 1000)} segundos en otro lugar de la arena.`,
+                                "gray",
+                                1,
+                                0,
+                                clientPersonaje,
+                            );
+                        }
                     } else if (!useWarDeathFlow && !useHuntersDeathFlow) {
                         handleProtocol.console(
                             "En 15 segundos entraras al mundo de los muertos.",

@@ -563,6 +563,22 @@ ALTER TABLE game_tickets DROP COLUMN IF EXISTS arena_room_id;
 DROP TABLE IF EXISTS arena_room_members;
 DROP TABLE IF EXISTS arena_rooms;
 
+-- Entrenamiento contra el bot de la arena: la clase del bot (NULL en el todos contra todos).
+ALTER TABLE game_tickets ADD COLUMN IF NOT EXISTS arena_bot_class_id INTEGER;
+
+-- Mejor racha de cada cuenta contra el bot de entrenamiento (server/src/arenaTraining.ts): puntaje, a cuántos
+-- niveles le ganó y con qué clases. `runs` cuenta las rachas terminadas.
+CREATE TABLE IF NOT EXISTS arena_training_records (
+    account_id UUID PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+    best_score INTEGER NOT NULL DEFAULT 0,
+    best_level INTEGER NOT NULL DEFAULT 0,
+    class_id INTEGER NOT NULL,
+    bot_class_id INTEGER NOT NULL,
+    runs INTEGER NOT NULL DEFAULT 0,
+    achieved_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- Lo que hizo cada cuenta en la Arena: kills y muertes acumuladas, y su mejor puntaje y racha en una partida.
 CREATE TABLE IF NOT EXISTS arena_stats (
     account_id UUID PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
@@ -738,6 +754,7 @@ CREATE INDEX IF NOT EXISTS idx_password_reset_requests_ip_created_at ON password
 CREATE INDEX IF NOT EXISTS idx_game_tickets_auth_token ON game_tickets(auth_token);
 CREATE INDEX IF NOT EXISTS idx_game_tickets_expires_at ON game_tickets(expires_at);
 CREATE INDEX IF NOT EXISTS idx_arena_stats_best_points ON arena_stats(best_points DESC);
+CREATE INDEX IF NOT EXISTS idx_arena_training_records_best_score ON arena_training_records(best_score DESC);
 CREATE INDEX IF NOT EXISTS idx_user_online_stats_created_at ON user_online_stats(created_at);
 CREATE INDEX IF NOT EXISTS idx_game_objects_updated_at ON game_objects(updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_game_objects_obj_type ON game_objects(obj_type);

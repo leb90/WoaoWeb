@@ -5,6 +5,7 @@ import type {
   ArenaLiveEntry,
   ArenaOverviewResponse,
   ArenaRankingEntry,
+  ArenaTrainingRankingEntry,
   AuthSessionRecord,
   GameTicketResponse,
 } from "../types";
@@ -16,11 +17,15 @@ const ARENA_CLASS_IDS = [1, 2, 3, 4, 6, 7, 8, 9, 18, 20, 22] as const;
 const ARENA_LIVE_STALE_MS = 1000 * 90;
 const ARENA_RANKING_SIZE = 20;
 
+const classIdSchema = z.coerce
+  .number()
+  .int()
+  .refine((value) => (ARENA_CLASS_IDS as readonly number[]).includes(value), "Clase invalida");
+
 const ticketSchema = z.object({
-  idClase: z.coerce
-    .number()
-    .int()
-    .refine((value) => (ARENA_CLASS_IDS as readonly number[]).includes(value), "Clase invalida"),
+  idClase: classIdSchema,
+  // Entrenamiento contra el bot (server/src/arenaTraining.ts): la clase del bot. Sin ella, es el todos contra todos.
+  idClaseBot: classIdSchema.optional().nullable(),
 });
 
 const liveEntrySchema = z.object({
@@ -37,6 +42,18 @@ const resultSchema = z.object({
   muertes: z.coerce.number().int().min(0),
   mejorPuntaje: z.coerce.number().int().min(0),
   mejorRacha: z.coerce.number().int().min(0),
+});
+
+const trainingResultSchema = z.object({
+  accountId: z.string().uuid(),
+  puntaje: z.coerce.number().int().min(0),
+  nivel: z.coerce.number().int().min(0),
+  idClase: classIdSchema,
+  idClaseBot: classIdSchema,
+});
+
+const trainingStateSchema = z.object({
+  resultados: z.array(trainingResultSchema).max(500),
 });
 
 const stateSchema = z.object({
@@ -73,7 +90,7 @@ export async function createArenaGameTicket(token: string, payload: unknown): Pr
     return null;
   }
 
-  const { idClase } = ticketSchema.parse(payload);
+  const { idClase, idClaseBot } = ticketSchema.parse(payload);
   const ticket = createOpaqueTicket();
 
   const result = await pool.query<{ expires_at: Date }>(
@@ -85,12 +102,13 @@ export async function createArenaGameTicket(token: string, payload: unknown): Pr
         character_id,
         mode,
         pvp_template_id,
+        arena_bot_class_id,
         expires_at
       )
-      VALUES ($1, $2, $3, NULL, 'arena', $4, NOW() + ($5 * INTERVAL '1 millisecond'))
+      VALUES ($1, $2, $3, NULL, 'arena', $4, $5, NOW() + ($6 * INTERVAL '1 millisecond'))
       RETURNING expires_at
     `,
-    [ticket, token, session.account_id, idClase, ARENA_GAME_TICKET_TTL_MS],
+    [ticket, token, session.account_id, idClase, idClaseBot ?? null, ARENA_GAME_TICKET_TTL_MS],
   );
 
   return {
@@ -119,6 +137,37 @@ export async function saveArenaState(payload: unknown): Promise<void> {
             updated_at = NOW()
       `,
       [result.accountId, result.kills, result.muertes, result.mejorPuntaje, result.mejorRacha],
+    );
+  }
+}
+
+/** Lo manda el server de juego cuando termina una racha contra el bot: queda la mejor de cada cuenta. */
+export async function saveArenaTrainingResults(payload: unknown): Promise<void> {
+  const { resultados } = trainingStateSchema.parse(payload);
+
+  for (const result of resultados) {
+    await pool.query(
+      `
+        INSERT INTO arena_training_records (
+          account_id, best_score, best_level, class_id, bot_class_id, runs, achieved_at, updated_at
+        )
+        SELECT id, $2, $3, $4, $5, 1, NOW(), NOW()
+        FROM accounts
+        WHERE id = $1
+        ON CONFLICT (account_id) DO UPDATE
+        SET runs = arena_training_records.runs + 1,
+            updated_at = NOW(),
+            best_level = CASE WHEN EXCLUDED.best_score > arena_training_records.best_score
+              THEN EXCLUDED.best_level ELSE arena_training_records.best_level END,
+            class_id = CASE WHEN EXCLUDED.best_score > arena_training_records.best_score
+              THEN EXCLUDED.class_id ELSE arena_training_records.class_id END,
+            bot_class_id = CASE WHEN EXCLUDED.best_score > arena_training_records.best_score
+              THEN EXCLUDED.bot_class_id ELSE arena_training_records.bot_class_id END,
+            achieved_at = CASE WHEN EXCLUDED.best_score > arena_training_records.best_score
+              THEN NOW() ELSE arena_training_records.achieved_at END,
+            best_score = GREATEST(arena_training_records.best_score, EXCLUDED.best_score)
+      `,
+      [result.accountId, result.puntaje, result.nivel, result.idClase, result.idClaseBot],
     );
   }
 }
@@ -152,7 +201,37 @@ export async function getArenaOverview(): Promise<ArenaOverviewResponse> {
     mejorRacha: Number(row.best_streak),
   }));
 
+  const trainingResult = await pool.query<{
+    name: string;
+    best_score: number;
+    best_level: number;
+    class_id: number;
+    bot_class_id: number;
+    achieved_at: Date;
+  }>(
+    `
+      SELECT accounts.name, arena_training_records.best_score, arena_training_records.best_level,
+        arena_training_records.class_id, arena_training_records.bot_class_id, arena_training_records.achieved_at
+      FROM arena_training_records
+      JOIN accounts ON accounts.id = arena_training_records.account_id
+      WHERE arena_training_records.best_score > 0
+      ORDER BY arena_training_records.best_score DESC, arena_training_records.achieved_at ASC
+      LIMIT $1
+    `,
+    [ARENA_RANKING_SIZE],
+  );
+
+  const entrenamiento: ArenaTrainingRankingEntry[] = trainingResult.rows.map((row) => ({
+    nombre: row.name,
+    puntaje: Number(row.best_score),
+    nivel: Number(row.best_level),
+    idClase: Number(row.class_id),
+    idClaseBot: Number(row.bot_class_id),
+    fecha: new Date(row.achieved_at).toISOString(),
+  }));
+
   return {
+    entrenamiento,
     enVivo: {
       jugadores: live?.jugadores ?? 0,
       top: live?.top ?? [],

@@ -190,6 +190,13 @@ function isRankedRoundLocked(user: RuntimeCharacter | undefined) {
     return Boolean(user && Number(user.rankedLockedUntil ?? 0) > Date.now());
 }
 
+// El entrenamiento de la arena usa el mismo bloqueo en la cuenta regresiva de cada ronda (arenaTraining.ts).
+function getRoundLockMessage(user: RuntimeCharacter) {
+    return user.arenaEntrenamiento
+        ? "[Entrenamiento] Esperá a que termine la cuenta regresiva."
+        : "[Ranked] Espera a que termine la cuenta regresiva.";
+}
+
 function getChallengeManager() {
     return require("./challengeManager") as {
         isCharacterInActiveMatch: (user: RuntimeCharacter | undefined) => boolean;
@@ -3801,7 +3808,7 @@ function attackMele(ws: RuntimeClient) {
         }
 
         if (isRankedRoundLocked(user)) {
-            handleProtocol.console("[Ranked] Espera a que termine la cuenta regresiva.", "white", 0, 0, ws);
+            handleProtocol.console(getRoundLockMessage(user), "white", 0, 0, ws);
             return;
         }
 
@@ -4021,7 +4028,7 @@ function attackRange(ws: RuntimeClient) {
         }
 
         if (isRankedRoundLocked(user)) {
-            handleProtocol.console("[Ranked] Espera a que termine la cuenta regresiva.", "white", 0, 0, ws);
+            handleProtocol.console(getRoundLockMessage(user), "white", 0, 0, ws);
             return;
         }
 
@@ -4472,7 +4479,7 @@ function attackSpell(ws: RuntimeClient) {
             isRankedRoundLocked(user) &&
             (isHostileCombatSpell(datSpell) || isSummonSpell || isPartialInvisibilityRemoval)
         ) {
-            handleProtocol.console("[Ranked] Espera a que termine la cuenta regresiva.", "white", 0, 0, ws);
+            handleProtocol.console(getRoundLockMessage(user), "white", 0, 0, ws);
             return;
         }
 

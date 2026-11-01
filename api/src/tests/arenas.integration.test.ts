@@ -11,6 +11,7 @@ import {
     expectSuccessPayload,
     getArenaOverview,
     sendArenaState,
+    sendArenaTrainingResults,
 } from "./helpers/api";
 
 beforeAll(async () => {
@@ -85,4 +86,66 @@ test("the game server reports who is playing and the account ranking keeps the b
     const firstRow = overview.data.ranking.find((row) => row.nombre === first.name);
     assert.deepEqual(firstRow, { nombre: first.name, kills: 5, muertes: 5, mejorPuntaje: 9_000_040, mejorRacha: 3 });
     assert.equal(overview.data.ranking[0]?.nombre, first.name);
+});
+
+test("a training ticket carries the bot class and the account's best training score", async () => {
+    const player = await createAccountFixture();
+
+    const invalid = await createArenaTicket(player.session.sessionToken, 1, 5);
+    assert.equal(invalid.status, 400);
+
+    await sendArenaTrainingResults({
+        resultados: [{ accountId: player.session.account._id, puntaje: 750, nivel: 4, idClase: 1, idClaseBot: 3 }],
+    });
+
+    const ticketResponse = await createArenaTicket(player.session.sessionToken, 1, 3);
+    assert.equal(ticketResponse.status, 200);
+    const { ticket } = expectSuccessPayload<GameTicketResponse>(ticketResponse.data);
+    const consumed = expectSuccessPayload<ConsumedGameTicketPayload>((await consumeGameTicket(ticket, "127.0.0.1")).data);
+    assert.equal(consumed.arena?.idClase, 1);
+    assert.equal(consumed.arena?.idClaseBot, 3);
+    assert.equal(consumed.arena?.recordEntrenamiento, 750);
+
+    // Sin la clase del bot es el todos contra todos.
+    const ffaTicket = expectSuccessPayload<GameTicketResponse>((await createArenaTicket(player.session.sessionToken, 1)).data);
+    const ffa = expectSuccessPayload<ConsumedGameTicketPayload>((await consumeGameTicket(ffaTicket.ticket, "127.0.0.1")).data);
+    assert.equal(ffa.arena?.idClaseBot, null);
+});
+
+test("the training ranking keeps each account's best run with its classes", async () => {
+    const first = await createAccountFixture();
+    const second = await createAccountFixture();
+
+    // Puntajes que suben en cada corrida, para quedar arriba de lo que dejaron las anteriores en la base.
+    const base = Math.floor(Date.now() / 1000);
+
+    const denied = await sendArenaTrainingResults({ resultados: [] }, "wrong-token");
+    assert.equal(denied.status, 401);
+
+    const sent = await sendArenaTrainingResults({
+        resultados: [
+            { accountId: first.session.account._id, puntaje: base + 100, nivel: 9, idClase: 3, idClaseBot: 1 },
+            { accountId: second.session.account._id, puntaje: base + 50, nivel: 8, idClase: 20, idClaseBot: 22 },
+        ],
+    });
+    assert.equal(sent.status, 200);
+    // Una racha peor no pisa la mejor (ni sus clases); una mejor sí.
+    await sendArenaTrainingResults({
+        resultados: [
+            { accountId: first.session.account._id, puntaje: 300, nivel: 2, idClase: 1, idClaseBot: 1 },
+            { accountId: second.session.account._id, puntaje: base + 200, nivel: 10, idClase: 8, idClaseBot: 4 },
+        ],
+    });
+
+    const overview = await getArenaOverview();
+    assert.equal(overview.status, 200);
+    const rows = overview.data.entrenamiento.filter((row) => row.nombre === first.name || row.nombre === second.name);
+    assert.deepEqual(
+        rows.map(({ fecha: _fecha, ...row }) => row),
+        [
+            { nombre: second.name, puntaje: base + 200, nivel: 10, idClase: 8, idClaseBot: 4 },
+            { nombre: first.name, puntaje: base + 100, nivel: 9, idClase: 3, idClaseBot: 1 },
+        ],
+    );
+    assert.equal(overview.data.entrenamiento[0]?.nombre, second.name);
 });

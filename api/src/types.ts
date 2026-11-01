@@ -41,6 +41,8 @@ export type GameTicketRecord = {
     mode: string;
     /** En los tickets de la arena, la clase elegida. */
     pvp_template_id: number | null;
+    /** En los de entrenamiento contra el bot, la clase del bot. */
+    arena_bot_class_id?: number | null;
     created_at: Date;
     expires_at: Date;
     consumed_at: Date | null;
@@ -471,6 +473,9 @@ export type ArenaGameTicketConsumeResponse = {
     };
     arena: {
         idClase: number;
+        /** Entrenamiento contra el bot: la clase del bot y el mejor puntaje de la cuenta. */
+        idClaseBot: number | null;
+        recordEntrenamiento: number;
     };
 };
 
@@ -490,6 +495,16 @@ export type ArenaRankingEntry = {
     mejorRacha: number;
 };
 
+export type ArenaTrainingRankingEntry = {
+    nombre: string;
+    puntaje: number;
+    /** A cuántos niveles del bot le ganó en esa racha. */
+    nivel: number;
+    idClase: number;
+    idClaseBot: number;
+    fecha: string;
+};
+
 export type ArenaOverviewResponse = {
     enVivo: {
         jugadores: number;
@@ -497,6 +512,7 @@ export type ArenaOverviewResponse = {
         actualizado: string | null;
     };
     ranking: ArenaRankingEntry[];
+    entrenamiento: ArenaTrainingRankingEntry[];
 };
 
 export type UserOnlineStatResponse = {

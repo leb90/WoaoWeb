@@ -1254,7 +1254,7 @@ export async function consumeGameTicket(
 
         const ticketResult = await client.query<GameTicketRecord>(
             `
-        SELECT ticket, account_id, character_id, auth_token, mode, pvp_template_id, created_at, expires_at, consumed_at
+        SELECT ticket, account_id, character_id, auth_token, mode, pvp_template_id, arena_bot_class_id, created_at, expires_at, consumed_at
         FROM game_tickets
         WHERE ticket = $1
           AND consumed_at IS NULL
@@ -1348,6 +1348,14 @@ export async function consumeGameTicket(
                 return null;
             }
 
+            const idClaseBot = storedTicket.arena_bot_class_id ?? null;
+            const recordResult = idClaseBot
+                ? await pool.query<{ best_score: number }>(
+                      "SELECT best_score FROM arena_training_records WHERE account_id = $1",
+                      [account.id],
+                  )
+                : null;
+
             return {
                 mode: "arena",
                 account: {
@@ -1357,6 +1365,8 @@ export async function consumeGameTicket(
                 },
                 arena: {
                     idClase: storedTicket.pvp_template_id,
+                    idClaseBot,
+                    recordEntrenamiento: Number(recordResult?.rows[0]?.best_score ?? 0),
                 },
             };
         }

@@ -5,6 +5,7 @@
 import type { EntityId, RuntimeCharacter } from "./types/runtime";
 import { getArenaClass } from "./arenaClasses";
 import { applyDeath, applyKill, createScore, pruneLastKills, standings, type ArenaScore } from "./arenaScore";
+import * as arenaTraining from "./arenaTraining";
 
 const vars = require("./vars");
 const handleProtocol = require("./handleProtocol");
@@ -63,6 +64,11 @@ export function isArenaCharacter(user: { arenaFfa?: boolean } | null | undefined
 
 export function isArenaUser(idUser: EntityId): boolean {
     return isArenaCharacter(getUser(idUser));
+}
+
+/** Entrenamiento contra el bot (arenaTraining.ts): mismas reglas de la arena, en una copia privada del mapa. */
+export function isTrainingUser(idUser: EntityId): boolean {
+    return arenaTraining.isTrainingCharacter(getUser(idUser));
 }
 
 export function ensureArenaMap(): number {
@@ -173,6 +179,10 @@ function scheduleState() {
 }
 
 export function sendState(idUser: EntityId) {
+    if (isTrainingUser(idUser)) {
+        arenaTraining.sendState(idUser);
+        return;
+    }
     const client = getClient(idUser);
     if (client && typeof handleProtocol.arenaState === "function") {
         handleProtocol.arenaState(buildPayload(standings(state.scores.values()), String(idUser)), client);
@@ -247,6 +257,10 @@ export function onConnected(idUser: EntityId) {
     if (!isArenaCharacter(user) || !user) {
         return;
     }
+    if (arenaTraining.isTrainingCharacter(user)) {
+        arenaTraining.onConnected(idUser);
+        return;
+    }
 
     const id = String(idUser);
     state.scores.set(
@@ -271,6 +285,10 @@ export function onConnected(idUser: EntityId) {
 
 export function onDisconnected(user: RuntimeCharacter | undefined) {
     if (!isArenaCharacter(user) || !user) {
+        return;
+    }
+    if (arenaTraining.isTrainingCharacter(user)) {
+        arenaTraining.onDisconnected(user);
         return;
     }
 
@@ -326,6 +344,10 @@ function reviveInArena(id: string) {
 export function onUserDied(idUser: EntityId) {
     const id = String(idUser);
     const user = getUser(id);
+    if (arenaTraining.isTrainingCharacter(user)) {
+        arenaTraining.onUserDied(idUser);
+        return;
+    }
     const score = state.scores.get(id);
     if (!isArenaCharacter(user) || !score) {
         return;
@@ -380,11 +402,15 @@ export function onUserKilled(killerId: EntityId, victimId: EntityId) {
 
 /** El cartel del cliente y los mensajes de muerte: en la arena no hay mundo de los muertos. */
 export function getReviveDelayMs(idUser: EntityId): number {
+    if (isTrainingUser(idUser)) {
+        return arenaTraining.getReviveDelayMs(idUser);
+    }
     const at = state.reviveAt.get(String(idUser));
     return at ? Math.max(0, at - Date.now()) : ARENA_REVIVE_DELAY_MS;
 }
 
 export function initialize() {
+    arenaTraining.initialize();
     if (state.flushTimer) {
         return;
     }

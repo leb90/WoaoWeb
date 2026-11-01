@@ -160,5 +160,13 @@
             "El cursor del guantelete ya no parpadea con la flecha del sistema en la Mac: ahora lo dibuja el juego.",
             "Crear personaje en el celular rediseñado: el personaje grande arriba, pestañas de raza, rostro, clase y datos, y todo en una pantalla."
         ]
+    },
+    {
+        "fecha": "2026-11-01",
+        "titulo": "Beta abierta: experiencia x20",
+        "features": [
+            "Durante la beta las criaturas dan 20 veces su experiencia, para subir rápido y buscar errores en todo el juego.",
+            "La wiki muestra la experiencia y el oro con los multiplicadores en uso."
+        ]
     }
 ]

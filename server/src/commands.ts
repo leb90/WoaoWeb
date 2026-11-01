@@ -4004,6 +4004,63 @@ const command: CommandApi = {
                     break;
                 }
 
+                // Multiplicadores de experiencia y oro de las criaturas, en vivo y guardados (serverRates.ts):
+                // /experiencia muestra los actuales; /experiencia 20 la pone en x20. Igual /oro.
+                case "/experiencia":
+                case "/oro": {
+                    if (!hasAdminPrivileges(user)) {
+                        break;
+                    }
+                    const serverRates = require("./serverRates");
+                    const isExp = commandText === "/experiencia";
+                    const label = isExp ? "experiencia" : "oro";
+                    const rawValue = nextText.trim().split(/\s+/).filter(Boolean)[0];
+
+                    if (!rawValue) {
+                        const rates = serverRates.getServerRates();
+                        handleProtocol.console(
+                            `[INFO] Experiencia x${rates.expMultiplier} · oro x${rates.goldMultiplier}. Para cambiarlos: /${label} <multiplicador>.`,
+                            "#E69500",
+                            0,
+                            0,
+                            ws as CommandClient,
+                        );
+                        break;
+                    }
+
+                    const value = Number(rawValue.replace(",", "."));
+                    if (!Number.isFinite(value) || value <= 0 || value > 100) {
+                        handleProtocol.console(
+                            `[INFO] Multiplicador de ${label} inválido: tiene que ser un número entre 0 y 100.`,
+                            "#E69500",
+                            0,
+                            0,
+                            ws as CommandClient,
+                        );
+                        break;
+                    }
+
+                    try {
+                        const rates = await serverRates.updateServerRate(isExp ? "expMultiplier" : "goldMultiplier", value);
+                        handleProtocol.consoleToAll(
+                            `[Servidor] ${isExp ? `Experiencia x${rates.expMultiplier}` : `Oro x${rates.goldMultiplier}`}.`,
+                            "#E69500",
+                            0,
+                            0,
+                        );
+                    } catch (error) {
+                        funct.dumpError(error);
+                        handleProtocol.console(
+                            `[INFO] No se pudo guardar el multiplicador de ${label}.`,
+                            "#E69500",
+                            0,
+                            0,
+                            ws as CommandClient,
+                        );
+                    }
+                    break;
+                }
+
                 case "/dobleexp":
                     if (hasAdminPrivileges(user)) {
                         vars.dobleExp = !vars.dobleExp;

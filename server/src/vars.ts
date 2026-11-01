@@ -139,7 +139,8 @@ function Vars(this: any) {
         orbitalRojo: 21,
     };
 
-    this.multiplicadorExp = 5;
+    // Valores hasta que llegan los de la API (serverRates.ts); iguales a los que la API usa si nunca se cambiaron.
+    this.multiplicadorExp = 20;
     this.multiplicadorGold = 3;
     this.partyExpBonusPct = 15;
 

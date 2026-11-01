@@ -8,9 +8,7 @@ import {
     type GameNpcDropEntry,
     type GameNpcRecordData,
 } from "../lib/gameData";
-
-const CURRENT_EXP_MULTIPLIER = 5;
-const CURRENT_GOLD_MULTIPLIER = 3;
+import { getServerRates, type ServerRates } from "./runtimeSettings";
 
 type GameNpcRow = {
     id: number;
@@ -316,13 +314,13 @@ export async function getCurrentGameNpcVersion(): Promise<number> {
     return Number(result.rows[0]?.version ?? 0);
 }
 
-function toGameNpcSummary(row: GameNpcRow) {
+function toGameNpcSummary(row: GameNpcRow, rates: ServerRates) {
     const maxHp = Number(row.data.maxHp ?? row.data.hp ?? 0);
     const expReward = Math.floor(
-        Number(row.data.exp ?? 0) * CURRENT_EXP_MULTIPLIER,
+        Number(row.data.exp ?? 0) * rates.expMultiplier,
     );
     const goldReward = Math.floor(
-        Number(row.data.gold ?? 0) * CURRENT_GOLD_MULTIPLIER,
+        Number(row.data.gold ?? 0) * rates.goldMultiplier,
     );
     const expPerHp = maxHp > 0 ? Number((expReward / maxHp).toFixed(4)) : null;
 
@@ -346,6 +344,7 @@ function toGameNpcSummary(row: GameNpcRow) {
 export async function listGameNpcs(filters: unknown) {
     await ensureSeeded();
     const parsed = listFiltersSchema.parse(filters ?? {});
+    const rates = await getServerRates();
     const values: Array<string | number> = [];
     const conditions: string[] = [];
     const pageSize = parsed.limit ?? 100;
@@ -383,11 +382,11 @@ export async function listGameNpcs(filters: unknown) {
     const sortExpressions: Record<string, string> = {
         id: "id",
         maxHp: "COALESCE((data->>'maxHp')::int, (data->>'hp')::int, 0)",
-        expReward: `(COALESCE((data->>'exp')::int, 0) * ${CURRENT_EXP_MULTIPLIER})`,
-        goldReward: `(COALESCE((data->>'gold')::int, 0) * ${CURRENT_GOLD_MULTIPLIER})`,
+        expReward: `(COALESCE((data->>'exp')::int, 0) * ${rates.expMultiplier})`,
+        goldReward: `(COALESCE((data->>'gold')::int, 0) * ${rates.goldMultiplier})`,
         expPerHp: `CASE
       WHEN COALESCE((data->>'maxHp')::int, (data->>'hp')::int, 0) > 0
-      THEN ((COALESCE((data->>'exp')::int, 0)::numeric * ${CURRENT_EXP_MULTIPLIER})
+      THEN ((COALESCE((data->>'exp')::int, 0)::numeric * ${rates.expMultiplier})
         / COALESCE((data->>'maxHp')::int, (data->>'hp')::int, 0)::numeric)
       ELSE NULL
     END`,
@@ -422,7 +421,7 @@ export async function listGameNpcs(filters: unknown) {
     const total = Number(countResult.rows[0]?.count ?? 0);
 
     return {
-        npcs: result.rows.map(toGameNpcSummary),
+        npcs: result.rows.map((row) => toGameNpcSummary(row, rates)),
         pagination: {
             page,
             pageSize,
@@ -450,7 +449,7 @@ export async function getGameNpcById(id: number) {
     }
 
     return {
-        ...toGameNpcSummary(row),
+        ...toGameNpcSummary(row, await getServerRates()),
         checksum: row.checksum,
         data: normalizeNpcData(row.data),
     };

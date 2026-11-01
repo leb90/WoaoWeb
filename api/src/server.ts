@@ -161,7 +161,9 @@ import {
 } from "./repositories/gameSmeltingRecipes";
 import {
     getRuntimeTimingConfig,
+    getServerRates,
     updateRuntimeTimingValue,
+    updateServerRate,
 } from "./repositories/runtimeSettings";
 import { getPublicWiki } from "./repositories/wiki";
 import {
@@ -476,7 +478,8 @@ app.get("/runtime-config/admin", async (_request, response) => {
 app.get("/internal/runtime-config", requireAuth, async (_request, response) => {
     try {
         const timing = await getRuntimeTimingConfig();
-        response.json({ timing });
+        const rates = await getServerRates();
+        response.json({ timing, rates });
     } catch (error) {
         response.status(500).json({
             error: error instanceof Error ? error.message : "Unexpected error",
@@ -513,6 +516,17 @@ app.put(
         }
     },
 );
+
+// Experiencia y oro de las criaturas: los cambia un GM con /experiencia y /oro desde el juego.
+app.put("/internal/runtime-config/rates", requireAuth, async (request, response) => {
+    try {
+        const rates = await updateServerRate(request.body?.key, request.body?.value);
+        response.json({ rates });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "Unexpected error";
+        response.status(message === "Multiplicador invalido" ? 400 : 500).json({ error: message });
+    }
+});
 
 app.get("/admin/game-data/objects", async (request, response) => {
     try {

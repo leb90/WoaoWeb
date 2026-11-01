@@ -58,6 +58,58 @@ test("runtime-config internal endpoint requires auth and validates updates", asy
     assert.equal(missingPath.data.error, "path es requerido");
 });
 
+test("runtime-config rates require auth, validate and persist", async () => {
+    type RatesResponse = {
+        rates?: { expMultiplier?: number; goldMultiplier?: number };
+        error?: string;
+    };
+    const putRate = (body: unknown, authorization?: string) =>
+        requestJson<RatesResponse>("/internal/runtime-config/rates", {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                ...(authorization ? { Authorization: authorization } : {}),
+            },
+            body: JSON.stringify(body),
+        });
+
+    const current = await requestJson<RatesResponse>("/internal/runtime-config", {
+        headers: {
+            Authorization: API_AUTH,
+        },
+    });
+    const originalExp = current.data.rates?.expMultiplier;
+
+    assert.equal(current.status, 200);
+    assert.equal(typeof originalExp, "number");
+    assert.equal(typeof current.data.rates?.goldMultiplier, "number");
+
+    const noAuth = await putRate({ key: "expMultiplier", value: 7 });
+    const badKey = await putRate({ key: "dropMultiplier", value: 7 }, API_AUTH);
+    const zero = await putRate({ key: "expMultiplier", value: 0 }, API_AUTH);
+    const tooHigh = await putRate({ key: "expMultiplier", value: 1000 }, API_AUTH);
+
+    assert.equal(noAuth.status, 401);
+    assert.equal(badKey.status, 400);
+    assert.equal(zero.status, 400);
+    assert.equal(tooHigh.status, 400);
+
+    try {
+        const updated = await putRate({ key: "expMultiplier", value: 7 }, API_AUTH);
+        const reread = await requestJson<RatesResponse>("/internal/runtime-config", {
+            headers: {
+                Authorization: API_AUTH,
+            },
+        });
+
+        assert.equal(updated.status, 200);
+        assert.equal(updated.data.rates?.expMultiplier, 7);
+        assert.equal(reread.data.rates?.expMultiplier, 7);
+    } finally {
+        await putRate({ key: "expMultiplier", value: originalExp }, API_AUTH);
+    }
+});
+
 test("admin game-data endpoints are forbidden without admin proxy auth", async () => {
     const account = await createAccountFixture();
 

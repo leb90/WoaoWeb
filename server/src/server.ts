@@ -755,6 +755,7 @@ function trackClientActivity(ws: RuntimeClient, packageID: number) {
     const startInitialize = Date.now();
 
     await runtimeTiming.loadRuntimeTimingConfig();
+    await require("./serverRates").loadServerRates();
 
     if (config.resetConnectedCharactersOnStartup) {
         const resetCharactersResponse = (await funct.fetchUrl("/internal/characters/reset-connected", {

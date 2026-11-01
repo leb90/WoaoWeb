@@ -49,7 +49,7 @@ import type { TargetingMode } from "../../components/game/core/useCombatControll
 import { MobileInstallGate } from "../../components/game/overlays/MobileInstallGate";
 import { RotateDeviceOverlay } from "../../components/game/overlays/RotateDeviceOverlay";
 import { useIsMobile } from "../../hooks/useIsMobile";
-import { isStandaloneDisplayMode } from "../../lib/pwa";
+import { isIosDevice, isStandaloneDisplayMode } from "../../lib/pwa";
 import {
     setViewportRotation,
     type ViewportRotation,
@@ -169,14 +169,40 @@ function readLandscapeRotation(): 90 | -90 | null {
 // vista girada quedaba con el reloj encima del joystick y una franja vacía abajo: se corre hacia abajo lo que mide la
 // barra. En horizontal iOS esconde la barra y no hace falta.
 function readStatusBarGap(viewportHeight: number): number {
-    const standalone = (window.navigator as Navigator & { standalone?: boolean }).standalone;
-    if (!standalone) {
+    // La misma detección de app instalada que usa el juego (display-mode o navigator.standalone): con solo
+    // navigator.standalone no se activaba en el iPhone de Leandro.
+    if (!isIosDevice() || !isStandaloneDisplayMode()) {
         return 0;
     }
 
     const screenLongSide = Math.max(window.screen?.width ?? 0, window.screen?.height ?? 0);
     const gap = screenLongSide - viewportHeight;
     return gap > 0 && gap <= 80 ? gap : 0;
+}
+
+// /pantalla: las medidas reales de la pantalla en el chat, para ver en el teléfono qué pasa con la vista girada.
+function describeScreen(rotation: number, statusBarGap: number): string {
+    const probe = document.createElement("div");
+    probe.style.cssText =
+        "position:fixed;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);height:100lvh;width:0";
+    document.body.appendChild(probe);
+    const probeStyle = getComputedStyle(probe);
+    const inset = (side: string) => Math.round(parseFloat(probeStyle.getPropertyValue(`padding-${side}`)) || 0);
+    const largeViewport = Math.round(probe.getBoundingClientRect().height);
+    probe.remove();
+    const visual = window.visualViewport;
+    const shell = document.querySelector(".game-shell")?.getBoundingClientRect();
+    const standalone = (window.navigator as Navigator & { standalone?: boolean }).standalone;
+    return [
+        `Pantalla> ventana ${window.innerWidth}×${window.innerHeight}`,
+        `pantalla ${window.screen.width}×${window.screen.height}`,
+        `visual ${Math.round(visual?.width ?? 0)}×${Math.round(visual?.height ?? 0)} desde ${Math.round(visual?.offsetTop ?? 0)}`,
+        `html ${document.documentElement.clientHeight}, 100lvh ${largeViewport}`,
+        `seguras ↑${inset("top")} →${inset("right")} ↓${inset("bottom")} ←${inset("left")}`,
+        `instalada ${isStandaloneDisplayMode() ? "sí" : "no"} (standalone ${String(standalone)})`,
+        `giro ${rotation}, corrimiento ${statusBarGap}`,
+        shell ? `vista ${Math.round(shell.left)},${Math.round(shell.top)} a ${Math.round(shell.right)},${Math.round(shell.bottom)}` : "sin vista",
+    ].join(" · ");
 }
 
 function readStoredOrientationLock(): boolean {
@@ -1309,6 +1335,9 @@ function HomeContent() {
         setMacros(buildArenaQuickSlotMacros(accesos, spells, inventory));
     }, [arenaMode, hud?.arenaState?.accesos, hud?.inventory, hud?.spells]);
 
+    // /pantalla lo resuelve el cliente: escribe las medidas de la pantalla en la consola (ver describeScreen).
+    const screenReportRef = useRef<(() => void) | null>(null);
+
     const sendChatMessage = useCallback(
         (message: string) => {
             const trimmedMessage = message.trim();
@@ -1322,6 +1351,11 @@ function HomeContent() {
             const commandText = trimmedMessage
                 .split(/\s+/, 1)[0]
                 ?.toLowerCase();
+
+            if (commandText === "/pantalla") {
+                screenReportRef.current?.();
+                return true;
+            }
 
             if (commandText === "/estadisticas" || commandText === "/stats") {
                 setCharacterStatsOpen(true);
@@ -2130,6 +2164,15 @@ function HomeContent() {
         },
         [],
     );
+
+    useEffect(() => {
+        screenReportRef.current = () =>
+            appendConsoleEntry({
+                text: describeScreen(lockedRotation, viewport.statusBarGap),
+                source: "system",
+                color: "#9FD3FF",
+            });
+    }, [appendConsoleEntry, lockedRotation, viewport.statusBarGap]);
 
     const refreshRuntimeTiming = useCallback(async () => {
         try {

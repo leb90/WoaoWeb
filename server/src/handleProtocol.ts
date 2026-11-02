@@ -17,6 +17,7 @@ import type {
     TradeItem,
 } from "./types/runtime";
 import { getCharacterById, getClientById } from "./runtimeRegistry";
+import { isFeedWatched, recordFeedLine } from "./gmSpectateFeed";
 
 export {};
 
@@ -491,6 +492,7 @@ export type HandleProtocolApi = {
     factionWarState: (payload: FactionWarStatePayload, client: RuntimeClient) => void;
     rankedState: (payload: unknown, client: RuntimeClient) => void;
     arenaState: (payload: unknown, client: RuntimeClient) => void;
+    gmOnline: (payload: unknown, client: RuntimeClient) => void;
     huntersGameState: (payload: unknown, client: RuntimeClient) => void;
     bossEventState: (payload: unknown, client: RuntimeClient) => void;
     levelUpNotice: (payload: unknown, client: RuntimeClient) => void;
@@ -1070,6 +1072,11 @@ const handleServer: HandleProtocolApi = {
     console(msg, color, bold, italica, client, channel = "console", senderName) {
         writeConsolePayload(msg, color, bold, italica, channel, senderName);
         socket.send(client);
+
+        // Un GM lo está mirando desde /online (gmOnline.ts): la línea va también a su panel.
+        if (isFeedWatched(client?.id)) {
+            recordFeedLine(client.id, senderName ? `${senderName}: ${msg}` : msg, color);
+        }
     },
 
     consoleToAll(msg, color, bold, italica) {
@@ -1200,6 +1207,10 @@ const handleServer: HandleProtocolApi = {
         pkg.writeString(color);
         pkg.writeByte(consoleFlag);
         socket.send(client);
+
+        if (isFeedWatched(client?.id) && String(msg ?? "").trim()) {
+            recordFeedLine(client.id, name ? `${name}: ${msg}` : msg, color, { id: idUser, text: String(msg) });
+        }
     },
 
     pong(
@@ -1688,6 +1699,19 @@ const handleServer: HandleProtocolApi = {
         pkg.setPackageID(pkg.clientPacketID.arenaState);
         pkg.writeString(JSON.stringify(payload));
         socket.send(client);
+    },
+
+    // Panel /online de los GM (gmOnline.ts). Va troceado como el de estadísticas, pero siempre con índice y total.
+    gmOnline(payload, client) {
+        const chunks = splitSnapshotIntoChunks(JSON.stringify(payload));
+
+        chunks.forEach((chunk, index) => {
+            pkg.setPackageID(pkg.clientPacketID.gmOnline);
+            pkg.writeShort(index);
+            pkg.writeShort(chunks.length);
+            pkg.writeString(chunk);
+            socket.send(client);
+        });
     },
 
     rankedState(payload, client) {

@@ -3583,7 +3583,19 @@ function position(ws: RuntimeClient) {
 }
 
 const UI_PANEL_COMMAND_COOLDOWN_MS = 200;
-const UI_PANEL_COMMANDS = new Set(["/transmog", "/transfigurar", "/transmogponer", "/transmogquitar", "/tienda", "/tiendacomprar", "/mazmorra"]);
+const UI_PANEL_COMMANDS = new Set([
+    "/transmog",
+    "/transfigurar",
+    "/transmogponer",
+    "/transmogquitar",
+    "/tienda",
+    "/tiendacomprar",
+    "/mazmorra",
+    // Panel /online de los GM (gmOnline.ts).
+    "/onlinever",
+    "/onlinedejar",
+    "/onlinecerrar",
+]);
 
 function isUiPanelCommand(message: string): boolean {
     return UI_PANEL_COMMANDS.has(message.split(/\s+/, 1)[0]?.toLowerCase() ?? "");

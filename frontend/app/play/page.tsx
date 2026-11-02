@@ -29,6 +29,8 @@ import AggroPanel, { AGGRO_STRIP_SLOTS, AggroStrip } from "../../components/Aggr
 import MacroBar from "../../components/MacroBar";
 import BailModal from "../../components/BailModal";
 import CharacterStatsModal from "../../components/CharacterStatsModal";
+import GmOnlineModal from "../../components/game/overlays/GmOnlineModal";
+import { requestGmOnline } from "../../lib/gmOnline";
 import CraftingModal from "../../components/CraftingModal";
 import AuctionHouseModal from "../../components/AuctionHouseModal";
 import MarketModal from "../../components/MarketModal";
@@ -1355,6 +1357,11 @@ function HomeContent() {
             if (commandText === "/pantalla") {
                 screenReportRef.current?.();
                 return true;
+            }
+
+            // A un GM el server le contesta /online con el panel de conectados (GmOnlineModal).
+            if (commandText === "/online") {
+                requestGmOnline();
             }
 
             if (commandText === "/estadisticas" || commandText === "/stats") {
@@ -4938,6 +4945,8 @@ function HomeContent() {
                     }}
                 />
             ) : null}
+
+            <GmOnlineModal onSendCommand={sendChatMessage} />
 
             <CharacterStatsModal
                 hud={hud}

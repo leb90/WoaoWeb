@@ -103,6 +103,7 @@ export const CLIENT_PACKET_ID = {
     afflictionState: 103,
     targetState: 104,
     arenaState: 105,
+    gmOnline: 106,
 } as const;
 
 export const CHARACTER_SWING_WEAPON = 1;
@@ -1695,6 +1696,8 @@ export type ParsedServerPacket =
     | { type: "castleState"; payload: CastleStatePayload }
     | { type: "factionWarState"; payload: FactionWarStatePayload }
     | { type: "arenaState"; payload: ArenaStatePayload }
+    // Panel /online de los GM (lib/gmOnline.ts): JSON troceado.
+    | { type: "gmOnline"; payload: { chunkIndex: number; totalChunks: number; chunk: string } }
     | { type: "rankedState"; payload: RankedStatePayload }
     | { type: "huntersGameState"; payload: HuntersGameStatePayload }
     | { type: "bossEventState"; payload: BossEventStatePayload }
@@ -3141,6 +3144,15 @@ function parseServerPacketById(
             };
         }
 
+        case CLIENT_PACKET_ID.gmOnline:
+            return {
+                type: "gmOnline",
+                payload: {
+                    chunkIndex: reader.getShort(),
+                    totalChunks: reader.getShort(),
+                    chunk: reader.getString(),
+                },
+            };
         case CLIENT_PACKET_ID.characterStatsSnapshotChunk:
             return {
                 type: "characterStatsSnapshotChunk",

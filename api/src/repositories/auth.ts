@@ -21,6 +21,7 @@ import {
 } from "../lib/characterCreation";
 import { sendPasswordResetEmail } from "../lib/email";
 import { hashPassword, verifyPassword } from "../lib/passwords";
+import { hasWorldAccess, WORLD_CLOSED_MESSAGE } from "../lib/worldAccess";
 import {
     DISPLAY_NAME_MAX_LENGTH,
     isValidDisplayName,
@@ -439,7 +440,29 @@ function toPublicSession(
         },
         characters: characters.map(toAuthCharacterSummary),
         selectedCharacterId: normalizedSelectedCharacterId,
+        worldAccess: hasWorldAccess(account, config.worldAccessAllowlist),
     };
+}
+
+async function assertWorldAccess(accountId: string): Promise<void> {
+    if (!config.worldAccessAllowlist) {
+        return;
+    }
+
+    const result = await pool.query<Pick<AccountRecord, "name" | "email">>(
+        `
+      SELECT name, email
+      FROM accounts
+      WHERE id = $1
+      LIMIT 1
+    `,
+        [accountId],
+    );
+    const account = result.rows[0];
+
+    if (!account || !hasWorldAccess(account, config.worldAccessAllowlist)) {
+        throw new Error(WORLD_CLOSED_MESSAGE);
+    }
 }
 
 async function createAuthSession(account: AccountRecord): Promise<string> {
@@ -496,6 +519,8 @@ export async function createCharacterForSession(
     if (!session) {
         return null;
     }
+
+    await assertWorldAccess(session.account_id);
 
     if (
         payload &&
@@ -1156,6 +1181,10 @@ export async function createGameTicket(
 
         const session = sessionResult.rows[0];
 
+        if (session) {
+            await assertWorldAccess(session.account_id);
+        }
+
         if (!session || !session.selected_character_id) {
             await client.query("ROLLBACK");
             return null;
@@ -1417,6 +1446,8 @@ export async function selectSessionCharacter(
     if (!session) {
         return null;
     }
+
+    await assertWorldAccess(session.account_id);
 
     const characterMatch = await pool.query<{
         id: string;

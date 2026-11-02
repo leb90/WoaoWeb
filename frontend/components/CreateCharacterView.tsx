@@ -16,6 +16,7 @@ import {
     getDisplayNameError,
 } from "../lib/name-validation";
 import { useAuthRedirect } from "../hooks/useAuthRedirect";
+import WorldClosedModal from "./WorldClosedModal";
 import type { BodiesDB, GraphicsDB, HeadsDB } from "../types/game";
 import { loadBodiesDB, loadGraphicsDB, loadHeadsDB } from "../utils/gameLoader";
 import {
@@ -303,6 +304,14 @@ export default function CreateCharacterView() {
             setCreatingCharacter(false);
         }
     };
+
+    if (session?.worldAccess === false) {
+        return (
+            <main className="min-h-screen bg-[#050302]">
+                <WorldClosedModal />
+            </main>
+        );
+    }
 
     if (session && !desktopLayout) {
         return (

@@ -38,6 +38,9 @@ services:
       GAME_DATA_ADMIN_PROXY_TOKEN: ${GAME_DATA_ADMIN_PROXY_TOKEN:-}
       MERCADOPAGO_ACCESS_TOKEN: ${MERCADOPAGO_ACCESS_TOKEN:-}
       DONATIONS_ARS_PER_USD: ${DONATIONS_ARS_PER_USD:-}
+      # Mundo cerrado hasta la beta: solo esas cuentas (nombre o email) usan personajes y
+      # entran al mundo. Va en un secret porque este repo es público. Para abrirlo, borrar esta línea.
+      WORLD_ACCESS_ALLOWLIST: ${WORLD_ACCESS_ALLOWLIST:?WORLD_ACCESS_ALLOWLIST is required}
     depends_on:
       postgres:
         condition: service_healthy

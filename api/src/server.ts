@@ -5,6 +5,7 @@ import config from "./config";
 import pool from "./db";
 import { requireAuth } from "./middleware/auth";
 import { DONATION_PACKAGES, getDonationPackage } from "./lib/donationPackages";
+import { WORLD_CLOSED_MESSAGE } from "./lib/worldAccess";
 import {
     createCheckoutPreference,
     getPayment,
@@ -1421,7 +1422,8 @@ app.post("/auth/select-character", async (request, response) => {
             message === "Personaje invalido"
                 ? 400
                 : message === "Tu personaje se encuentra baneado." ||
-                    message === "Tu personaje tiene un ban de IP activo."
+                    message === "Tu personaje tiene un ban de IP activo." ||
+                    message === WORLD_CLOSED_MESSAGE
                   ? 403
                   : 500;
         response.status(status).json({ error: message });
@@ -1452,7 +1454,11 @@ app.post("/auth/create-character", async (request, response) => {
         const message =
             error instanceof Error ? error.message : "Unexpected error";
         const status =
-            message === "Ese nombre de personaje ya esta en uso" ? 409 : 400;
+            message === WORLD_CLOSED_MESSAGE
+                ? 403
+                : message === "Ese nombre de personaje ya esta en uso"
+                  ? 409
+                  : 400;
         response.status(status).json({ error: message });
     }
 });
@@ -1526,7 +1532,8 @@ app.post("/auth/game-ticket", async (request, response) => {
             error instanceof Error ? error.message : "Unexpected error";
         const status =
             message === "Tu personaje se encuentra baneado." ||
-            message === "Tu personaje tiene un ban de IP activo."
+            message === "Tu personaje tiene un ban de IP activo." ||
+            message === WORLD_CLOSED_MESSAGE
                 ? 403
                 : 500;
         response.status(status).json({ error: message });

@@ -100,6 +100,16 @@ cat /root/.ssh/github_deploy
 
 4. Workflow file: `.github/workflows/deploy-hostinger.yml`
 
+## Mundo cerrado (beta)
+
+`WORLD_ACCESS_ALLOWLIST` lista las cuentas (nombre o email, separados por coma) que pueden usar personajes y entrar al mundo. El resto ve un aviso que las lleva a `/arenas`.
+
+- **Solo existe en producción.** Sin la variable (local, tests) el mundo queda abierto para todos, así que no hace falta configurar nada para desarrollar.
+- **Se carga como secret** porque el repo es público: `gh secret set WORLD_ACCESS_ALLOWLIST --repo leb90/WoaoWeb --body "cuenta,mail@ejemplo.com"`. El deploy lo copia al `.env` del VPS; si falta, `docker compose` frena el deploy y producción sigue como estaba.
+- **Para cambiar la lista:** actualizar el secret y volver a correr el deploy.
+- **Para probar el aviso en local:** `WORLD_ACCESS_ALLOWLIST=otra-cuenta pnpm --dir api dev`.
+- **Para abrir el mundo:** borrar la línea de `docker-compose.hostinger.yml` y desplegar.
+
 ## Database Backups
 
 ```bash

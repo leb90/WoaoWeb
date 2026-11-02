@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { parseWorldAccessAllowlist } from "./lib/worldAccess";
 
 type Config = {
   port: number;
@@ -25,6 +26,7 @@ type Config = {
   mercadopagoAccessToken: string | null;
   donationsArsPerUsd: number | null;
   gameServerUrl: string;
+  worldAccessAllowlist: string[] | null;
 };
 
 const projectRoot = path.resolve(__dirname, "..");
@@ -105,6 +107,7 @@ const config: Config = {
   mercadopagoAccessToken: process.env.MERCADOPAGO_ACCESS_TOKEN?.trim() || null,
   donationsArsPerUsd: getOptionalNumberEnv("DONATIONS_ARS_PER_USD", 0) || null,
   gameServerUrl: (process.env.GAME_SERVER_URL?.trim() || "http://game-server:7666").replace(/\/+$/, ""),
+  worldAccessAllowlist: parseWorldAccessAllowlist(process.env.WORLD_ACCESS_ALLOWLIST),
 };
 
 export default config;

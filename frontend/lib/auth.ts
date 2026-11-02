@@ -24,6 +24,8 @@ export type AuthSession = {
     };
     characters: AuthCharacterSummary[];
     selectedCharacterId: string | null;
+    /** false: mundo cerrado para esta cuenta. La API es la que lo hace cumplir. */
+    worldAccess?: boolean;
 };
 
 export type AuthErrorResponse = {

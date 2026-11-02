@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import CharacterSpritePreview from "@/components/CharacterSpritePreview";
 import UpdatesPanel from "@/components/UpdatesPanel";
+import WorldClosedModal from "@/components/WorldClosedModal";
 import type { AuthErrorResponse, AuthSession } from "../../lib/auth";
 import { useAuthRedirect } from "../../hooks/useAuthRedirect";
 
@@ -423,6 +424,8 @@ export default function CharactersPage() {
                     </div>
                 </div>
             ) : null}
+
+            {activeSession?.worldAccess === false ? <WorldClosedModal /> : null}
         </main>
     );
 }

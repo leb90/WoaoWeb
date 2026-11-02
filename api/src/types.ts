@@ -413,6 +413,7 @@ export type PublicAuthSession = Omit<AuthResponse, "sessionToken">;
 
 export type PublicAuthSessionWithSelection = PublicAuthSession & {
     selectedCharacterId: string | null;
+    worldAccess: boolean;
 };
 
 export type RuntimeTimingConfig = {

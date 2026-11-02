@@ -1619,7 +1619,10 @@ function HomeContent() {
 
         const selectedCharacterId = authSession.selectedCharacterId || "";
 
-        if (!arenaMode && !selectedCharacterId) {
+        if (
+            !arenaMode &&
+            (!selectedCharacterId || authSession.worldAccess === false)
+        ) {
             autoConnectKeyRef.current = null;
             setActiveConnection(null);
             setHud(null);
@@ -1742,6 +1745,7 @@ function HomeContent() {
             arenaMode ||
             !authSession?.selectedCharacterId ||
             !authSession ||
+            authSession.worldAccess === false ||
             status.connecting ||
             status.connected
         ) {

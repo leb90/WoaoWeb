@@ -19,11 +19,12 @@ jobs:
         env:
           MERCADOPAGO_ACCESS_TOKEN: ${{ secrets.MERCADOPAGO_ACCESS_TOKEN }}
           DONATIONS_ARS_PER_USD: ${{ secrets.DONATIONS_ARS_PER_USD }}
+          WORLD_ACCESS_ALLOWLIST: ${{ secrets.WORLD_ACCESS_ALLOWLIST }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          envs: MERCADOPAGO_ACCESS_TOKEN,DONATIONS_ARS_PER_USD
+          envs: MERCADOPAGO_ACCESS_TOKEN,DONATIONS_ARS_PER_USD,WORLD_ACCESS_ALLOWLIST
           script: |
             set -euo pipefail
             cd /opt/woaoweb
@@ -44,6 +45,7 @@ jobs:
             }
             upsert_env MERCADOPAGO_ACCESS_TOKEN "${MERCADOPAGO_ACCESS_TOKEN:-}"
             upsert_env DONATIONS_ARS_PER_USD "${DONATIONS_ARS_PER_USD:-}"
+            upsert_env WORLD_ACCESS_ALLOWLIST "${WORLD_ACCESS_ALLOWLIST:-}"
 
             docker compose -f docker-compose.hostinger.yml --env-file .env up -d --build
             docker compose -f docker-compose.hostinger.yml --env-file .env ps

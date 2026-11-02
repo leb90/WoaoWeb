@@ -8,6 +8,7 @@ import { handleMawBoss } from "../engine/dungeonMawBosses";
 import { handleTowerEffect } from "../engine/dungeonTower";
 import { playDungeonMotion } from "../engine/dungeonMotion";
 import type { IncomingPacketHandlerArgs } from "./incomingPacketTypes";
+import { receiveGmOnlineChunk } from "../../../lib/gmOnline";
 
 export async function handleIncomingUiPacket({
     packet,
@@ -329,6 +330,10 @@ export async function handleIncomingUiPacket({
 
         case "arenaState":
             ctx.mergeHud({ arenaState: { ...packet.payload, receivedAt: Date.now() } });
+            return true;
+
+        case "gmOnline":
+            receiveGmOnlineChunk(packet.payload);
             return true;
 
         case "rankedState":

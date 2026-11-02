@@ -138,6 +138,7 @@ const clientPacketID = {
     afflictionState: 103,
     targetState: 104,
     arenaState: 105,
+    gmOnline: 106,
 } as const;
 
 const serverPacketID = {

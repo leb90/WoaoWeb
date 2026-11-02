@@ -26,6 +26,7 @@ import {
     replaceAllMapNpcPlacements,
 } from "./mapNpcStorage";
 import * as safeZone from "./safeZone";
+import * as gmOnline from "./gmOnline";
 import {
     isEquipmentStorageSlot,
     unequipInventoryItem,
@@ -2214,6 +2215,12 @@ const command: CommandApi = {
 
             switch (commandText) {
                 case "/online":
+                    // Los GM ven el panel con la lista, la ficha y la vista en vivo de cada uno (gmOnline.ts).
+                    if (hasAdminPrivileges(user)) {
+                        gmOnline.openOnlinePanel(clientId);
+                        break;
+                    }
+
                     handleProtocol.console(
                         `Usuarios online en PvE: ${vars.usuariosOnline}`,
                         "#FFFFFF",
@@ -2228,6 +2235,27 @@ const command: CommandApi = {
                         0,
                         ws as CommandClient,
                     );
+                    break;
+
+                case "/onlinever": {
+                    if (!hasAdminPrivileges(user)) {
+                        break;
+                    }
+
+                    const error = gmOnline.watchCharacter(clientId, nextText);
+
+                    if (error) {
+                        handleProtocol.console(`[INFO] ${error}`, "#E69500", 0, 0, ws as CommandClient);
+                    }
+                    break;
+                }
+
+                case "/onlinedejar":
+                    gmOnline.stopWatching(clientId);
+                    break;
+
+                case "/onlinecerrar":
+                    gmOnline.closeOnlinePanel(clientId);
                     break;
 
                 case "/global": {

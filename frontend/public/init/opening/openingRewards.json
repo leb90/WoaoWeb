@@ -1,0 +1,8 @@
+{
+  "ranked":{"win":8,"loss":2,"firstWinBonus":12,"dailyCap":80,"opponentMatchesPerDay":3,"minimumDurationSeconds":60},
+  "tournament":{"championBase":100,"perAccount":2,"maximumBonus":60,"finalist":30,"minimumAccounts":4},
+  "hungerGames":{"championBase":100,"perAccount":2,"maximumBonus":60,"minimumAccounts":4},
+  "huntersGame":{"kill":3,"championBase":15,"perAccount":2,"minimumAccounts":3},
+  "bloodCastle":{"survivor":150,"completionBonus":20},
+  "factionWar":{"win":40,"loss":10,"mvp":15}
+}

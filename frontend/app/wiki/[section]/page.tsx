@@ -8,6 +8,7 @@ import WikiCreditos from "@/components/wiki/WikiCreditos";
 import WikiPersonajesProgresion from "@/components/wiki/WikiPersonajesProgresion";
 import WikiPrimerosPasos from "@/components/wiki/WikiPrimerosPasos";
 import WikiPvpBalance from "@/components/wiki/WikiPvpBalance";
+import WikiOpeningSystems from "@/components/wiki/WikiOpeningSystems";
 import { WikiPageHeader, WikiSection } from "@/components/wiki/WikiUi";
 import { buildPageMetadata } from "@/lib/seo";
 import { getWikiData } from "@/lib/wiki-data";
@@ -86,6 +87,7 @@ export default async function WikiSectionPage({ params }: PageProps) {
             {category.slug === "crafting" ? <WikiCraftingGuide /> : null}
             {category.slug === "pvp" ? <WikiPvpBalance /> : null}
             {category.slug === "creditos" ? <WikiCreditos /> : null}
+            <WikiOpeningSystems section={category.slug}/>
 
             {catalogs.length ? (
                 <div className="mt-6 grid gap-3 md:grid-cols-2">
@@ -105,6 +107,7 @@ export default async function WikiSectionPage({ params }: PageProps) {
             category.slug === "personajes" ||
             category.slug === "crafting" ||
             category.slug === "pvp" ||
+            ["comunidad","combate","competitivo","eventos"].includes(category.slug) ||
             category.slug === "creditos" ? null : (
             <WikiSection title="Contenido manual" className="mt-6">
                 <div className="flex min-h-44 flex-col items-center justify-center text-center">

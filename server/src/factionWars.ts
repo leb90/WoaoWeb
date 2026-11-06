@@ -5,7 +5,7 @@ const game = require("./game");
 const vars = require("./vars");
 const handleProtocol = require("./handleProtocol");
 const socket = require("./socket");
-const { getProgress, saveProgress } = require("./woaoProgress");
+const rewards = require("./eventRewards");
 
 const REAL_MAP = 204;
 const CAOS_MAP = 203;
@@ -21,8 +21,8 @@ const AFK_LIMIT_MS = 60_000;
 const TEAM_IMBALANCE_LIMIT = 2;
 const SAFE_AREA_RADIUS = 8;
 
-const WINNER_QUEST_POINTS = 30;
-const MVP_QUEST_POINTS = 10;
+const WINNER_QUEST_POINTS = 40;
+const MVP_QUEST_POINTS = 15;
 const WINNER_FACTION_POINTS = 50;
 const LOSER_FACTION_POINTS = 25;
 const DRAW_FACTION_POINTS = 20;
@@ -212,7 +212,7 @@ function leaveWar(idUser: string, destination = EXIT) {
     teleportUser(idUser, destination.map, destination.x, destination.y, "guerra-exit");
 }
 
-function awardQuestPoints(idUser: string, amount: number) {
+function awardQuestPoints(idUser: string, amount: number, kind: string) {
     if (amount <= 0) {
         return;
     }
@@ -222,10 +222,7 @@ function awardQuestPoints(idUser: string, amount: number) {
         return;
     }
 
-    const progress = getProgress(user);
-    progress.puntosCanje = Number(progress.puntosCanje ?? 0) + amount;
-    user.puntosCanje = progress.puntosCanje;
-    saveProgress(user);
+    rewards.rewardEventUser("factionWar", idUser, kind);
 
     const client = getClient(idUser);
     if (client) {
@@ -269,9 +266,9 @@ function awardMvp(category: MvpCategory, label: string) {
         return;
     }
 
-    awardQuestPoints(top.id, MVP_QUEST_POINTS);
+    awardQuestPoints(top.id, MVP_QUEST_POINTS, `mvp-${category}`);
     awardFactionPoints(top.id, top.faction, MVP_FACTION_POINTS);
-    tell(top.id, `Has sido elegido MVP de ${label}. Recibes ${MVP_QUEST_POINTS} puntos quest extra.`);
+    tell(top.id, `Has sido elegido MVP de ${label}. Premio Quest registrado.`);
 
     const user = getUser(top.id);
     if (user) {
@@ -282,6 +279,7 @@ function awardMvp(category: MvpCategory, label: string) {
 }
 
 function resetWarRuntime() {
+    rewards.endRewardRun("factionWar");
     state.active = false;
     state.map = 0;
     state.startedAt = 0;
@@ -323,9 +321,8 @@ function finish(winner: WarFaction | "none", rewardParticipants = true) {
             tell(participant.id, `Recibiste ${factionPoints} puntos de faccion por participar en la guerra.`);
 
             if (userWon) {
-                awardQuestPoints(participant.id, WINNER_QUEST_POINTS);
-                tell(participant.id, `Tu faccion gano la guerra. Recibiste ${WINNER_QUEST_POINTS} puntos quest.`);
-            }
+                awardQuestPoints(participant.id, WINNER_QUEST_POINTS, "win");
+            } else awardQuestPoints(participant.id, 10, "loss");
         }
 
         awardMvp("damage", "dano");
@@ -460,6 +457,7 @@ export function startWar() {
     state.active = true;
     state.map = Math.random() < 0.5 ? REAL_MAP : CAOS_MAP;
     state.startedAt = Date.now();
+    rewards.startRewardRun("factionWar", []);
     state.lastReviveAt = state.startedAt;
     state.participants.clear();
     state.reentryBlocked.clear();
@@ -522,6 +520,7 @@ export function joinWar(idUser: string) {
     };
 
     state.participants.set(idUser, participant);
+    rewards.joinRewardRun("factionWar", idUser);
     user.guerra = true;
     reviveIfDead(idUser);
     moveParticipantToWarSpawn(idUser);
@@ -568,6 +567,7 @@ export function enterTemple(idUser: string) {
 }
 
 export function onNpcDied(_templateNpcIndex: number) {
+    void _templateNpcIndex;
     // La guerra nueva se define por kills entre facciones, no por matar un NPC.
 }
 
@@ -714,8 +714,10 @@ export function isInSafeArea(userOrId: RuntimeCharacter | EntityId | string | un
     }
 
     const spawn = getSpawnForFaction(participant.faction);
-    return Math.abs(Number(user.pos?.x ?? 0) - spawn.x) <= SAFE_AREA_RADIUS &&
-        Math.abs(Number(user.pos?.y ?? 0) - spawn.y) <= SAFE_AREA_RADIUS;
+    return (
+        Math.abs(Number(user.pos?.x ?? 0) - spawn.x) <= SAFE_AREA_RADIUS &&
+        Math.abs(Number(user.pos?.y ?? 0) - spawn.y) <= SAFE_AREA_RADIUS
+    );
 }
 
 export function getAttackDeniedReason(

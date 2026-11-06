@@ -1,4 +1,6 @@
 import { canAddToInventory } from "./equipmentStorage";
+import { queueQuestPurchase } from "./questPurchases";
+import crypto from "node:crypto";
 
 const game = require("./game");
 const vars = require("./vars");
@@ -79,7 +81,7 @@ function canReceiveItem(user: any, idItem: number, quantity: number) {
     return canAddToInventory(user.inv ?? {}, idItem, quantity, 10_000, require("./itemRarity").getItemRarity(idItem));
 }
 
-function redeemFromCatalog(
+async function redeemFromCatalog(
     idUser: string,
     premioId: number,
     quantity: number,
@@ -113,18 +115,37 @@ function redeemFromCatalog(
     }
 
     if (currency === "quest") {
-        progress.puntosCanje -= totalCost;
-        user.puntosCanje = progress.puntosCanje;
+        const result = await queueQuestPurchase(crypto.randomUUID(), {
+            characterId: String(user._id), cost: totalCost, objIndex: premio.objIndex,
+            amount: safeQuantity, rarity: require("./itemRarity").getItemRarity(premio.objIndex),
+            reason: `Canje ${premioId}`,
+        });
+        refreshUserSnapshot(idUser, user);
+        return {
+            ok: true,
+            message: result === "pending"
+                ? "Canje pendiente de confirmación. El objeto se entregará cuando la API confirme el cobro."
+                : `Canjeaste ${premio.name}${safeQuantity > 1 ? ` x${safeQuantity}` : ""}. Te quedan ${progress.puntosCanje} puntos.`,
+        };
     } else {
         progress.puntosDonacion -= totalCost;
         user.puntosDonacion = progress.puntosDonacion;
     }
 
     saveProgress(user);
-    game.putItemToInv(idUser, premio.objIndex, safeQuantity);
+    if (canReceiveItem(user, premio.objIndex, safeQuantity)) game.putItemToInv(idUser, premio.objIndex, safeQuantity);
+    else {
+        progress.pendingDeliveries.push({
+            objIndex: premio.objIndex,
+            amount: safeQuantity,
+            reason: `Canje ${premioId}`,
+            createdAt: Date.now(),
+        });
+        saveProgress(user);
+    }
     refreshUserSnapshot(idUser, user);
 
-    const remaining = currency === "quest" ? progress.puntosCanje : progress.puntosDonacion;
+    const remaining = progress.puntosDonacion;
     const quantityText = safeQuantity > 1 ? ` x${safeQuantity}` : "";
     return { ok: true, message: `Canjeaste ${premio.name}${quantityText}. Te quedan ${remaining} puntos.` };
 }

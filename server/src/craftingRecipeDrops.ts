@@ -1,5 +1,6 @@
 import { getCraftingRecipes, type CraftingRecipe } from "./craftingRecipes";
 import type { RuntimeNpc } from "./types/runtime";
+import { getRankedDropChance } from "./npcRanks";
 
 export type CraftingRecipeDrop = {
     item: number;
@@ -28,11 +29,9 @@ function isHostileNpc(npc: RuntimeNpc) {
         return false;
     }
 
-    return (
-        Number(npc.hostile ?? 0) > 0 ||
+    return Number(npc.hostile ?? 0) > 0 ||
         Number(npc.attackable ?? 0) > 0 ||
-        Number(npc.movement ?? 0) === 3
-    );
+        Number(npc.movement ?? 0) === 3;
 }
 
 function getRecipePoolsByLevel() {
@@ -57,7 +56,7 @@ export function getEligibleCraftingRecipeLevels(npc: RuntimeNpc): number[] {
         return [];
     }
 
-    const npcMaxHp = Math.floor(Number(npc.maxHp ?? 0));
+    const npcMaxHp = Math.floor(Number(npc.npcRankBaseHp ?? npc.maxHp ?? 0));
     return CRAFTING_RECIPE_DROP_TIERS
         .filter((tier) => npcMaxHp > tier.minNpcMaxHpExclusive)
         .map((tier) => tier.level);
@@ -73,7 +72,8 @@ export function rollCraftingRecipeDrops(npc: RuntimeNpc): CraftingRecipeDrop[] {
     const drops: CraftingRecipeDrop[] = [];
 
     for (const tier of CRAFTING_RECIPE_DROP_TIERS) {
-        if (!eligibleLevels.has(tier.level) || Math.random() * 100 >= tier.chancePercent) {
+        if (!eligibleLevels.has(tier.level) || Math.random() * 100 >= getRankedDropChance(tier.chancePercent, npc.npcRank)
+        ) {
             continue;
         }
 

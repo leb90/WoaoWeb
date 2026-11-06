@@ -986,8 +986,8 @@ function writeNpcPayload(npc: ProtocolNpc, viewerId?: EntityId) {
     pkg.writeString(npc.clan);
     pkg.writeByte(getMovementRestrictionState(npc));
     pkg.writeInt(getMovementRestrictionRemainingMs(npc, vars.timing.statusDurations.crowdControlNpcMs));
-    pkg.writeShort(npc.hp);
-    pkg.writeShort(npc.maxHp);
+    pkg.writeInt(npc.hp);
+    pkg.writeInt(npc.maxHp);
     pkg.writeByte(getNpcQuestStatusForViewer(npc, viewerId));
     // Hostil (ataca solo): el cliente lo usa para el color del contorno al pasar el mouse.
     pkg.writeByte(Number((npc as { hostile?: number }).hostile ?? 0) === 1 || Number(npc.movement ?? 0) === 3 ? 1 : 0);
@@ -1763,8 +1763,8 @@ const handleServer: HandleProtocolApi = {
     entityVitalsDelta(id, hp, maxHp, mana, maxMana, client) {
         pkg.setPackageID(pkg.clientPacketID.entityVitalsDelta);
         pkg.writeDouble(id);
-        pkg.writeShort(hp);
-        pkg.writeShort(maxHp);
+        pkg.writeInt(hp);
+        pkg.writeInt(maxHp);
         pkg.writeShort(mana);
         pkg.writeShort(maxMana);
         socket.send(client);

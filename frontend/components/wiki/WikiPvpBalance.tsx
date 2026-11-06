@@ -263,7 +263,7 @@ export default function WikiPvpBalance() {
 
             <WikiSection title="Rarezas de los objetos">
                 <p className="mb-4 max-w-3xl text-sm leading-6 text-stone-400">
-                    Las armas, armaduras, cascos, escudos y anillos pueden salir con rareza cuando caen de una criatura, cuando los crafteás o como recompensa de una misión. Cada objeto tiene la suya: dos espadas iguales pueden ser de rarezas distintas, y los objetos con rareza no se apilan.
+                    Las armas, armaduras, cascos, escudos y anillos pueden salir con rareza cuando caen de una criatura, cuando los crafteás o como recompensa de una misión. Dos espadas iguales con la misma mejora se juntan en una pila de hasta 10.000; las rarezas distintas se guardan separadas.
                 </p>
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     {RARITY_NAMES.map((name, index) => (

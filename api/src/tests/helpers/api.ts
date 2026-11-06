@@ -945,6 +945,9 @@ export async function putAccountVault(accountId: string, payload: unknown) {
 }
 
 export async function putClanVault(clanId: string, payload: unknown) {
+    const current = await requestJson<{ revision: number }>(`/internal/vaults/clan/${encodeURIComponent(clanId)}`, {
+        headers: { Authorization: API_AUTH },
+    });
     return requestJson<{ ok?: true; error?: string }>(
         `/internal/vaults/clan/${encodeURIComponent(clanId)}`,
         {
@@ -953,7 +956,7 @@ export async function putClanVault(clanId: string, payload: unknown) {
                 "Content-Type": "application/json",
                 Authorization: API_AUTH,
             },
-            body: JSON.stringify(payload),
+            body: JSON.stringify({ ...(payload as Record<string, unknown>), expectedRevision: current.data.revision }),
         },
     );
 }

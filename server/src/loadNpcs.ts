@@ -1,6 +1,7 @@
 export {};
 import { buildNpcRespawnKey, getNpcRespawnCooldown, initializeNpcRespawnCooldowns } from "./npcRespawnCooldowns";
 import { loadAllMapNpcPlacements, replaceAllMapNpcPlacements } from "./mapNpcStorage";
+import { assignNaturalNpcRank } from "./npcRanks";
 const { loadDefaultNpcsData } = require("./npcData");
 const game = require("./game");
 const vars = require("./vars");
@@ -161,6 +162,7 @@ class LoadNpcs {
             tmpNPC.clan = clan;
         }
 
+        assignNaturalNpcRank(tmpNPC, datNpc);
         vars.npcs[tmpNPC.id] = tmpNPC;
         vars.npcs[tmpNPC.id].cooldownAtaque = +Date.now() + 4000;
         vars.areaNpc[tmpNPC.id] = [];

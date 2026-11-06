@@ -1186,6 +1186,7 @@ function buildTargetFramePayload(viewer: RuntimeCharacter): Record<string, unkno
             hp: Number(npc.hp ?? 0),
             maxHp: Number(npc.maxHp ?? 0),
             hostile: Number(npc.hostile ?? 0) === 1,
+            npcRank: npc.npcRank ?? "normal",
             attackable: Number(npc.attackable ?? 1) === 1,
             paralizado: Boolean(npc.paralizado),
             inmovilizado: Boolean(npc.inmovilizado),

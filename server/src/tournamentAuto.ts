@@ -1,7 +1,7 @@
 const game = require("./game");
 const vars = require("./vars");
 const handleProtocol = require("./handleProtocol");
-const { getProgress, saveProgress } = require("./woaoProgress");
+const rewards = require("./eventRewards");
 
 const MAP = 208;
 const WAIT = { x: 50, y: 75 };
@@ -12,7 +12,6 @@ const CORNERS = [
     { x: 42, y: 57 },
     { x: 61, y: 57 },
 ];
-const PRIZE_ITEM = 1245;
 
 type TournamentState = {
     open: boolean;
@@ -62,6 +61,7 @@ function warp(idUser: string, map: number, x: number, y: number) {
 }
 
 function resetState() {
+    rewards.endRewardRun("tournament");
     state.open = false;
     state.active = false;
     state.rounds = 0;
@@ -104,14 +104,10 @@ function startNextFight() {
 function finishWinner(idUser: string) {
     const user = vars.personajes[idUser];
     if (user) {
-        const progress = getProgress(user);
-        progress.puntosCanje += 100;
-        user.puntosCanje = progress.puntosCanje;
-        saveProgress(user);
-        if (vars.datObj?.[PRIZE_ITEM]) {
-            game.putItemToInv(idUser, PRIZE_ITEM, 1);
-        }
-        tell(idUser, "Ganaste el torneo automatico. +100 puntos de canje.");
+        rewards.rewardEventUser("tournament", idUser, "champion");
+        tell(idUser,
+            "Ganaste el torneo automático. El premio se confirma si hubo al menos 4 cuentas y participaste en combate.",
+        );
         announce(`${user.nameCharacter} gano el torneo automatico.`);
         warp(idUser, EXIT.map, EXIT.x, EXIT.y);
     }
@@ -166,6 +162,7 @@ export function joinEvent(idUser: string) {
         state.open = false;
         state.active = true;
         state.waitingFight = [...state.participants];
+        rewards.startRewardRun("tournament", state.participants);
         announce("Comienza el torneo.");
         startNextFight();
     }
@@ -200,6 +197,7 @@ export function onUserDied(idUser: string) {
     }
 
     if (state.fighting && state.fighting.includes(String(idUser))) {
+        if (state.waitingFight.length === 0) rewards.rewardEventUser("tournament", String(idUser), "finalist");
         const winner = state.fighting.find((id) => id !== String(idUser));
         state.fighting = null;
         if (winner) {
@@ -223,6 +221,7 @@ export function tick() {
         state.open = false;
         state.active = true;
         state.waitingFight = [...state.participants];
+        rewards.startRewardRun("tournament", state.participants);
         announce("Se acabo el tiempo de espera. Comienza el torneo.");
         startNextFight();
     }

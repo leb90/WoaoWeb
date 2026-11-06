@@ -1,11 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
+import { runtimeDataPath } from "./runtimeDataPath";
 
 const handleProtocol = require("./handleProtocol");
 
 type Owner = 1 | 2;
 
-const DATA_PATH = path.resolve(__dirname, "../data/cityOwnership.json");
+const DATA_PATH = runtimeDataPath("cityOwnership.json");
 
 const INSTANCE_CITIES: Record<number, { name: string; maps: number[] }> = {
     251: { name: "Ullathorpe", maps: [1] },

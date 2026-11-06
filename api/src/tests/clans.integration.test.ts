@@ -271,7 +271,7 @@ test("leader can assign co-leaders and co-leaders can accept requests", async ()
     assert.equal(applicantState.clanId, clanId);
 });
 
-test("clans enforce a maximum of 50 members", async () => {
+test("level 1 clans enforce a maximum of 30 members", async () => {
     const leader = await createCharacterFixture({
         namePrefix: "MaxL",
         level: 30,
@@ -309,7 +309,7 @@ test("clans enforce a maximum of 50 members", async () => {
         assert.equal(acceptResponse.status, 200);
     }
 
-    for (let index = 0; index < 48; index += 1) {
+    for (let index = 0; index < 28; index += 1) {
         const member = await createCharacterFixture({
             namePrefix: `Mx${uniqueLetters(3)}`,
             level: 30,
@@ -351,18 +351,14 @@ test("clans enforce a maximum of 50 members", async () => {
     assert.equal(fullClanOverview.status, 200);
     assert.equal(
         expectSuccessPayload<ClanOverviewPayload>(fullClanOverview.data)
-            .currentClan?.memberCount,
-        50,
-    );
+            .currentClan?.memberCount, 30);
 
     const acceptWhenFull = await acceptClanRequest(pendingRequestId as string, {
         reviewerCharacterId: leader.id,
     });
     assert.equal(acceptWhenFull.status, 400);
     assert.equal(
-        acceptWhenFull.data.error,
-        "El clan ya alcanzo el maximo de 50 miembros",
-    );
+        acceptWhenFull.data.error, "El clan ya alcanzo el maximo de 30 miembros");
 
     const overflowApplicant = await createCharacterFixture({
         namePrefix: "Over",
@@ -376,9 +372,7 @@ test("clans enforce a maximum of 50 members", async () => {
     });
     assert.equal(overflowRequest.status, 400);
     assert.equal(
-        overflowRequest.data.error,
-        "El clan ya alcanzo el maximo de 50 miembros",
-    );
+        overflowRequest.data.error, "El clan ya alcanzo el maximo de 30 miembros");
 });
 
 test("leader can delete clan and all members lose membership", async () => {

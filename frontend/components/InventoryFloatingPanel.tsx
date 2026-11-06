@@ -3,6 +3,7 @@
 "use client";
 
 import React from "react";
+import ClanProgressionPanel,{type ClanProgressionState} from "./clans/ClanProgressionPanel";
 import { createPortal } from "react-dom";
 import { formatNumber } from "../lib/number-format";
 import { formatStackAmount } from "../lib/itemAmount";
@@ -154,6 +155,8 @@ type HardwareAccelerationWarning = {
 type ClanAlignment = "citizen" | "criminal";
 
 type ClanSummary = {
+    level:number;
+    maxMembers:number;
     id: string;
     name: string;
     alignment: ClanAlignment;
@@ -190,6 +193,9 @@ type ClanRequest = {
 };
 
 type ClanDetails = {
+    level:number;
+    maxMembers:number;
+    progression?:ClanProgressionState|null;
     id: string;
     name: string;
     alignment: ClanAlignment;
@@ -5190,7 +5196,7 @@ export default function InventoryFloatingPanel({
                           onClick={closeClanModal}
                       >
                     <div
-                        className="w-full max-w-3xl overflow-hidden rounded-[24px] border border-amber-200/20 bg-[#120c08]/96 text-stone-100 shadow-[0_28px_90px_rgba(0,0,0,0.6)]"
+                        className="flex max-h-[calc(100dvh-2rem)] w-full max-w-3xl flex-col overflow-hidden rounded-[24px] border border-amber-200/20 bg-[#120c08]/96 text-stone-100 shadow-[0_28px_90px_rgba(0,0,0,0.6)]"
                         onClick={(event) => event.stopPropagation()}
                     >
                         <div className="flex items-center justify-between gap-4 border-b border-amber-200/10 bg-[linear-gradient(180deg,rgba(127,78,35,0.28),rgba(18,12,8,0))] px-4 py-3">
@@ -5287,7 +5293,7 @@ export default function InventoryFloatingPanel({
                             </div>
                         </div>
 
-                        <div className="px-4 py-4">
+                        <div className="min-h-0 overflow-y-auto px-4 py-4">
                             {clanView === "list" ? (
                                 <div>
                                     <section className="rounded-[18px] border border-white/8 bg-white/4 p-4">
@@ -5698,6 +5704,7 @@ export default function InventoryFloatingPanel({
                                                 Nivel minimo{" "}
                                                 {currentClan.minJoinLevel}
                                             </p>
+                                            {currentClan.progression&&onSendCommand?<ClanProgressionPanel state={currentClan.progression} memberCount={currentClan.memberCount} isLeader={Boolean(isClanLeader)} questBalance={hud?.puntosCanje??0} onSend={onSendCommand} onRefresh={refreshClanOverview}/>:null}
                                             <p className="mt-1 text-sm text-stone-400">
                                                 Puntos de clan{" "}
                                                 {formatNumber(

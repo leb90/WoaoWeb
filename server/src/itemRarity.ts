@@ -50,7 +50,7 @@ export function rollRarityForItem(idItem: number, random: () => number = Math.ra
 // Un ítem con rareza nunca se apila: va de a uno por lugar. Los normales se apilan como siempre.
 export function canStackWith(slotItem: { idItem?: number; rarity?: number } | null | undefined, idItem: number, rarity: number): boolean {
     if (!slotItem || Number(slotItem.idItem) !== Number(idItem)) return false;
-    return getItemRarity(idItem, slotItem.rarity) === 0 && getItemRarity(idItem, rarity) === 0;
+    return getItemRarity(idItem, slotItem.rarity) === getItemRarity(idItem, rarity);
 }
 
 export function isRarityNoDrop(idItem: number, rarity?: unknown): boolean {

@@ -1,0 +1,47 @@
+{
+  "normal": {
+    "label": "Normal",
+    "chancePerTenThousand": 9650,
+    "hp": 1,
+    "damage": 1,
+    "reward": 1,
+    "drop": 1,
+    "color": "white"
+  },
+  "mejorado": {
+    "label": "Mejorado",
+    "chancePerTenThousand": 150,
+    "hp": 1.5,
+    "damage": 1.2,
+    "reward": 2,
+    "drop": 1.25,
+    "color": "#35c76d"
+  },
+  "lider": {
+    "label": "Líder",
+    "chancePerTenThousand": 100,
+    "hp": 2,
+    "damage": 1.4,
+    "reward": 3,
+    "drop": 1.5,
+    "color": "#60a5fa"
+  },
+  "especial": {
+    "label": "Especial",
+    "chancePerTenThousand": 90,
+    "hp": 3,
+    "damage": 1.7,
+    "reward": 5,
+    "drop": 2,
+    "color": "#b084ee"
+  },
+  "legendario": {
+    "label": "Legendario",
+    "chancePerTenThousand": 10,
+    "hp": 4,
+    "damage": 2,
+    "reward": 7,
+    "drop": 3,
+    "color": "#e8b84e"
+  }
+}

@@ -486,6 +486,7 @@ export type AfflictionStatePayload = { venenoDmg: number; cegueraMs: number; est
 export type TargetStatePayload =
     | {
           kind: "npc";
+          npcRank?: "normal"|"mejorado"|"lider"|"especial"|"legendario";
           id: number;
           name: string;
           hp: number;
@@ -2099,8 +2100,8 @@ function parseNpc(reader: PacketReader): CharacterSnapshot {
         clan: reader.getString(),
         inmovilizado: reader.getByte(),
         crowdControlRemainingMs: reader.getInt(),
-        hp: reader.getShort(),
-        maxHp: reader.getShort(),
+        hp: reader.getInt(),
+        maxHp: reader.getInt(),
         isNpc: true,
     };
 
@@ -2269,8 +2270,8 @@ function parseServerPacketById(
                 type: "entityVitalsDelta",
                 payload: {
                     id: reader.getDouble(),
-                    hp: reader.getShort(),
-                    maxHp: reader.getShort(),
+                    hp: reader.getInt(),
+                    maxHp: reader.getInt(),
                     mana: reader.canReadBytes(4) ? reader.getShort() : 0,
                     maxMana: reader.canReadBytes(2) ? reader.getShort() : 0,
                 },

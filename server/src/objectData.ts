@@ -130,7 +130,7 @@ function fetchObjectsChangesFromApi(): ObjectChangesResponse {
     const raw = execFileSync(
         "curl",
         ["-fsSL", `${config.apiBaseUrl}${DEFAULT_OBJECTS_API_PATH}`, "-H", `Authorization: ${config.tokenAuth}`],
-        { encoding: "utf8" },
+        { encoding: "utf8", maxBuffer: 32 * 1024 * 1024, timeout: 30_000 },
     );
 
     console.log(`${config.apiBaseUrl}${DEFAULT_OBJECTS_API_PATH}`);

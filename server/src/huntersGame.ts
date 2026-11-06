@@ -4,7 +4,7 @@ const game = require("./game");
 const vars = require("./vars");
 const handleProtocol = require("./handleProtocol");
 const socket = require("./socket");
-const { getProgress, saveProgress } = require("./woaoProgress");
+const rewards = require("./eventRewards");
 
 export type HuntersGamePhase =
     | "CLOSED"
@@ -115,12 +115,12 @@ const huntersGameConfig = {
         arrowsMax: 20,
     },
     killReward: {
-        questPoints: 2,
+        questPoints: 3,
         gold: 1000,
     },
     winnerReward: {
-        baseQuestPoints: 5,
-        questPointsPerParticipant: 1,
+        baseQuestPoints: 15,
+        questPointsPerParticipant: 2,
         baseGold: 5000,
         goldPerParticipant: 1000,
     },
@@ -701,17 +701,6 @@ function statusLabel(): string {
     return state.phase;
 }
 
-function addQuestPoints(user: RuntimeCharacter, amount: number) {
-    if (amount <= 0) {
-        return;
-    }
-
-    const progress = getProgress(user);
-    progress.puntosCanje = Number(progress.puntosCanje ?? 0) + amount;
-    user.puntosCanje = progress.puntosCanje;
-    saveProgress(user);
-}
-
 function addGold(idUser: string, amount: number) {
     const user = getUser(idUser);
     const client = getClient(idUser);
@@ -737,20 +726,19 @@ function sendCharacterRefresh(idUser: string) {
 }
 
 function awardKillReward(killerId: string, victimId: string) {
-    const key = `${state.matchId}:${killerId}:${victimId}`;
+    const victim = getUser(victimId);
+    const key = `${state.matchId}:${killerId}:${victim?.idAccount ?? victimId}`;
     const user = getUser(killerId);
-    if (!user || state.rewardedKills.has(key)) {
+    if (!user || !victim || user.idAccount === victim.idAccount || state.rewardedKills.has(key)) {
         return;
     }
 
     state.rewardedKills.add(key);
-    addQuestPoints(user, huntersGameConfig.killReward.questPoints);
+    rewards.rewardEventUser("huntersGame", killerId, "kill", { victimId });
     addGold(killerId, huntersGameConfig.killReward.gold);
     sendCharacterRefresh(killerId);
     tell(
-        killerId,
-        `Kill valida: +${huntersGameConfig.killReward.questPoints} puntos de canje y +${huntersGameConfig.killReward.gold} oro.`,
-    );
+        killerId, `Baja válida: +${huntersGameConfig.killReward.gold} oro. Premio Quest registrado.`);
 }
 
 function awardWinnerReward(winnerId: string) {
@@ -760,14 +748,12 @@ function awardWinnerReward(winnerId: string) {
     }
 
     const participantCount = Math.max(MIN_PLAYERS, Number(state.initialParticipantCount || state.participants.size || 0));
-    const questPoints =
-        huntersGameConfig.winnerReward.baseQuestPoints + participantCount * huntersGameConfig.winnerReward.questPointsPerParticipant;
     const gold = huntersGameConfig.winnerReward.baseGold + participantCount * huntersGameConfig.winnerReward.goldPerParticipant;
 
-    addQuestPoints(user, questPoints);
+    rewards.rewardEventUser("huntersGame", winnerId, "champion");
     addGold(winnerId, gold);
     sendCharacterRefresh(winnerId);
-    tell(winnerId, `Ganaste Hunters Game: +${questPoints} puntos de canje y +${gold} oro.`);
+    tell(winnerId, `Ganaste Hunters Game: +${gold} oro. Premio Quest registrado.`);
 }
 
 function buildPayload(idUser?: string) {
@@ -852,7 +838,7 @@ function startRegistration(manual = false, scheduledStartsAt?: number) {
     state.chests.clear();
     state.killFeed = [];
     state.registrationStartsAt = now;
-    state.startsAt = manual ? now + 30_000 : scheduledStartsAt ?? now + REGISTRATION_MINUTES * 60_000;
+    state.startsAt = manual ? now + 30_000 : (scheduledStartsAt ?? now + REGISTRATION_MINUTES * 60_000);
     state.nextPhaseAt = state.startsAt;
     state.safePhaseEndsAt = null;
     state.initialParticipantCount = 0;
@@ -902,6 +888,7 @@ function beginMatch() {
     state.nextPhaseAt = Date.now() + MATCH_DURATION_MS;
     state.safePhaseEndsAt = Date.now() + huntersGameConfig.initialSafeSeconds * 1000;
     state.initialParticipantCount = state.participants.size;
+    rewards.startRewardRun("huntersGame", state.participants.keys());
     state.safePhaseNoticesSent.clear();
     announce(`La partida comenzo con ${state.participants.size} jugadores. Fase segura: ${huntersGameConfig.initialSafeSeconds} segundos.`);
 

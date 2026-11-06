@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { getProgress } from "./woaoProgress";
+import { runtimeDataPath } from "./runtimeDataPath";
 
 const handleProtocol = require("./handleProtocol");
 const vars = require("./vars");
@@ -25,7 +26,7 @@ type PvpTransferResponse = {
     loserClanPoints?: number;
 };
 
-const DATA_PATH = path.resolve(__dirname, "../data/clanMeta.json");
+const DATA_PATH = runtimeDataPath("clanMeta.json");
 const store = new Map<string, ClanMeta>();
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -83,6 +84,11 @@ export function getClanLevel(clanId?: string | null): number {
     return getMeta(String(clanId)).level;
 }
 
+export function setClanLevel(clanId: string, level: number): void {
+    getMeta(clanId).level = Math.max(1, Math.min(6, Math.floor(level)));
+    persistStore();
+}
+
 export function isAlliedWith(clanId: string | null | undefined, ownerClanName: string): boolean {
     if (!clanId || !ownerClanName) {
         return false;
@@ -98,10 +104,6 @@ export function applyReputation(clanId: string | null | undefined, delta: number
 
     const meta = getMeta(String(clanId));
     meta.points = Math.max(0, meta.points + delta);
-    if (delta > 0 && meta.points >= meta.level * 500) {
-        meta.level += 1;
-        handleProtocol.consoleToAll(`Clan> un clan subio al nivel ${meta.level}.`, "#E69500", 1, 0);
-    }
     persistStore();
 }
 
@@ -112,14 +114,11 @@ export function setReputation(clanId: string | null | undefined, points: number 
 
     const meta = getMeta(String(clanId));
     meta.points = Math.max(0, Math.floor(points));
-    while (meta.points >= meta.level * 500) {
-        meta.level += 1;
-        handleProtocol.consoleToAll(`Clan> un clan subio al nivel ${meta.level}.`, "#E69500", 1, 0);
-    }
     persistStore();
 }
 
 function getCharacterUuid(character: any): string | null {
+    // El nivel comprado se confirma en PostgreSQL; la reputación nunca lo aumenta.
     const value = String(character?._id ?? character?.idCharacter ?? "");
     return UUID_PATTERN.test(value) ? value : null;
 }

@@ -484,8 +484,7 @@ export type RuntimeCharacter = {
 };
 
 export type GmBotState = {
-    step:
-        | "menu"
+    step: "menu"
         | "reportar_nombre"
         | "reportar_motivo"
         | "bug_texto"
@@ -529,6 +528,10 @@ export type PartyRuntimeState = {
 };
 
 export type RuntimeNpc = {
+    rewardsProcessed?: boolean;
+    npcRank?: import("../npcRanks").NpcRankId;
+    npcRankDamageMultiplier?: number;
+    npcRankBaseHp?: number;
     id: EntityId;
     templateNpcIndex?: number;
     questNumber?: number;

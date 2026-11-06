@@ -795,6 +795,8 @@ function trackClientActivity(ws: RuntimeClient, packageID: number) {
     }
 
     require("./quests").initialize();
+    require("./questWallet").initializeQuestRewards();
+    require("./eventRewards").initializeEventRewards();
     require("./mounts").initialize();
     require("./bloodCastle").initialize();
     require("./huntersGame").initialize();

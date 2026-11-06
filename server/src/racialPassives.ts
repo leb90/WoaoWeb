@@ -14,6 +14,7 @@ export const WOAO_RACE = {
 } as const;
 
 type Combatant = {
+    id?: string | number;
     idRaza?: number;
     hp?: number;
     maxHp?: number;
@@ -250,6 +251,8 @@ export function applyIncomingHit(
     next = applyLethalSave(user, next);
     if (user) {
         user.hp = Number(user.hp ?? 0) - next;
+        if (!fromNpc && attackerId !== undefined && user.id !== undefined)
+            require("./combatActivity").recordCombatActivity(attackerId, user.id, next > 0);
         applyVampireOnHit(user);
         if (typeof attackerId !== "undefined") {
             user.lastAttackerId = attackerId;

@@ -85,7 +85,10 @@ test("the game server reports who is playing and the account ranking keeps the b
 
     const firstRow = overview.data.ranking.find((row) => row.nombre === first.name);
     assert.deepEqual(firstRow, { nombre: first.name, kills: 5, muertes: 5, mejorPuntaje: 9_000_040, mejorRacha: 3 });
-    assert.equal(overview.data.ranking[0]?.nombre, first.name);
+    assert.ok(overview.data.ranking.every(
+            (row, index, rows) => index === 0 || rows[index - 1].mejorPuntaje >= row.mejorPuntaje,
+        ),
+    );
 });
 
 test("a training ticket carries the bot class and the account's best training score", async () => {

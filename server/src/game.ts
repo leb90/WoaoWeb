@@ -3395,6 +3395,7 @@ function applyMountNpcAttack(
 }
 
 function notifyUserSpellDamage(user: GameCharacter, userAttacked: GameCharacter, dmg: number) {
+    require("./combatActivity").recordCombatActivity(user.id, userAttacked.id, dmg > 0);
     withUserClient(user.id, (userClient) => {
         handleProtocol.console(
             "Le has quitado " + dmg + " puntos de vida a " + userAttacked.nameCharacter,
@@ -4024,6 +4025,7 @@ export type GameApi = {
     clearPartyInvitation: (idUser: EntityId) => void;
     syncPartyStateForMember: (idUser: EntityId) => void;
     syncClanState: (clanId?: string | null) => void;
+    withClanVaultExclusive: <T>(clanId: string, run: () => Promise<T>) => Promise<T>;
     syncClanStateForMember: (idUser: EntityId) => void;
     refreshRelationshipIndexesForMember: (
         idUser: EntityId,
@@ -4300,6 +4302,7 @@ function findFirstHealthPotionSlot(user: GameCharacter): string | null {
 type SharedVaultScope = "account" | "clan";
 
 type SharedVaultSession = {
+    revision: number;
     key: string;
     scope: SharedVaultScope;
     ownerId: string;
@@ -4779,6 +4782,7 @@ async function fetchSharedVaultState(
 ): Promise<{
     gold: number;
     items: InventoryRecord;
+    revision: number;
 }> {
     const path =
         scope === "account"
@@ -4790,6 +4794,7 @@ async function fetchSharedVaultState(
             Authorization: vars.tokenAuth,
         },
     })) as {
+        revision?: number;
         gold: number;
         items: Array<{ idPos: number | string; idItem: number; cant: number; rarity?: number }>;
     };
@@ -4797,6 +4802,7 @@ async function fetchSharedVaultState(
     return {
         gold: balance.clampGold(Number(result.gold ?? 0)),
         items: hydrateBankRecord(result.items ?? []),
+        revision: Number(result.revision ?? 0),
     };
 }
 
@@ -4822,6 +4828,7 @@ async function persistSharedVaultAndCharacterState(
     await queueSharedVaultPersistence(session.key, async () => {
         const body: Record<string, unknown> = {
             characterId: user._id,
+            expectedRevision: session.revision,
         };
 
         if (options.characterItems) {
@@ -4840,14 +4847,15 @@ async function persistSharedVaultAndCharacterState(
             body.gold = balance.clampGold(session.gold);
         }
 
-        await funct.fetchUrl(path, {
+        const saved = (await funct.fetchUrl(path, {
             method: "PUT",
             body: JSON.stringify(body),
             headers: {
                 "Content-Type": "application/json",
                 Authorization: vars.tokenAuth,
             },
-        });
+        })) as { revision?: number };
+        if (saved.revision !== undefined) session.revision = saved.revision;
     });
 }
 
@@ -4920,6 +4928,21 @@ async function acquireSharedVaultSession(
     tab: Extract<BankTab, "account" | "clan">,
 ): Promise<{ ok: true; session: SharedVaultSession } | { ok: false; message: string }> {
     const scope = getSharedVaultTabScope(tab);
+    const owner = getBankTabOwnerId(user, tab);
+    let result: Awaited<ReturnType<typeof acquireSharedVaultSessionUnlocked>> = {
+        ok: false,
+        message: "Bóveda inválida",
+    };
+    await queueSharedVaultPersistence(getSharedVaultKey(scope ?? "account", owner ?? ""), async () => {
+        result = await acquireSharedVaultSessionUnlocked(user, tab);
+    });
+    return result;
+}
+async function acquireSharedVaultSessionUnlocked(
+    user: GameCharacter,
+    tab: Extract<BankTab, "account" | "clan">,
+): Promise<{ ok: true; session: SharedVaultSession } | { ok: false; message: string }> {
+    const scope = getSharedVaultTabScope(tab);
     const ownerId = getBankTabOwnerId(user, tab);
 
     if (!scope || !ownerId) {
@@ -4966,6 +4989,7 @@ async function acquireSharedVaultSession(
         holderCharacterName: user.nameCharacter,
         items: state.items,
         gold: state.gold,
+        revision: state.revision,
     };
     sharedVaultSessions.set(key, session);
 
@@ -5657,13 +5681,13 @@ function addItemToRecord(
     cant: number,
     options?: { maxSlots?: number; equipped?: number | boolean; rarity?: number },
 ): number[] | null {
-    if (!Number.isFinite(cant) || cant < 1) {
+    if (!Number.isSafeInteger(cant) || cant < 1) {
         return null;
     }
 
-    // Un ítem con rareza no se apila: cada unidad va en su lugar (itemRarity.ts).
+    // Se apilan únicamente el mismo objeto y la misma mejora efectiva.
     const rarity = itemRarity.getItemRarity(idItem, options?.rarity);
-    const stackLimit = rarity > 0 ? 1 : 10000;
+    const stackLimit = 10000;
     const matchingSlots: Array<{ idPos: string; available: number }> = [];
     let existingCapacity = 0;
 
@@ -9038,6 +9062,17 @@ function Game(this: GameApi) {
         syncClanState(clanId);
     };
 
+    this.withClanVaultExclusive = async function <T>(clanId: string, run: () => Promise<T>): Promise<T> {
+        const key = getSharedVaultKey("clan", clanId);
+        let result: T;
+        await queueSharedVaultPersistence(key, async () => {
+            if (sharedVaultSessions.has(key))
+                throw new Error("Cierra la bóveda del clan antes de subir de nivel. Otro miembro puede estar usándola");
+            result = await run();
+        });
+        return result!;
+    };
+
     this.refreshRelationshipIndexesForMember = function (
         idUser: EntityId,
         previousPartyId?: string | null,
@@ -10529,6 +10564,7 @@ function Game(this: GameApi) {
             }
 
             getFactionWars().onUserSpellEffect(idUser, idUserAttacked, spellEffect, dmg);
+            require("./combatActivity").recordCombatActivity(idUser, idUserAttacked, Boolean(spellEffect) || dmg > 0);
             return spellEffect ?? dmg;
         } catch (err) {
             funct.dumpError(err);
@@ -11302,6 +11338,7 @@ function Game(this: GameApi) {
             }
 
             if (!attackMissed) {
+                require("./combatActivity").recordCombatActivity(idUser, idUserAttacked, dmg > 0);
                 trainCharacterSkill(user, getAttackTrainSkillId(user));
 
                 if (stabResult.stabbed) {
@@ -12634,6 +12671,7 @@ function Game(this: GameApi) {
     };
 
     this.calcularExp = function (idUser: EntityId, idNpc: EntityId, dmg: number) {
+        require("./combatActivity").recordCombatActivity(idUser, idNpc, dmg > 0);
         try {
             const npc = vars.npcs[idNpc] as GameNpc | undefined;
 

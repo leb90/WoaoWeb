@@ -1,7 +1,6 @@
 const game = require("./game");
 const vars = require("./vars");
 const handleProtocol = require("./handleProtocol");
-const { getProgress, saveProgress } = require("./woaoProgress");
 
 const LOBBY = { map: 268, x: 40, y: 50 };
 const ARENA = { map: 269 };
@@ -107,11 +106,7 @@ export function onUserDied(idUser: string) {
         const winnerId = alive[0];
         const winner = vars.personajes[winnerId];
         if (winner) {
-            const progress = getProgress(winner);
-            progress.puntosCanje += 100;
-            winner.puntosCanje = progress.puntosCanje;
-            saveProgress(winner);
-            tell(winnerId, "Ganaste los Juegos del Hambre. +100 puntos de canje.");
+            tell(winnerId, "Los Juegos del Hambre fueron reemplazados por Hunters Game.");
             announce(`${winner.nameCharacter} gano los Juegos del Hambre.`);
             warp(winnerId, EXIT.map, EXIT.x, EXIT.y);
         }

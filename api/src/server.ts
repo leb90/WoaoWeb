@@ -3,6 +3,9 @@ import express from "express";
 import { z } from "zod";
 import config from "./config";
 import pool from "./db";
+import { initializeQuestWallet, mutateQuestWallet } from "./repositories/questWallets";
+import { donateClanQuestPoints, upgradeClan, importClanProgression } from "./repositories/clanProgression";
+import { registerEventRun, grantEventReward } from "./repositories/eventRewards";
 import { requireAuth } from "./middleware/auth";
 import { DONATION_PACKAGES, getDonationPackage } from "./lib/donationPackages";
 import { WORLD_CLOSED_MESSAGE } from "./lib/worldAccess";
@@ -2491,6 +2494,24 @@ app.get(
         }
     },
 );
+
+for (const [route, handler] of [
+    ["/internal/quest-wallets/initialize", initializeQuestWallet],
+    ["/internal/quest-wallets/mutate", mutateQuestWallet],
+    ["/internal/events/register-rewards", registerEventRun],
+    ["/internal/events/grant-reward", grantEventReward],
+    ["/internal/clans/donate-quest", donateClanQuestPoints],
+    ["/internal/clans/upgrade", upgradeClan],
+    ["/internal/clans/import-progression", importClanProgression],
+] as Array<[string, (payload: unknown) => Promise<unknown>]>) {
+    app.post(route, requireAuth, async (request, response) => {
+        try {
+            response.json(await handler(request.body));
+        } catch (error) {
+            response.status(400).json({ error: error instanceof Error ? error.message : "Operación inválida" });
+        }
+    });
+}
 
 app.post("/internal/clans", requireAuth, async (request, response) => {
     try {

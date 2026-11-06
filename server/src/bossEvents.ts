@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { runtimeDataPath } from "./runtimeDataPath";
 import type { EntityId, Position, RuntimeClient, RuntimeNpc } from "./types/runtime";
 
 export {};
@@ -11,7 +12,7 @@ const login = require("./login");
 const socket = require("./socket");
 const handleProtocol = require("./handleProtocol");
 
-const STATE_PATH = path.resolve(__dirname, "../jsons/bossEvents.json");
+const STATE_PATH = runtimeDataPath("bossEvents.json", "../jsons/bossEvents.json");
 const HOUR_MS = 60 * 60 * 1000;
 const MINUTE_MS = 60 * 1000;
 

@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
+import { runtimeDataPath } from "./runtimeDataPath";
 
 export type QuestProgress = {
+    rewardOperationId?: string;
     questIndex: number;
     npcsKilled: number[];
 };
@@ -26,6 +28,8 @@ export type PendingDelivery = {
 };
 
 export type WoaoProgress = {
+    questWalletVersion?: number;
+    rewardDeliveriesApplied?: Record<string, boolean>;
     puntosCanje: number;
     puntosDonacion: number;
     quests: QuestProgress[];
@@ -45,7 +49,7 @@ export type WoaoProgress = {
     dungeonItems?: string[];
 };
 
-const DATA_PATH = path.resolve(__dirname, "../data/woaoProgress.json");
+const DATA_PATH = runtimeDataPath("woaoProgress.json");
 const MAX_QUESTS = 3;
 
 const store = new Map<string, WoaoProgress>();

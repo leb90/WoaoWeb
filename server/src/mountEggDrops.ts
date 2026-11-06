@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { DropItem, RuntimeNpc } from "./types/runtime";
+import { getRankedDropChance } from "./npcRanks";
 
 const vars = require("./vars");
 
@@ -458,7 +459,7 @@ export function rollMountEggDrops(npc: RuntimeNpc | undefined | null): DropItem[
     const drops: DropItem[] = [];
 
     for (const entry of entries) {
-        if (Math.random() * 100 >= entry.chancePercent) {
+        if (Math.random() * 100 >= getRankedDropChance(entry.chancePercent, npc.npcRank)) {
             continue;
         }
 

@@ -426,6 +426,25 @@ function handleHttpRequest(request: any, response: any) {
         return;
     }
 
+    // Las escenas del teaser (teaser.ts), que arma la grabación (teaser/grabar.ts):
+    //   /debug/teaser/escena?id=ciudad&jugador=Nombre, /debug/teaser/decir?bot=Nombre&texto=..., /debug/teaser/limpiar
+    if (config.nodeEnv !== "production" && request.url?.startsWith("/debug/teaser/")) {
+        const url = new URL(request.url, "http://localhost");
+        void require("./teaser")
+            .handleDebugRequest(url)
+            .then((resultado: unknown) => {
+                response.statusCode = 200;
+                response.setHeader("Content-Type", "application/json; charset=utf-8");
+                response.end(JSON.stringify(resultado));
+            })
+            .catch((error: unknown) => {
+                funct.dumpError(error);
+                response.statusCode = 500;
+                response.end(String(error));
+            });
+        return;
+    }
+
     if (config.isTestDeployment && request.url?.startsWith("/debug/population-bots")) {
         const url = new URL(request.url, "http://localhost");
         const action = url.searchParams.get("action");
@@ -1370,6 +1389,7 @@ createDynamicScheduler(
         populationBotsTickSamplesMs.push(Number(process.hrtime.bigint() - populationBotsTickStart) / 1e6);
         require("./arenaTraining").tick(now);
         require("./trainingDummies").tick(now);
+        require("./teaser").tick(now);
 
         if (now >= nextPlayerStatusTickAt) {
             processPlayerStatusTick(now);

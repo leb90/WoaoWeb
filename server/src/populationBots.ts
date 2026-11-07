@@ -244,7 +244,7 @@ const HEADING_DELTAS: Array<{ dx: number; dy: number; heading: number }> = [
 // BFS acotado (mismo espiritu que el flow-field que ya usan los NPCs, pero
 // calculado directo punto-a-punto: cada bot persigue su propio objetivo, no
 // tiene sentido compartir cache entre bots como si fuera un solo target).
-function localBfsHeadings(map: number, from: Position, to: Position, maxSteps: number): number[] {
+export function localBfsHeadings(map: number, from: Position, to: Position, maxSteps: number): number[] {
     const startKey = posKey(from.x, from.y);
     const visited = new Map<string, { fromKey: string | null; heading: number | null }>();
     visited.set(startKey, { fromKey: null, heading: null });

@@ -391,6 +391,8 @@ type PvPConnectOptions = {
     arena?: boolean;
     /** Entrenamiento contra el bot (arenaTraining.ts): copia privada de la arena; el bot lleva `esBot`. */
     entrenamiento?: { map: number; idClaseBot: number; record?: number; esBot?: boolean; jugadorId?: string };
+    /** Bot del teaser (teaser.ts): la plantilla por clase de la arena, pero en el mundo y en el lugar de `spawn`. */
+    teaserBot?: boolean;
 };
 
 export type LoginApi = {
@@ -1231,9 +1233,11 @@ function Login(this: LoginApi) {
     ) => {
         // En la arena, idChar es la clase (arenaClasses.ts); los bots usan las plantillas viejas de vars.
         const isArena = Boolean(options?.arena);
+        const isTeaserBot = Boolean(options?.teaserBot);
+        const usesClassTemplate = isArena || isTeaserBot;
         const arena = require("./arena") as typeof import("./arena");
         const character = (
-            isArena ? buildArenaTemplate(idChar) : _.cloneDeep(vars.charactersPvP[idChar])
+            usesClassTemplate ? buildArenaTemplate(idChar) : _.cloneDeep(vars.charactersPvP[idChar])
         ) as
             | PvPCharacterTemplate | undefined | null;
 
@@ -1250,7 +1254,7 @@ function Login(this: LoginApi) {
             ),
         );
         const entrenamiento = options?.entrenamiento;
-        const isSyntheticBot = Boolean(options?.markAsBot || isAdminSummonedBot || entrenamiento?.esBot);
+        const isSyntheticBot = Boolean(options?.markAsBot || isAdminSummonedBot || entrenamiento?.esBot || isTeaserBot);
         const isPvpCharacter = options?.pvpChar ?? true;
 
         const baseAttrFuerza = 18 + vars.balanceRazas[character.idRaza].fuerza;
@@ -1442,7 +1446,7 @@ function Login(this: LoginApi) {
         const skills = require("./skills");
         const skillValues = skills.ensureSkills(newCharacter) as number[];
 
-        if (isArena) {
+        if (usesClassTemplate) {
             // Entrenado como un nivel 50 y con el bono del set sumado a la vida y al maná, igual que el login normal.
             for (const name of ARENA_SKILLS) {
                 skillValues[skills.SKILLS[name] - 1] = ARENA_SKILL_VALUE;

@@ -37,6 +37,7 @@ import {
     setTextIfChanged,
 } from "../rendering/textStyles";
 import { Engine } from "../engine/Engine";
+import { exposeTeaserControls } from "../../../lib/teaserRecording";
 import { getHoverRelation, updateHoverHighlight } from "../rendering/hoverHighlight";
 import { cursorForHoverRelation, setElementCursor } from "../../../lib/gameCursors";
 import { updateSpellAreaPreview } from "../rendering/spellAreaPreview";
@@ -240,6 +241,12 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                     // la consola o desde pruebas automatizadas.
                     (window as unknown as { __woaoEngine?: Engine }).__woaoEngine =
                         engine;
+                    exposeTeaserControls((packet) => {
+                        const socket = options.websocketRef.current;
+                        if (socket?.readyState === WebSocket.OPEN) {
+                            socket.send(packet);
+                        }
+                    });
                 }
 
                 engine.sendPositionPacket = (heading: number) => {

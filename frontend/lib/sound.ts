@@ -1,5 +1,6 @@
 import { Howl, Howler } from "howler";
 import { DEFAULT_SOUND_VOLUMES } from "./soundVolumes";
+import { logTeaserSound } from "./teaserRecording";
 
 export interface SoundPosition {
     map?: number;
@@ -116,6 +117,7 @@ export class GameSoundManager {
         if (computedVolume <= 0) {
             return;
         }
+        logTeaserSound({ soundId, volume: computedVolume, category });
 
         const sound = this.getOrCreateSound(soundId);
         if (!sound) {

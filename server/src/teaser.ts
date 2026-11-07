@@ -196,7 +196,11 @@ const ESCENAS: Record<string, Escena> = {
         momento: "mediodia",
         clima: "despejado",
         bots: [],
-        alLlegar: (jugadorId) => require("./dungeons").enter(jugadorId, "solo"),
+        alLlegar: (jugadorId) => {
+            // La Pluma, para saltar la lava; las Patas de rana las saca del cofre en la toma.
+            itemsDeMazmorra(jugadorId, ["pluma"], ["patas_de_rana"]);
+            require("./dungeons").enter(jugadorId, "solo");
+        },
     },
 };
 
@@ -705,6 +709,21 @@ function curar(user: RuntimeCharacter, client: RuntimeClient) {
     user.mana = user.maxMana;
     handleProtocol.updateHP(user.hp, client);
     handleProtocol.updateMana(user.mana, client);
+}
+
+// Los ítems de mazmorra se guardan en el progreso del personaje (dungeons.ts los lee de ahí).
+function itemsDeMazmorra(jugadorId: EntityId, dar: string[], sacar: string[]) {
+    const clave = (usuario(jugadorId) as { _id?: unknown } | undefined)?._id;
+    if (!clave) {
+        return;
+    }
+    const progreso = require("./woaoProgress");
+    const datos = progreso.getProgress({ _id: String(clave) }) as { dungeonItems?: string[] };
+    const items = new Set(datos.dungeonItems ?? []);
+    dar.forEach((item) => items.add(item));
+    sacar.forEach((item) => items.delete(item));
+    datos.dungeonItems = [...items];
+    progreso.saveProgress({ _id: String(clave) });
 }
 
 // --- Armar y desarmar ---

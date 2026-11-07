@@ -26,6 +26,8 @@ declare global {
         __woaoTeaser?: {
             castSpell: (slot: number, x: number, y: number, map: number, targetId?: number) => void;
             say: (text: string) => void;
+            click: (x: number, y: number, map: number) => void;
+            face: (heading: number) => void;
         };
     }
 }

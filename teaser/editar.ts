@@ -1,6 +1,6 @@
 // Arma el video del teaser (README.md) con lo que grabó grabar.ts: los cuadros con su hora, las marcas de cada escena
-// y los sonidos que sonaron. Corta cada escena, le pone su cartel, las une con fundidos, arma la música (tres tramos
-// del tema del menú del juego) con los efectos del juego en su momento, y codifica el MP4.
+// y los sonidos que sonaron. Corta cada escena, le pone su cartel, las une con fundidos, arma la música épica con los
+// golpes de tráiler, el clima y los efectos del juego en su momento, y codifica el MP4.
 //   pnpm editar [salida.mp4]
 // Necesita ffmpeg (con libx264) y Chrome (dibuja los carteles con la letra del sitio).
 import { execFileSync } from "node:child_process";
@@ -19,31 +19,56 @@ const RATE = 48000;
 // El fundido entre escenas, en segundos.
 const XFADE = 0.5;
 
-// La música: "Shoulders of Giants", de Scott Buckley (CC BY 4.0), la del inicio del sitio (lib/musicCredits.ts).
-const MUSIC = path.join(PUBLIC, "music", "menu", "inicio.mp3");
-const MUSIC_CREDIT = "Música: «Shoulders of Giants», Scott Buckley (CC BY 4.0)";
-// Los tramos (en segundos del tema): el arranque suave para la ciudad, la parte más fuerte para la acción y la bajada
-// para el final.
-const CALMA: [number, number] = [8, 32];
-const ACCION: [number, number] = [292, 347];
-const CIERRE: [number, number] = [347, 372];
+// La música: "Five Armies", de Kevin MacLeod (incompetech.com, CC BY 4.0). Se baja la primera vez a assets/.
+const MUSIC_URL = "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Five%20Armies.mp3";
+const MUSIC = path.join(__dirname, "assets", "five-armies.mp3");
+const MUSIC_CREDIT = "Música: «Five Armies», Kevin MacLeod (incompetech.com), CC BY 4.0";
+// La ciudad va con el arranque del tema (los tambores suaves). Para el resto, el tema sigue hasta su golpe final, que
+// cae justo cuando aparece el logo; el acorde que queda sonando cierra el video.
+const ARRANQUE: [number, number] = [0, 14];
+const GOLPE_FINAL = 147.2;
+const FIN_DEL_TEMA = 155.8;
+
+// El clima de algunas escenas (frontend/public/sounds/clima, CC0): el juego lo suena aparte y no queda anotado.
+const CLIMA = path.join(PUBLIC, "sounds", "clima");
 
 type Cuadro = { file: string; at: number };
 type Sonido = { soundId: number; at: number; volume: number; category: string };
 type Cartel = { titulo: string; antetitulo?: string; pie?: string } | "logo";
-// Una escena: desde una marca (más unos segundos), cuánto dura, su cartel (si tiene) y en qué parte de la música va.
-type Escena = { marca: string; desde: number; segundos: number; cartel?: Cartel; parte: "calma" | "accion" | "cierre"; negro?: boolean };
+// Una escena: desde una marca (más unos segundos), cuánto dura, su cartel (si tiene), si arranca con un golpe de
+// tráiler y el clima que suena de fondo.
+type Escena = {
+    marca: string;
+    desde: number;
+    segundos: number;
+    cartel?: Cartel;
+    golpe?: boolean;
+    clima?: { archivo: string; ganancia: number; trueno?: string };
+    /** Acerca la cámara (el personaje queda en el centro): en la mazmorra los bloques, las placas y las bombas son chicos. */
+    zoom?: number;
+    negro?: boolean;
+};
+
+const TORMENTA = { archivo: "clima-tormenta.mp3", ganancia: 0.35 };
+const NIEVE = { archivo: "clima-nieve.mp3", ganancia: 0.3 };
 
 const ESCENAS: Escena[] = [
-    { marca: "ciudad", desde: 0.6, segundos: 9.2, cartel: { antetitulo: "World of Argentum", titulo: "Un mundo lleno de gente" }, parte: "calma" },
-    { marca: "caza", desde: 0.8, segundos: 5.6, cartel: { titulo: "Armá tu party y salí a cazar" }, parte: "accion" },
-    { marca: "caza", desde: 7.4, segundos: 4.2, parte: "accion" },
-    { marca: "chaman", desde: 0.5, segundos: 5.4, cartel: { antetitulo: "Clase nueva", titulo: "Chamán elemental" }, parte: "accion" },
-    { marca: "chaman", desde: 7.0, segundos: 4.6, parte: "accion" },
-    { marca: "castillo", desde: 0.6, segundos: 6.2, cartel: { titulo: "Conquistá castillos con tu clan" }, parte: "accion" },
-    { marca: "castillo", desde: 7.6, segundos: 4.4, parte: "accion" },
-    { marca: "mazmorra", desde: 1.2, segundos: 6.4, cartel: { antetitulo: "Próximamente", titulo: "Mazmorras", pie: "En desarrollo" }, parte: "cierre" },
-    { marca: "fin", desde: 0, segundos: 7.0, cartel: "logo", parte: "cierre", negro: true },
+    { marca: "ciudad", desde: 0.6, segundos: 9.2, cartel: { antetitulo: "World of Argentum", titulo: "Un mundo lleno de gente" } },
+    { marca: "caza", desde: 0.8, segundos: 5.6, cartel: { titulo: "Armá tu party y salí a cazar" }, golpe: true },
+    { marca: "caza", desde: 7.4, segundos: 3.4 },
+    { marca: "chaman", desde: 0.5, segundos: 5.4, cartel: { antetitulo: "Clase nueva", titulo: "Chamán elemental" }, golpe: true, clima: NIEVE },
+    { marca: "chaman", desde: 7.0, segundos: 3.8, clima: NIEVE },
+    { marca: "castillo", desde: 0.6, segundos: 6.2, cartel: { titulo: "Conquistá castillos con tu clan" }, golpe: true, clima: { ...TORMENTA, trueno: "clima-trueno-1.ogg" } },
+    { marca: "castillo", desde: 7.6, segundos: 3.6, clima: TORMENTA },
+    // La mazmorra: la llave, el salto con la Pluma, la puerta, el bloque y las placas, y la sala del agua con el Abisal.
+    { marca: "mazmorra.cofre", desde: -1.6, segundos: 3.4, cartel: { antetitulo: "Próximamente", titulo: "Mazmorras", pie: "En desarrollo" }, golpe: true, zoom: 1.4 },
+    { marca: "mazmorra.salto", desde: -0.7, segundos: 2.2, zoom: 1.4 },
+    { marca: "mazmorra.puerta", desde: -0.4, segundos: 1.9, zoom: 1.4 },
+    { marca: "mazmorra.bloque", desde: 0.2, segundos: 3.6, cartel: { titulo: "Resolvé acertijos" }, zoom: 1.4 },
+    { marca: "mazmorra.placa", desde: 1.2, segundos: 2.4, zoom: 1.4 },
+    { marca: "mazmorra.ranas", desde: -0.6, segundos: 2.4, zoom: 1.4 },
+    { marca: "mazmorra.agua", desde: 0.6, segundos: 6.0, cartel: { titulo: "Usá objetos nuevos" }, zoom: 1.6 },
+    { marca: "fin", desde: 0, segundos: 7.0, cartel: "logo", golpe: true, negro: true },
 ];
 
 const run = (args: string[]) => execFileSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", ...args], { stdio: ["ignore", "inherit", "inherit"] });
@@ -127,7 +152,8 @@ function cortar(escena: Escena, indice: number, cuadros: Cuadro[], marcas: Recor
         fs.writeFileSync(listFile, lista.join("\n"));
         entradas.push("-f", "concat", "-safe", "0", "-i", listFile);
     }
-    const base = `[0:v]fps=${FPS},scale=${SIZE.width}:${SIZE.height}:flags=lanczos,setsar=1,trim=duration=${escena.segundos}`;
+    const acercar = escena.zoom ? `crop=iw/${escena.zoom}:ih/${escena.zoom},` : "";
+    const base = `[0:v]fps=${FPS},${acercar}scale=${SIZE.width}:${SIZE.height}:flags=lanczos,setsar=1,trim=duration=${escena.segundos}`;
     let filtro = `${base},format=yuv420p[v]`;
     const cartel = escena.cartel ? carteles.get(escena.cartel) : undefined;
     if (cartel) {
@@ -198,9 +224,41 @@ function escribirWav(file: string, pista: Float32Array): void {
     fs.writeFileSync(file, Buffer.concat([header, data]));
 }
 
+// Los golpes de tráiler, hechos acá con ffmpeg (no hay licencias que cumplir): un golpe grave con su eco, un barrido
+// de aire que pasa de un lado al otro y una subida que lleva al logo.
+function sonidosDeTrailer(): { golpe: string; barrido: string; subida: string } {
+    const golpe = path.join(WORK, "golpe.wav");
+    const barrido = path.join(WORK, "barrido.wav");
+    const subida = path.join(WORK, "subida.wav");
+    run([
+        "-f", "lavfi", "-i", `aevalsrc='0.9*sin(2*PI*(52*t-10*t*t))*exp(-2.4*t)+0.3*sin(2*PI*(104*t-20*t*t))*exp(-5*t)':s=${RATE}:d=3.5`,
+        "-f", "lavfi", "-i", `anoisesrc=d=3.5:c=brown:r=${RATE}:a=0.8`,
+        "-filter_complex",
+        "[1:a]lowpass=f=700,afade=t=out:st=0:d=0.6:curve=exp[ruido];" +
+            "[0:a][ruido]amix=inputs=2:weights=1 0.6:normalize=0,aecho=0.8:0.6:70|140:0.35|0.25,highpass=f=25,alimiter=limit=0.95,pan=stereo|c0=c0|c1=c0",
+        golpe,
+    ]);
+    run([
+        "-f", "lavfi", "-i", `anoisesrc=d=1.2:c=pink:r=${RATE}:a=0.9`,
+        "-af", "highpass=f=250,lowpass=f=5000,afade=t=in:st=0:d=0.8:curve=qsin,afade=t=out:st=0.8:d=0.4,pan=stereo|c0=c0|c1=c0,apulsator=hz=0.8:amount=0.7",
+        barrido,
+    ]);
+    run([
+        "-f", "lavfi", "-i", `aevalsrc='0.25*sin(2*PI*(180*t+70*t*t))*(t/2.5)':s=${RATE}:d=2.5`,
+        "-f", "lavfi", "-i", `anoisesrc=d=2.5:c=white:r=${RATE}:a=0.5`,
+        "-filter_complex", "[1:a]highpass=f=1500,volume=0.4[ruido];[0:a][ruido]amix=inputs=2:normalize=0,afade=t=in:st=0:d=2.3:curve=exp,pan=stereo|c0=c0|c1=c0",
+        subida,
+    ]);
+    return { golpe, barrido, subida };
+}
+
 async function main(): Promise<void> {
     fs.rmSync(WORK, { recursive: true, force: true });
     fs.mkdirSync(WORK, { recursive: true });
+    if (!fs.existsSync(MUSIC)) {
+        fs.mkdirSync(path.dirname(MUSIC), { recursive: true });
+        execFileSync("curl", ["-sL", "-A", "Mozilla/5.0", "-o", MUSIC, MUSIC_URL]);
+    }
     const cuadros = JSON.parse(fs.readFileSync(path.join(OUT, "cuadros.json"), "utf8")) as Cuadro[];
     const marcas = JSON.parse(fs.readFileSync(path.join(OUT, "marcas.json"), "utf8")) as Record<string, number>;
     const sonidos = JSON.parse(fs.readFileSync(path.join(OUT, "sonidos.json"), "utf8")) as Sonido[];
@@ -231,40 +289,75 @@ async function main(): Promise<void> {
     const mudo = path.join(WORK, "video.mp4");
     run([...entradas, "-filter_complex", filtro, "-map", "[final]", "-c:v", "libx264", "-preset", "slow", "-crf", "16", "-pix_fmt", "yuv420p", "-r", String(FPS), mudo]);
 
-    // 4. El sonido: la música en sus tres tramos, con fundidos, y los efectos del juego donde sonaron.
+    // 4. El sonido.
     const pista = new Float32Array(Math.ceil(total * RATE) * 2);
-    const primeraAccion = clips.findIndex((clip) => clip.escena.parte === "accion");
-    const primerCierre = clips.findIndex((clip) => clip.escena.parte === "cierre");
-    const partes: Array<{ tramo: [number, number]; en: number; hasta: number }> = [
-        { tramo: CALMA, en: 0, hasta: comienzos[primeraAccion]! + 1.2 },
-        { tramo: ACCION, en: comienzos[primeraAccion]!, hasta: comienzos[primerCierre]! + 1.5 },
-        { tramo: CIERRE, en: comienzos[primerCierre]!, hasta: total },
-    ];
-    for (const parte of partes) {
-        const segundos = Math.min(parte.hasta - parte.en, parte.tramo[1] - parte.tramo[0]);
-        const valores = muestras(MUSIC, parte.tramo[0], segundos).slice();
-        // Entra y sale en 1,2 segundos (se cruza con el tramo de al lado).
-        const fundido = Math.round(1.2 * RATE) * 2;
+    const conFundido = (valores: Float32Array, entra: number, sale: number) => {
+        const largoEntra = Math.max(1, Math.round(entra * RATE) * 2);
+        const largoSale = Math.max(1, Math.round(sale * RATE) * 2);
         for (let i = 0; i < valores.length; i++) {
-            valores[i]! *= Math.min(1, i / fundido, (valores.length - i) / fundido);
+            valores[i]! *= Math.min(1, i / largoEntra, (valores.length - i) / largoSale);
         }
-        mezclar(pista, valores, parte.en, 0.8);
-    }
+        return valores;
+    };
+
+    // La música: el arranque del tema para la ciudad y, desde la caza, el tema hasta su golpe final con el logo.
+    const primeraAccion = clips.findIndex((clip) => clip.escena.marca !== "ciudad");
+    const logo = clips.findIndex((clip) => clip.escena.cartel === "logo");
+    const enAccion = comienzos[primeraAccion]!;
+    const desdeTema = Math.max(ARRANQUE[1], GOLPE_FINAL - (comienzos[logo]! - enAccion));
+    const arranque = Math.min(enAccion + 0.8, ARRANQUE[1] - ARRANQUE[0]);
+    mezclar(pista, conFundido(muestras(MUSIC, ARRANQUE[0], arranque).slice(), 0.3, 0.8), 0, 0.7);
+    mezclar(pista, conFundido(muestras(MUSIC, desdeTema, FIN_DEL_TEMA - desdeTema).slice(), 0.15, 1.5), enAccion, 0.7);
+
+    // Los golpes de tráiler: uno al entrar cada escena grande, un barrido en cada cambio de lugar y una subida antes
+    // del logo.
+    const trailer = sonidosDeTrailer();
+    clips.forEach((clip, i) => {
+        if (clip.escena.golpe) {
+            mezclar(pista, muestras(trailer.golpe), comienzos[i]! + XFADE / 2, i === logo ? 1 : 0.85);
+        }
+        const lugar = (marca: string) => marca.split(".")[0];
+        if (i > 0 && lugar(clip.escena.marca) !== lugar(clips[i - 1]!.escena.marca) && i !== logo) {
+            mezclar(pista, muestras(trailer.barrido), comienzos[i]! - 0.7, 0.35);
+        }
+    });
+    mezclar(pista, muestras(trailer.subida), comienzos[logo]! - 2.4, 0.45);
+
+    // El clima de fondo y el trueno, en las escenas que lo tienen.
+    clips.forEach((clip, i) => {
+        const clima = clip.escena.clima;
+        if (!clima) {
+            return;
+        }
+        const fondo = muestras(path.join(CLIMA, clima.archivo));
+        const largo = Math.round(clip.escena.segundos * RATE) * 2;
+        const tramo = new Float32Array(largo);
+        for (let j = 0; j < largo; j++) tramo[j] = fondo[j % fondo.length]!;
+        mezclar(pista, conFundido(tramo, 0.4, 0.4), comienzos[i]!, clima.ganancia);
+        if (clima.trueno) {
+            mezclar(pista, muestras(path.join(CLIMA, clima.trueno)), comienzos[i]! + 0.4, 0.8);
+        }
+    });
+
+    // Los efectos del juego donde sonaron. El mismo sonido dos veces en el mismo instante (lo anota el cliente y el
+    // eco del server) va una sola vez.
     clips.forEach((clip, i) => {
         if (clip.escena.negro) {
             return;
         }
         const fin = clip.inicio + clip.escena.segundos * 1000;
+        const ultimoDe = new Map<number, number>();
         for (const sonido of sonidos) {
-            if (sonido.at < clip.inicio || sonido.at >= fin) {
+            if (sonido.at < clip.inicio || sonido.at >= fin || sonido.at - (ultimoDe.get(sonido.soundId) ?? -Infinity) < 80) {
                 continue;
             }
+            ultimoDe.set(sonido.soundId, sonido.at);
             const file = archivoDeSonido(sonido.soundId);
             if (!file) {
                 continue;
             }
             // Las pisadas, bien abajo: acompañan sin tapar la música.
-            const ganancia = sonido.volume * (sonido.category === "pisadas" ? 0.12 : 0.5);
+            const ganancia = sonido.volume * (sonido.category === "pisadas" ? 0.12 : 0.85);
             mezclar(pista, muestras(file), comienzos[i]! + (sonido.at - clip.inicio) / 1000, ganancia);
         }
     });

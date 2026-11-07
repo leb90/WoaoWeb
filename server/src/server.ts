@@ -825,7 +825,7 @@ wsServer?.on("connection", function (ws: RuntimeClient, request: RuntimeConnecti
 
     ws.on("message", function (data: unknown) {
         try {
-            if (ws.readyState !== ws.OPEN || !vars.serverReady) {
+            if (!require("./serverStartupGate").acceptGameMessage(ws, vars.serverReady)) {
                 return;
             }
 

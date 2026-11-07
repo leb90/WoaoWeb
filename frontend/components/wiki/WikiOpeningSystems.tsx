@@ -245,6 +245,16 @@ export default function WikiOpeningSystems({ section }: { section: string }) {
                         caption="La primera victoria válida del día acredita 20 puntos Quest: 8 por victoria y 12 de bonus."
                     />
                     <p className="mt-3 text-sm leading-6 text-stone-300">
+                        En 2v2, la ronda continúa mientras quede un integrante del equipo vivo. Una resurrección
+                        permite volver al combate. La serie termina al ganar dos rondas; al salir recuperás tu
+                        equipo y la vida.
+                    </p>
+                    <Capture
+                        file="ranked-2v2"
+                        alt="Ranked 2v2 con una baja y marcador todavía en cero a cero"
+                        caption="La primera baja no decide la ronda: el compañero sigue peleando."
+                    />
+                    <p className="mt-3 text-sm leading-6 text-stone-300">
                         Cada personaje puede recibir hasta {rewards.ranked.dailyCap} puntos por día entre ambos modos.
                         El día cambia a medianoche de Argentina. Como máximo se premian{" "}
                         {rewards.ranked.opponentMatchesPerDay} encuentros diarios contra una misma cuenta rival.
@@ -311,6 +321,21 @@ export default function WikiOpeningSystems({ section }: { section: string }) {
                         file="evento-premio"
                         alt="Evento terminado con puntos Quest acreditados al participante"
                         caption="Los puntos del evento se agregan al mismo saldo Quest que usan las misiones, los canjes y los aportes al clan."
+                    />
+                    <Capture
+                        file="torneo-premio"
+                        alt="Campeón del torneo automático con puntos Quest acreditados"
+                        caption="En el torneo sólo podés atacar a tu rival de turno, incluso si pertenece a tu clan."
+                    />
+                    <Capture
+                        file="hunters-premio"
+                        alt="Hunters Game terminado y premio del último superviviente"
+                        caption="Hunters comienza con dos minutos seguros para buscar cofres. Después se habilita el combate."
+                    />
+                    <Capture
+                        file="guerra-premio"
+                        alt="Resultado de una guerra de facciones y premios por victoria y MVP"
+                        caption="La guerra dura cinco minutos. El resultado y los MVP determinan los premios de los participantes activos."
                     />
                     <p className="mt-3 text-sm leading-6 text-stone-400">
                         Los Juegos del Hambre antiguos están deshabilitados y fueron reemplazados por Hunters Game. Los

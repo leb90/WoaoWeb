@@ -1441,6 +1441,7 @@ function resetFuerzaAgilidadBuffs(user: GameCharacter, client?: RuntimeClient) {
 
 function isArenaCombat(user: GameCharacter | undefined, userAttacked: GameCharacter | undefined): boolean {
     return Boolean(
+        require("./tournamentAuto").isTournamentCombat(user?.id, userAttacked?.id) ||
         (user?.arenaFfa && userAttacked?.arenaFfa && user.map === userAttacked.map) ||
         getHuntersGame().isHuntersCombat(user?.id, userAttacked?.id) ||
         (user?.rankedMatchId &&
@@ -1699,6 +1700,10 @@ function getFriendlyFireBlockReason(
 
     const attacker = getCharacterById(attackerId);
     const victim = getCharacterById(victimId);
+    const tournamentRelation = require("./tournamentAuto").getCombatRelation(attackerId, victimId);
+    if (tournamentRelation === "enemy") return null;
+    if (tournamentRelation === "waiting") return "Sólo puedes atacar al rival de tu duelo. Espera tu turno.";
+    if (getHuntersGame().isHuntersCombat(attackerId, victimId)) return null;
     if (
         attacker?.rankedMatchId &&
         victim?.rankedMatchId &&
@@ -3999,7 +4004,7 @@ export type GameApi = {
     ) => Position | undefined;
     puedePegar: (posX: number, posY: number) => boolean;
     bodyNaked: (idUser: EntityId) => number;
-    putBodyAndHeadDead: (idUser: EntityId) => void;
+    putBodyAndHeadDead: (idUser: EntityId, killerId?: EntityId) => void;
     revivirUsuario: (
         idUser: EntityId,
         options?: {
@@ -8914,7 +8919,7 @@ function Game(this: GameApi) {
      * @param  {[type]} idUser [description]
      * @return {[type]}        [description]
      */
-    this.putBodyAndHeadDead = function (idUser: EntityId) {
+    this.putBodyAndHeadDead = function (idUser: EntityId, killerId?: EntityId) {
         try {
             const user = vars.personajes[idUser];
             const userClient = getClientById(idUser);
@@ -8938,18 +8943,12 @@ function Game(this: GameApi) {
             user.idShield = 0;
             resetFuerzaAgilidadBuffs(user, userClient ?? undefined);
             user.dead = 1;
-            // En la guerra y en la arena se revive solo: no se pasa al mundo de los muertos.
+            // Los combates con restauración automática no pasan al mundo de los muertos.
             const arena = require("./arena");
-            const useWarDeathFlow =
-                require("./factionWars").shouldUseWarDeathFlow(String(idUser)) || arena.isArenaCharacter(user);
+            const useAutomaticDeathFlow =
+                require("./factionWars").shouldUseWarDeathFlow(String(idUser)) ||
+                arena.isArenaCharacter(user) || Boolean(user.rankedMatchId);
             require("./summonRoom").scheduleDeadUserExit(idUser);
-            require("./bloodCastle").onUserDied(String(idUser));
-            require("./hungerGames").onUserDied(String(idUser));
-            require("./huntersGame").onUserDied(String(idUser));
-            require("./tournamentAuto").onUserDied(String(idUser));
-            require("./rankedArena").onUserDied(String(idUser));
-            require("./factionWars").onUserDied(String(idUser));
-            arena.onUserDied(idUser);
             require("./playerTrade").onUserLeft(String(idUser));
             user.deadWorldActive = false;
             user.invisibleSpell = false;
@@ -8978,7 +8977,7 @@ function Game(this: GameApi) {
             }
 
             if (userClient) {
-                if (useWarDeathFlow) {
+                if (useAutomaticDeathFlow) {
                     clearDeadWorldTransition(user);
                     user.deadWorldTransitionEndsAt = 0;
                 } else {
@@ -8986,7 +8985,7 @@ function Game(this: GameApi) {
                 }
                 handleProtocol.sendMyCharacter(user);
                 socket.send(userClient);
-            } else if (!useWarDeathFlow) {
+            } else if (!useAutomaticDeathFlow) {
                 user.deadWorldTransitionEndsAt = Date.now() + DEAD_WORLD_DELAY_MS;
             } else {
                 user.deadWorldTransitionEndsAt = 0;
@@ -9005,6 +9004,20 @@ function Game(this: GameApi) {
             if (shouldSyncVisibilityState) {
                 syncCharacterVisibilityForOthers(idUser);
             }
+
+            // Un cierre puede revivir y restaurar el equipo. Debe suceder después
+            // de limpiar y transmitir la muerte, sin sobrescribir esa restauración.
+            require("./bloodCastle").onUserDied(String(idUser));
+            require("./hungerGames").onUserDied(String(idUser));
+            if (killerId !== undefined && user.huntersGame) {
+                require("./huntersGame").onUserKilled(String(killerId), String(idUser));
+            } else {
+                require("./huntersGame").onUserDied(String(idUser));
+            }
+            require("./tournamentAuto").onUserDied(String(idUser));
+            require("./rankedArena").onUserDied(String(idUser));
+            require("./factionWars").onUserDied(String(idUser));
+            arena.onUserDied(idUser);
         } catch (err) {
             funct.dumpError(err);
             return false;

@@ -2198,7 +2198,6 @@ function parseServerPacketById(
     packetId: number,
     reader: PacketReader,
 ): ParsedServerPacket {
-    console.log(`Parsing server packet with ID: ${packetId}`);
 
     switch (packetId) {
         case CLIENT_PACKET_ID.getMyCharacter:

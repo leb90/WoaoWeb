@@ -186,6 +186,17 @@ export function cancelEvent() {
     return { ok: true, message: "Torneo cancelado." };
 }
 
+export function isTournamentCombat(leftId: unknown, rightId: unknown): boolean {
+    return Boolean(state.active && state.fighting && String(leftId) !== String(rightId) &&
+        state.fighting.includes(String(leftId)) && state.fighting.includes(String(rightId)));
+}
+
+export function getCombatRelation(leftId: unknown, rightId: unknown): "enemy" | "waiting" | null {
+    if (isTournamentCombat(leftId, rightId)) return "enemy";
+    return state.active && (state.participants.includes(String(leftId)) || state.participants.includes(String(rightId)))
+        ? "waiting" : null;
+}
+
 export function onUserDied(idUser: string) {
     if (!state.participants.includes(String(idUser))) {
         return;

@@ -79,6 +79,7 @@ type RankedMatchParticipant = {
 };
 
 type RankedActiveMatch = {
+    eliminatedIds: Set<string>;
     id: string;
     mode: RankedMode;
     map: number;
@@ -734,6 +735,7 @@ function startRound(match: RankedActiveMatch) {
     }
 
     match.resolvingRound = false;
+    match.eliminatedIds.clear();
     clearTimers(match);
     const lockedUntil = Date.now() + RANKED_ROUND_COUNTDOWN_SECONDS * 1000;
     match.participants.A.forEach((participant, index) => prepareUserForRound(participant, match.arena, index, lockedUntil));
@@ -1027,6 +1029,7 @@ async function startMatch(left: RankedQueueEntry, right: RankedQueueEntry) {
             B: 0,
         },
         resolvingRound: false,
+        eliminatedIds: new Set(),
         finished: false,
         timerIds: [],
     };
@@ -1275,7 +1278,13 @@ export function onUserDied(idUser: string) {
         return;
     }
 
-    scheduleNextRound(match, getOppositeTeam(participant.team));
+    const defeated = require("./ranked/rankedRoundElimination").recordRankedDeath(
+        match.eliminatedIds, match.participants[participant.team].map(member => member.id), String(idUser),
+        match.participants[participant.team]
+            .filter(member => member.id !== String(idUser) && !getCharacterById(member.id)?.dead)
+            .map(member => member.id),
+    );
+    if (defeated) scheduleNextRound(match, getOppositeTeam(participant.team));
 }
 
 export function onUserLeft(idUser: string) {

@@ -1,7 +1,7 @@
 // Modo grabación del teaser (teaser/README.md): /play muestra solo el mundo, sin HUD, tapando toda la ventana, y
 // anota cada sonido que suena para mezclarlo después en el video. Lo prende la grabación (teaser/grabar.ts) con
 // sessionStorage, así sigue prendido al recargar. Solo existe en desarrollo.
-import { createAttackSpellPacket, createDialogPacket } from "./aowProtocol";
+import { createAttackSpellPacket, createChangeHeadingPacket, createClickPacket, createDialogPacket } from "./aowProtocol";
 import { VIEWPORT_PIXEL_HEIGHT, VIEWPORT_PIXEL_WIDTH } from "./viewport";
 
 const STORAGE_KEY = "woao.grabacion";
@@ -13,6 +13,8 @@ type TeaserWindow = Window & {
     __woaoTeaser?: {
         castSpell: (slot: number, x: number, y: number, map: number, targetId?: number) => void;
         say: (text: string) => void;
+        click: (x: number, y: number, map: number) => void;
+        face: (heading: number) => void;
     };
 };
 
@@ -35,8 +37,9 @@ export function logTeaserSound(sound: Omit<TeaserHeardSound, "at">): void {
     (target.__woaoAudioLog ??= []).push({ ...sound, at: Date.now() });
 }
 
-// Lo que hace el personaje que graba sin tocar la interfaz (que está escondida): tirar un hechizo a una baldosa y
-// hablar. Manda los mismos paquetes que el juego.
+// Lo que hace el personaje que graba sin tocar la interfaz (que está escondida): tirar un hechizo a una baldosa,
+// hablar, hacer clic en una baldosa (cofres, puertas y bloques de las mazmorras) y girar. Manda los mismos paquetes
+// que el juego.
 export function exposeTeaserControls(send: (packet: ArrayBuffer) => void): void {
     if (process.env.NODE_ENV === "production") {
         return;
@@ -44,6 +47,8 @@ export function exposeTeaserControls(send: (packet: ArrayBuffer) => void): void 
     (window as TeaserWindow).__woaoTeaser = {
         castSpell: (slot, x, y, map, targetId) => send(createAttackSpellPacket(slot, x, y, false, map, targetId ?? null)),
         say: (text) => send(createDialogPacket(text)),
+        click: (x, y, map) => send(createClickPacket(x, y, 0, map)),
+        face: (heading) => send(createChangeHeadingPacket(heading)),
     };
 }
 

@@ -105,6 +105,11 @@ import {
     VIEWPORT_PIXEL_HEIGHT,
     VIEWPORT_PIXEL_WIDTH,
 } from "../../lib/viewport";
+import {
+    isTeaserRecording,
+    TEASER_RECORDING_CSS,
+    teaserCanvasSize,
+} from "../../lib/teaserRecording";
 
 const DEFAULT_WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:7666";
 const OverviewModal = dynamic(() => import("../../components/OverviewModal"), {
@@ -1209,6 +1214,9 @@ function HomeContent() {
         height: 0,
         statusBarGap: 0,
     });
+    // La grabación del teaser (lib/teaserRecording.ts): el render tapa la ventana y no se ve el HUD.
+    const [teaserRecording] = useState(isTeaserRecording);
+    const teaserCanvas = teaserRecording ? teaserCanvasSize(viewport) : null;
     const lastConsoleEntryIdRef = useRef(0);
     const autoConnectKeyRef = useRef<string | null>(null);
     const activeChatTabRef = useRef<ChatTab>("console");
@@ -3482,14 +3490,16 @@ function HomeContent() {
                             </div>
                             <div
                                 className="relative overflow-hidden rounded-none bg-black"
+                                data-teaser-canvas={teaserCanvas ? "" : undefined}
                                 style={{
-                                    width: `${hudLayout.canvasWidth ?? CANVAS_BASE_WIDTH}px`,
-                                    height: `${hudLayout.canvasHeight ?? CANVAS_BASE_HEIGHT}px`,
+                                    width: `${teaserCanvas?.width ?? hudLayout.canvasWidth ?? CANVAS_BASE_WIDTH}px`,
+                                    height: `${teaserCanvas?.height ?? hudLayout.canvasHeight ?? CANVAS_BASE_HEIGHT}px`,
                                 }}
                             >
+                                {teaserCanvas ? <style>{TEASER_RECORDING_CSS}</style> : null}
                                 {/* El borde del render, como las líneas que separan el chat de su línea para escribir. Va
                                     encima del canvas para no cambiarle el tamaño al juego. */}
-                                {!isMobile ? (
+                                {!isMobile && !teaserCanvas ? (
                                     <div
                                         aria-hidden="true"
                                         data-testid="render-border"
@@ -3509,8 +3519,8 @@ function HomeContent() {
                                     hideStatusText={!isMobile}
                                     onPerformanceSample={publishPerformanceSample}
                                     mapNumber={selectedMap}
-                                    width={hudLayout.canvasWidth}
-                                    height={hudLayout.canvasHeight}
+                                    width={teaserCanvas?.width ?? hudLayout.canvasWidth}
+                                    height={teaserCanvas?.height ?? hudLayout.canvasHeight}
                                     connection={connection}
                                     isMobile={isMobile}
                                     touchMovementDirection={

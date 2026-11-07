@@ -1,0 +1,17 @@
+{
+    "name": "woao-teaser",
+    "version": "0.1.0",
+    "private": true,
+    "description": "Graba el juego real con bots y arma el video del teaser (README.md)",
+    "scripts": {
+        "grabar": "tsx grabar.ts",
+        "editar": "tsx editar.ts",
+        "typecheck": "tsc --noEmit -p tsconfig.json"
+    },
+    "devDependencies": {
+        "@types/node": "^25.8.0",
+        "playwright": "1.64.0",
+        "tsx": "^4.22.1",
+        "typescript": "^6.0.3"
+    }
+}

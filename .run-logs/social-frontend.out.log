@@ -1,0 +1,46 @@
+[32m✔[0m [33mConsole Ninja[0m extension is connected to [33mNext.js[0m, see [36mhttps://tinyurl.com/2vt8jxzw[0m
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://0.0.0.0:3000
+- Environments: .env.local
+✓ Ready in 11.7s
+⚠ Console Ninja Turbopack support is a PRO feature, [33mcurrently available to community users while in preview[0m
+Creating turbopack project {
+  dir: 'D:\\AProgramacion\\Proyectos 2024\\WoaoWeb\\frontend',
+  testMode: true
+}
+
+○ Compiling / ...
+ GET /login 200 in 20.7s (next.js: 20.6s, application-code: 70ms)
+○ Compiling /manifest.webmanifest ...
+ GET /manifest.webmanifest 200 in 5.7s (next.js: 5.7s, application-code: 19ms)
+ GET /api/auth/me 401 in 1950ms (next.js: 1940ms, application-code: 9ms)
+ GET /api/auth/me 401 in 2.2s (next.js: 2.2s, application-code: 6ms)
+ POST /api/auth/login 200 in 182ms (next.js: 60ms, application-code: 123ms)
+ GET / 200 in 81ms (next.js: 9ms, application-code: 72ms)
+ GET / 200 in 39ms (next.js: 6ms, application-code: 33ms)
+ GET /api/auth/me 200 in 68ms (next.js: 7ms, application-code: 60ms)
+ GET /api/auth/me 200 in 76ms (next.js: 18ms, application-code: 58ms)
+ GET /api/auth/me 200 in 163ms (next.js: 27ms, application-code: 136ms)
+ GET /manifest.webmanifest 200 in 14ms (next.js: 7ms, application-code: 7ms)
+ GET /characters 200 in 163ms (next.js: 27ms, application-code: 137ms)
+ GET /manifest.webmanifest 200 in 13ms (next.js: 5ms, application-code: 8ms)
+ GET /api/auth/me 200 in 34ms (next.js: 3ms, application-code: 30ms)
+ GET /api/auth/me 200 in 40ms (next.js: 12ms, application-code: 28ms)
+ POST /api/auth/select-character 200 in 123ms (next.js: 90ms, application-code: 33ms)
+ GET /play 200 in 103ms (next.js: 54ms, application-code: 50ms)
+ GET /play 200 in 67ms (next.js: 8ms, application-code: 58ms)
+ GET /api/auth/me 200 in 40ms (next.js: 4ms, application-code: 36ms)
+ GET /api/auth/me 200 in 43ms (next.js: 5ms, application-code: 38ms)
+ GET /api/auth/me 200 in 47ms (next.js: 14ms, application-code: 33ms)
+ GET /manifest.webmanifest 200 in 14ms (next.js: 4ms, application-code: 10ms)
+ GET /api/runtime-config 200 in 213ms (next.js: 183ms, application-code: 30ms)
+ GET /api/runtime-config 200 in 214ms (next.js: 192ms, application-code: 22ms)
+ POST /api/auth/game-ticket 200 in 191ms (next.js: 56ms, application-code: 136ms)
+ GET /api/auth/character-settings 200 in 199ms (next.js: 153ms, application-code: 45ms)
+ GET /api/auth/session 200 in 204ms (next.js: 103ms, application-code: 100ms)
+✓ Finished filesystem cache database compaction in 11.9s
+ GET /characters 200 in 82ms (next.js: 7ms, application-code: 75ms)
+ GET /manifest.webmanifest 200 in 11ms (next.js: 5ms, application-code: 6ms)
+ GET /api/auth/me 200 in 48ms (next.js: 9ms, application-code: 39ms)
+ GET /api/auth/me 200 in 51ms (next.js: 3ms, application-code: 48ms)

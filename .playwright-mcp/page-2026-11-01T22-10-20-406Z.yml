@@ -1,0 +1,26 @@
+- generic [active] [ref=f1e1]:
+  - banner [ref=f1e2]:
+    - generic [ref=f1e3]:
+      - link "World of AO" [ref=f1e4]:
+        - /url: /
+      - navigation [ref=f1e6]:
+        - link "Inicio" [ref=f1e7]:
+          - /url: /
+        - link "Personajes" [ref=f1e9]:
+          - /url: /characters
+        - link "Arenas" [ref=f1e11]:
+          - /url: /arenas
+        - link "Ranking" [ref=f1e13]:
+          - /url: /ranking
+        - link "Wiki" [ref=f1e15]:
+          - /url: /wiki
+        - link "Donaciones" [ref=f1e17]:
+          - /url: /donaciones
+        - link "Discord" [ref=f1e19]:
+          - /url: https://discord.gg/YpJ9XrMdg
+      - generic [ref=f1e21]:
+        - button "Silenciar la música" [ref=f1e22]
+        - link "Ingresar" [ref=f1e27]:
+          - /url: /login
+  - main [ref=f1e32]:
+    - generic [ref=f1e33]: Cargando acceso...

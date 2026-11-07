@@ -1,0 +1,10 @@
+⚠ Slow filesystem detected. The benchmark took 384ms. If D:\AProgramacion\Proyectos 2024\WoaoWeb\frontend\.next/dev is a network drive, consider moving it to a local folder.
+See more: https://nextjs.org/docs/app/guides/local-development
+[browser] Image with src "/wiki/apertura/clan-requisitos.png" was detected as the Largest Contentful Paint (LCP). Please add the `loading="eager"` property if this image is above the fold.
+Read more: https://nextjs.org/docs/app/api-reference/components/image#loading (file://D:/AProgramacion/Proyectos 2024/WoaoWeb/frontend/.next/dev/static/chunks/0cco_next_dist_0uq~hyz._.js:2483:13)
+[browser] Image with src "/wiki/apertura/npc-rangos.png" was detected as the Largest Contentful Paint (LCP). Please add the `loading="eager"` property if this image is above the fold.
+Read more: https://nextjs.org/docs/app/api-reference/components/image#loading (file://D:/AProgramacion/Proyectos 2024/WoaoWeb/frontend/.next/dev/static/chunks/0cco_next_dist_0uq~hyz._.js:2483:13)
+[browser] Image with src "/wiki/apertura/ranked-premio.png" was detected as the Largest Contentful Paint (LCP). Please add the `loading="eager"` property if this image is above the fold.
+Read more: https://nextjs.org/docs/app/api-reference/components/image#loading (file://D:/AProgramacion/Proyectos 2024/WoaoWeb/frontend/.next/dev/static/chunks/0cco_next_dist_0uq~hyz._.js:2483:13)
+[browser] Image with src "/wiki/apertura/evento-premio.png" was detected as the Largest Contentful Paint (LCP). Please add the `loading="eager"` property if this image is above the fold.
+Read more: https://nextjs.org/docs/app/api-reference/components/image#loading (file://D:/AProgramacion/Proyectos 2024/WoaoWeb/frontend/.next/dev/static/chunks/0cco_next_dist_0uq~hyz._.js:2483:13)

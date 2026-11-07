@@ -5,7 +5,7 @@ import {
     upsertGameBalance,
 } from "./repositories/gameBalance";
 import { getGameObjectById, upsertGameObject } from "./repositories/gameObjects";
-import { upsertGameNpc } from "./repositories/gameNpcs";
+import { getGameNpcById, upsertGameNpc } from "./repositories/gameNpcs";
 import { loadSeedNpcsJson } from "./lib/gameData";
 
 // Cambios de datos que tienen que llegar una sola vez a la base de producción: el deploy no corre importGameData y
@@ -17,6 +17,32 @@ type DataMigration = {
 };
 
 const DATA_MIGRATIONS: DataMigration[] = [
+    {
+        id: "2026-11-06-misiones-npc-universal",
+        run: async () => {
+            const template = loadSeedNpcsJson().find((row) => row.id === 9601);
+            if (template && !(await getGameNpcById(9601))) await upsertGameNpc(9601, template.data);
+        },
+    },
+    {
+        id: "2026-11-06-materiales-clan",
+        run: async () => {
+            for (const [id, item, chancePercent] of [
+                [739, 1095, 5],
+                [754, 1095, 10],
+                [761, 1096, 5],
+                [726, 1096, 10],
+                [585, 1241, 5],
+                [726, 1241, 5],
+            ]) {
+                const current = await getGameNpcById(id);
+                if (!current) continue;
+                const drop = (current.data.drop ?? []).filter((entry) => entry.item !== item);
+                drop.push({ item, cant: 1, chancePercent });
+                await upsertGameNpc(id, { ...current.data, drop });
+            }
+        },
+    },
     {
         // Razas espejadas por arquetipo (Alianza ↔ Horda), docs/balance/RAZAS.md. Los personajes toman los atributos
         // nuevos al entrar y la vida se corre con la diferencia de constitución (server/src/login.ts).

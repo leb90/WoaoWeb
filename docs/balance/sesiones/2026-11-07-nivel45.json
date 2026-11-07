@@ -1,0 +1,113 @@
+{
+  "conditions": {
+    "durationSeconds": 180,
+    "map": 25,
+    "actors": 4,
+    "competition": "Mismo campamento compartido, sin party; no es una comparación de clases aisladas",
+    "strategy": "eficiente con retirada",
+    "spawns": "naturales, rangos activos",
+    "worldEvents": "Bonos temporales del mundo activos, sin fijar entre reinicios; la tasa observada incluye esos efectos."
+  },
+  "sessions": [
+    {
+      "role": "huntWarrior",
+      "classId": 3,
+      "level": 45,
+      "map": 25,
+      "npcTemplates": [
+        749
+      ],
+      "seconds": 181,
+      "kills": 10,
+      "xp": 156693,
+      "xpPerHour": 3123512,
+      "goldNet": 2790,
+      "goldPerHour": 55616,
+      "redUsed": 0,
+      "blueUsed": 0,
+      "damageTaken": 21,
+      "dead": false,
+      "hp": 467,
+      "maxHp": 482,
+      "finalLevel": 45,
+      "strategy": "efficient",
+      "timeAlive": 181,
+      "finalMap": 25
+    },
+    {
+      "role": "huntMage",
+      "classId": 1,
+      "level": 45,
+      "map": 25,
+      "npcTemplates": [
+        749
+      ],
+      "seconds": 181,
+      "kills": 0,
+      "xp": 7199,
+      "xpPerHour": 143550,
+      "goldNet": 0,
+      "goldPerHour": 0,
+      "redUsed": 3,
+      "blueUsed": 0,
+      "damageTaken": 187,
+      "dead": false,
+      "hp": 267,
+      "maxHp": 350,
+      "finalLevel": 45,
+      "strategy": "efficient",
+      "timeAlive": 181,
+      "finalMap": 25
+    },
+    {
+      "role": "huntDruid",
+      "classId": 7,
+      "level": 45,
+      "map": 25,
+      "npcTemplates": [
+        749
+      ],
+      "seconds": 180,
+      "kills": 1,
+      "xp": 18045,
+      "xpPerHour": 359943,
+      "goldNet": 279,
+      "goldPerHour": 5565,
+      "redUsed": 1,
+      "blueUsed": 0,
+      "damageTaken": 131,
+      "dead": false,
+      "hp": 297,
+      "maxHp": 372,
+      "finalLevel": 45,
+      "strategy": "efficient",
+      "timeAlive": 180,
+      "finalMap": 25
+    },
+    {
+      "role": "huntAssassin",
+      "classId": 4,
+      "level": 45,
+      "map": 25,
+      "npcTemplates": [
+        749
+      ],
+      "seconds": 180,
+      "kills": 3,
+      "xp": 64784,
+      "xpPerHour": 1292535,
+      "goldNet": 837,
+      "goldPerHour": 16699,
+      "redUsed": 0,
+      "blueUsed": 0,
+      "damageTaken": 60,
+      "dead": false,
+      "hp": 362,
+      "maxHp": 394,
+      "finalLevel": 45,
+      "strategy": "efficient",
+      "timeAlive": 180,
+      "finalMap": 25
+    }
+  ]
+}

@@ -35,6 +35,7 @@ function NpcTarget({ target }: { target: Extract<TargetStatePayload, { kind: "np
     const dbs = useCreatureDatabases(target.head <= 0);
     const disposition = npcDisposition(target);
     const DispositionIcon = disposition.icon;
+    const rankColor=({mejorado:"#35c76d",lider:"#60a5fa",especial:"#b084ee",legendario:"#e8b84e"} as Record<string,string>)[target.npcRank??""];
 
     return (
         <UnitFrameShell
@@ -56,7 +57,7 @@ function NpcTarget({ target }: { target: Extract<TargetStatePayload, { kind: "np
             }
             band={
                 <>
-                    <span data-testid="target-frame-name" className={`min-w-0 flex-1 truncate text-[11px] font-semibold leading-none [text-shadow:0_1px_2px_rgba(0,0,0,0.9)] ${disposition.name}`}>
+                    <span data-testid="target-frame-name" style={rankColor?{color:rankColor}:undefined} className={`min-w-0 flex-1 truncate text-[11px] font-semibold leading-none [text-shadow:0_1px_2px_rgba(0,0,0,0.9)] ${disposition.name}`}>
                         {target.name}
                     </span>
                     <span className={`shrink-0 text-[8px] font-bold uppercase leading-none tracking-[0.08em] ${disposition.tag}`}>

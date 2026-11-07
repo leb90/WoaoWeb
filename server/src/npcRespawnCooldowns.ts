@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { runtimeDataPath } from "./runtimeDataPath";
 
 export type NpcRespawnEntry = {
     mapNum: number;
@@ -12,7 +13,7 @@ type PersistedNpcRespawnCooldown = NpcRespawnEntry & {
     respawnAt: number;
 };
 
-const NPC_RESPAWN_COOLDOWNS_PATH = path.resolve(__dirname, "../jsons/npcRespawnCooldowns.json");
+const NPC_RESPAWN_COOLDOWNS_PATH = runtimeDataPath("npcRespawnCooldowns.json", "../jsons/npcRespawnCooldowns.json");
 const persistedCooldowns = new Map<string, PersistedNpcRespawnCooldown>();
 const scheduledRespawns = new Map<string, NodeJS.Timeout>();
 

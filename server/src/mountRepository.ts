@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { runtimeDataPath } from "./runtimeDataPath";
 import { randomUUID } from "node:crypto";
 
 export type MountPerks = {
@@ -53,7 +54,7 @@ type MountStore = {
     instances: Record<string, MountInstance>;
 };
 
-const DATA_PATH = path.resolve(__dirname, "../data/mountInstances.json");
+const DATA_PATH = runtimeDataPath("mountInstances.json");
 const SCHEMA_VERSION = 1;
 const ASSIGNABLE_STAT_KEYS = [
     "meleeAttack",

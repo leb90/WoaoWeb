@@ -1,7 +1,7 @@
 const game = require("./game");
 const vars = require("./vars");
 const handleProtocol = require("./handleProtocol");
-const { getProgress, saveProgress } = require("./woaoProgress");
+const rewards = require("./eventRewards");
 
 const MAP_ID = 205;
 const JOIN_POS = { x: 24, y: 86 };
@@ -22,6 +22,7 @@ const EVENT_NPCS = [14, 24, 772, 773, 774, 775, 776, 777, 778, 779];
 const WAVE_DURATION_MS = 600_000;
 
 type BloodState = {
+    guardianDefeated: boolean;
     open: boolean;
     started: boolean;
     capacity: number;
@@ -34,6 +35,7 @@ type BloodState = {
 };
 
 const state: BloodState = {
+    guardianDefeated: false,
     open: false,
     started: false,
     capacity: 0,
@@ -47,13 +49,6 @@ const state: BloodState = {
 
 function announce(message: string) {
     handleProtocol.consoleToAll(`Blood Castle> ${message}`, "#E69500", 1, 0);
-}
-
-function tell(idUser: string, message: string) {
-    const client = vars.clients[idUser];
-    if (client) {
-        handleProtocol.console(`Blood Castle> ${message}`, "#E69500", 1, 0, client);
-    }
 }
 
 function setTilesBlocked(tiles: Array<{ x: number; y: number }>, blocked: number) {
@@ -139,6 +134,8 @@ function warpUser(idUser: string, map: number, x: number, y: number) {
 }
 
 function resetState() {
+    state.guardianDefeated = false;
+    rewards.endRewardRun("bloodCastle");
     state.open = false;
     state.started = false;
     state.capacity = 0;
@@ -150,6 +147,8 @@ function resetState() {
 }
 
 function finishEvent(won: boolean) {
+    if (!state.started && !state.open) return;
+    state.started = false;
     if (won) {
         announce("Felicidades a nuestros nobles Guerreros, el rey de Archavon fue derrotado.");
     } else {
@@ -163,11 +162,7 @@ function finishEvent(won: boolean) {
         }
 
         if (won) {
-            const progress = getProgress(user);
-            progress.puntosCanje += 150;
-            user.puntosCanje = progress.puntosCanje;
-            saveProgress(user);
-            tell(idUser, "Has ganado 150 Puntos de Canje, felicidades Noble Guerrero.");
+            rewards.rewardEventUser("bloodCastle", idUser, "survivor", { completed: true });
         }
 
         warpUser(idUser, EXIT_POS.map, EXIT_POS.x, EXIT_POS.y);
@@ -183,6 +178,7 @@ function beginCombat() {
     }
 
     state.started = true;
+    rewards.startRewardRun("bloodCastle", state.participants);
     state.open = false;
     state.waveEndsAt = Date.now() + WAVE_DURATION_MS;
     state.nextWaveAt = Date.now() + 4000;
@@ -259,17 +255,18 @@ export function cancelEvent() {
     return { ok: true, message: "Blood Castle cancelado." };
 }
 
-export function onNpcDied(npcIndex: number) {
-    if (!state.started) {
+export function onNpcDied(npcIndex: number, mapId: number) {
+    if (!state.started || mapId !== MAP_ID || Date.now() > state.waveEndsAt || state.rewardAt > 0) {
         return;
     }
 
     if (npcIndex === 779) {
+        state.guardianDefeated = true;
         setTilesBlocked(ARCHAVON_UNLOCK, 0);
         return;
     }
 
-    if (npcIndex === 778) {
+    if (npcIndex === 778 && state.guardianDefeated) {
         announce("El rey Archavon ha sido derrotado. Tienen 10 segundos para recoger tesoros.");
         state.rewardAt = Date.now() + 10000;
     }

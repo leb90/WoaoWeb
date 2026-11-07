@@ -133,6 +133,7 @@ type FactionStatsSnapshot = {
 };
 
 type ClanCharacterSummary = {
+    clanLevel?: number;
     clanId: string | null;
     clanName: string | null;
     clanTag: string | null;
@@ -885,6 +886,7 @@ async function refreshOnlineCharacterClanStateByPersistedId(characterId?: string
     onlineCharacter.clanRole = summary.clanRole;
     onlineCharacter.seguroClanActivado = Boolean(summary.clanId);
     require("./clanMeta").setReputation(summary.clanId, summary.clanPoints ?? undefined);
+    if (summary.clanId) await require("./clanProgression").hydrateClanProgression(onlineCharacter);
 
     if (onlineCharacter.privileges === 1 || onlineCharacter.privileges === 2) {
         onlineCharacter.clan = "<Woao Staff>";
@@ -2606,6 +2608,19 @@ const command: CommandApi = {
                     break;
                 }
 
+                case "/clandonarquest": {
+                    const [amount, operationId] = splitClanCommandArgs(nextText);
+                    await require("./clanProgression").donateQuestToClan(user, Number(amount), operationId);
+                    require("./handleProtocol").sendMyCharacter(user);
+                    socket.send(ws);
+                    handleProtocol.console("Donación Quest confirmada.", "#E69500", 1, 0, ws as CommandClient);
+                    break;
+                }
+                case "/clansubirnivel": {
+                    const [level, operationId] = splitClanCommandArgs(nextText);
+                    await require("./clanProgression").upgradeUserClan(user, Number(level), operationId);
+                    break;
+                }
                 case "/clanpostular": {
                     const args = splitClanCommandArgs(nextText);
                     const clanId = args[0] ?? "";
@@ -3470,7 +3485,7 @@ const command: CommandApi = {
 
                 case "/canjear": {
                     const [premioIdText, quantityText] = nextText.trim().split(/\s+/);
-                    const result = require("./premiosShop").redeemPremio(
+                    const result = await require("./premiosShop").redeemPremio(
                         String(clientId),
                         Number(premioIdText),
                         Number(quantityText || 1),
@@ -3486,7 +3501,7 @@ const command: CommandApi = {
 
                 case "/canjeardonacion": {
                     const [premioIdText, quantityText] = nextText.trim().split(/\s+/);
-                    const result = require("./premiosShop").redeemDonacion(
+                    const result = await require("./premiosShop").redeemDonacion(
                         String(clientId),
                         Number(premioIdText),
                         Number(quantityText || 1),
@@ -4630,7 +4645,8 @@ const command: CommandApi = {
 
                         // Rareza opcional (0 Normal, 1 Mejorado, 2 Épico, 3 Legendario o su nombre).
                         const rarityArg = String(createItemArgs[2] ?? "0").toLowerCase();
-                        const rarityByName: Record<string, number> = { normal: 0, mejorado: 1, raro: 1, epico: 2, "épico": 2, legendario: 3 };
+                        const rarityByName: Record<string, number> = { normal: 0, mejorado: 1, raro: 1, epico: 2,
+                            épico: 2, legendario: 3 };
                         const requestedRarity = rarityByName[rarityArg] ?? Number.parseInt(rarityArg, 10);
                         const rarity = Number.isInteger(requestedRarity) ? Math.max(0, Math.min(3, requestedRarity)) : 0;
                         game.putItemToInv(user.id, idItem, cant, rarity);

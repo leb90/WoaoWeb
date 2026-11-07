@@ -26,12 +26,10 @@ import {
     shouldIgnoreHarmfulSpell,
 } from "./racialPassives";
 import { getLegacyNpcDropChancePercent, shouldDropNpcItem } from "./npcDrops";
-import {
-    applyDropChanceBonus,
-    getEquippedNpcDropBonusPct,
-} from "./equipmentRewardBonuses";
+import { getEquippedNpcDropBonusPct } from "./equipmentRewardBonuses";
 import { rollCraftingRecipeDrops } from "./craftingRecipeDrops";
 import { pickMountRespawnMap, rollMountEggDrops } from "./mountEggDrops";
+import { assignNaturalNpcRank, getRankedDropChance } from "./npcRanks";
 import {
     getNpcSpellEffect,
     isNpcOffensiveSpell,
@@ -754,7 +752,10 @@ function tryNpcCastSpell(
                 return true;
             }
             let damage = applyNpcSpellDamageToUser(
-                funct.randomIntFromInterval(Number(datSpell.minHp ?? 0), Number(datSpell.maxHp ?? 0)),
+                Math.floor(
+                    funct.randomIntFromInterval(Number(datSpell.minHp ?? 0), Number(datSpell.maxHp ?? 0)) *
+                        Number(npc.npcRankDamageMultiplier ?? 1),
+                ),
                 target,
             );
 
@@ -2752,7 +2753,7 @@ function Npcs(this: NpcsApi) {
     this.muereNpc = function (idNpc: EntityId) {
         try {
             const npc = getNpc(idNpc);
-            require("./bloodCastle").onNpcDied(Number(npc?.templateNpcIndex ?? 0));
+            require("./bloodCastle").onNpcDied(Number(npc?.templateNpcIndex ?? 0), Number(npc?.map ?? 0));
             require("./summonRoom").onNpcDied(npc);
 
             if (isSummonedNpc(npc)) {
@@ -2868,9 +2869,15 @@ function Npcs(this: NpcsApi) {
                 );
             }
             npc.cooldownAtaque = Date.now() + 2000;
+            const baseTemplate = vars.datNpc[npc.templateNpcIndex ?? 0];
+            if (baseTemplate) {
+                delete npc.npcRank;
+                assignNaturalNpcRank(npc, baseTemplate);
+            }
             npc.hp = npc.maxHp;
             npc.hitExpAwarded = 0;
             npc.deathProcessed = false;
+            npc.rewardsProcessed = false;
             npc.cooldownParalizado = 0;
             npc.inmovilizado = 0;
             npc.paralizado = 0;
@@ -3602,6 +3609,11 @@ function Npcs(this: NpcsApi) {
                 return;
             }
 
+            if (npc.rewardsProcessed) return;
+            npc.rewardsProcessed = true;
+            const baseGold = Math.floor(Number(npc.gold ?? 0) * vars.multiplicadorGold);
+            if (Number.isFinite(baseGold) && baseGold > 0) game.distribuirOroNpc(ws.id!, idNpc, baseGold);
+
             const reservedDropPositions = new Set<string>();
 
             const killer = getUser(ws.id!);
@@ -3616,7 +3628,7 @@ function Npcs(this: NpcsApi) {
                 const baseChance = getLegacyNpcDropChancePercent(index);
                 const boostedEntry = {
                     ...item,
-                    chancePercent: applyDropChanceBonus(
+                    chancePercent: getRankedDropChance(
                         Number(
                             item.chancePercent ??
                                 item.chance ??
@@ -3624,6 +3636,7 @@ function Npcs(this: NpcsApi) {
                                 item.probabilidad ??
                                 baseChance,
                         ),
+                        npc.npcRank ?? "normal",
                         dropBonusPct,
                     ),
                 };

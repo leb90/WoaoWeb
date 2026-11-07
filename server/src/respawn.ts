@@ -134,14 +134,16 @@ function Respawn(this: any) {
                     !pjSelected.isNpc && require("./huntersGame").shouldUseHuntersDeathFlow(String(idPersonaje));
                 // En la arena tampoco se gana experiencia, oro ni puntos de facción: solo puntos de la arena.
                 const arenaCombatDeath = !pjSelected.isNpc && require("./arena").isArenaCharacter(pjSelected);
+                const tournamentCombatDeath = !pjSelected.isNpc &&
+                    require("./tournamentAuto").isTournamentCombat(user.id, pjSelected.id);
                 const isolatedDuelDeath =
-                    challengeCombatDeath || rankedCombatDeath || huntersCombatDeath || arenaCombatDeath;
+                    challengeCombatDeath || rankedCombatDeath || huntersCombatDeath || arenaCombatDeath || tournamentCombatDeath;
 
                 if (!pjSelected.isNpc) {
-                    game.putBodyAndHeadDead(idPersonaje);
+                    pjSelected.hp = 0;
+                    game.putBodyAndHeadDead(idPersonaje, user.id);
                     npcs.deleteUserToAllNpcs(idPersonaje);
                     npcs.removeOwnerSummons(idPersonaje);
-                    pjSelected.hp = 0;
                     if (
                         !isolatedDuelDeath &&
                         vars.mapa[pjSelected.map][pjSelected.pos.y][pjSelected.pos.x].trigger != 6
@@ -153,9 +155,8 @@ function Respawn(this: any) {
                 let expGanada = 0;
                 let goldGanado = 0;
 
-                if (pjSelected.isNpc) {
-                    goldGanado = pjSelected.gold * vars.multiplicadorGold;
-                } else {
+                // El oro base de NPC y sus drops se reparten juntos en npcs.tirarItems.
+                if (!pjSelected.isNpc) {
                     if (
                         !isolatedDuelDeath &&
                         vars.mapa[pjSelected.map][pjSelected.pos.y][pjSelected.pos.x].trigger != 6
@@ -258,10 +259,6 @@ function Respawn(this: any) {
 
                     const npcRewardExp = game.distribuirExpRestanteNpc(ws.id, idPersonaje);
 
-                    if (goldGanado > 0) {
-                        game.distribuirOroNpc(ws.id, idPersonaje, goldGanado);
-                    }
-
                     game.clearSummonTargetNpc(ws.id);
                     handleProtocol.console(
                         "¡Has matado a " + vars.npcs[idPersonaje].nameCharacter + "!",
@@ -333,7 +330,7 @@ function Respawn(this: any) {
                                 clientPersonaje,
                             );
                         }
-                    } else if (!useWarDeathFlow && !useHuntersDeathFlow) {
+                    } else if (!useWarDeathFlow && !useHuntersDeathFlow && !rankedCombatDeath) {
                         handleProtocol.console(
                             "En 15 segundos entraras al mundo de los muertos.",
                             "gray",
@@ -346,7 +343,6 @@ function Respawn(this: any) {
 
                 handleProtocol.console("Has matado a " + (useHuntersDeathFlow ? "Jugador" : recibeName) + "!", "red", 1, 0, ws);
 
-                require("./huntersGame").onUserKilled(String(ws.id), String(idPersonaje));
                 require("./factionWars").onUserKilled(String(ws.id), String(idPersonaje));
                 arena.onUserKilled(ws.id, idPersonaje);
                 require("./clanMeta").onPlayerKill(String(ws.id), String(idPersonaje));

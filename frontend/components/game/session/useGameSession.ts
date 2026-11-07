@@ -1,4 +1,4 @@
-import { useEffect, useRef, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import {
     CLIENT_PACKET_ID,
     createConnectCharacterPacket,
@@ -122,6 +122,7 @@ export function useGameSession({
     characterStatsChunkTotalRef,
     onPacket,
 }: UseGameSessionOptions) {
+    const [startupAttempt, setStartupAttempt] = useState(0);
     const emitHudRef = useRef(emitHud);
     const emitStatusRef = useRef(emitStatus);
     const emitTradeStateRef = useRef(emitTradeState);
@@ -306,6 +307,7 @@ export function useGameSession({
         activeSessionKeyRef.current = connection.sessionKey;
 
         const socket = new WebSocket(connection.wsUrl);
+        let startupRetry: ReturnType<typeof setTimeout> | null = null;
         socket.binaryType = "arraybuffer";
         websocketRef.current = socket;
 
@@ -488,7 +490,7 @@ export function useGameSession({
             });
         };
 
-        socket.onclose = () => {
+        socket.onclose = (event) => {
             clearPing();
             if (
                 activeSessionKeyRef.current === connection.sessionKey &&
@@ -499,12 +501,20 @@ export function useGameSession({
                 emitStatusRef.current({
                     connected: false,
                     connecting: false,
-                    error: previousError || "Conexion cerrada.",
+                    error: event.code === 1013
+                        ? startupAttempt < 5
+                            ? "El mundo está iniciando. Reintentando conexión…"
+                            : "El mundo sigue iniciando. Recargá la página en unos segundos."
+                        : previousError || "Conexion cerrada.",
                 });
+                if (event.code === 1013 && startupAttempt < 5) {
+                    startupRetry = setTimeout(() => setStartupAttempt(value => value + 1), 1500);
+                }
             }
         };
 
         return () => {
+            if (startupRetry) clearTimeout(startupRetry);
             if (
                 activeSessionKeyRef.current === connection.sessionKey &&
                 isCurrentSocketInstance(socket)
@@ -528,6 +538,7 @@ export function useGameSession({
         };
     }, [
         connection,
+        startupAttempt,
         isClientReadyForConnection,
         activeSessionKeyRef,
         activeSocketInstanceRef,

@@ -927,6 +927,7 @@ function convertMinimaps(): number {
 
 function main() {
     const mapNames = parseMapNames();
+    const npcs = convertNpcs();
     let mapsConverted = 0;
     let npcPlacements = 0;
 
@@ -935,6 +936,13 @@ function main() {
         if (!converted) {
             continue;
         }
+
+        converted.npcPlacements = converted.npcPlacements.filter((placement) => {
+            if (npcs[String(placement.npcIndex)]) return true;
+            delete converted.specials.npcs[`${placement.x},${placement.y}`];
+            console.warn(`Mapa ${mapId}: referencia heredada sin plantilla NPC ${placement.npcIndex} descartada.`);
+            return false;
+        });
 
         const mapDir = path.join(MAPS_SOURCE_DIR, `mapa_${mapId}`);
         fs.mkdirSync(mapDir, { recursive: true });
@@ -952,7 +960,6 @@ function main() {
     }
 
     const objects = convertObjects();
-    const npcs = convertNpcs();
     const spells = convertSpells();
 
     writeJson(path.join(API_JSONS, "objs.json"), objects);

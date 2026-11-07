@@ -1,4 +1,5 @@
 import type { InventoryItem, InventoryRecord } from "./types/runtime";
+import { canStackWith, getItemRarity } from "./itemRarity";
 
 export const INVENTORY_SLOT_COUNT = 21;
 
@@ -46,11 +47,9 @@ function cloneInventory(record: InventoryRecord): InventoryRecord {
 
 export function isInventorySlot(slot: number | string): boolean {
     const numericSlot = Number(slot);
-    return (
-        Number.isInteger(numericSlot) &&
+    return Number.isInteger(numericSlot) &&
         numericSlot >= 1 &&
-        numericSlot <= INVENTORY_SLOT_COUNT
-    );
+        numericSlot <= INVENTORY_SLOT_COUNT;
 }
 
 export function isEquipmentStorageSlot(
@@ -113,17 +112,11 @@ export function getInventoryStackCapacity(
     maxStack = 10_000,
     rarity = 0,
 ): number {
-    if (rarity > 0) {
-        return 0;
-    }
-
     let capacity = 0;
 
     for (const [slot, item] of Object.entries(record)) {
         if (
-            !isInventorySlot(slot) ||
-            item.idItem !== idItem ||
-            hasRarity(item) ||
+            !isInventorySlot(slot) || !canStackWith(item, idItem, rarity) ||
             item.cant >= maxStack
         ) {
             continue;
@@ -142,7 +135,8 @@ export function canAddToInventory(
     maxStack = 10_000,
     rarity = 0,
 ): boolean {
-    const stackLimit = rarity > 0 ? 1 : maxStack;
+    if (!Number.isSafeInteger(amount) || amount <= 0) return false;
+    const stackLimit = maxStack;
     const stackCapacity = getInventoryStackCapacity(
         record,
         idItem,
@@ -153,45 +147,32 @@ export function canAddToInventory(
         Math.max(0, amount - stackCapacity) / stackLimit,
     );
 
-    return (
-        countOccupiedInventorySlots(record) + slotsNeeded <=
-        INVENTORY_SLOT_COUNT
-    );
+    return countOccupiedInventorySlots(record) + slotsNeeded <=
+        INVENTORY_SLOT_COUNT;
 }
 
-function addItemToInventory(
+export function addItemToInventory(
     record: InventoryRecord,
     item: InventoryItem,
     preferredSlot?: number,
     maxStack = 10_000,
 ): boolean {
     let remaining = item.cant;
-    const unique = hasRarity(item);
-    const stackLimit = unique ? 1 : maxStack;
+    if (!canAddToInventory(record, item.idItem, item.cant, maxStack, item.rarity)) return false;
+    const rarity = getItemRarity(item.idItem, item.rarity);
+    const stackLimit = maxStack;
     const createSlot = (amount: number) => ({
         idItem: item.idItem,
         cant: amount,
         equipped: 0,
-        ...(unique ? { rarity: Number(item.rarity) } : {}),
+        ...(rarity > 0 ? { rarity } : {}),
     });
-
-    if (
-        preferredSlot &&
-        isInventorySlot(preferredSlot) &&
-        !record[String(preferredSlot)]
-    ) {
-        const amount = Math.min(remaining, stackLimit);
-        record[String(preferredSlot)] = createSlot(amount);
-        remaining -= amount;
-    }
 
     for (const [slot, inventoryItem] of Object.entries(record)) {
         if (
             remaining <= 0 ||
-            unique ||
             !isInventorySlot(slot) ||
-            inventoryItem.idItem !== item.idItem ||
-            hasRarity(inventoryItem) ||
+            !canStackWith(inventoryItem, item.idItem, rarity) ||
             inventoryItem.cant >= maxStack
         ) {
             continue;
@@ -200,6 +181,15 @@ function addItemToInventory(
         const amount = Math.min(remaining, maxStack - inventoryItem.cant);
         inventoryItem.cant += amount;
         inventoryItem.equipped = 0;
+        remaining -= amount;
+    }
+
+    if (remaining > 0 && preferredSlot &&
+        isInventorySlot(preferredSlot) &&
+        !record[String(preferredSlot)]
+    ) {
+        const amount = Math.min(remaining, stackLimit);
+        record[String(preferredSlot)] = createSlot(amount);
         remaining -= amount;
     }
 
@@ -342,5 +332,22 @@ export function normalizeEquipmentStorage(
         }
     }
 
+    const bagSlots = Object.keys(next)
+        .filter(isInventorySlot)
+        .sort((a, b) => Number(a) - Number(b));
+    for (let index = 0; index < bagSlots.length; index++) {
+        const target = next[bagSlots[index]];
+        if (!target) continue;
+        for (const sourceSlot of bagSlots.slice(index + 1)) {
+            const source = next[sourceSlot];
+            if (!source || !canStackWith(source, target.idItem, getItemRarity(target.idItem, target.rarity))) continue;
+            const amount = Math.min(source.cant, Math.max(0, 10000 - target.cant));
+            if (!amount) continue;
+            target.cant += amount;
+            source.cant -= amount;
+            if (!source.cant) delete next[sourceSlot];
+            changed = true;
+        }
+    }
     return { inventory: next, changed };
 }

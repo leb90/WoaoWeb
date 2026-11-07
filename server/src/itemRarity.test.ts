@@ -53,15 +53,16 @@ test("solo el legendario no se cae al morir", () => {
     assert.equal(itemRarity.isRarityNoDrop(TIER_SWORD, 0), true);
 });
 
-test("un ítem con rareza no se apila y conserva la rareza al equipar y desequipar", () => {
+test("las mejoras iguales se apilan y conservan la rareza al equipar y desequipar", () => {
     assert.equal(itemRarity.canStackWith({ idItem: MATADRAGONES, rarity: 0 }, MATADRAGONES, 0), true);
-    assert.equal(itemRarity.canStackWith({ idItem: MATADRAGONES, rarity: 1 }, MATADRAGONES, 1), false);
+    assert.equal(itemRarity.canStackWith({ idItem: MATADRAGONES, rarity: 1 }, MATADRAGONES, 1), true);
+    assert.equal(itemRarity.canStackWith({ idItem: MATADRAGONES, rarity: 1 }, MATADRAGONES, 2), false);
 
     // 20 lugares ocupados: entra una espada normal en el que queda, pero no dos con rareza.
     const inventory: Record<string, { idItem: number; cant: number; equipped: number; rarity?: number }> = {};
     for (let slot = 1; slot <= 20; slot++) inventory[String(slot)] = { idItem: RED_POTION, cant: 1, equipped: 0 };
     assert.equal(canAddToInventory(inventory, MATADRAGONES, 2, 10_000, 0), true);
-    assert.equal(canAddToInventory(inventory, MATADRAGONES, 2, 10_000, 2), false);
+    assert.equal(canAddToInventory(inventory, MATADRAGONES, 2, 10_000, 2), true);
 
     inventory["21"] = { idItem: MATADRAGONES, cant: 1, equipped: 0, rarity: 2 };
     const equipped = equipInventoryItem(inventory, 21, EQUIPMENT_STORAGE_SLOTS.weapon);

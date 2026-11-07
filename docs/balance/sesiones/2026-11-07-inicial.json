@@ -1,0 +1,295 @@
+{
+  "conditions": {
+    "durationSeconds": 180,
+    "classes": [
+      3,
+      1,
+      7,
+      4
+    ],
+    "levels": [
+      10,
+      30,
+      50
+    ],
+    "gear": "venta, raza humana, habilidades por nivel, sin buffs",
+    "spawns": "naturales, rangos activos, sin respawn forzado",
+    "actions": "paquetes reales, control local aislado, estrategia de mayor daño por hechizo sin retirada",
+    "supplies": {
+      "red": 100,
+      "blue": 100
+    },
+    "multipliers": {
+      "exp": 5,
+      "gold": 3
+    },
+    "caveat": "Campamentos de distinta densidad. Incluye tiempo muerto y agotamiento de consumibles. No permite ordenar clases por poder.",
+    "worldEvents": "Bonos temporales del mundo activos, sin fijar entre reinicios; la tasa observada incluye esos efectos."
+  },
+  "sessions": [
+    {
+      "role": "huntWarrior",
+      "classId": 3,
+      "level": 10,
+      "map": 19,
+      "npcTemplates": [
+        501
+      ],
+      "seconds": 180,
+      "kills": 23,
+      "xp": 11603,
+      "xpPerHour": 231652,
+      "goldNet": 276,
+      "goldPerHour": 5510,
+      "redUsed": 0,
+      "blueUsed": 0,
+      "damageTaken": 2,
+      "dead": false,
+      "hp": 126,
+      "maxHp": 126,
+      "finalLevel": 11
+    },
+    {
+      "role": "huntMage",
+      "classId": 1,
+      "level": 10,
+      "map": 22,
+      "npcTemplates": [
+        501
+      ],
+      "seconds": 180,
+      "kills": 16,
+      "xp": 8156,
+      "xpPerHour": 162882,
+      "goldNet": 192,
+      "goldPerHour": 3834,
+      "redUsed": 0,
+      "blueUsed": 43,
+      "damageTaken": 1,
+      "dead": false,
+      "hp": 94,
+      "maxHp": 94,
+      "finalLevel": 11
+    },
+    {
+      "role": "huntDruid",
+      "classId": 7,
+      "level": 10,
+      "map": 119,
+      "npcTemplates": [
+        501
+      ],
+      "seconds": 180,
+      "kills": 19,
+      "xp": 9765,
+      "xpPerHour": 195065,
+      "goldNet": 228,
+      "goldPerHour": 4555,
+      "redUsed": 0,
+      "blueUsed": 88,
+      "damageTaken": 3,
+      "dead": false,
+      "hp": 102,
+      "maxHp": 102,
+      "finalLevel": 11
+    },
+    {
+      "role": "huntAssassin",
+      "classId": 4,
+      "level": 10,
+      "map": 226,
+      "npcTemplates": [
+        501
+      ],
+      "seconds": 180,
+      "kills": 3,
+      "xp": 1500,
+      "xpPerHour": 29972,
+      "goldNet": 36,
+      "goldPerHour": 719,
+      "redUsed": 0,
+      "blueUsed": 0,
+      "damageTaken": 12,
+      "dead": false,
+      "hp": 96,
+      "maxHp": 97,
+      "finalLevel": 10
+    },
+    {
+      "role": "huntWarrior",
+      "classId": 3,
+      "level": 30,
+      "map": 193,
+      "npcTemplates": [
+        510
+      ],
+      "seconds": 180,
+      "kills": 3,
+      "xp": 27875,
+      "xpPerHour": 556813,
+      "goldNet": 750,
+      "goldPerHour": 14982,
+      "redUsed": 100,
+      "blueUsed": 0,
+      "damageTaken": 3107,
+      "dead": false,
+      "hp": 232,
+      "maxHp": 325,
+      "finalLevel": 30
+    },
+    {
+      "role": "huntMage",
+      "classId": 1,
+      "level": 30,
+      "map": 33,
+      "npcTemplates": [
+        510
+      ],
+      "seconds": 180,
+      "kills": 0,
+      "xp": 1542,
+      "xpPerHour": 30806,
+      "goldNet": 0,
+      "goldPerHour": 0,
+      "redUsed": 100,
+      "blueUsed": 84,
+      "damageTaken": 3238,
+      "dead": true,
+      "hp": 0,
+      "maxHp": 238,
+      "finalLevel": 30
+    },
+    {
+      "role": "huntDruid",
+      "classId": 7,
+      "level": 30,
+      "map": 12,
+      "npcTemplates": [
+        510
+      ],
+      "seconds": 180,
+      "kills": 0,
+      "xp": 1183,
+      "xpPerHour": 23641,
+      "goldNet": 0,
+      "goldPerHour": 0,
+      "redUsed": 62,
+      "blueUsed": 100,
+      "damageTaken": 1941,
+      "dead": false,
+      "hp": 183,
+      "maxHp": 252,
+      "finalLevel": 30
+    },
+    {
+      "role": "huntAssassin",
+      "classId": 4,
+      "level": 30,
+      "map": 16,
+      "npcTemplates": [
+        510
+      ],
+      "seconds": 180,
+      "kills": 11,
+      "xp": 61325,
+      "xpPerHour": 1225838,
+      "goldNet": 1650,
+      "goldPerHour": 32982,
+      "redUsed": 15,
+      "blueUsed": 0,
+      "damageTaken": 541,
+      "dead": false,
+      "hp": 205,
+      "maxHp": 267,
+      "finalLevel": 30
+    },
+    {
+      "role": "huntWarrior",
+      "classId": 3,
+      "level": 50,
+      "map": 48,
+      "npcTemplates": [
+        553
+      ],
+      "seconds": 180,
+      "kills": 0,
+      "xp": 0,
+      "xpPerHour": 0,
+      "goldNet": 0,
+      "goldPerHour": 0,
+      "redUsed": 0,
+      "blueUsed": 0,
+      "damageTaken": 535,
+      "dead": true,
+      "hp": 0,
+      "maxHp": 535,
+      "finalLevel": 50
+    },
+    {
+      "role": "huntMage",
+      "classId": 1,
+      "level": 50,
+      "map": 142,
+      "npcTemplates": [
+        553
+      ],
+      "seconds": 180,
+      "kills": 0,
+      "xp": 0,
+      "xpPerHour": 0,
+      "goldNet": 0,
+      "goldPerHour": 0,
+      "redUsed": 0,
+      "blueUsed": 1,
+      "damageTaken": 418,
+      "dead": true,
+      "hp": 0,
+      "maxHp": 388,
+      "finalLevel": 50
+    },
+    {
+      "role": "huntDruid",
+      "classId": 7,
+      "level": 50,
+      "map": 144,
+      "npcTemplates": [
+        553
+      ],
+      "seconds": 180,
+      "kills": 0,
+      "xp": 0,
+      "xpPerHour": 0,
+      "goldNet": 0,
+      "goldPerHour": 0,
+      "redUsed": 0,
+      "blueUsed": 3,
+      "damageTaken": 412,
+      "dead": true,
+      "hp": 0,
+      "maxHp": 412,
+      "finalLevel": 50
+    },
+    {
+      "role": "huntAssassin",
+      "classId": 4,
+      "level": 50,
+      "map": 145,
+      "npcTemplates": [
+        553
+      ],
+      "seconds": 180,
+      "kills": 0,
+      "xp": 0,
+      "xpPerHour": 0,
+      "goldNet": 0,
+      "goldPerHour": 0,
+      "redUsed": 0,
+      "blueUsed": 0,
+      "damageTaken": 437,
+      "dead": true,
+      "hp": 0,
+      "maxHp": 437,
+      "finalLevel": 50
+    }
+  ]
+}

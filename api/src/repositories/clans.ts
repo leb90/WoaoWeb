@@ -1,6 +1,8 @@
 import { z } from "zod";
 import type { PoolClient } from "pg";
 import pool from "../db";
+import { clanLevelConfig } from "../lib/clanLevelConfig";
+import { getClanProgression } from "./clanProgression";
 import type {
     ClanAlignment,
     ClanDetailsResponse,
@@ -22,7 +24,6 @@ import {
 const CLAN_CREATION_COST = 150_000;
 const CLAN_CREATION_LEVEL_REQUIRED = 30;
 const CLAN_NAME_MAX_LENGTH = 18;
-const CLAN_MAX_MEMBERS = 50;
 
 const createClanSchema = z.object({
     characterId: z.string().uuid(),
@@ -91,6 +92,7 @@ type CharacterState = {
 };
 
 type ClanRow = {
+    level: number;
     id: string;
     name: string;
     alignment: ClanAlignment;
@@ -102,6 +104,7 @@ type ClanRow = {
 };
 
 export type CharacterClanSummary = {
+    clanLevel?: number;
     clanId: string | null;
     clanName: string | null;
     clanTag: string | null;
@@ -276,6 +279,9 @@ async function getCharacterClanSummaryWithClient(
         clanMinJoinLevel: row?.clan_min_join_level ?? null,
         clanRole: row?.clan_role ?? null,
         clanPoints: row?.clan_points ?? null,
+        clanLevel: row?.clan_id
+            ? Number((await client.query("SELECT level FROM clans WHERE id=$1", [row.clan_id])).rows[0]?.level ?? 1)
+            : 1,
     };
 }
 
@@ -375,6 +381,7 @@ async function getClanDetails(
         cl.name,
         cl.alignment,
         cl.min_join_level,
+        cl.level,
         COALESCE(cl.points, 0) AS points,
         cl.leader_character_id,
         leader.name AS leader_name,
@@ -412,6 +419,9 @@ async function getClanDetails(
         leaderCharacterId: row.leader_character_id,
         leaderName: row.leader_name,
         memberCount: Number(row.member_count),
+        level: row.level,
+        maxMembers: clanLevelConfig(row.level).maxMembers,
+        progression: includeOnlineStatus ? await getClanProgression(clanId) : null,
         members,
         requests,
     };
@@ -484,6 +494,7 @@ export async function listClansForCharacter(
             cl.name,
             cl.alignment,
             cl.min_join_level,
+            cl.level,
             COALESCE(cl.points, 0) AS points,
             cl.leader_character_id,
             leader.name AS leader_name,
@@ -530,6 +541,8 @@ export async function listClansForCharacter(
                 minJoinLevel: row.min_join_level,
                 points: Number(row.points ?? 0),
                 memberCount: Number(row.member_count),
+                level: row.level,
+                maxMembers: clanLevelConfig(row.level).maxMembers,
                 leaderName: row.leader_name,
             })),
         };
@@ -767,6 +780,10 @@ export async function createClanRequest(
         }
 
         const memberCount = await getClanMemberCount(client, parsed.clanId);
+        const clanLevel = Number(
+            (await client.query("SELECT level FROM clans WHERE id=$1", [parsed.clanId])).rows[0]?.level ?? 1,
+        );
+        const CLAN_MAX_MEMBERS = clanLevelConfig(clanLevel).maxMembers;
 
         if (memberCount >= CLAN_MAX_MEMBERS) {
             throw new Error(
@@ -872,9 +889,9 @@ export async function acceptClanRequest(
 
         const [applicant, clanResult] = await Promise.all([
             getCharacterState(client, request.character_id),
-            client.query<{ alignment: ClanAlignment }>(
+            client.query<{ alignment: ClanAlignment; level: number }>(
                 `
-          SELECT alignment
+          SELECT alignment,level
           FROM clans
           WHERE id = $1
           LIMIT 1
@@ -893,6 +910,7 @@ export async function acceptClanRequest(
         }
 
         const clanAlignment = clanResult.rows[0]?.alignment;
+        const CLAN_MAX_MEMBERS = clanLevelConfig(clanResult.rows[0]?.level ?? 1).maxMembers;
 
         if (!clanAlignment) {
             throw new Error("Clan invalido");

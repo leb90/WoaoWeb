@@ -366,7 +366,9 @@ export async function listAuctionHouseState(input: z.input<typeof listAuctionSch
         }
         if (parsed.search) {
             values.push(`%${parsed.search.toLowerCase()}%`);
-            where.push(`(LOWER(seller_name) LIKE $${values.length} OR item_id::text LIKE $${values.length})`);
+            where.push(`(LOWER(seller_name) LIKE $${values.length} OR item_id::text LIKE $${values.length}
+                OR EXISTS (SELECT 1 FROM game_objects o
+                    WHERE o.id = auction_listings.item_id AND LOWER(o.name) LIKE $${values.length}))`);
         }
 
         const whereSql = `WHERE ${where.join(" AND ")}`;

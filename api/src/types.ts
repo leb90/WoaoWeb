@@ -345,6 +345,8 @@ export type CharacterLookupResponse = {
 };
 
 export type ClanSummaryResponse = {
+    level: number;
+    maxMembers: number;
     id: string;
     name: string;
     alignment: ClanAlignment;
@@ -381,6 +383,9 @@ export type ClanRequestResponse = {
 };
 
 export type ClanDetailsResponse = {
+    level: number;
+    maxMembers: number;
+    progression?: import("./repositories/clanProgression").ClanProgressionState | null;
     id: string;
     name: string;
     alignment: ClanAlignment;

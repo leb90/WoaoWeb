@@ -363,7 +363,9 @@ export async function listMarketListings(input: ListMarketListingsInput) {
 
         if (parsed.search) {
             values.push(`%${parsed.search.toLowerCase()}%`);
-            whereClauses.push(`LOWER(seller_name) LIKE $${values.length}`);
+            whereClauses.push(`(LOWER(seller_name) LIKE $${values.length} OR item_id::text LIKE $${values.length}
+                OR EXISTS (SELECT 1 FROM game_objects o
+                    WHERE o.id = market_listings.item_id AND LOWER(o.name) LIKE $${values.length}))`);
         }
 
         values.push(parsed.limit ?? 20);

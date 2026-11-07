@@ -1,0 +1,8 @@
+[
+  {"level":1,"maxMembers":30,"castleLimit":3,"gold":0,"questPoints":0,"items":[]},
+  {"level":2,"maxMembers":33,"castleLimit":4,"gold":300000,"questPoints":50,"items":[{"idItem":1095,"amount":1}]},
+  {"level":3,"maxMembers":36,"castleLimit":5,"gold":1500000,"questPoints":150,"items":[{"idItem":1095,"amount":3},{"idItem":1096,"amount":1}]},
+  {"level":4,"maxMembers":39,"castleLimit":6,"gold":7500000,"questPoints":350,"items":[{"idItem":1095,"amount":5},{"idItem":1096,"amount":3}]},
+  {"level":5,"maxMembers":42,"castleLimit":7,"gold":15000000,"questPoints":700,"items":[{"idItem":1095,"amount":10},{"idItem":1096,"amount":3},{"idItem":1241,"amount":1}]},
+  {"level":6,"maxMembers":45,"castleLimit":8,"gold":20000000,"questPoints":1200,"items":[{"idItem":1095,"amount":12},{"idItem":1096,"amount":5},{"idItem":1241,"amount":3}]}
+]

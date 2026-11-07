@@ -22,8 +22,11 @@
         "typescript-eslint": "^8.59.3"
     },
     "scripts": {
-        "clean": "rm -rf dist",
-        "build": "pnpm run clean && tsc && node scripts/copy-assets.cjs",
+        "test": "node scripts/test.cjs",
+        "balance-opening": "tsx src/scripts/reportOpeningBalance.ts && tsx src/scripts/reportOpeningCombat.ts",
+        "export-opening-guides": "tsx src/scripts/exportOpeningGuides.ts",
+        "clean": "node scripts/clean.cjs",
+        "build": "node scripts/clean.cjs && tsc && node scripts/copy-assets.cjs",
         "dev": "NODE_ENV=development tsx watch src/server.ts",
         "compact-objs": "tsx src/scripts/compactObjsJson.ts",
         "compact-npcs": "tsx src/scripts/compactNpcsJson.ts",

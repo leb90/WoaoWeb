@@ -90,14 +90,14 @@ export async function fetchRankedRatings(characterIds: readonly string[], mode: 
     })) as RankedRating[];
 }
 
-export async function persistRankedMatch(payload: CompleteRankedMatchPayload): Promise<{ id: string; status: string }> {
+export async function persistRankedMatch(payload: CompleteRankedMatchPayload): Promise<{ id: string; status: string; applied: boolean; rewards: { characterId: string; points: number }[] }> {
     return (await funct.fetchUrl("/internal/ranked/matches/complete", {
         method: "POST",
         body: JSON.stringify(payload),
         headers: authHeaders({
             "Content-Type": "application/json",
         }),
-    })) as { id: string; status: string };
+    })) as { id: string; status: string; applied: boolean; rewards: { characterId: string; points: number }[] };
 }
 
 export async function fetchRankedLeaderboard(

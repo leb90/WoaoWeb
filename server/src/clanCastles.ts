@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { runtimeDataPath } from "./runtimeDataPath";
 
 const handleProtocol = require("./handleProtocol");
 const vars = require("./vars");
@@ -52,7 +53,7 @@ type CastleNpc = {
     lastAggressedAt?: number;
 };
 
-const DATA_PATH = path.resolve(__dirname, "../data/castleOwnership.json");
+const DATA_PATH = runtimeDataPath("castleOwnership.json");
 const SAFE_MAP = 34;
 const SAFE_POS = { x: 50, y: 50 };
 const CASTLE_NPC_TYPES = new Set([33, 61, 77, 78]);

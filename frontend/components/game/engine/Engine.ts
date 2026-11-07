@@ -926,7 +926,6 @@ export class Engine {
 
     // Initialize resources (like engine.js initCanvas)
     async initResources(initialSnapshot?: CharacterSnapshot): Promise<void> {
-        console.log("Loading resources...");
 
         const [
             graphicsDB,

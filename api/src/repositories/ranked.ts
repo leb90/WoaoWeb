@@ -1,7 +1,13 @@
 import { z } from "zod";
 import pool from "../db";
+import crypto from "node:crypto";
+import { onceInTransaction } from "./economyTransactions";
+import { grantRankedRewards } from "./rankedRewards";
 
-const rankedModeSchema = z.union([z.literal("RANKED_1V1"), z.literal("RANKED_2V2")]);
+const rankedModeSchema = z.union([
+    z.literal("RANKED_1V1"),
+    z.literal("RANKED_2V2"),
+]);
 const teamSchema = z.union([z.literal("A"), z.literal("B")]);
 const resultSchema = z.union([
     z.literal("win"),
@@ -65,7 +71,10 @@ function toRating(row: {
     };
 }
 
-export async function getOrCreateRankedRating(characterId: string, mode: string) {
+export async function getOrCreateRankedRating(
+    characterId: string,
+    mode: string,
+) {
     const parsedMode = rankedModeSchema.parse(mode);
     const result = await pool.query(
         `
@@ -81,7 +90,10 @@ export async function getOrCreateRankedRating(characterId: string, mode: string)
     return toRating(result.rows[0]);
 }
 
-export async function listRankedRatings(characterIds: readonly string[], mode: string) {
+export async function listRankedRatings(
+    characterIds: readonly string[],
+    mode: string,
+) {
     const parsedMode = rankedModeSchema.parse(mode);
     const uniqueCharacterIds = [...new Set(characterIds)].filter(Boolean);
 
@@ -89,7 +101,11 @@ export async function listRankedRatings(characterIds: readonly string[], mode: s
         return [];
     }
 
-    await Promise.all(uniqueCharacterIds.map((characterId) => getOrCreateRankedRating(characterId, parsedMode)));
+    await Promise.all(
+        uniqueCharacterIds.map((characterId) =>
+            getOrCreateRankedRating(characterId, parsedMode),
+        ),
+    );
 
     const result = await pool.query(
         `
@@ -105,6 +121,18 @@ export async function listRankedRatings(characterIds: readonly string[], mode: s
 
 export async function completeRankedMatch(payload: unknown) {
     const parsed = completeMatchSchema.parse(payload);
+    parsed.id ??= crypto.randomUUID();
+    const expected = parsed.mode === "RANKED_1V1" ? 2 : 4;
+    if (
+        parsed.participants.length !== expected ||
+        new Set(parsed.participants.map((p) => p.characterId)).size !==
+            expected ||
+        parsed.participants.filter((p) => p.team === "A").length !==
+            expected / 2 ||
+        parsed.participants.filter((p) => p.team === "B").length !==
+            expected / 2
+    )
+        throw new Error("Equipos de ranked inválidos");
     const startedAt = new Date(parsed.startedAt);
     const finishedAt = new Date(parsed.finishedAt);
 
@@ -112,8 +140,13 @@ export async function completeRankedMatch(payload: unknown) {
         try {
             await client.query("BEGIN");
 
-            const matchResult = await client.query(
-                `
+            const completion = await onceInTransaction(
+                client,
+                `ranked:${parsed.id}`,
+                parsed,
+                async () => {
+                    const matchResult = await client.query(
+                        `
                     INSERT INTO ranked_matches (
                         id,
                         mode,
@@ -133,27 +166,29 @@ export async function completeRankedMatch(payload: unknown) {
                     VALUES (COALESCE($1, gen_random_uuid()), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'COMPLETED', $13::jsonb)
                     RETURNING *
                 `,
-                [
-                    parsed.id ?? null,
-                    parsed.mode,
-                    parsed.arenaMapId ?? null,
-                    startedAt.toISOString(),
-                    finishedAt.toISOString(),
-                    parsed.teamAEloBefore,
-                    parsed.teamBEloBefore,
-                    parsed.teamAEloAfter,
-                    parsed.teamBEloAfter,
-                    parsed.winnerTeam,
-                    parsed.scoreA,
-                    parsed.scoreB,
-                    JSON.stringify(parsed.metadata ?? {}),
-                ],
-            );
-            const matchId = matchResult.rows[0].id as string;
+                        [
+                            parsed.id ?? null,
+                            parsed.mode,
+                            parsed.arenaMapId ?? null,
+                            startedAt.toISOString(),
+                            finishedAt.toISOString(),
+                            parsed.teamAEloBefore,
+                            parsed.teamBEloBefore,
+                            parsed.teamAEloAfter,
+                            parsed.teamBEloAfter,
+                            parsed.winnerTeam,
+                            parsed.scoreA,
+                            parsed.scoreB,
+                            JSON.stringify(parsed.metadata ?? {}),
+                        ],
+                    );
+                    const matchId = matchResult.rows[0].id as string;
 
-            for (const participant of parsed.participants) {
-                await client.query(
-                    `
+                    for (const participant of [...parsed.participants].sort(
+                        (a, b) => a.characterId.localeCompare(b.characterId),
+                    )) {
+                        await client.query(
+                            `
                         INSERT INTO ranked_match_participants (
                             match_id,
                             character_id,
@@ -171,24 +206,27 @@ export async function completeRankedMatch(payload: unknown) {
                             elo_delta = EXCLUDED.elo_delta,
                             result = EXCLUDED.result
                     `,
-                    [
-                        matchId,
-                        participant.characterId,
-                        participant.team,
-                        participant.eloBefore,
-                        participant.eloAfter,
-                        participant.eloDelta,
-                        participant.result,
-                    ],
-                );
+                            [
+                                matchId,
+                                participant.characterId,
+                                participant.team,
+                                participant.eloBefore,
+                                participant.eloAfter,
+                                participant.eloDelta,
+                                participant.result,
+                            ],
+                        );
 
-                if (participant.result === "pending" || participant.result === "draw") {
-                    continue;
-                }
+                        if (
+                            participant.result === "pending" ||
+                            participant.result === "draw"
+                        ) {
+                            continue;
+                        }
 
-                const won = participant.result === "win";
-                await client.query(
-                    `
+                        const won = participant.result === "win";
+                        await client.query(
+                            `
                         INSERT INTO ranked_ratings (
                             character_id,
                             mode,
@@ -203,8 +241,8 @@ export async function completeRankedMatch(payload: unknown) {
                         VALUES ($1, $2, $3, $4, $5, $6, $6, 1, $3)
                         ON CONFLICT (character_id, mode) DO UPDATE
                         SET elo = EXCLUDED.elo,
-                            wins = ranked_ratings.wins + $4,
-                            losses = ranked_ratings.losses + $5,
+        wins = ranked_ratings.wins + $4,
+        losses = ranked_ratings.losses + $5,
                             win_streak = CASE WHEN $4 = 1 THEN ranked_ratings.win_streak + 1 ELSE 0 END,
                             best_win_streak = GREATEST(
                                 ranked_ratings.best_win_streak,
@@ -214,19 +252,23 @@ export async function completeRankedMatch(payload: unknown) {
                             highest_elo = GREATEST(ranked_ratings.highest_elo, EXCLUDED.elo),
                             updated_at = NOW()
                     `,
-                    [
-                        participant.characterId,
-                        parsed.mode,
-                        participant.eloAfter,
-                        won ? 1 : 0,
-                        won ? 0 : 1,
-                        won ? 1 : 0,
-                    ],
-                );
-            }
+                            [
+                                participant.characterId,
+                                parsed.mode,
+                                participant.eloAfter,
+                                won ? 1 : 0,
+                                won ? 0 : 1,
+                                won ? 1 : 0,
+                            ],
+                        );
+                    }
 
+                    const rewards = await grantRankedRewards(client, parsed);
+                    return { id: matchId, status: "COMPLETED", rewards };
+                },
+            );
             await client.query("COMMIT");
-            return { id: matchId, status: "COMPLETED" };
+            return { ...completion.value, applied: completion.applied };
         } catch (error) {
             await client.query("ROLLBACK");
             throw error;
@@ -325,9 +367,7 @@ export async function getRankedLeaderboard(
                                     rr2.elo = self_rating.elo
                                     AND rr2.wins = self_rating.wins
                                     AND rr2.character_id::text < self_rating.character_id::text
-                                )
-                            )
-                    ) AS position
+                                ))) AS position
                 FROM self_rating
             `,
             [parsedMode, selfCharacterId],

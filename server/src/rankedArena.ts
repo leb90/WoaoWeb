@@ -1,4 +1,8 @@
 import crypto from "node:crypto";
+import { DurableOutbox } from "./durableOutbox";
+import { runtimeDataPath } from "./runtimeDataPath";
+import { hasCombatActivity } from "./combatActivity";
+import { hydrateQuestWallet } from "./questWallet";
 import { getClientById, getCharacterById, getOnlineSessionById } from "./runtimeRegistry";
 import {
     calculateRankedEloChange,
@@ -75,6 +79,7 @@ type RankedMatchParticipant = {
 };
 
 type RankedActiveMatch = {
+    eliminatedIds: Set<string>;
     id: string;
     mode: RankedMode;
     map: number;
@@ -730,6 +735,7 @@ function startRound(match: RankedActiveMatch) {
     }
 
     match.resolvingRound = false;
+    match.eliminatedIds.clear();
     clearTimers(match);
     const lockedUntil = Date.now() + RANKED_ROUND_COUNTDOWN_SECONDS * 1000;
     match.participants.A.forEach((participant, index) => prepareUserForRound(participant, match.arena, index, lockedUntil));
@@ -793,7 +799,24 @@ function unregisterMatch(match: RankedActiveMatch) {
     clearTimers(match);
 }
 
-async function finishMatch(match: RankedActiveMatch, winnerTeam: RankedTeam, reason = "victoria") {
+const pendingResults = new DurableOutbox(runtimeDataPath("rankedResultsOutbox.json"), async (_id, payload) => {
+    const result = await persistRankedMatch(payload);
+    for (const reward of result.rewards ?? []) {
+        const user = Object.values(vars.personajes as Record<string, any>).find((u) => u._id === reward.characterId);
+        if (!user) continue;
+        await hydrateQuestWallet(user);
+        if (result.applied && reward.points > 0)
+            tell(String(user.id), `Premio ranked: +${reward.points} puntos Quest.`);
+        const client = getClientById(user.id);
+        if (client) {
+            handleProtocol.sendMyCharacter(user);
+            socket.send(client);
+        }
+    }
+});
+async function finishMatch(match: RankedActiveMatch, winnerTeam: RankedTeam, reason = "victoria",
+    abandonedId?: string,
+) {
     if (match.finished) {
         return;
     }
@@ -807,7 +830,7 @@ async function finishMatch(match: RankedActiveMatch, winnerTeam: RankedTeam, rea
     const loserEloAfter = Math.max(0, match.teamEloBefore[loserTeam] + eloChange.loserDelta);
 
     try {
-        await persistRankedMatch({
+        pendingResults.enqueue(match.id, {
             id: match.id,
             mode: match.mode,
             arenaMapId: match.map,
@@ -835,13 +858,19 @@ async function finishMatch(match: RankedActiveMatch, winnerTeam: RankedTeam, rea
                     eloBefore: loser.eloBefore,
                     eloAfter: Math.max(0, loser.eloBefore + eloChange.loserDelta),
                     eloDelta: eloChange.loserDelta,
-                    result: reason === "abandono" ? ("abandoned" as const) : ("loss" as const),
+                    result: reason === "abandono" && loser.id === abandonedId ? ("abandoned" as const) : ("loss" as const),
                 })),
             ],
             metadata: {
                 reason,
                 winnerName: getTeamNames(winners),
                 loserName: getTeamNames(losers),
+                activity: Object.fromEntries(
+                    getAllParticipants(match).map((p) => [
+                        p.persistedId,
+                        hasCombatActivity(p.id, match.startedAt) ? 1 : 0,
+                    ]),
+                ),
             },
         });
     } catch (error) {
@@ -873,6 +902,7 @@ async function finishMatch(match: RankedActiveMatch, winnerTeam: RankedTeam, rea
         restoreParticipant(match, participant);
     }
     unregisterMatch(match);
+    void pendingResults.flush();
     sendRankedStateToMany(ids);
 }
 
@@ -999,6 +1029,7 @@ async function startMatch(left: RankedQueueEntry, right: RankedQueueEntry) {
             B: 0,
         },
         resolvingRound: false,
+        eliminatedIds: new Set(),
         finished: false,
         timerIds: [],
     };
@@ -1149,6 +1180,16 @@ function requestPartyQueue(idUser: string) {
 }
 
 export async function toggleQueue(idUser: string, rawMode = "") {
+    const persisted = getCharacterById(idUser)?._id;
+    if (
+        pendingResults.hasPending((payload) =>
+            payload.participants.some((p: { characterId: string }) => p.characterId === persisted),
+        )
+    )
+        return {
+            ok: false,
+            message: "Tu último resultado está pendiente de confirmación. Inténtalo nuevamente en unos segundos.",
+        };
     const user = getCharacterById(idUser);
     if (!user) {
         return { ok: false, message: "No se pudo entrar a Ranked." };
@@ -1237,7 +1278,13 @@ export function onUserDied(idUser: string) {
         return;
     }
 
-    scheduleNextRound(match, getOppositeTeam(participant.team));
+    const defeated = require("./ranked/rankedRoundElimination").recordRankedDeath(
+        match.eliminatedIds, match.participants[participant.team].map(member => member.id), String(idUser),
+        match.participants[participant.team]
+            .filter(member => member.id !== String(idUser) && !getCharacterById(member.id)?.dead)
+            .map(member => member.id),
+    );
+    if (defeated) scheduleNextRound(match, getOppositeTeam(participant.team));
 }
 
 export function onUserLeft(idUser: string) {
@@ -1261,7 +1308,7 @@ export function onUserLeft(idUser: string) {
         return;
     }
 
-    void finishMatch(match, getOppositeTeam(participant.team), "abandono");
+    void finishMatch(match, getOppositeTeam(participant.team), "abandono", idUser);
 }
 
 export async function tick() {
@@ -1295,6 +1342,10 @@ export async function tick() {
 }
 
 export function initialize() {
+    void pendingResults.flush();
+    setInterval(() => {
+        void pendingResults.flush();
+    }, 5000).unref();
     if (timer) {
         return;
     }

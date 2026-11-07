@@ -91,6 +91,17 @@ CREATE TABLE IF NOT EXISTS clans (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Estas relaciones deben existir antes de normalizar clanes en una instalación nueva.
+ALTER TABLE characters ADD COLUMN IF NOT EXISTS clan_id UUID REFERENCES clans(id) ON DELETE SET NULL;
+CREATE TABLE IF NOT EXISTS clan_members (
+    clan_id UUID NOT NULL REFERENCES clans(id) ON DELETE CASCADE,
+    character_id UUID NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+    role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('leader', 'co_leader', 'member')),
+    joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (clan_id, character_id),
+    UNIQUE (character_id)
+);
+
 ALTER TABLE clans
     DROP CONSTRAINT IF EXISTS clans_alignment_check;
 
@@ -909,3 +920,62 @@ CREATE INDEX IF NOT EXISTS idx_custom_design_requests_character_created
     ON custom_design_requests(character_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_custom_design_requests_status_created
     ON custom_design_requests(status, created_at DESC);
+
+-- Progresión comprada y monederos Quest. La reputación de ranking sigue en points.
+ALTER TABLE clans ADD COLUMN IF NOT EXISTS level INTEGER NOT NULL DEFAULT 1 CHECK(level BETWEEN 1 AND 6);
+ALTER TABLE clans ADD COLUMN IF NOT EXISTS quest_points INTEGER NOT NULL DEFAULT 0 CHECK(quest_points>=0);
+ALTER TABLE clans ADD COLUMN IF NOT EXISTS progression_imported BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE clan_vaults ADD COLUMN IF NOT EXISTS revision INTEGER NOT NULL DEFAULT 0;
+CREATE TABLE IF NOT EXISTS character_quest_wallets (
+    character_id UUID PRIMARY KEY REFERENCES characters(id) ON DELETE CASCADE,
+    balance INTEGER NOT NULL DEFAULT 0 CHECK(balance>=0),
+    version INTEGER NOT NULL DEFAULT 0,
+    imported_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS economy_operations (
+    operation_id TEXT PRIMARY KEY,
+    payload_hash TEXT NOT NULL,
+    payload JSONB NOT NULL,
+    result JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_economy_operations_created ON economy_operations(created_at);
+ALTER TABLE character_quest_wallets ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 0;
+CREATE TABLE IF NOT EXISTS ranked_reward_daily (
+    character_id UUID NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+    reward_day DATE NOT NULL,
+    points INTEGER NOT NULL DEFAULT 0 CHECK(points BETWEEN 0 AND 80),
+    first_win_awarded BOOLEAN NOT NULL DEFAULT FALSE,
+    PRIMARY KEY(character_id,reward_day)
+);
+CREATE TABLE IF NOT EXISTS ranked_reward_opponents (
+    character_id UUID NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+    opponent_account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    reward_day DATE NOT NULL,
+    rewarded_matches INTEGER NOT NULL DEFAULT 0 CHECK(rewarded_matches>=0),
+    PRIMARY KEY(character_id,opponent_account_id,reward_day)
+);
+CREATE TABLE IF NOT EXISTS reward_event_runs (
+    id UUID PRIMARY KEY,
+    type TEXT NOT NULL,
+    started_at TIMESTAMPTZ NOT NULL
+);
+CREATE TABLE IF NOT EXISTS reward_event_participants (
+    run_id UUID NOT NULL REFERENCES reward_event_runs(id) ON DELETE CASCADE,
+    character_id UUID NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+    account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    PRIMARY KEY(run_id,character_id)
+);
+CREATE TABLE IF NOT EXISTS event_kill_rewards (
+    run_id UUID NOT NULL REFERENCES reward_event_runs(id) ON DELETE CASCADE,
+    killer_character_id UUID NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+    victim_account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    PRIMARY KEY(run_id,killer_character_id,victim_account_id)
+);
+CREATE TABLE IF NOT EXISTS event_reward_awards (
+    run_id UUID NOT NULL REFERENCES reward_event_runs(id) ON DELETE CASCADE,
+    character_id UUID NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+    kind TEXT NOT NULL,
+    PRIMARY KEY(run_id,character_id,kind)
+);

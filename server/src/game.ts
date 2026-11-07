@@ -1441,6 +1441,7 @@ function resetFuerzaAgilidadBuffs(user: GameCharacter, client?: RuntimeClient) {
 
 function isArenaCombat(user: GameCharacter | undefined, userAttacked: GameCharacter | undefined): boolean {
     return Boolean(
+        require("./tournamentAuto").isTournamentCombat(user?.id, userAttacked?.id) ||
         (user?.arenaFfa && userAttacked?.arenaFfa && user.map === userAttacked.map) ||
         getHuntersGame().isHuntersCombat(user?.id, userAttacked?.id) ||
         (user?.rankedMatchId &&
@@ -1699,6 +1700,10 @@ function getFriendlyFireBlockReason(
 
     const attacker = getCharacterById(attackerId);
     const victim = getCharacterById(victimId);
+    const tournamentRelation = require("./tournamentAuto").getCombatRelation(attackerId, victimId);
+    if (tournamentRelation === "enemy") return null;
+    if (tournamentRelation === "waiting") return "Sólo puedes atacar al rival de tu duelo. Espera tu turno.";
+    if (getHuntersGame().isHuntersCombat(attackerId, victimId)) return null;
     if (
         attacker?.rankedMatchId &&
         victim?.rankedMatchId &&
@@ -3395,6 +3400,7 @@ function applyMountNpcAttack(
 }
 
 function notifyUserSpellDamage(user: GameCharacter, userAttacked: GameCharacter, dmg: number) {
+    require("./combatActivity").recordCombatActivity(user.id, userAttacked.id, dmg > 0);
     withUserClient(user.id, (userClient) => {
         handleProtocol.console(
             "Le has quitado " + dmg + " puntos de vida a " + userAttacked.nameCharacter,
@@ -3998,7 +4004,7 @@ export type GameApi = {
     ) => Position | undefined;
     puedePegar: (posX: number, posY: number) => boolean;
     bodyNaked: (idUser: EntityId) => number;
-    putBodyAndHeadDead: (idUser: EntityId) => void;
+    putBodyAndHeadDead: (idUser: EntityId, killerId?: EntityId) => void;
     revivirUsuario: (
         idUser: EntityId,
         options?: {
@@ -4024,6 +4030,7 @@ export type GameApi = {
     clearPartyInvitation: (idUser: EntityId) => void;
     syncPartyStateForMember: (idUser: EntityId) => void;
     syncClanState: (clanId?: string | null) => void;
+    withClanVaultExclusive: <T>(clanId: string, run: () => Promise<T>) => Promise<T>;
     syncClanStateForMember: (idUser: EntityId) => void;
     refreshRelationshipIndexesForMember: (
         idUser: EntityId,
@@ -4300,6 +4307,7 @@ function findFirstHealthPotionSlot(user: GameCharacter): string | null {
 type SharedVaultScope = "account" | "clan";
 
 type SharedVaultSession = {
+    revision: number;
     key: string;
     scope: SharedVaultScope;
     ownerId: string;
@@ -4779,6 +4787,7 @@ async function fetchSharedVaultState(
 ): Promise<{
     gold: number;
     items: InventoryRecord;
+    revision: number;
 }> {
     const path =
         scope === "account"
@@ -4790,6 +4799,7 @@ async function fetchSharedVaultState(
             Authorization: vars.tokenAuth,
         },
     })) as {
+        revision?: number;
         gold: number;
         items: Array<{ idPos: number | string; idItem: number; cant: number; rarity?: number }>;
     };
@@ -4797,6 +4807,7 @@ async function fetchSharedVaultState(
     return {
         gold: balance.clampGold(Number(result.gold ?? 0)),
         items: hydrateBankRecord(result.items ?? []),
+        revision: Number(result.revision ?? 0),
     };
 }
 
@@ -4822,6 +4833,7 @@ async function persistSharedVaultAndCharacterState(
     await queueSharedVaultPersistence(session.key, async () => {
         const body: Record<string, unknown> = {
             characterId: user._id,
+            expectedRevision: session.revision,
         };
 
         if (options.characterItems) {
@@ -4840,14 +4852,15 @@ async function persistSharedVaultAndCharacterState(
             body.gold = balance.clampGold(session.gold);
         }
 
-        await funct.fetchUrl(path, {
+        const saved = (await funct.fetchUrl(path, {
             method: "PUT",
             body: JSON.stringify(body),
             headers: {
                 "Content-Type": "application/json",
                 Authorization: vars.tokenAuth,
             },
-        });
+        })) as { revision?: number };
+        if (saved.revision !== undefined) session.revision = saved.revision;
     });
 }
 
@@ -4920,6 +4933,21 @@ async function acquireSharedVaultSession(
     tab: Extract<BankTab, "account" | "clan">,
 ): Promise<{ ok: true; session: SharedVaultSession } | { ok: false; message: string }> {
     const scope = getSharedVaultTabScope(tab);
+    const owner = getBankTabOwnerId(user, tab);
+    let result: Awaited<ReturnType<typeof acquireSharedVaultSessionUnlocked>> = {
+        ok: false,
+        message: "Bóveda inválida",
+    };
+    await queueSharedVaultPersistence(getSharedVaultKey(scope ?? "account", owner ?? ""), async () => {
+        result = await acquireSharedVaultSessionUnlocked(user, tab);
+    });
+    return result;
+}
+async function acquireSharedVaultSessionUnlocked(
+    user: GameCharacter,
+    tab: Extract<BankTab, "account" | "clan">,
+): Promise<{ ok: true; session: SharedVaultSession } | { ok: false; message: string }> {
+    const scope = getSharedVaultTabScope(tab);
     const ownerId = getBankTabOwnerId(user, tab);
 
     if (!scope || !ownerId) {
@@ -4966,6 +4994,7 @@ async function acquireSharedVaultSession(
         holderCharacterName: user.nameCharacter,
         items: state.items,
         gold: state.gold,
+        revision: state.revision,
     };
     sharedVaultSessions.set(key, session);
 
@@ -5657,13 +5686,13 @@ function addItemToRecord(
     cant: number,
     options?: { maxSlots?: number; equipped?: number | boolean; rarity?: number },
 ): number[] | null {
-    if (!Number.isFinite(cant) || cant < 1) {
+    if (!Number.isSafeInteger(cant) || cant < 1) {
         return null;
     }
 
-    // Un ítem con rareza no se apila: cada unidad va en su lugar (itemRarity.ts).
+    // Se apilan únicamente el mismo objeto y la misma mejora efectiva.
     const rarity = itemRarity.getItemRarity(idItem, options?.rarity);
-    const stackLimit = rarity > 0 ? 1 : 10000;
+    const stackLimit = 10000;
     const matchingSlots: Array<{ idPos: string; available: number }> = [];
     let existingCapacity = 0;
 
@@ -8890,7 +8919,7 @@ function Game(this: GameApi) {
      * @param  {[type]} idUser [description]
      * @return {[type]}        [description]
      */
-    this.putBodyAndHeadDead = function (idUser: EntityId) {
+    this.putBodyAndHeadDead = function (idUser: EntityId, killerId?: EntityId) {
         try {
             const user = vars.personajes[idUser];
             const userClient = getClientById(idUser);
@@ -8914,18 +8943,12 @@ function Game(this: GameApi) {
             user.idShield = 0;
             resetFuerzaAgilidadBuffs(user, userClient ?? undefined);
             user.dead = 1;
-            // En la guerra y en la arena se revive solo: no se pasa al mundo de los muertos.
+            // Los combates con restauración automática no pasan al mundo de los muertos.
             const arena = require("./arena");
-            const useWarDeathFlow =
-                require("./factionWars").shouldUseWarDeathFlow(String(idUser)) || arena.isArenaCharacter(user);
+            const useAutomaticDeathFlow =
+                require("./factionWars").shouldUseWarDeathFlow(String(idUser)) ||
+                arena.isArenaCharacter(user) || Boolean(user.rankedMatchId);
             require("./summonRoom").scheduleDeadUserExit(idUser);
-            require("./bloodCastle").onUserDied(String(idUser));
-            require("./hungerGames").onUserDied(String(idUser));
-            require("./huntersGame").onUserDied(String(idUser));
-            require("./tournamentAuto").onUserDied(String(idUser));
-            require("./rankedArena").onUserDied(String(idUser));
-            require("./factionWars").onUserDied(String(idUser));
-            arena.onUserDied(idUser);
             require("./playerTrade").onUserLeft(String(idUser));
             user.deadWorldActive = false;
             user.invisibleSpell = false;
@@ -8954,7 +8977,7 @@ function Game(this: GameApi) {
             }
 
             if (userClient) {
-                if (useWarDeathFlow) {
+                if (useAutomaticDeathFlow) {
                     clearDeadWorldTransition(user);
                     user.deadWorldTransitionEndsAt = 0;
                 } else {
@@ -8962,7 +8985,7 @@ function Game(this: GameApi) {
                 }
                 handleProtocol.sendMyCharacter(user);
                 socket.send(userClient);
-            } else if (!useWarDeathFlow) {
+            } else if (!useAutomaticDeathFlow) {
                 user.deadWorldTransitionEndsAt = Date.now() + DEAD_WORLD_DELAY_MS;
             } else {
                 user.deadWorldTransitionEndsAt = 0;
@@ -8981,6 +9004,20 @@ function Game(this: GameApi) {
             if (shouldSyncVisibilityState) {
                 syncCharacterVisibilityForOthers(idUser);
             }
+
+            // Un cierre puede revivir y restaurar el equipo. Debe suceder después
+            // de limpiar y transmitir la muerte, sin sobrescribir esa restauración.
+            require("./bloodCastle").onUserDied(String(idUser));
+            require("./hungerGames").onUserDied(String(idUser));
+            if (killerId !== undefined && user.huntersGame) {
+                require("./huntersGame").onUserKilled(String(killerId), String(idUser));
+            } else {
+                require("./huntersGame").onUserDied(String(idUser));
+            }
+            require("./tournamentAuto").onUserDied(String(idUser));
+            require("./rankedArena").onUserDied(String(idUser));
+            require("./factionWars").onUserDied(String(idUser));
+            arena.onUserDied(idUser);
         } catch (err) {
             funct.dumpError(err);
             return false;
@@ -9036,6 +9073,17 @@ function Game(this: GameApi) {
 
     this.syncClanState = function (clanId?: string | null) {
         syncClanState(clanId);
+    };
+
+    this.withClanVaultExclusive = async function <T>(clanId: string, run: () => Promise<T>): Promise<T> {
+        const key = getSharedVaultKey("clan", clanId);
+        let result: T;
+        await queueSharedVaultPersistence(key, async () => {
+            if (sharedVaultSessions.has(key))
+                throw new Error("Cierra la bóveda del clan antes de subir de nivel. Otro miembro puede estar usándola");
+            result = await run();
+        });
+        return result!;
     };
 
     this.refreshRelationshipIndexesForMember = function (
@@ -10529,6 +10577,7 @@ function Game(this: GameApi) {
             }
 
             getFactionWars().onUserSpellEffect(idUser, idUserAttacked, spellEffect, dmg);
+            require("./combatActivity").recordCombatActivity(idUser, idUserAttacked, Boolean(spellEffect) || dmg > 0);
             return spellEffect ?? dmg;
         } catch (err) {
             funct.dumpError(err);
@@ -11302,6 +11351,7 @@ function Game(this: GameApi) {
             }
 
             if (!attackMissed) {
+                require("./combatActivity").recordCombatActivity(idUser, idUserAttacked, dmg > 0);
                 trainCharacterSkill(user, getAttackTrainSkillId(user));
 
                 if (stabResult.stabbed) {
@@ -12634,6 +12684,7 @@ function Game(this: GameApi) {
     };
 
     this.calcularExp = function (idUser: EntityId, idNpc: EntityId, dmg: number) {
+        require("./combatActivity").recordCombatActivity(idUser, idNpc, dmg > 0);
         try {
             const npc = vars.npcs[idNpc] as GameNpc | undefined;
 

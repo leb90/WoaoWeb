@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn, type ChildProcess } from "node:child_process";
 import path from "node:path";
+import { createRequire } from "node:module";
 import { afterAll, beforeAll, describe, test } from "vitest";
 import { WORLD_CLOSED_MESSAGE } from "../lib/worldAccess";
 import {
@@ -67,8 +68,8 @@ beforeAll(async () => {
     await ensureApiReady();
 
     closedApi = spawn(
-        path.join(process.cwd(), "node_modules/.bin/tsx"),
-        ["src/server.ts"],
+        process.execPath,
+        [createRequire(path.join(process.cwd(), "package.json")).resolve("tsx/cli"), "src/server.ts"],
         {
             env: {
                 ...process.env,

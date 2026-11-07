@@ -1028,6 +1028,8 @@ function Login(this: LoginApi) {
                 personaje.summons = [];
                 personaje.summonTargetNpcId = 0;
                 require("./woaoProgress").hydrateUser(personaje);
+                await require("./questWallet").hydrateQuestWallet(personaje);
+                await require("./clanProgression").hydrateClanProgression(personaje);
                 require("./skills").ensureSkills(personaje);
                 vars.personajes[ws.id] = personaje;
 
@@ -1232,7 +1234,8 @@ function Login(this: LoginApi) {
         const arena = require("./arena") as typeof import("./arena");
         const character = (
             isArena ? buildArenaTemplate(idChar) : _.cloneDeep(vars.charactersPvP[idChar])
-        ) as PvPCharacterTemplate | undefined | null;
+        ) as
+            | PvPCharacterTemplate | undefined | null;
 
         if (!character) {
             throw new Error(`Plantilla PvP invalida: ${idChar}`);
@@ -1434,6 +1437,8 @@ function Login(this: LoginApi) {
         hydrateEquipmentState(newCharacter as unknown as StoredCharacter);
 
         require("./woaoProgress").hydrateUser(newCharacter);
+        await require("./questWallet").hydrateQuestWallet(newCharacter);
+        await require("./clanProgression").hydrateClanProgression(newCharacter);
         const skills = require("./skills");
         const skillValues = skills.ensureSkills(newCharacter) as number[];
 

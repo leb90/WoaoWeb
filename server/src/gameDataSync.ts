@@ -298,6 +298,8 @@ function isNpcSafeToPatch(npc: Record<string, unknown>): boolean {
 }
 
 function patchLiveNpc(npc: Record<string, unknown>, data: DataNpc): void {
+    const previousRank = npc.npcRank as import("./npcRanks").NpcRankId | undefined;
+    const previousHp = Number(npc.hp ?? 0);
     npc.nameCharacter = data.name;
     npc.idHead = data.idHead;
     npc.idBody = data.idBody;
@@ -324,6 +326,10 @@ function patchLiveNpc(npc: Record<string, unknown>, data: DataNpc): void {
     npc.desc = data.desc ?? "";
     npc.exp = data.exp ?? 0;
     npc.gold = data.gold ?? 0;
+    if (previousRank) {
+        npc.hp = previousHp;
+        require("./npcRanks").refreshNpcRank(npc, data, previousRank);
+    }
 
     const map = Number(npc.map ?? 0);
     const pos = npc.pos as { x?: number; y?: number } | undefined;

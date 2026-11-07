@@ -32,6 +32,7 @@ function ensureUniqueSlots<T extends { idPos: number }>(
 const syncVaultSchema = z
     .object({
         characterId: z.string().uuid().optional(),
+        expectedRevision: z.number().int().min(0).optional(),
         characterGold: z.coerce
             .number()
             .int()
@@ -83,6 +84,7 @@ type SyncVaultPayload = z.infer<typeof syncVaultSchema>;
 type VaultScope = "account" | "clan";
 
 type VaultStateResponse = {
+    revision?: number;
     gold: number;
     items: VaultItem[];
 };
@@ -326,9 +328,9 @@ async function getVaultState(
     const config = scopeConfig[scope];
     await ensureOwnerExists(client, scope, ownerId);
     await ensureVaultRow(client, scope, ownerId);
-    const goldResult = await client.query<{ gold: number }>(
+    const goldResult = await client.query<{ gold: number; revision?: number }>(
         `
-            SELECT gold
+            SELECT gold${scope === "clan" ? ",revision" : ""}
             FROM ${config.vaultTable}
             WHERE ${config.ownerColumn} = $1
             LIMIT 1
@@ -338,6 +340,7 @@ async function getVaultState(
 
     return {
         gold: goldResult.rows[0]?.gold ?? 0,
+        ...(scope === "clan" ? { revision: Number(goldResult.rows[0]?.revision ?? 0) } : {}),
         items: await getVaultItems(client, scope, ownerId),
     };
 }
@@ -346,7 +349,7 @@ async function syncVault(
     scope: VaultScope,
     ownerId: string,
     payload: unknown,
-): Promise<{ ok: true; updatedAt: string }> {
+): Promise<{ ok: true; updatedAt: string; revision?: number }> {
     const parsedOwnerId = scopeConfig[scope].idSchema.parse(ownerId);
     const parsed = syncVaultSchema.parse(payload);
     const client = await pool.connect();
@@ -355,6 +358,17 @@ async function syncVault(
         await client.query("BEGIN");
         await ensureOwnerExists(client, scope, parsedOwnerId);
         await ensureVaultRow(client, scope, parsedOwnerId);
+
+        let revision: number | undefined;
+        if (scope === "clan") {
+            const state = (
+                await client.query("SELECT revision FROM clan_vaults WHERE clan_id=$1 FOR UPDATE", [parsedOwnerId])
+            ).rows[0];
+            if (parsed.expectedRevision !== state.revision)
+                throw new Error("La bóveda cambió. Vuelve a abrirla antes de guardar");
+            revision = state.revision + 1;
+            await client.query("UPDATE clan_vaults SET revision=$2 WHERE clan_id=$1", [parsedOwnerId, revision]);
+        }
 
         if (parsed.characterId) {
             const characterResult = await client.query<{
@@ -451,6 +465,7 @@ async function syncVault(
 
         return {
             ok: true,
+            ...(revision !== undefined ? { revision } : {}),
             updatedAt:
                 updatedResult.rows[0]?.updated_at.toISOString() ??
                 new Date().toISOString(),

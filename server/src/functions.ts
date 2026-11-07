@@ -153,7 +153,7 @@ function Funct(this: any) {
                     ? apiError
                     : `Request failed with status ${response.status}`;
 
-            throw new Error(message);
+            throw Object.assign(new Error(message), {status: response.status});
         }
 
         return result as T;

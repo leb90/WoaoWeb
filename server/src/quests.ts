@@ -1,8 +1,9 @@
 import { getProgress, MAX_QUESTS, saveProgress, type QuestProgress } from "./woaoProgress";
-import {
-    countOccupiedInventorySlots,
-    isInventorySlot,
+import { isInventorySlot,
 } from "./equipmentStorage";
+import { planQuestInventory, type RolledQuestReward } from "./questRewards";
+import { queueQuestReward } from "./questWallet";
+import crypto from "node:crypto";
 
 const game = require("./game");
 const vars = require("./vars");
@@ -110,33 +111,6 @@ function countItem(user: { inv?: Record<string, { idItem?: number; cant?: number
         }
     }
     return total;
-}
-
-function countFreeSlots(user: { inv?: Record<string, unknown> }) {
-    return Math.max(0, 21 - countOccupiedInventorySlots(user.inv ?? {}));
-}
-
-function removeItems(idUser: string, itemId: number, amount: number) {
-    const user = vars.personajes[idUser];
-    if (!user?.inv) {
-        return;
-    }
-
-    let remaining = amount;
-    for (const [slot, item] of Object.entries(user.inv as Record<string, { idItem?: number; cant?: number; amount?: number }>)) {
-        if (remaining <= 0) {
-            break;
-        }
-
-        if (!isInventorySlot(slot) || Number(item?.idItem) !== itemId) {
-            continue;
-        }
-
-        const have = Number(item.cant ?? item.amount ?? 0);
-        const take = Math.min(have, remaining);
-        game.quitarUserInvItem(idUser, slot, take);
-        remaining -= take;
-    }
 }
 
 function findQuestSlot(progressQuests: QuestProgress[], questIndex: number) {
@@ -264,7 +238,9 @@ function sendAreaNpcQuestSnapshot(idUser: string) {
             return false;
         }
 
-        return Math.abs(Number(npc.pos.x) - Number(user.pos.x)) <= rangeX && Math.abs(Number(npc.pos.y) - Number(user.pos.y)) <= rangeY;
+        return (
+            Math.abs(Number(npc.pos.x) - Number(user.pos.x)) <= rangeX && Math.abs(Number(npc.pos.y) - Number(user.pos.y)) <= rangeY
+        );
     });
 
     handleProtocol.areaNpcsSnapshot(visibleNpcs, client);
@@ -735,7 +711,20 @@ export function finishQuest(idUser: string, questNumber: number, npcId?: unknown
         }
     }
 
-    if (quest.rewardObjs.length > countFreeSlots(user)) {
+    const itemRarity = require("./itemRarity");
+    const rolledRewards: RolledQuestReward[] = [];
+    for (const reward of quest.rewardObjs) {
+        if (itemRarity.isRarityEligible(reward.index)) {
+            for (let unit = 0; unit < reward.amount; unit++)
+                rolledRewards.push({
+                    idItem: reward.index,
+                    cant: 1,
+                    rarity: itemRarity.rollRarityForItem(reward.index),
+                });
+        } else rolledRewards.push({ idItem: reward.index, cant: reward.amount });
+    }
+    const inventoryPlan = planQuestInventory(user.inv ?? {}, quest.requiredObjs, rolledRewards);
+    if (!inventoryPlan.ok) {
         sendQuestState(idUser, buildQuestEntryState(user, quest, "ready", { npcId, progress: current }));
         npcTalk(
             idUser,
@@ -745,9 +734,7 @@ export function finishQuest(idUser: string, questNumber: number, npcId?: unknown
         return;
     }
 
-    for (const req of quest.requiredObjs) {
-        removeItems(idUser, req.index, req.amount);
-    }
+    user.inv = inventoryPlan.inventory;
 
     if (quest.rewardExp) {
         user.exp = Number(user.exp ?? 0) + quest.rewardExp;
@@ -756,7 +743,7 @@ export function finishQuest(idUser: string, questNumber: number, npcId?: unknown
     }
 
     if (quest.rewardGold) {
-        user.gold = Number(user.gold ?? 0) + quest.rewardGold;
+        user.gold = require("./balance").clampGold(Number(user.gold ?? 0) + quest.rewardGold);
         const client = vars.clients[idUser];
         if (client) {
             handleProtocol.actGold(user.gold, client);
@@ -765,21 +752,12 @@ export function finishQuest(idUser: string, questNumber: number, npcId?: unknown
     }
 
     if (quest.rewardPoints) {
-        progress.puntosCanje += quest.rewardPoints;
-        user.puntosCanje = progress.puntosCanje;
-        tell(idUser, `Has ganado ${quest.rewardPoints} Puntos de Canje como recompensa.`);
+        current.rewardOperationId ??= crypto.randomUUID();
+        saveProgress(user);
+        queueQuestReward(user, quest.rewardPoints, `Misión ${questNumber}`, current.rewardOperationId);
     }
 
-    const itemRarity = require("./itemRarity");
     for (const reward of quest.rewardObjs) {
-        // El equipo de recompensa sale con rareza sorteada por unidad (itemRarity.ts).
-        if (itemRarity.isRarityEligible(reward.index)) {
-            for (let unit = 0; unit < reward.amount; unit++) {
-                game.putItemToInv(idUser, reward.index, 1, itemRarity.rollRarityForItem(reward.index));
-            }
-        } else {
-            game.putItemToInv(idUser, reward.index, reward.amount);
-        }
         const objName = vars.datObj?.[reward.index]?.name ?? `Item ${reward.index}`;
         tell(idUser, `Has recibido ${reward.amount} ${objName} como recompensa.`);
     }

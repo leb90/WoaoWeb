@@ -2,6 +2,7 @@ import { existsSync } from "fs";
 import fs from "fs/promises";
 import path from "path";
 import { getCurrentGameNpcVersion, listGameNpcChangesSince } from "./gameNpcs";
+import { getServerRates } from "./runtimeSettings";
 import {
     getCurrentGameObjectVersion,
     listGameObjectChangesSince,
@@ -35,8 +36,6 @@ import type {
 
 export type { PublicWikiResponse } from "./wiki/wikiTypes";
 
-const CURRENT_EXP_MULTIPLIER = 5;
-const CURRENT_GOLD_MULTIPLIER = 3;
 function resolveApiDataPath(): string {
     const candidates = [
         path.resolve(__dirname, ".."),
@@ -399,7 +398,9 @@ async function getWikiVersionSignature(): Promise<string> {
 }
 
 export async function getPublicWiki(): Promise<PublicWikiResponse> {
-    const signature = await getWikiVersionSignature();
+    // La experiencia y el oro de las criaturas salen de los multiplicadores actuales (/experiencia y /oro).
+    const rates = await getServerRates();
+    const signature = `${await getWikiVersionSignature()}:x${rates.expMultiplier}:o${rates.goldMultiplier}`;
 
     if (wikiCache?.signature === signature) {
         return wikiCache.payload;
@@ -466,10 +467,10 @@ export async function getPublicWiki(): Promise<PublicWikiResponse> {
             const data = entry.data as Record<string, unknown>;
             const maxHp = toNumber(data.maxHp) || toNumber(data.hp);
             const expReward = Math.floor(
-                toNumber(data.exp) * CURRENT_EXP_MULTIPLIER,
+                toNumber(data.exp) * rates.expMultiplier,
             );
             const goldReward = Math.floor(
-                toNumber(data.gold) * CURRENT_GOLD_MULTIPLIER,
+                toNumber(data.gold) * rates.goldMultiplier,
             );
             const npcMaps =
                 npcMapCounts.get(entry.id) ?? new Map<number, number>();

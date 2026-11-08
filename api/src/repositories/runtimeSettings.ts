@@ -2,6 +2,22 @@ import pool from "../db";
 import type { RuntimeTimingConfig } from "../types";
 
 const TIMING_SETTINGS_KEY = "timing";
+const RATES_SETTINGS_KEY = "rates";
+
+// Multiplicadores de experiencia y oro de las criaturas. Se cambian en vivo con /experiencia y /oro (GM) y quedan
+// guardados. Si nunca se cambiaron, arrancan en x20 de experiencia: lo pidió Leandro para la beta (2026-11-01); antes
+// era x5.
+export type ServerRates = {
+    expMultiplier: number;
+    goldMultiplier: number;
+};
+
+export const DEFAULT_SERVER_RATES: ServerRates = {
+    expMultiplier: 20,
+    goldMultiplier: 3,
+};
+
+const MAX_SERVER_RATE = 100;
 
 export const DEFAULT_RUNTIME_TIMING: RuntimeTimingConfig = {
     gameplayTickMs: 50,
@@ -324,4 +340,61 @@ export async function updateRuntimeTimingValue(
     ) as RuntimeTimingConfig;
 
     return saveTimingConfig(sanitizedTiming);
+}
+
+function sanitizeRate(value: unknown, fallback: number): number {
+    const number = Number(value);
+    if (!Number.isFinite(number) || number <= 0) {
+        return fallback;
+    }
+    return Math.min(MAX_SERVER_RATE, Math.round(number * 100) / 100);
+}
+
+async function saveServerRates(rates: ServerRates): Promise<ServerRates> {
+    await pool.query(
+        `
+      INSERT INTO runtime_settings (key, value, updated_at)
+      VALUES ($1, $2::jsonb, NOW())
+      ON CONFLICT (key)
+      DO UPDATE SET value = EXCLUDED.value,
+                    updated_at = NOW()
+    `,
+        [RATES_SETTINGS_KEY, JSON.stringify(rates)],
+    );
+    return rates;
+}
+
+export async function getServerRates(): Promise<ServerRates> {
+    const result = await pool.query<RuntimeSettingRecord>(
+        `
+      SELECT key, value
+      FROM runtime_settings
+      WHERE key = $1
+      LIMIT 1
+    `,
+        [RATES_SETTINGS_KEY],
+    );
+
+    if (!result.rowCount) {
+        return saveServerRates({ ...DEFAULT_SERVER_RATES });
+    }
+
+    const stored = (result.rows[0]?.value ?? {}) as Partial<ServerRates>;
+    return {
+        expMultiplier: sanitizeRate(stored.expMultiplier, DEFAULT_SERVER_RATES.expMultiplier),
+        goldMultiplier: sanitizeRate(stored.goldMultiplier, DEFAULT_SERVER_RATES.goldMultiplier),
+    };
+}
+
+export async function updateServerRate(key: unknown, value: unknown): Promise<ServerRates> {
+    if (key !== "expMultiplier" && key !== "goldMultiplier") {
+        throw new Error("Multiplicador invalido");
+    }
+    const number = Number(value);
+    if (!Number.isFinite(number) || number <= 0 || number > MAX_SERVER_RATE) {
+        throw new Error("Multiplicador invalido");
+    }
+    const rates = await getServerRates();
+    rates[key] = sanitizeRate(number, rates[key]);
+    return saveServerRates(rates);
 }

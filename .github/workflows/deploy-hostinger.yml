@@ -49,3 +49,10 @@ jobs:
 
             docker compose -f docker-compose.hostinger.yml --env-file .env up -d --build
             docker compose -f docker-compose.hostinger.yml --env-file .env ps
+
+            # Cada deploy arma imágenes nuevas y las viejas quedan sin nombre ocupando disco, igual que la caché del
+            # build. Se borran las imágenes sin usar y la caché de más de una semana. Nunca los volúmenes: ahí está
+            # la base de datos.
+            docker image prune -f || true
+            docker builder prune -f --filter until=168h || true
+            df -h /

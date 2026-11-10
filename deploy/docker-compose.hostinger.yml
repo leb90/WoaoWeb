@@ -1,7 +1,16 @@
+# Los logs de cada contenedor rotan (5 archivos de 20 MB): sin esto Docker los guarda enteros en el disco del VPS y
+# crecen sin parar.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
+
 services:
   postgres:
     image: postgres:18-alpine
     restart: unless-stopped
+    logging: *logging
     command: ["postgres", "-c", "shared_preload_libraries=pg_stat_statements"]
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-aoweb}
@@ -24,6 +33,7 @@ services:
     build:
       context: ../api
     restart: unless-stopped
+    logging: *logging
     environment:
       NODE_ENV: production
       PORT: 3100
@@ -60,6 +70,7 @@ services:
     build:
       context: ../server
     restart: unless-stopped
+    logging: *logging
     environment:
       NODE_ENV: production
       AOWEB_TEST_MODE: "false"
@@ -89,6 +100,7 @@ services:
         NEXT_BUILD_ID: ${NEXT_BUILD_ID:-}
         GAME_DATA_ADMIN_PROXY_TOKEN: ${GAME_DATA_ADMIN_PROXY_TOKEN:-}
     restart: unless-stopped
+    logging: *logging
     environment:
       NODE_ENV: production
       PORT: 3000
@@ -112,6 +124,7 @@ services:
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
+    logging: *logging
     environment:
       APP_DOMAIN: ${APP_DOMAIN:?APP_DOMAIN is required}
       API_DOMAIN: ${API_DOMAIN:?API_DOMAIN is required}

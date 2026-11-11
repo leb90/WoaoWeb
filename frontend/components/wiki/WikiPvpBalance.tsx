@@ -329,7 +329,7 @@ export default function WikiPvpBalance() {
                         {
                             icon: Sparkles,
                             title: "Pelear te delata",
-                            text: "Si atacás a un jugador o te atacan estando invisible, durante 5 segundos aparecés y desaparecés (fade in y fade out) para los demás. Pegar o tirar un hechizo de daño te saca la invisibilidad.",
+                            text: "Si atacás a un jugador o te atacan estando invisible, durante 5 segundos aparecés y desaparecés (fade in y fade out) para los demás, y después volvés a ser invisible. Si estás oculto, pegar o tirar un hechizo de daño te descubre.",
                         },
                         {
                             icon: Target,

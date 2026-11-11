@@ -629,7 +629,8 @@ const BLEED_TICK_MS = 1000;
 
 const COMBAT_HIT_FX_ID = 14;
 const COMBAT_SHIELD_BLOCK_FX_ID = 88;
-const COMBAT_STABBING_FX_ID = 89;
+// El chorro de sangre de la apuñalada (frontend/public/init/fxs.json, docs/CREDITOS_GRAFICOS.md).
+const COMBAT_STABBING_FX_ID = 156;
 const COMBAT_MISS_FX_ID = 144;
 const LEVEL_UP_FX_ID = 145;
 
@@ -2350,32 +2351,20 @@ function setHiddenSkillState(idUser: EntityId, enabled: boolean) {
     game.syncUserNpcVisibility(idUser);
 }
 
-function breakUserInvisibilityOnPvPDamageAttack(idUser: EntityId) {
+// Hacerle daño a un jugador corta el ocultamiento (Ocultarse). La invisibilidad (el hechizo y la Capa Hobbit) no se
+// corta: como al recibir un golpe, el que pega parpadea durante la ventana de pelea (markUsersInPvpCombat) y después
+// vuelve a ser invisible.
+function breakHiddenSkillOnPvPDamageAttack(idUser: EntityId) {
     const user = getCharacterById(idUser);
 
-    if (!user) {
+    if (!user?.hiddenSkill) {
         return;
     }
 
-    let visibilityChanged = false;
-
-    if (user.invisibleSpell) {
-        user.invisibleSpell = false;
-        user.cooldownInvisibleSpell = 0;
-        visibilityChanged = true;
-    }
-
-    if (user.hiddenSkill) {
-        user.hiddenSkill = false;
-        user.hiddenSkillStartedAt = 0;
-        user.hiddenSkillExpiresAt = 0;
-        user.hiddenSkillCooldownUntil = 0;
-        visibilityChanged = true;
-    }
-
-    if (!visibilityChanged) {
-        return;
-    }
+    user.hiddenSkill = false;
+    user.hiddenSkillStartedAt = 0;
+    user.hiddenSkillExpiresAt = 0;
+    user.hiddenSkillCooldownUntil = 0;
 
     syncCharacterVisibility(idUser);
     game.syncUserNpcVisibility(idUser);
@@ -10326,7 +10315,7 @@ function Game(this: GameApi) {
 
                     markUsersInPvpCombat(user, userAttacked);
 
-                    breakUserInvisibilityOnPvPDamageAttack(idUser);
+                    breakHiddenSkillOnPvPDamageAttack(idUser);
 
                     const resisted = applyUserSpellDamage(user, userAttacked, datSpell);
                     if (resisted == null) {
@@ -10987,7 +10976,7 @@ function Game(this: GameApi) {
             interruptPendingLogoutOnAttack(idUserAttacked);
 
             if (userImpacto) {
-                breakUserInvisibilityOnPvPDamageAttack(idUser);
+                breakHiddenSkillOnPvPDamageAttack(idUser);
 
                 dmg = game.calcularDmg(idUser);
 

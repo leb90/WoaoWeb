@@ -50,9 +50,13 @@ type BotDef = {
     /** Lo que dice cada tanto, en orden. */
     frases?: string[];
     clan?: string;
+    /** Cuántas veces su vida normal (la víctima de la vitrina aguanta un desangrado entero). */
+    vida?: number;
+    /** Sin el seguro, para poder atacar a otro jugador. */
+    sinSeguro?: boolean;
 };
 
-type CriaturaDef = { npc: number; x: number; y: number };
+type CriaturaDef = { npc: number; x: number; y: number; mira?: Rumbo };
 
 type Escena = {
     mapa: number;
@@ -111,6 +115,20 @@ const PLAZA: Zona = { x1: 29, y1: 52, x2: 36, y2: 63 };
 const CALLE: Zona = { x1: 37, y1: 50, x2: 40, y2: 64 };
 // El bosque de pinos del mapa 54, junto al camino.
 const BOSQUE: Zona = { x1: 33, y1: 26, x2: 48, y2: 36 };
+
+function escenaInvisibilidad(clan?: string): Escena {
+    return {
+        mapa: 54,
+        jugador: { x: 38, y: 32, mira: "arriba", clan },
+        momento: "mediodia",
+        clima: "despejado",
+        despejar: 16,
+        bots: [
+            { nombre: "Asesino", clase: CLASE.asesino, x: 37, y: 30, mira: "derecha", accion: { tipo: "quieto" }, sinSeguro: true, clan, vida: 30 },
+            { nombre: "Paladín", clase: CLASE.paladin, x: 40, y: 30, mira: "izquierda", accion: { tipo: "quieto" }, sinSeguro: true, vida: 30 },
+        ],
+    };
+}
 
 const ESCENAS: Record<string, Escena> = {
     // Nix con gente: unos caminan, otros charlan o meditan.
@@ -189,6 +207,10 @@ const ESCENAS: Record<string, Escena> = {
             { nombre: "Ragnar", clase: CLASE.arquero, x: 50, y: 27, clan: "Guardia de Plata", accion: { tipo: "duelo", rival: "Tincho" } },
         ],
     },
+    // Para explicar la invisibilidad (un video de ejemplo): un asesino que se hace invisible y un paladín que pelea con
+    // él, vistos por otro jugador (el que graba, escondido abajo). En "invisibilidad-clan" el que graba es de su clan.
+    invisibilidad: escenaInvisibilidad(),
+    "invisibilidad-clan": escenaInvisibilidad("Los Inmortales"),
     // La mazmorra nueva (todavía en desarrollo): entra desde la piedra de invocación de Nix.
     mazmorra: {
         mapa: 34,
@@ -347,6 +369,9 @@ function crearCriatura(def: CriaturaDef, mapa: number) {
     delete npc.spawnMapNum;
     delete npc.spawnOrigin;
     Object.assign(npc, { teaser: true, ephemeralSummon: 1, drop: [], gold: 0 });
+    if (def.mira) {
+        npc.heading = RUMBOS[def.mira]();
+    }
     state.criaturas.set(String(npc.id), { def, mapa });
     mostrarCriatura(npc);
     return npc;
@@ -450,14 +475,14 @@ async function conectarBot(def: BotDef, mapa: number): Promise<BotVivo | null> {
     }
 
     // Aguantan más que un jugador, así la pelea dura lo que dura la escena.
-    const vida = def.accion.tipo === "duelo" ? VIDA_DUELO : VIDA_BOT;
+    const vida = def.vida ?? (def.accion.tipo === "duelo" ? VIDA_DUELO : VIDA_BOT);
     user.maxHp = Number(user.maxHp ?? 1) * vida;
     user.hp = user.maxHp;
     if (def.clan) {
         Object.assign(user, { clan: def.clan, clanId: `teaser:${def.clan}` });
     }
     // Sin el seguro, que no deja atacar a otros ciudadanos: en el castillo pelean entre clanes.
-    if (def.accion.tipo === "duelo") {
+    if (def.accion.tipo === "duelo" || def.sinSeguro) {
         user.seguroActivado = false;
     }
     if (def.mira) {
@@ -570,8 +595,9 @@ function pensar(bot: BotVivo, ahora: number) {
         return;
     }
 
-    // Tampoco se quedan sin maná: la toma dura más que lo que aguanta una pelea de verdad.
-    if (Number(user.mana ?? 0) < Number(user.maxMana ?? 0) * 0.4) {
+    // Tampoco se quedan sin maná: la toma dura más que lo que aguanta una pelea de verdad (con medio tanque, un paladín
+    // ya no llega a Apocalipsis).
+    if (Number(user.mana ?? 0) < Number(user.maxMana ?? 0)) {
         user.mana = user.maxMana;
     }
 
@@ -776,7 +802,9 @@ function llevarJugador(user: RuntimeCharacter, client: RuntimeClient, mapa: numb
 const VITRINA = { mapa: 54, jugador: { x: 38, y: 31 }, bot: { x: 36, y: 31 }, muneco: { x: 40, y: 31 } };
 const MUNECO = 9845;
 
-function escenaVitrina(clase: number, nombre: string): Escena {
+// Con `victima`, en lugar del muñeco hay otro jugador mirando para el mismo lado (para apuñalarlo por la espalda y
+// que se desangre).
+function escenaVitrina(clase: number, nombre: string, victima: boolean): Escena {
     return {
         mapa: VITRINA.mapa,
         jugador: { ...VITRINA.jugador, mira: "derecha" },
@@ -784,8 +812,12 @@ function escenaVitrina(clase: number, nombre: string): Escena {
         clima: "despejado",
         despejar: 16,
         reaparecenMs: 500,
-        criaturas: [{ npc: MUNECO, ...VITRINA.muneco }],
-        bots: [{ nombre, clase, ...VITRINA.bot, mira: "derecha", accion: { tipo: "quieto" } }],
+        // El muñeco mira para el mismo lado que el bot: así la apuñalada es por la espalda.
+        criaturas: victima ? [] : [{ npc: MUNECO, ...VITRINA.muneco, mira: "derecha" }],
+        bots: [
+            { nombre, clase, ...VITRINA.bot, mira: "derecha", accion: { tipo: "quieto" }, sinSeguro: victima },
+            ...(victima ? [{ nombre: "Rival", clase: 3, ...VITRINA.muneco, mira: "derecha" as Rumbo, accion: { tipo: "quieto" as const }, vida: 30 }] : []),
+        ],
     };
 }
 
@@ -808,7 +840,15 @@ function hacer(param: (name: string) => string) {
     if (!bot || !user) {
         return { ok: false, error: `${param("bot")} no está en escena.` };
     }
-    const objetivo = param("a") === "yo" || !blanco ? { pos: user.pos, map: Number(user.map), id: user.id } : blanco;
+    // `a`: "yo", el nombre de otro bot, o nada (el muñeco; si no hay, el bot "Rival").
+    const otro = state.bots.get((param("a") || "rival").toLowerCase());
+    const otroUser = otro && otro !== bot ? usuario(otro.id) : undefined;
+    const objetivo =
+        param("a") === "yo" || (!blanco && !otroUser)
+            ? { pos: user.pos, map: Number(user.map), id: user.id }
+            : otroUser && (param("a") || !blanco)
+              ? { pos: otroUser.pos, map: Number(otroUser.map), id: otroUser.id }
+              : blanco!;
     switch (param("que")) {
         case "hechizo": {
             const spells = (user.spells ?? {}) as Record<string, { idSpell?: number } | undefined>;
@@ -913,7 +953,11 @@ export async function handleDebugRequest(url: URL) {
         case "escena":
             return armarEscena(param("id"), param("jugador"));
         case "vitrina":
-            return armarEscena("vitrina", param("jugador"), escenaVitrina(Number(param("clase")), param("nombre") || "Demo"));
+            return armarEscena(
+                "vitrina",
+                param("jugador"),
+                escenaVitrina(Number(param("clase")), param("nombre") || "Demo", param("victima") === "1"),
+            );
         case "hacer":
             return hacer(param);
         case "limpiar":
@@ -940,7 +984,15 @@ export async function handleDebugRequest(url: URL) {
                 jugador: jugador ? { mapa: jugador.map, pos: jugador.pos, vida: jugador.hp, hechizos } : null,
                 bots: [...state.bots.values()].map((bot) => {
                     const user = usuario(bot.id);
-                    return { nombre: bot.def.nombre, mapa: user?.map, pos: user?.pos, vida: user?.hp, muerto: Boolean(user?.dead) };
+                    return {
+                        nombre: bot.def.nombre,
+                        mapa: user?.map,
+                        pos: user?.pos,
+                        vida: user?.hp,
+                        mana: user ? `${user.mana}/${user.maxMana}` : null,
+                        muerto: Boolean(user?.dead),
+                        sangra: Boolean((user as { bleed?: unknown } | undefined)?.bleed),
+                    };
                 }),
                 criaturas: [...state.criaturas.keys()].map((id) => {
                     const npc = vars.npcs?.[id];

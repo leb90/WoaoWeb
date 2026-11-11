@@ -26,9 +26,9 @@ export const CLASS_SKILLS: Partial<Record<CharacterClassKey, ClassSkill[]>> = {
         { id: "pocion-de-fuerza", nombre: "Poción de fuerza", descripcion: "Le sube la fuerza por un rato, y con ella el daño de cada golpe." },
     ],
     asesino: [
-        { id: "apunalar", nombre: "Apuñalar", descripcion: "Desde atrás, la daga a veces pega el doble; a los jugadores además los deja desangrándose." },
-        { id: "destello-infernal", nombre: "Destello infernal", descripcion: "Daño mágico a distancia: de 54 a 59." },
-        { id: "invisibilidad", nombre: "Invisibilidad", descripcion: "Se vuelve invisible por un rato, para acercarse o para escapar." },
+        { id: "apunalar", nombre: "Apuñalar", descripcion: "Por la espalda, la daga a veces pega el doble a las criaturas, y a los jugadores los desangra." },
+        { id: "desangrado", nombre: "Desangrado", descripcion: "Un jugador apuñalado por la espalda pierde, cada segundo y durante 10 s, lo mismo que el golpe. Curarse no lo frena." },
+        { id: "destello-infernal", nombre: "Destello infernal", descripcion: "Daño mágico a distancia: de 54 a 59. Solo lo aprende el asesino." },
     ],
     bardo: [
         { id: "apocalipsis", nombre: "Apocalipsis", descripcion: "De 50 a 55 de daño mágico a distancia." },

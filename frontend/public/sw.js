@@ -134,13 +134,14 @@ self.addEventListener("fetch", (event) => {
         return;
     }
 
-    // Nunca cachear API, sockets del juego, ni las páginas del juego en sí. Tampoco los videos: el navegador los pide
-    // por partes.
+    // Nunca cachear API, sockets del juego, ni las páginas del juego en sí. Tampoco los videos (los de fondo y los de
+    // las habilidades de la creación): el navegador los pide por partes.
     if (
         url.pathname.startsWith("/api/") ||
         url.pathname.startsWith("/play") ||
         url.pathname.startsWith("/_next/data/") ||
-        url.pathname.startsWith("/static/video/")
+        url.pathname.startsWith("/static/video/") ||
+        url.pathname.endsWith(".mp4")
     ) {
         return;
     }

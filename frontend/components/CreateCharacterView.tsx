@@ -416,9 +416,13 @@ export default function CreateCharacterView() {
                             onCycleHead={cycleHead}
                             onSelectHead={setSelectedHeadIndex}
                         />
-                        <div className="flex min-h-0 flex-col gap-2">
-                            <RaceInfoPanel race={selectedRaceOption} gender={selectedGender} />
-                            <ClassInfoPanel option={selectedClassOption} />
+                        {/* La columna no estira la fila: el alto lo ponen la raza y el personaje, y el video de las
+                            habilidades de la clase usa el lugar que queda. */}
+                        <div className="relative min-h-0">
+                            <div className="absolute inset-0 flex flex-col gap-2">
+                                <RaceInfoPanel race={selectedRaceOption} gender={selectedGender} />
+                                <ClassInfoPanel option={selectedClassOption} />
+                            </div>
                         </div>
                         <ClassSelector
                             options={characterClassOptions}

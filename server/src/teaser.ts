@@ -266,6 +266,13 @@ function paqueteChat(client: RuntimeClient, texto: string) {
     });
 }
 
+function paqueteUsarItem(client: RuntimeClient, slot: number) {
+    mandar(client, (buffer) => {
+        buffer.writeUint8(getPkg().serverPacketID.useItemU);
+        buffer.writeUint32(slot);
+    });
+}
+
 function paqueteEquipar(client: RuntimeClient, slot: number) {
     mandar(client, (buffer) => {
         buffer.writeUint8(getPkg().serverPacketID.equiparItem);
@@ -763,8 +770,95 @@ function llevarJugador(user: RuntimeCharacter, client: RuntimeClient, mapa: numb
     }
 }
 
-export async function armarEscena(id: string, nombreJugador: string) {
-    const escena = ESCENAS[id];
+// La vitrina de las clases (teaser/habilidades.ts): un bot de la clase y un muñeco en un claro del bosque, para grabar
+// de cerca cada habilidad que muestra la creación de personaje. El que graba queda entre los dos y no se dibuja (lo
+// esconde el modo grabación), así la cámara queda centrada en la acción.
+const VITRINA = { mapa: 54, jugador: { x: 38, y: 31 }, bot: { x: 36, y: 31 }, muneco: { x: 40, y: 31 } };
+const MUNECO = 9845;
+
+function escenaVitrina(clase: number, nombre: string): Escena {
+    return {
+        mapa: VITRINA.mapa,
+        jugador: { ...VITRINA.jugador, mira: "derecha" },
+        momento: "mediodia",
+        clima: "despejado",
+        despejar: 16,
+        reaparecenMs: 500,
+        criaturas: [{ npc: MUNECO, ...VITRINA.muneco }],
+        bots: [{ nombre, clase, ...VITRINA.bot, mira: "derecha", accion: { tipo: "quieto" } }],
+    };
+}
+
+function muneco() {
+    for (const id of state.criaturas.keys()) {
+        const npc = vars.npcs?.[id];
+        if (npc && Number(npc.templateNpcIndex) === MUNECO) {
+            return npc;
+        }
+    }
+    return null;
+}
+
+// Una acción del bot de la vitrina, cuando la pide la grabación: un hechizo (al muñeco o a sí mismo), un golpe, un
+// flechazo, una poción, caminar hasta una baldosa o mirar para un lado.
+function hacer(param: (name: string) => string) {
+    const bot = state.bots.get(param("bot").toLowerCase());
+    const user = bot ? usuario(bot.id) : undefined;
+    const blanco = muneco();
+    if (!bot || !user) {
+        return { ok: false, error: `${param("bot")} no está en escena.` };
+    }
+    const objetivo = param("a") === "yo" || !blanco ? { pos: user.pos, map: Number(user.map), id: user.id } : blanco;
+    switch (param("que")) {
+        case "hechizo": {
+            const spells = (user.spells ?? {}) as Record<string, { idSpell?: number } | undefined>;
+            const slot = Object.entries(spells).find(([, entry]) => Number(entry?.idSpell) === Number(param("id")))?.[0];
+            if (!slot) {
+                return { ok: false, error: `${bot.def.nombre} no sabe el hechizo ${param("id")}.` };
+            }
+            paqueteHechizo(bot.client, Number(slot), objetivo);
+            return { ok: true };
+        }
+        case "golpe":
+            paqueteGirar(bot.client, rumboHacia(user.pos, objetivo.pos));
+            paqueteGolpe(bot.client);
+            return { ok: true };
+        case "disparo":
+            paqueteGirar(bot.client, rumboHacia(user.pos, objetivo.pos));
+            paqueteDisparo(bot.client, objetivo);
+            return { ok: true };
+        case "pocion": {
+            const inventario = (user.inv ?? {}) as Record<string, { idItem?: number } | undefined>;
+            const slot = Object.entries(inventario).find(([, item]) => Number(item?.idItem) === Number(param("id")))?.[0];
+            if (slot) {
+                paqueteUsarItem(bot.client, Number(slot));
+            }
+            return { ok: Boolean(slot) };
+        }
+        case "ir":
+            user.pendingMoveQueue = [];
+            caminarHacia(bot, user, { x: Number(param("x")), y: Number(param("y")) }, 12);
+            return { ok: true };
+        case "mirar":
+            paqueteGirar(bot.client, RUMBOS[param("rumbo") as Rumbo]?.() ?? vars.direcciones.down);
+            return { ok: true };
+        // Para mostrar una curación: con la vida llena no se ve cuánto cura.
+        case "herir":
+            user.hp = Math.round(Number(user.maxHp ?? 1) * 0.5);
+            return { ok: true };
+        // Ocultarse, como la tecla del juego. Con la habilidad al máximo casi siempre sale.
+        case "ocultar": {
+            const skills = require("./skills");
+            (skills.ensureSkills(user) as number[])[skills.SKILLS.ocultarse - 1] = 100;
+            mandar(bot.client, (buffer) => buffer.writeUint8(getPkg().serverPacketID.toggleHiddenSkill));
+            return { ok: true };
+        }
+        default:
+            return { ok: false, error: `No sé hacer "${param("que")}".` };
+    }
+}
+
+export async function armarEscena(id: string, nombreJugador: string, escena: Escena | undefined = ESCENAS[id]) {
     if (!escena) {
         return { ok: false, error: `No existe la escena ${id}. Hay: ${Object.keys(ESCENAS).join(", ")}` };
     }
@@ -818,6 +912,10 @@ export async function handleDebugRequest(url: URL) {
     switch (accion) {
         case "escena":
             return armarEscena(param("id"), param("jugador"));
+        case "vitrina":
+            return armarEscena("vitrina", param("jugador"), escenaVitrina(Number(param("clase")), param("nombre") || "Demo"));
+        case "hacer":
+            return hacer(param);
         case "limpiar":
             await limpiar();
             return { ok: true };

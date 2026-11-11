@@ -56,3 +56,17 @@ El audio es AAC, como piden las redes. La vista previa de VS Code no lo reproduc
 - **Para ver una escena sin grabar todo:** se arma con `/debug/teaser/escena?id=castillo&jugador=Nahuel` y se revisa con `/debug/teaser/estado`.
 
 Las escenas de caza y del chamán sacan las criaturas del mapa que andan cerca, así no se meten en la toma. No vuelven hasta que se reinicia el server de juego.
+
+## Los videos de las habilidades de cada clase
+
+La creación de personaje muestra las habilidades más importantes de la clase elegida, con un video corto de cada una que pasa solo (`frontend/lib/classSkills.ts` y `components/character-creation/ClassSkillShowcase.tsx`). Esos videos se graban con este mismo paquete:
+
+```bash
+pnpm habilidades            # todas las clases, unos 6 minutos
+pnpm habilidades mago bardo # solo esas
+```
+
+`habilidades.ts` arma la vitrina del server para cada clase: un bot de la clase y un muñeco en un claro del bosque. El que graba queda escondido entre los dos, porque el modo grabación no lo dibuja. El bot hace cada habilidad con `/debug/teaser/hacer`, y de la grabación sale un clip de 4 s, recortado de cerca (8 × 5 baldosas) y sin sonido. Quedan en `frontend/public/static/clases/<clase>/<habilidad>.mp4`, con un `.jpg` que se ve mientras carga.
+
+Para sumar o cambiar una habilidad: el texto va en `classSkills.ts`, y cómo la hace el bot va en `TOMAS` de `habilidades.ts`.
+

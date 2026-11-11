@@ -3,6 +3,7 @@ import type { ObjectData } from "../../../types/game";
 import { OBJECT_TYPE, type PlayerHudState } from "../../../lib/aowProtocol";
 import type { RuntimeTimingConfig } from "../../../lib/runtime-config";
 import type { Character } from "../engine/Engine";
+import { isTeaserSelfHidden } from "../../../lib/teaserRecording";
 
 const GHOST_ALPHA = 0.45;
 const PARTY_INVISIBLE_ALPHA = 0.4;
@@ -177,6 +178,10 @@ export function getCharacterRenderAlpha(
 ): number {
     if (!character) {
         return 1;
+    }
+
+    if (options?.isLocalCharacter && isTeaserSelfHidden()) {
+        return 0;
     }
 
     if (character.invisibleAdmin || character.dead) {

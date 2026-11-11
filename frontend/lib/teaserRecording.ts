@@ -15,8 +15,16 @@ type TeaserWindow = Window & {
         say: (text: string) => void;
         click: (x: number, y: number, map: number) => void;
         face: (heading: number) => void;
+        hideSelf: (hidden: boolean) => void;
     };
 };
+
+// Para grabar a otro (la vitrina de las clases): el que graba no se dibuja y la cámara queda en el medio de la acción.
+let selfHidden = false;
+
+export function isTeaserSelfHidden(): boolean {
+    return selfHidden;
+}
 
 export function isTeaserRecording(): boolean {
     if (process.env.NODE_ENV === "production" || typeof window === "undefined") {
@@ -38,8 +46,8 @@ export function logTeaserSound(sound: Omit<TeaserHeardSound, "at">): void {
 }
 
 // Lo que hace el personaje que graba sin tocar la interfaz (que está escondida): tirar un hechizo a una baldosa,
-// hablar, hacer clic en una baldosa (cofres, puertas y bloques de las mazmorras) y girar. Manda los mismos paquetes
-// que el juego.
+// hablar, hacer clic en una baldosa (cofres, puertas y bloques de las mazmorras) y girar, con los mismos paquetes que
+// el juego; y dejar de dibujarse.
 export function exposeTeaserControls(send: (packet: ArrayBuffer) => void): void {
     if (process.env.NODE_ENV === "production") {
         return;
@@ -49,6 +57,9 @@ export function exposeTeaserControls(send: (packet: ArrayBuffer) => void): void 
         say: (text) => send(createDialogPacket(text)),
         click: (x, y, map) => send(createClickPacket(x, y, 0, map)),
         face: (heading) => send(createChangeHeadingPacket(heading)),
+        hideSelf: (hidden) => {
+            selfHidden = hidden;
+        },
     };
 }
 

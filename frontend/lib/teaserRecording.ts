@@ -16,14 +16,21 @@ type TeaserWindow = Window & {
         click: (x: number, y: number, map: number) => void;
         face: (heading: number) => void;
         hideSelf: (hidden: boolean) => void;
+        hideNames: (hidden: boolean) => void;
     };
 };
 
-// Para grabar a otro (la vitrina de las clases): el que graba no se dibuja y la cámara queda en el medio de la acción.
+// Para grabar a otro (la vitrina de las clases): el que graba no se dibuja y la cámara queda en el medio de la acción;
+// y, si se pide, tampoco los nombres (en un recorte chico se pisan).
 let selfHidden = false;
+let namesHidden = false;
 
 export function isTeaserSelfHidden(): boolean {
     return selfHidden;
+}
+
+export function areTeaserNamesHidden(): boolean {
+    return namesHidden;
 }
 
 export function isTeaserRecording(): boolean {
@@ -59,6 +66,9 @@ export function exposeTeaserControls(send: (packet: ArrayBuffer) => void): void 
         face: (heading) => send(createChangeHeadingPacket(heading)),
         hideSelf: (hidden) => {
             selfHidden = hidden;
+        },
+        hideNames: (hidden) => {
+            namesHidden = hidden;
         },
     };
 }

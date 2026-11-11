@@ -29,6 +29,7 @@ declare global {
             click: (x: number, y: number, map: number) => void;
             face: (heading: number) => void;
             hideSelf: (hidden: boolean) => void;
+            hideNames: (hidden: boolean) => void;
         };
     }
 }

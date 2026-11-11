@@ -629,7 +629,8 @@ const BLEED_TICK_MS = 1000;
 
 const COMBAT_HIT_FX_ID = 14;
 const COMBAT_SHIELD_BLOCK_FX_ID = 88;
-const COMBAT_STABBING_FX_ID = 89;
+// El chorro de sangre de la apuñalada (frontend/public/init/fxs.json, docs/CREDITOS_GRAFICOS.md).
+const COMBAT_STABBING_FX_ID = 156;
 const COMBAT_MISS_FX_ID = 144;
 const LEVEL_UP_FX_ID = 145;
 

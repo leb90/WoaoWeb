@@ -35,7 +35,9 @@ const CLASES: Record<string, { id: number; nombre: string }> = {
 // Lo que hace el bot (el endpoint /debug/teaser/hacer): `antes` lo acomoda y `pasos` va en el clip, cada uno a los
 // segundos que dice `en`. El bot arranca en (36,31), el muñeco está en (40,31) y el que graba, escondido, en (38,31).
 type Paso = { en: number; que: string } & Record<string, string | number>;
-type Toma = { antes?: Paso[]; pasos: Paso[] };
+// `victima`: en la vitrina hay otro jugador en lugar del muñeco. `hastaSangrar`: antes de grabar le pega hasta que la
+// apuñalada sale y lo deja desangrándose (sale una de cada tantas).
+type Toma = { antes?: Paso[]; pasos: Paso[]; victima?: boolean; hastaSangrar?: boolean };
 
 const alMuneco = (id: number): Toma => ({ pasos: [0.2, 2.2].map((en) => ({ en, que: "hechizo", id })) });
 // Las curaciones, con el bot herido antes: con la vida llena no se ve cuánto cura.
@@ -59,10 +61,11 @@ const TOMAS: Record<string, Toma> = {
     "clerigo/curacion-divina": curacion(39),
     "guerrero/golpes-pesados": golpes(),
     "guerrero/pocion-de-fuerza": { ...golpes(), pasos: [{ en: 0.2, que: "pocion", id: 1093 }, ...[1.0, 1.9, 2.8].map((en) => ({ en, que: "golpe" }))] },
-    // Por la espalda: arriba del muñeco, mirando para donde mira él.
-    "asesino/apunalar": golpes(40, 30, "abajo"),
+    // Por la espalda: el muñeco mira a la derecha, igual que el bot.
+    "asesino/apunalar": golpes(),
+    // A otro jugador, por la espalda: desde atrás y mirando para el mismo lado que él.
+    "asesino/desangrado": { ...golpes(39, 31), victima: true, hastaSangrar: true },
     "asesino/destello-infernal": alMuneco(73),
-    "asesino/invisibilidad": { pasos: [{ en: 0.4, que: "hechizo", id: 14, a: "yo" }] },
     "bardo/apocalipsis": alMuneco(25),
     "bardo/inmovilizar": alMuneco(66),
     "bardo/curacion-milagrosa": curacion(32),
@@ -116,18 +119,27 @@ async function main() {
     const tomas: Array<{ clase: CharacterClassKey; id: string; desde: number }> = [];
 
     try {
-        await page.evaluate(() => window.__woaoTeaser?.hideSelf(true));
+        // Ni el que graba ni los nombres: en un recorte de 8 baldosas se pisan, y la clase ya la dice el panel.
+        await page.evaluate(() => {
+            window.__woaoTeaser?.hideSelf(true);
+            window.__woaoTeaser?.hideNames(true);
+        });
         await cdp.send("Page.startScreencast", { format: "jpeg", quality: 92, maxWidth: 1600, maxHeight: 900, everyNthFrame: 1 });
         for (const clase of clases) {
             const datos = CLASES[clase]!;
-            await pedir("vitrina", { jugador: PERSONAJE.nombre, clase: datos.id, nombre: datos.nombre });
-            await page.waitForFunction(() => window.__woaoEngine?.mapNumber === 54, null, { timeout: 30_000 });
-            await esperar(2500);
+            let conVictima: boolean | null = null;
             for (const habilidad of CLASS_SKILLS[clase] ?? []) {
                 const toma = TOMAS[`${clase}/${habilidad.id}`];
                 if (!toma) {
                     console.log(`[aviso] falta cómo grabar ${clase}/${habilidad.id}`);
                     continue;
+                }
+                // La vitrina se arma de nuevo si cambia lo que hay enfrente (el muñeco o un jugador).
+                if (conVictima !== Boolean(toma.victima)) {
+                    conVictima = Boolean(toma.victima);
+                    await pedir("vitrina", { jugador: PERSONAJE.nombre, clase: datos.id, nombre: datos.nombre, victima: conVictima ? 1 : 0 });
+                    await page.waitForFunction(() => window.__woaoEngine?.mapNumber === 54, null, { timeout: 30_000 });
+                    await esperar(2500);
                 }
                 // Vuelve a su lugar, mirando al muñeco.
                 await hacer(datos.nombre, { en: 0, que: "ir", x: 36, y: 31 });
@@ -136,6 +148,14 @@ async function main() {
                 for (const paso of toma.antes ?? []) {
                     await hacer(datos.nombre, paso);
                     await esperar(paso.que === "ir" ? 1800 : 300);
+                }
+                for (let intento = 0; toma.hastaSangrar && intento < 30; intento++) {
+                    const estado = await pedir<{ bots: Array<{ nombre: string; sangra: boolean }> }>("estado");
+                    if (estado.bots.some((bot) => bot.nombre === "Rival" && bot.sangra)) {
+                        break;
+                    }
+                    await hacer(datos.nombre, { en: 0, que: "golpe" });
+                    await esperar(900);
                 }
                 await esperar(400);
                 const desde = Date.now();

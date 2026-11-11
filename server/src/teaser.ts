@@ -50,9 +50,13 @@ type BotDef = {
     /** Lo que dice cada tanto, en orden. */
     frases?: string[];
     clan?: string;
+    /** Cuántas veces su vida normal (la víctima de la vitrina aguanta un desangrado entero). */
+    vida?: number;
+    /** Sin el seguro, para poder atacar a otro jugador. */
+    sinSeguro?: boolean;
 };
 
-type CriaturaDef = { npc: number; x: number; y: number };
+type CriaturaDef = { npc: number; x: number; y: number; mira?: Rumbo };
 
 type Escena = {
     mapa: number;
@@ -347,6 +351,9 @@ function crearCriatura(def: CriaturaDef, mapa: number) {
     delete npc.spawnMapNum;
     delete npc.spawnOrigin;
     Object.assign(npc, { teaser: true, ephemeralSummon: 1, drop: [], gold: 0 });
+    if (def.mira) {
+        npc.heading = RUMBOS[def.mira]();
+    }
     state.criaturas.set(String(npc.id), { def, mapa });
     mostrarCriatura(npc);
     return npc;
@@ -450,14 +457,14 @@ async function conectarBot(def: BotDef, mapa: number): Promise<BotVivo | null> {
     }
 
     // Aguantan más que un jugador, así la pelea dura lo que dura la escena.
-    const vida = def.accion.tipo === "duelo" ? VIDA_DUELO : VIDA_BOT;
+    const vida = def.vida ?? (def.accion.tipo === "duelo" ? VIDA_DUELO : VIDA_BOT);
     user.maxHp = Number(user.maxHp ?? 1) * vida;
     user.hp = user.maxHp;
     if (def.clan) {
         Object.assign(user, { clan: def.clan, clanId: `teaser:${def.clan}` });
     }
     // Sin el seguro, que no deja atacar a otros ciudadanos: en el castillo pelean entre clanes.
-    if (def.accion.tipo === "duelo") {
+    if (def.accion.tipo === "duelo" || def.sinSeguro) {
         user.seguroActivado = false;
     }
     if (def.mira) {
@@ -570,8 +577,9 @@ function pensar(bot: BotVivo, ahora: number) {
         return;
     }
 
-    // Tampoco se quedan sin maná: la toma dura más que lo que aguanta una pelea de verdad.
-    if (Number(user.mana ?? 0) < Number(user.maxMana ?? 0) * 0.4) {
+    // Tampoco se quedan sin maná: la toma dura más que lo que aguanta una pelea de verdad (con medio tanque, un paladín
+    // ya no llega a Apocalipsis).
+    if (Number(user.mana ?? 0) < Number(user.maxMana ?? 0)) {
         user.mana = user.maxMana;
     }
 
@@ -776,7 +784,9 @@ function llevarJugador(user: RuntimeCharacter, client: RuntimeClient, mapa: numb
 const VITRINA = { mapa: 54, jugador: { x: 38, y: 31 }, bot: { x: 36, y: 31 }, muneco: { x: 40, y: 31 } };
 const MUNECO = 9845;
 
-function escenaVitrina(clase: number, nombre: string): Escena {
+// Con `victima`, en lugar del muñeco hay otro jugador mirando para el mismo lado (para apuñalarlo por la espalda y
+// que se desangre).
+function escenaVitrina(clase: number, nombre: string, victima: boolean): Escena {
     return {
         mapa: VITRINA.mapa,
         jugador: { ...VITRINA.jugador, mira: "derecha" },
@@ -784,8 +794,12 @@ function escenaVitrina(clase: number, nombre: string): Escena {
         clima: "despejado",
         despejar: 16,
         reaparecenMs: 500,
-        criaturas: [{ npc: MUNECO, ...VITRINA.muneco }],
-        bots: [{ nombre, clase, ...VITRINA.bot, mira: "derecha", accion: { tipo: "quieto" } }],
+        // El muñeco mira para el mismo lado que el bot: así la apuñalada es por la espalda.
+        criaturas: victima ? [] : [{ npc: MUNECO, ...VITRINA.muneco, mira: "derecha" }],
+        bots: [
+            { nombre, clase, ...VITRINA.bot, mira: "derecha", accion: { tipo: "quieto" }, sinSeguro: victima },
+            ...(victima ? [{ nombre: "Rival", clase: 3, ...VITRINA.muneco, mira: "derecha" as Rumbo, accion: { tipo: "quieto" as const }, vida: 30 }] : []),
+        ],
     };
 }
 
@@ -808,7 +822,14 @@ function hacer(param: (name: string) => string) {
     if (!bot || !user) {
         return { ok: false, error: `${param("bot")} no está en escena.` };
     }
-    const objetivo = param("a") === "yo" || !blanco ? { pos: user.pos, map: Number(user.map), id: user.id } : blanco;
+    const rival = state.bots.get("rival");
+    const rivalUser = rival && rival !== bot ? usuario(rival.id) : undefined;
+    const objetivo =
+        param("a") === "yo" || (!blanco && !rivalUser)
+            ? { pos: user.pos, map: Number(user.map), id: user.id }
+            : param("a") === "rival" || !blanco
+              ? { pos: rivalUser!.pos, map: Number(rivalUser!.map), id: rivalUser!.id }
+              : blanco;
     switch (param("que")) {
         case "hechizo": {
             const spells = (user.spells ?? {}) as Record<string, { idSpell?: number } | undefined>;
@@ -913,7 +934,11 @@ export async function handleDebugRequest(url: URL) {
         case "escena":
             return armarEscena(param("id"), param("jugador"));
         case "vitrina":
-            return armarEscena("vitrina", param("jugador"), escenaVitrina(Number(param("clase")), param("nombre") || "Demo"));
+            return armarEscena(
+                "vitrina",
+                param("jugador"),
+                escenaVitrina(Number(param("clase")), param("nombre") || "Demo", param("victima") === "1"),
+            );
         case "hacer":
             return hacer(param);
         case "limpiar":
@@ -940,7 +965,15 @@ export async function handleDebugRequest(url: URL) {
                 jugador: jugador ? { mapa: jugador.map, pos: jugador.pos, vida: jugador.hp, hechizos } : null,
                 bots: [...state.bots.values()].map((bot) => {
                     const user = usuario(bot.id);
-                    return { nombre: bot.def.nombre, mapa: user?.map, pos: user?.pos, vida: user?.hp, muerto: Boolean(user?.dead) };
+                    return {
+                        nombre: bot.def.nombre,
+                        mapa: user?.map,
+                        pos: user?.pos,
+                        vida: user?.hp,
+                        mana: user ? `${user.mana}/${user.maxMana}` : null,
+                        muerto: Boolean(user?.dead),
+                        sangra: Boolean((user as { bleed?: unknown } | undefined)?.bleed),
+                    };
                 }),
                 criaturas: [...state.criaturas.keys()].map((id) => {
                     const npc = vars.npcs?.[id];

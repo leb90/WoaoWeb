@@ -183,3 +183,12 @@ No se usaron los duplicados: `Esqueleto ataque.png.png` (va `Esqueleto Ataque.pn
 | `330050.png` | Muñeco quieto (cuerpo 600) y tambaleándose cuando le pegan (cuerpo 601, 4 cuadros) | "combat dummy", `lpc_entry/png/combat_dummy/BODY_animation.png` de *[LPC] Medieval fantasy character sprites*, https://opengameart.org/content/lpc-medieval-fantasy-character-sprites | Johannes Sjölund (wulax) | [OGA-BY 3.0](http://static.opengameart.org/OGA-BY-3.0.txt) (la página también ofrece CC-BY-SA 3.0 y GPL 3.0) |
 
 Cambios: sin reescalar (el muñeco mide 59 × 55, como un personaje con cabeza); el lienzo se recortó a 64 × 56 y se le sumaron 3 px abajo para que la base quede a la altura de los pies de los personajes. Los cuadros del golpe salen del giro original combinados con una inclinación por franjas: el tocón queda plantado y la parte de arriba se corre. No se cambiaron colores. OGA-BY pide nombrar al autor: va acá y en el PR.
+
+## Apuñalada del asesino (efecto 156)
+
+El chorro de sangre que sale al apuñalar (antes era el efecto 89). Se recortaron los 8 cuadros con la misma caja, se pasaron a un rojo sangre más oscuro y se achicaron al 30 % (`frontend/public/graphics/330051.png`, gráficos 43271 a 43279).
+
+| Efecto | Uso en el juego | Original | Autor | Licencia |
+|---|---|---|---|---|
+| 156 | Chorro de sangre de la apuñalada | "Animations - Blood Splatter 1", `SHARE BLOOD 1.png`, https://opengameart.org/content/animations-blood-splatter-1 | Sinestesia | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) |
+

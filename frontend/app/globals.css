@@ -163,6 +163,17 @@ html.cursor-dibujado
     }
 }
 
+/* Habilidades de la clase en la creación (components/character-creation/ClassSkillShowcase.tsx): la barra de la
+   habilidad que se ve se llena mientras dura su video. */
+@keyframes class-skill-progress {
+    from {
+        transform: scaleX(0);
+    }
+    to {
+        transform: scaleX(1);
+    }
+}
+
 /* Full screen optimization for mobile */
 @media screen and (max-width: 768px) {
     .game-shell {

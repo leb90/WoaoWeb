@@ -160,5 +160,13 @@
             "El cursor del guantelete ya no parpadea con la flecha del sistema en la Mac: ahora lo dibuja el juego.",
             "Crear personaje en el celular rediseñado: el personaje grande arriba, pestañas de raza, rostro, clase y datos, y todo en una pantalla."
         ]
+    },
+    {
+        "fecha": "2026-11-11",
+        "titulo": "Las habilidades de cada clase",
+        "features": [
+            "Al elegir una clase en la creación de personaje se ven sus habilidades más importantes, con un video corto de cada una grabado del juego.",
+            "Los videos pasan solos, uno tras otro; con las barras de arriba se va a cualquiera."
+        ]
     }
 ]

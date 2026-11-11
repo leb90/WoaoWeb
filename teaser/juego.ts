@@ -28,6 +28,7 @@ declare global {
             say: (text: string) => void;
             click: (x: number, y: number, map: number) => void;
             face: (heading: number) => void;
+            hideSelf: (hidden: boolean) => void;
         };
     }
 }

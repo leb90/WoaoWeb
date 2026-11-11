@@ -6,7 +6,8 @@
     "scripts": {
         "grabar": "tsx grabar.ts",
         "editar": "tsx editar.ts",
-        "typecheck": "tsc --noEmit -p tsconfig.json"
+        "typecheck": "tsc --noEmit -p tsconfig.json",
+        "habilidades": "tsx habilidades.ts"
     },
     "devDependencies": {
         "@types/node": "^25.8.0",

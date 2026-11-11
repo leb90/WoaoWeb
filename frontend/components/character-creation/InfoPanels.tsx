@@ -1,5 +1,6 @@
 "use client";
 
+import ClassSkillShowcase from "./ClassSkillShowcase";
 import RacePortrait from "./RacePortrait";
 import { panelClass } from "./styles";
 import type { CharacterClassOption, GenderKey, RaceOption } from "../../lib/characterCreation";
@@ -12,7 +13,7 @@ export function RaceInfoPanel({
     gender: GenderKey;
 }) {
     return (
-        <section className={`${panelClass} flex min-h-0 flex-col p-3`} aria-label={`Raza ${race.label}`}>
+        <section className={`${panelClass} flex min-h-0 shrink-0 flex-col p-3`} aria-label={`Raza ${race.label}`}>
             <header className="mb-2 flex items-center gap-2">
                 <span className="border border-[#41351f] bg-black">
                     <RacePortrait headId={race.genders[gender].startHeadId} label={race.label} size={42} />
@@ -44,7 +45,7 @@ export function ClassInfoPanel({ option }: { option: CharacterClassOption | null
     }
 
     return (
-        <section className={`${panelClass} flex min-h-0 flex-1 flex-col p-3`} aria-label={`Clase ${option.label}`}>
+        <section className={`${panelClass} flex min-h-0 flex-1 flex-col overflow-hidden p-3`} aria-label={`Clase ${option.label}`}>
             <header className="mb-2 flex items-center gap-2">
                 <span className="flex h-11 w-11 items-center justify-center border border-[#41351f] bg-black text-xl text-[#f3e6b8]">
                     {option.icon}
@@ -54,6 +55,9 @@ export function ClassInfoPanel({ option }: { option: CharacterClassOption | null
                 </h2>
             </header>
             <p className="text-[13px] leading-relaxed text-[#d7ccb4]">{option.summary}</p>
+            <div className="mt-2.5 flex min-h-0 flex-1 flex-col">
+                <ClassSkillShowcase clase={option.key} />
+            </div>
         </section>
     );
 }

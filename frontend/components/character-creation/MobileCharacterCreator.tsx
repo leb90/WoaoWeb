@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { RotateCcw, RotateCw } from "lucide-react";
 import CharacterSpritePreview from "../CharacterSpritePreview";
 import RacePortrait from "./RacePortrait";
+import ClassSkillShowcase from "./ClassSkillShowcase";
 import { cinzel, focusRing, panelClass } from "./styles";
 import { DISPLAY_NAME_MAX_LENGTH } from "../../lib/name-validation";
 import {
@@ -327,6 +328,7 @@ export default function MobileCharacterCreator({
                                     "Elegí una clase: el personaje se viste con su equipo."
                                 )}
                             </p>
+                            {selectedClassOption ? <ClassSkillShowcase clase={selectedClassOption.key} compacto /> : null}
                             <div className="grid grid-cols-4 gap-1.5 min-[420px]:grid-cols-5" role="group" aria-label="Clases">
                                 {classes.map((option) => {
                                     const active = option.key === selectedClass;

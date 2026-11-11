@@ -19,7 +19,6 @@ import { buildArenaQuickSlotMacros } from "../../components/game/controls/arenaQ
 import AdminIntervalsModal from "../../components/AdminIntervalsModal";
 import BuffStatusSidebar from "../../components/BuffStatusSidebar";
 import PlayerUnitFrame from "../../components/PlayerUnitFrame";
-import GameStatusOverlay from "../../components/GameStatusOverlay";
 import EnvironmentInline from "../../components/EnvironmentInline";
 import TargetUnitFrame from "../../components/TargetUnitFrame";
 import { publishPerformanceSample } from "../../lib/performanceReadout";
@@ -3767,28 +3766,18 @@ function HomeContent() {
                                 {/* Escritorio: el marco del personaje va a la izquierda del chat y ahí entran las primeras cuatro
                                     criaturas que te persiguen; las demás, acá. Sin la franja del chat (ventana angosta), el marco
                                     queda adentro del render. */}
-                                {/* FPS, ping y seguros como texto suelto arriba a la izquierda, sin fondo (en mobile los
-                                    dibuja el canvas). Lo que va en esa esquina arranca debajo. */}
-                                {!isMobile ? (
-                                    <GameStatusOverlay
-                                        seguro={Boolean(hud?.seguroActivado)}
-                                        seguroClan={Boolean(hud?.seguroClanActivado)}
-                                        hasClan={Boolean(hud?.clan)}
-                                        className="absolute left-2 top-1.5"
-                                    />
-                                ) : null}
                                 {isDesktopConsoleLayout ? (
                                     <AggroPanel
                                         aggro={hud?.aggroState}
                                         skip={AGGRO_STRIP_SLOTS}
-                                        className="absolute left-2 top-[42px]"
+                                        className="absolute left-2 top-2"
                                     />
                                 ) : !isMobile ? (
                                     <PlayerUnitFrame
                                         hud={hud}
                                         runtimeTiming={runtimeTiming}
                                         skillsState={skillsState}
-                                        className="absolute left-2 top-[42px]"
+                                        className="absolute left-2 top-2"
                                         style={{ width: CHARACTER_DOCK_WIDTH }}
                                     >
                                         {hasAggro ? (

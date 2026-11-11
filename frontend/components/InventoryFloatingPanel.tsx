@@ -79,6 +79,7 @@ import DungeonOverlay, { DungeonMinimapFog } from "./DungeonOverlay";
 import { DungeonBar, DungeonMusicPlayer } from "./DungeonBackpack";
 import SkillsModal from "./SkillsModal";
 import PanelVitals from "./PanelVitals";
+import PanelStatusLine from "./PanelStatusLine";
 import WorldMusicPlayer from "./WorldMusicPlayer";
 import type { SkillsState } from "../lib/aowProtocol";
 import type { EnvironmentState } from "../lib/aowProtocol";
@@ -3299,14 +3300,12 @@ export default function InventoryFloatingPanel({
                                         />
                                     </button>
                                 </div>
-                                <div className="min-w-0 flex-1">
-                                    <p className="text-[9px] uppercase tracking-[0.3em] text-amber-200/70">
-                                        Personaje
-                                    </p>
+                                {/* Sin la etiqueta "Personaje": ese alto lo usan la vida, el maná y la línea de FPS y ping. */}
+                                <div className="min-w-0 flex-1 pt-[2px]">
                                     <h3 className="truncate text-[20px] font-semibold leading-none text-[#efe2c5]">
                                         {hud?.nameCharacter || "Aventurero"}
                                     </h3>
-                                    <p className="mt-1.5 text-[11px] font-semibold tabular-nums text-amber-200">
+                                    <p className="mt-1 text-[11px] font-semibold tabular-nums text-amber-200">
                                         {formatNumber(hud?.gold ?? 0)} oro
                                     </p>
                                 </div>
@@ -3364,7 +3363,7 @@ export default function InventoryFloatingPanel({
                                 <button
                                     type="button"
                                     onClick={() => setActiveTab("inventory")}
-                                    className={`border px-3 py-2 text-sm font-semibold transition focus:outline-none focus-visible:outline-none ${
+                                    className={`border px-3 py-1.5 text-sm font-semibold transition focus:outline-none focus-visible:outline-none ${
                                         activeTab === "inventory"
                                             ? "border-amber-300/70 bg-[linear-gradient(180deg,#7d2e12,#4f1608)] text-amber-50 shadow-[inset_0_1px_0_rgba(255,220,180,0.18)]"
                                             : "border-[#4a3424] bg-[#241813] text-stone-300 hover:border-amber-400/40 hover:text-stone-100"
@@ -3375,7 +3374,7 @@ export default function InventoryFloatingPanel({
                                 <button
                                     type="button"
                                     onClick={() => setActiveTab("spells")}
-                                    className={`border px-3 py-2 text-sm font-semibold transition focus:outline-none focus-visible:outline-none ${
+                                    className={`border px-3 py-1.5 text-sm font-semibold transition focus:outline-none focus-visible:outline-none ${
                                         activeTab === "spells"
                                             ? "border-amber-300/70 bg-[linear-gradient(180deg,#7d2e12,#4f1608)] text-amber-50 shadow-[inset_0_1px_0_rgba(255,220,180,0.18)]"
                                             : "border-[#4a3424] bg-[#241813] text-stone-300 hover:border-amber-400/40 hover:text-stone-100"
@@ -3386,8 +3385,8 @@ export default function InventoryFloatingPanel({
                             </div>
 
                             {activeTab === "inventory" ? (
-                                <div className="mt-2 flex min-h-0 flex-1 flex-col gap-2">
-                                <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                                <div className="mt-1.5 flex min-h-0 flex-1 flex-col gap-1.5">
+                                <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                                     {hud?.dungeonState?.enMazmorra ? (
                                         <DungeonBar
                                             inside={hud.dungeonState.enMazmorra}
@@ -3619,7 +3618,7 @@ export default function InventoryFloatingPanel({
                                     <div
                                         aria-live="polite"
                                         data-testid="inventory-item-detail"
-                                        className="h-[62px] shrink-0 overflow-y-auto overscroll-contain border border-amber-200/15 bg-black/45 px-3 py-1.5 text-[11px] leading-4 text-stone-200 [scrollbar-width:thin]"
+                                        className="h-[56px] shrink-0 overflow-y-auto overscroll-contain border border-amber-200/15 bg-black/45 px-3 py-1 text-[11px] leading-[15px] text-stone-200 [scrollbar-width:thin]"
                                     >
                                         {inventoryDetailItem ? (
                                             <>
@@ -3974,12 +3973,12 @@ export default function InventoryFloatingPanel({
                         </section>
 
                         <section className="relative shrink-0 bg-[#19110d]/95 p-1.5">
-                            <div className="mb-1.5 grid grid-cols-2 gap-1">
+                            <div className="mb-[6px] grid grid-cols-2 gap-1">
                                 <button
                                     type="button"
                                     onClick={openTransmog}
                                     disabled={arenaMode}
-                                    className={`inline-flex min-h-[26px] items-center justify-center gap-1.5 rounded-sm border border-fuchsia-300/45 bg-[linear-gradient(180deg,#3d1f45_0%,#1a0f1d_100%)] px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-fuchsia-50 shadow-[inset_0_1px_0_rgba(255,200,255,0.14)] transition hover:border-fuchsia-200/80 hover:text-white ${ARENA_DISABLED_CLASS} disabled:hover:border-fuchsia-300/45 disabled:hover:text-fuchsia-50`}
+                                    className={`inline-flex min-h-[24px] items-center justify-center gap-1.5 rounded-sm border border-fuchsia-300/45 bg-[linear-gradient(180deg,#3d1f45_0%,#1a0f1d_100%)] px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-fuchsia-50 shadow-[inset_0_1px_0_rgba(255,200,255,0.14)] transition hover:border-fuchsia-200/80 hover:text-white ${ARENA_DISABLED_CLASS} disabled:hover:border-fuchsia-300/45 disabled:hover:text-fuchsia-50`}
                                 >
                                     <Sparkles className="h-3.5 w-3.5 text-fuchsia-200" />
                                     Transfigurar
@@ -3988,7 +3987,7 @@ export default function InventoryFloatingPanel({
                                     type="button"
                                     onClick={openShop}
                                     disabled={arenaMode}
-                                    className={`inline-flex min-h-[26px] items-center justify-center gap-1.5 rounded-sm border border-amber-300/60 bg-[linear-gradient(180deg,#6b4614_0%,#2a1a08_100%)] px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-amber-50 shadow-[inset_0_1px_0_rgba(255,230,170,0.18)] transition hover:border-amber-200 hover:text-white ${ARENA_DISABLED_CLASS} disabled:hover:border-amber-300/60 disabled:hover:text-amber-50`}
+                                    className={`inline-flex min-h-[24px] items-center justify-center gap-1.5 rounded-sm border border-amber-300/60 bg-[linear-gradient(180deg,#6b4614_0%,#2a1a08_100%)] px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-amber-50 shadow-[inset_0_1px_0_rgba(255,230,170,0.18)] transition hover:border-amber-200 hover:text-white ${ARENA_DISABLED_CLASS} disabled:hover:border-amber-300/60 disabled:hover:text-amber-50`}
                                 >
                                     <ShoppingBag className="h-3.5 w-3.5 text-amber-200" />
                                     Tienda
@@ -4024,7 +4023,7 @@ export default function InventoryFloatingPanel({
                                 </button>
                             </PanelVitals>
                             {/* El nombre del mapa y el clima están en el recuadro de coordenadas del render. */}
-                            <div className="mt-1.5 flex h-[46px] items-center gap-2 border-t border-amber-200/10 pt-1 text-stone-100">
+                            <div className="mt-1 flex h-[40px] items-center gap-2 border-t border-amber-200/10 pt-1 text-stone-100">
                                 <CastleHud
                                     onSendCommand={onSendCommand}
                                     castleState={hud?.castleState}
@@ -4041,6 +4040,13 @@ export default function InventoryFloatingPanel({
                                     />
                                 </div>
                             </div>
+                            {/* FPS, ping y seguros al pie del panel, como texto: fuera de la ventana del juego. */}
+                            <PanelStatusLine
+                                seguro={Boolean(hud?.seguroActivado)}
+                                seguroClan={Boolean(hud?.seguroClanActivado)}
+                                hasClan={Boolean(hud?.clan)}
+                                className="mt-1 border-t border-amber-200/10 px-1 pt-[5px]"
+                            />
                         </section>
                     </div>
                 </div>

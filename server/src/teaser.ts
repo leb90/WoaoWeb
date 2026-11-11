@@ -116,6 +116,20 @@ const CALLE: Zona = { x1: 37, y1: 50, x2: 40, y2: 64 };
 // El bosque de pinos del mapa 54, junto al camino.
 const BOSQUE: Zona = { x1: 33, y1: 26, x2: 48, y2: 36 };
 
+function escenaInvisibilidad(clan?: string): Escena {
+    return {
+        mapa: 54,
+        jugador: { x: 38, y: 32, mira: "arriba", clan },
+        momento: "mediodia",
+        clima: "despejado",
+        despejar: 16,
+        bots: [
+            { nombre: "Asesino", clase: CLASE.asesino, x: 37, y: 30, mira: "derecha", accion: { tipo: "quieto" }, sinSeguro: true, clan, vida: 30 },
+            { nombre: "Paladín", clase: CLASE.paladin, x: 40, y: 30, mira: "izquierda", accion: { tipo: "quieto" }, sinSeguro: true, vida: 30 },
+        ],
+    };
+}
+
 const ESCENAS: Record<string, Escena> = {
     // Nix con gente: unos caminan, otros charlan o meditan.
     ciudad: {
@@ -193,6 +207,10 @@ const ESCENAS: Record<string, Escena> = {
             { nombre: "Ragnar", clase: CLASE.arquero, x: 50, y: 27, clan: "Guardia de Plata", accion: { tipo: "duelo", rival: "Tincho" } },
         ],
     },
+    // Para explicar la invisibilidad (un video de ejemplo): un asesino que se hace invisible y un paladín que pelea con
+    // él, vistos por otro jugador (el que graba, escondido abajo). En "invisibilidad-clan" el que graba es de su clan.
+    invisibilidad: escenaInvisibilidad(),
+    "invisibilidad-clan": escenaInvisibilidad("Los Inmortales"),
     // La mazmorra nueva (todavía en desarrollo): entra desde la piedra de invocación de Nix.
     mazmorra: {
         mapa: 34,
@@ -822,14 +840,15 @@ function hacer(param: (name: string) => string) {
     if (!bot || !user) {
         return { ok: false, error: `${param("bot")} no está en escena.` };
     }
-    const rival = state.bots.get("rival");
-    const rivalUser = rival && rival !== bot ? usuario(rival.id) : undefined;
+    // `a`: "yo", el nombre de otro bot, o nada (el muñeco; si no hay, el bot "Rival").
+    const otro = state.bots.get((param("a") || "rival").toLowerCase());
+    const otroUser = otro && otro !== bot ? usuario(otro.id) : undefined;
     const objetivo =
-        param("a") === "yo" || (!blanco && !rivalUser)
+        param("a") === "yo" || (!blanco && !otroUser)
             ? { pos: user.pos, map: Number(user.map), id: user.id }
-            : param("a") === "rival" || !blanco
-              ? { pos: rivalUser!.pos, map: Number(rivalUser!.map), id: rivalUser!.id }
-              : blanco;
+            : otroUser && (param("a") || !blanco)
+              ? { pos: otroUser.pos, map: Number(otroUser.map), id: otroUser.id }
+              : blanco!;
     switch (param("que")) {
         case "hechizo": {
             const spells = (user.spells ?? {}) as Record<string, { idSpell?: number } | undefined>;

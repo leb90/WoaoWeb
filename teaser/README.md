@@ -70,3 +70,13 @@ pnpm habilidades mago bardo # solo esas
 
 Para sumar o cambiar una habilidad: el texto va en `classSkills.ts`, y cómo la hace el bot va en `TOMAS` de `habilidades.ts`.
 
+## Video de ejemplo de la invisibilidad
+
+`pnpm invisibilidad` graba un video corto que explica cómo funciona la invisibilidad (`out/invisibilidad-ejemplo.mp4`), con un asesino y un paladín, vistos por otro jugador. Muestra cuatro cosas:
+
+1. Se vuelve invisible: los demás no lo ven, tampoco el nombre.
+2. Si pelea con un jugador, parpadea durante 5 s.
+3. Si le hace daño a un jugador, se le corta.
+4. Su clan lo ve transparente y con el nombre.
+
+Usa las escenas `invisibilidad` e `invisibilidad-clan` de `server/src/teaser.ts`.

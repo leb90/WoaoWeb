@@ -88,6 +88,8 @@ type WoaoHubModalProps = {
     donationPoints?: number;
     auctionPanel?: React.ReactNode;
     onTabChange: (tab: WoaoHubTab) => void;
+    // Accesos a ventanas que no son pestañas del panel (Party y Clanes), a la derecha de las pestañas.
+    shortcuts?: Array<{ label: string; icon?: React.ReactNode; onClick: () => void }>;
     onClose: () => void;
     onOpenAuctionHouse?: () => void;
     // Los puntos de donación se gastan en la Tienda (incluye este catálogo).
@@ -1471,6 +1473,7 @@ export default function WoaoHubModal({
     donationPoints = 0,
     auctionPanel,
     onTabChange,
+    shortcuts,
     onClose,
     onOpenAuctionHouse,
     onOpenShop,
@@ -1867,6 +1870,21 @@ export default function WoaoHubModal({
                             {entry.label}
                         </button>
                     ))}
+                    {shortcuts?.length ? (
+                        <div className="ml-auto flex gap-1 border-l border-amber-200/10 pl-2">
+                            {shortcuts.map((shortcut) => (
+                                <button
+                                    key={shortcut.label}
+                                    type="button"
+                                    onClick={shortcut.onClick}
+                                    className="inline-flex items-center gap-1 rounded-[10px] border border-transparent px-3 py-1.5 text-[11px] font-semibold text-stone-300 transition hover:border-stone-600 hover:text-white"
+                                >
+                                    {shortcut.icon}
+                                    {shortcut.label}
+                                </button>
+                            ))}
+                        </div>
+                    ) : null}
                 </div>
 
                 <div

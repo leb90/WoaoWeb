@@ -966,7 +966,7 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                 fpsText.x = 10;
                 fpsText.y = 8;
 
-                // FPS, ping y los dos seguros en una capa: en escritorio se oculta y se ven en el panel de la derecha.
+                // FPS, ping y los dos seguros en una capa: en escritorio se oculta y los muestra GameStatusOverlay sobre el render.
                 const statusTextLayer = new Container();
                 statusTextLayer.zIndex = 1000;
                 statusTextLayer.visible = !options.hideStatusTextRef.current;

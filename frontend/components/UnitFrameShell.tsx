@@ -134,6 +134,7 @@ export default function UnitFrameShell({
     dead = false,
     band,
     bodyClassName = "space-y-[2px] py-[3px]",
+    bodyHeightClass = "h-[38px]",
     children,
 }: {
     testId: string;
@@ -144,6 +145,8 @@ export default function UnitFrameShell({
     band: React.ReactNode;
     // El espaciado de la zona de las barras (el alto no cambia).
     bodyClassName?: string;
+    // El alto de la zona de las barras (el del personaje es más bajo: solo lleva la energía).
+    bodyHeightClass?: string;
     // La zona de las barras: tiene alto fijo, así los dos marcos miden lo mismo.
     children: React.ReactNode;
 }) {
@@ -166,7 +169,7 @@ export default function UnitFrameShell({
                 <div className="flex h-[16px] items-center gap-1 border-b border-[#8b6b3e]/70 bg-[linear-gradient(180deg,#4d3419_0%,#2a1b10_100%)] pl-9 pr-1.5">
                     {band}
                 </div>
-                <div className={`h-[38px] pl-9 pr-1.5 ${bodyClassName}`}>{children}</div>
+                <div className={`${bodyHeightClass} pl-9 pr-1.5 ${bodyClassName}`}>{children}</div>
             </div>
         </div>
     );

@@ -19,6 +19,7 @@ import { buildArenaQuickSlotMacros } from "../../components/game/controls/arenaQ
 import AdminIntervalsModal from "../../components/AdminIntervalsModal";
 import BuffStatusSidebar from "../../components/BuffStatusSidebar";
 import PlayerUnitFrame from "../../components/PlayerUnitFrame";
+import EnvironmentInline from "../../components/EnvironmentInline";
 import TargetUnitFrame from "../../components/TargetUnitFrame";
 import { publishPerformanceSample } from "../../lib/performanceReadout";
 import { DEFAULT_SOUND_VOLUMES, loadSoundVolumes, saveSoundVolumes, type SoundVolumes } from "../../lib/soundVolumes";
@@ -3788,11 +3789,18 @@ function HomeContent() {
                                 ) : null}
 
                                 <div
-                                    className="pointer-events-none absolute right-2 z-30 rounded-md border border-stone-200/12 bg-stone-950/72 px-2.5 py-1.5 font-mono text-[11px] leading-none text-amber-100/90 shadow-xl backdrop-blur-sm"
+                                    className="pointer-events-none absolute right-2 z-30 flex items-center gap-3 rounded-md border border-stone-200/12 bg-stone-950/72 px-2.5 py-1.5 font-mono text-[11px] leading-none text-amber-100/90 shadow-xl backdrop-blur-sm"
                                     style={{
                                         bottom: isFullscreen ? 42 : 8,
                                     }}
                                 >
+                                    {/* Escritorio: el nombre del mapa y el clima (antes en el panel de la derecha) van acá,
+                                        en la misma línea que las coordenadas, para no ocupar lugar propio. */}
+                                    {!isMobile && status.worldName ? (
+                                        <span className="max-w-[180px] truncate font-sans text-[11px] font-semibold text-[#e6cf9f]">
+                                            {status.worldName}
+                                        </span>
+                                    ) : null}
                                     <span className="inline-grid grid-cols-[auto_4ch_auto_3ch_auto_3ch] items-baseline gap-x-1 tabular-nums">
                                         <span>Map:</span>
                                         <span className="text-right">
@@ -3807,6 +3815,12 @@ function HomeContent() {
                                             {hud?.pos?.y ?? "—"}
                                         </span>
                                     </span>
+                                    {!isMobile && environmentState ? (
+                                        <EnvironmentInline
+                                            environment={environmentState}
+                                            className="border-l border-stone-200/15 pl-3 font-sans text-[11px] font-semibold text-amber-100/90"
+                                        />
+                                    ) : null}
                                 </div>
 
                                 {globalCanvasNotice ? (

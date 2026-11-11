@@ -11,8 +11,9 @@ import {
     type PlayerStatusEntry,
 } from "./playerStatusEntries";
 
-// El marco del personaje (escritorio), al estilo del de WoW: nombre y energía, vida y maná, el retrato con el
-// escudo del bando y, debajo, los estados con lo que les falta. Va a la izquierda del chat; toma el ancho de su caja.
+// El marco del personaje (escritorio), al estilo del de WoW: nombre y energía, el retrato con el escudo del bando y,
+// debajo, los estados con lo que les falta. La vida y el maná van en grande en el panel de la derecha (PanelVitals).
+// Va a la izquierda del chat; toma el ancho de su caja.
 
 type PlayerUnitFrameProps = {
     hud: PlayerHudState | null;
@@ -80,15 +81,9 @@ export default function PlayerUnitFrame({
         return null;
     }
 
-    const hp = hud.hp ?? 0;
-    const maxHp = hud.maxHp ?? 0;
-    const mana = hud.mana ?? 0;
-    const maxMana = hud.maxMana ?? 0;
     const sta = hud.sta ?? 0;
     const maxSta = hud.maxSta ?? 0;
     const dead = Boolean(hud.dead);
-    // Hambre y sed en 0 a la vez: el personaje está perdiendo vida y estamina. La vida se pinta bordó.
-    const isStarving = (hud.hambre ?? 100) <= 0 && (hud.sed ?? 100) <= 0;
 
     return (
         <div
@@ -99,6 +94,8 @@ export default function PlayerUnitFrame({
             <UnitFrameShell
                 testId="player-frame"
                 dead={dead}
+                bodyHeightClass="h-[16px]"
+                bodyClassName="py-[4px]"
                 portrait={<HeadPortrait bodyId={hud.idBody ?? 0} headId={hud.idHead ?? 0} />}
                 badge={<StandingBadge color={hud.color} testId="player-frame-standing" />}
                 band={
@@ -130,31 +127,9 @@ export default function PlayerUnitFrame({
                     max={maxSta}
                     fromColor="#8a6514"
                     toColor="#f2cf5b"
-                    heightClass="h-[4px]"
+                    heightClass="h-[8px]"
                     showText={false}
-                    gloss="from-white/10 to-black/25"
-                />
-                <Bar
-                    testId="player-frame-hp"
-                    title={`Vida: ${hp}/${maxHp}`}
-                    value={hp}
-                    max={maxHp}
-                    fromColor={isStarving ? "#4a0a12" : "#951212"}
-                    toColor={isStarving ? "#7a1224" : "#f06b34"}
-                    heightClass="h-[14px]"
-                    showText
-                    textClass="text-[10px]"
-                />
-                <Bar
-                    testId="player-frame-mana"
-                    title={`Maná: ${mana}/${maxMana}`}
-                    value={mana}
-                    max={maxMana}
-                    fromColor="#0e436f"
-                    toColor="#2fb8ed"
-                    heightClass="h-[10px]"
-                    showText
-                    textClass="text-[8.5px]"
+                    gloss="from-white/15 to-black/25"
                 />
             </UnitFrameShell>
 

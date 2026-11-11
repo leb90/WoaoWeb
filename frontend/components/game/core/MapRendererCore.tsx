@@ -153,7 +153,7 @@ interface MapRendererProps {
     embedded?: boolean;
     connection?: ManualConnectionConfig | null;
     isMobile?: boolean;
-    // Oculta el FPS, el ping y los seguros dibujados arriba a la izquierda (en escritorio van en el panel de la derecha).
+    // Oculta el FPS, el ping y los seguros dibujados arriba a la izquierda (en escritorio van al pie del panel de la derecha, PanelStatusLine).
     hideStatusText?: boolean;
     touchMovementDirection?: "up" | "down" | "left" | "right" | null;
     meleeAttackRequest?: { token: number } | null;

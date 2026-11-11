@@ -32,19 +32,10 @@ import {
     Clock3,
     Swords,
     ShoppingBag,
-    Flower2,
-    Leaf,
-    Snowflake,
-    Sun,
-    Sunrise,
-    Sunset,
-    Moon,
-    CloudRain,
-    CloudLightning,
-    CloudFog,
-    Thermometer,
     Music,
     Footprints,
+    CloudRain,
+    Menu,
     type LucideIcon,
 } from "lucide-react";
 import type {
@@ -87,10 +78,11 @@ import DonationShopModal from "./transmog/DonationShopModal";
 import DungeonOverlay, { DungeonMinimapFog } from "./DungeonOverlay";
 import { DungeonBar, DungeonMusicPlayer } from "./DungeonBackpack";
 import SkillsModal from "./SkillsModal";
-import PanelStatusReadout from "./PanelStatusReadout";
+import PanelVitals from "./PanelVitals";
+import PanelStatusLine from "./PanelStatusLine";
 import WorldMusicPlayer from "./WorldMusicPlayer";
 import type { SkillsState } from "../lib/aowProtocol";
-import { DAY_PHASE, SEASON, WEATHER, type EnvironmentState } from "../lib/aowProtocol";
+import type { EnvironmentState } from "../lib/aowProtocol";
 import {
     formatSpecialRewardBonusLine,
     getSpecialItemAccent,
@@ -1248,99 +1240,6 @@ function HuntersGameOverlay({ hud }: { hud: PlayerHudState | null }) {
                 </div>
             ) : null}
         </>
-    );
-}
-
-const SEASON_LABELS: Record<number, string> = {
-    [SEASON.verano]: "Verano",
-    [SEASON.otono]: "Otoño",
-    [SEASON.invierno]: "Invierno",
-    [SEASON.primavera]: "Primavera",
-};
-
-const DAY_PHASE_LABELS: Record<number, string> = {
-    [DAY_PHASE.manana]: "Mañana",
-    [DAY_PHASE.mediodia]: "Mediodía",
-    [DAY_PHASE.tarde]: "Tarde",
-    [DAY_PHASE.noche]: "Noche",
-};
-
-const WEATHER_LABELS: Record<number, string> = {
-    [WEATHER.despejado]: "Despejado",
-    [WEATHER.lluvia]: "Lluvia",
-    [WEATHER.tormenta]: "Tormenta",
-    [WEATHER.nieve]: "Nieve",
-    [WEATHER.niebla]: "Niebla",
-};
-
-const SEASON_ICONS: Record<number, LucideIcon> = {
-    [SEASON.verano]: Sun,
-    [SEASON.otono]: Leaf,
-    [SEASON.invierno]: Snowflake,
-    [SEASON.primavera]: Flower2,
-};
-
-const DAY_PHASE_ICONS: Record<number, LucideIcon> = {
-    [DAY_PHASE.manana]: Sunrise,
-    [DAY_PHASE.mediodia]: Sun,
-    [DAY_PHASE.tarde]: Sunset,
-    [DAY_PHASE.noche]: Moon,
-};
-
-const WEATHER_ICONS: Record<number, LucideIcon> = {
-    [WEATHER.despejado]: Sun,
-    [WEATHER.lluvia]: CloudRain,
-    [WEATHER.tormenta]: CloudLightning,
-    [WEATHER.nieve]: Snowflake,
-    [WEATHER.niebla]: CloudFog,
-};
-
-type EnvironmentChip = {
-    key: string;
-    kind: string;
-    icon: LucideIcon | undefined;
-    label: string | undefined;
-};
-
-function getEnvironmentChips(environment: EnvironmentState) {
-    const chips: EnvironmentChip[] = [
-        { key: "season", kind: "Estación", icon: SEASON_ICONS[environment.season], label: SEASON_LABELS[environment.season] },
-        { key: "phase", kind: "Momento del día", icon: DAY_PHASE_ICONS[environment.dayPhase], label: DAY_PHASE_LABELS[environment.dayPhase] },
-        { key: "weather", kind: "Clima", icon: WEATHER_ICONS[environment.weather], label: WEATHER_LABELS[environment.weather] },
-        { key: "temperature", kind: "Temperatura", icon: Thermometer, label: `${environment.temperatureC}°C` },
-    ];
-    return chips.filter(
-        (chip): chip is EnvironmentChip & { icon: LucideIcon; label: string } =>
-            chip.icon !== undefined && Boolean(chip.label),
-    );
-}
-
-// Estación, momento del día, clima y temperatura en una grilla de 2 × 2, con el mismo alto que la de FPS, ping
-// y seguros (PanelStatusReadout). El bloque tiene que caber en el alto de la columna de botones de al lado: el
-// panel tiene alto fijo y si esto crece, el detalle del ítem pierde su segunda línea. Al pasar el mouse cada
-// chip dice qué es ("Estación: Primavera").
-function EnvironmentChips({ environment }: { environment: EnvironmentState }) {
-    const chips = getEnvironmentChips(environment);
-    return (
-        <div data-environment-chips="true" className="mb-[3px] grid grid-cols-2 gap-[2px]">
-            {chips.map(({ key, kind, icon: Icon, label }) => (
-                <span
-                    key={key}
-                    data-environment-chip={key}
-                    aria-label={`${kind}: ${label}`}
-                    className="group relative flex h-[15px] min-w-0 cursor-help items-center gap-[4px] whitespace-nowrap rounded-sm border border-[#6b5636]/50 bg-black/30 px-[4px] text-[9px] font-semibold leading-none text-[#d9c39d] transition-colors hover:border-[#c9a86a]/70 hover:text-amber-100"
-                >
-                    <Icon className="h-2.5 w-2.5 shrink-0 text-[#c9a86a]" aria-hidden="true" />
-                    <span className="truncate">{label}</span>
-                    <span
-                        role="tooltip"
-                        className="pointer-events-none absolute bottom-full left-0 z-50 mb-1 whitespace-nowrap rounded border border-[#6b5636] bg-stone-950/95 px-1.5 py-1 text-[10px] font-semibold normal-case tracking-normal text-amber-50 opacity-0 shadow-lg transition-opacity duration-100 group-hover:opacity-100"
-                    >
-                        <span className="text-[#c9a86a]">{kind}:</span> {label}
-                    </span>
-                </span>
-            ))}
-        </div>
     );
 }
 
@@ -3332,6 +3231,35 @@ export default function InventoryFloatingPanel({
         { label: "WOAO", onClick: () => setWoaoHubTab("eventos") },
     ];
 
+    // Escritorio: el botón Menú reemplaza a los ocho de arriba y hace lo mismo que WOAO (abre el Panel WOAO en
+    // Eventos). Party y Clanes, que no son pestañas del panel, quedan como accesos en su barra de pestañas.
+    const openWoaoMenu = () => setWoaoHubTab("eventos");
+    const closeWoaoHub = () => {
+        if (woaoHubTab === "subastas") {
+            onCloseAuctionHouse?.();
+        }
+        setIsQuestNpcDialogOpen(false);
+        setWoaoHubTab(null);
+    };
+    const woaoHubShortcuts = [
+        {
+            label: "Party",
+            icon: <Users className="h-3 w-3 text-cyan-300" aria-hidden="true" />,
+            onClick: () => {
+                closeWoaoHub();
+                setIsPartyModalOpen(true);
+            },
+        },
+        {
+            label: "Clanes",
+            icon: <Shield className="h-3 w-3 text-amber-300" aria-hidden="true" />,
+            onClick: () => {
+                closeWoaoHub();
+                setIsClanModalOpen(true);
+            },
+        },
+    ];
+
     return (
         <>
             <div
@@ -3372,14 +3300,12 @@ export default function InventoryFloatingPanel({
                                         />
                                     </button>
                                 </div>
-                                <div className="min-w-0 flex-1">
-                                    <p className="text-[9px] uppercase tracking-[0.3em] text-amber-200/70">
-                                        Personaje
-                                    </p>
+                                {/* Sin la etiqueta "Personaje": ese alto lo usan la vida, el maná y la línea de FPS y ping. */}
+                                <div className="min-w-0 flex-1 pt-[2px]">
                                     <h3 className="truncate text-[20px] font-semibold leading-none text-[#efe2c5]">
                                         {hud?.nameCharacter || "Aventurero"}
                                     </h3>
-                                    <p className="mt-1.5 text-[11px] font-semibold tabular-nums text-amber-200">
+                                    <p className="mt-1 text-[11px] font-semibold tabular-nums text-amber-200">
                                         {formatNumber(hud?.gold ?? 0)} oro
                                     </p>
                                 </div>
@@ -3437,7 +3363,7 @@ export default function InventoryFloatingPanel({
                                 <button
                                     type="button"
                                     onClick={() => setActiveTab("inventory")}
-                                    className={`border px-3 py-2 text-sm font-semibold transition focus:outline-none focus-visible:outline-none ${
+                                    className={`border px-3 py-1.5 text-sm font-semibold transition focus:outline-none focus-visible:outline-none ${
                                         activeTab === "inventory"
                                             ? "border-amber-300/70 bg-[linear-gradient(180deg,#7d2e12,#4f1608)] text-amber-50 shadow-[inset_0_1px_0_rgba(255,220,180,0.18)]"
                                             : "border-[#4a3424] bg-[#241813] text-stone-300 hover:border-amber-400/40 hover:text-stone-100"
@@ -3448,7 +3374,7 @@ export default function InventoryFloatingPanel({
                                 <button
                                     type="button"
                                     onClick={() => setActiveTab("spells")}
-                                    className={`border px-3 py-2 text-sm font-semibold transition focus:outline-none focus-visible:outline-none ${
+                                    className={`border px-3 py-1.5 text-sm font-semibold transition focus:outline-none focus-visible:outline-none ${
                                         activeTab === "spells"
                                             ? "border-amber-300/70 bg-[linear-gradient(180deg,#7d2e12,#4f1608)] text-amber-50 shadow-[inset_0_1px_0_rgba(255,220,180,0.18)]"
                                             : "border-[#4a3424] bg-[#241813] text-stone-300 hover:border-amber-400/40 hover:text-stone-100"
@@ -3459,7 +3385,8 @@ export default function InventoryFloatingPanel({
                             </div>
 
                             {activeTab === "inventory" ? (
-                                <div className="mt-2 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                                <div className="mt-1.5 flex min-h-0 flex-1 flex-col gap-1.5">
+                                <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                                     {hud?.dungeonState?.enMazmorra ? (
                                         <DungeonBar
                                             inside={hud.dungeonState.enMazmorra}
@@ -3683,10 +3610,15 @@ export default function InventoryFloatingPanel({
                                             onSendCommand?.("/estadisticas")
                                         }
                                     />
+                                </div>
 
+                                    {/* La descripción del ítem elegido: fuera del scroll del inventario y con alto fijo, así
+                                        no se aplasta cuando el panel es más bajo (pantalla completa). Si el texto es largo,
+                                        se desplaza adentro. */}
                                     <div
                                         aria-live="polite"
-                                        className="min-h-[68px] shrink-0 border border-amber-200/10 bg-black/45 px-3 py-2.5 text-[11px] leading-4 text-stone-200"
+                                        data-testid="inventory-item-detail"
+                                        className="h-[56px] shrink-0 overflow-y-auto overscroll-contain border border-amber-200/15 bg-black/45 px-3 py-1 text-[11px] leading-[15px] text-stone-200 [scrollbar-width:thin]"
                                     >
                                         {inventoryDetailItem ? (
                                             <>
@@ -3721,7 +3653,11 @@ export default function InventoryFloatingPanel({
                                                     </p>
                                                 ) : null}
                                             </>
-                                        ) : null}
+                                        ) : (
+                                            <p className="flex h-full items-center justify-center text-center text-[10px] uppercase tracking-[0.12em] text-stone-500">
+                                                Seleccioná un ítem para ver su descripción
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                             ) : (
@@ -4037,12 +3973,12 @@ export default function InventoryFloatingPanel({
                         </section>
 
                         <section className="relative shrink-0 bg-[#19110d]/95 p-1.5">
-                            <div className="mb-1.5 grid grid-cols-2 gap-1">
+                            <div className="mb-[6px] grid grid-cols-2 gap-1">
                                 <button
                                     type="button"
                                     onClick={openTransmog}
                                     disabled={arenaMode}
-                                    className={`inline-flex min-h-[26px] items-center justify-center gap-1.5 rounded-sm border border-fuchsia-300/45 bg-[linear-gradient(180deg,#3d1f45_0%,#1a0f1d_100%)] px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-fuchsia-50 shadow-[inset_0_1px_0_rgba(255,200,255,0.14)] transition hover:border-fuchsia-200/80 hover:text-white ${ARENA_DISABLED_CLASS} disabled:hover:border-fuchsia-300/45 disabled:hover:text-fuchsia-50`}
+                                    className={`inline-flex min-h-[24px] items-center justify-center gap-1.5 rounded-sm border border-fuchsia-300/45 bg-[linear-gradient(180deg,#3d1f45_0%,#1a0f1d_100%)] px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-fuchsia-50 shadow-[inset_0_1px_0_rgba(255,200,255,0.14)] transition hover:border-fuchsia-200/80 hover:text-white ${ARENA_DISABLED_CLASS} disabled:hover:border-fuchsia-300/45 disabled:hover:text-fuchsia-50`}
                                 >
                                     <Sparkles className="h-3.5 w-3.5 text-fuchsia-200" />
                                     Transfigurar
@@ -4051,7 +3987,7 @@ export default function InventoryFloatingPanel({
                                     type="button"
                                     onClick={openShop}
                                     disabled={arenaMode}
-                                    className={`inline-flex min-h-[26px] items-center justify-center gap-1.5 rounded-sm border border-amber-300/60 bg-[linear-gradient(180deg,#6b4614_0%,#2a1a08_100%)] px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-amber-50 shadow-[inset_0_1px_0_rgba(255,230,170,0.18)] transition hover:border-amber-200 hover:text-white ${ARENA_DISABLED_CLASS} disabled:hover:border-amber-300/60 disabled:hover:text-amber-50`}
+                                    className={`inline-flex min-h-[24px] items-center justify-center gap-1.5 rounded-sm border border-amber-300/60 bg-[linear-gradient(180deg,#6b4614_0%,#2a1a08_100%)] px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-amber-50 shadow-[inset_0_1px_0_rgba(255,230,170,0.18)] transition hover:border-amber-200 hover:text-white ${ARENA_DISABLED_CLASS} disabled:hover:border-amber-300/60 disabled:hover:text-amber-50`}
                                 >
                                     <ShoppingBag className="h-3.5 w-3.5 text-amber-200" />
                                     Tienda
@@ -4062,51 +3998,32 @@ export default function InventoryFloatingPanel({
                                     ) : null}
                                 </button>
                             </div>
-                            <div className="flex items-start gap-1.5">
-                                <div className="min-w-0 flex-1">
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsWorldMapOpen(true)}
-                                        className="mb-[3px] block w-full truncate text-left text-[9px] font-semibold leading-[11px] tracking-[0.04em] text-[#cbb18e] transition hover:text-amber-100"
-                                        aria-label="Abrir mapa del mundo"
-                                        title={
-                                            hud
-                                                ? `Mapa ${hud.map} (${hud.pos.x}, ${hud.pos.y})`
-                                                : "Abrir mapa del mundo"
-                                        }
-                                    >
-                                        {mapName || "Sin mapa cargado"}
-                                    </button>
-                                    {environment ? (
-                                        <EnvironmentChips environment={environment} />
-                                    ) : null}
-                                    {/* La energía, la vida y el maná están en el marco del personaje (PlayerUnitFrame). */}
-                                    <PanelStatusReadout
-                                        seguro={Boolean(hud?.seguroActivado)}
-                                        seguroClan={Boolean(hud?.seguroClanActivado)}
-                                        hasClan={Boolean(hud?.clan)}
-                                        hambre={hud?.hambre ?? 100}
-                                        maxHambre={hud?.maxHambre ?? 100}
-                                        sed={hud?.sed ?? 100}
-                                        maxSed={hud?.maxSed ?? 100}
-                                    />
-                                </div>
-                                <div className="grid w-[118px] shrink-0 grid-cols-2 gap-1">
-                                    {hubActions.map((action) => (
-                                        <button
-                                            key={action.label}
-                                            type="button"
-                                            onClick={action.onClick}
-                                            disabled={arenaMode}
-                                            className={HUD_ACTION_BUTTON_CLASS}
-                                        >
-                                            {action.icon}
-                                            {action.label}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="mt-1.5 flex h-[46px] items-center gap-2 border-t border-amber-200/10 pt-1 text-stone-100">
+                            {/* La vida y el maná en grande (antes en el marco del personaje), el hambre, la sed y el botón
+                                Menú, que abre el Panel WOAO (Misiones, Montura, Premios, Ranked, Subastas, Viajes y
+                                Eventos, con accesos a Party y Clanes). El FPS, el ping y los seguros van sobre el render. */}
+                            <PanelVitals
+                                hp={hud?.hp ?? 0}
+                                maxHp={hud?.maxHp ?? 0}
+                                mana={hud?.mana ?? 0}
+                                maxMana={hud?.maxMana ?? 0}
+                                hambre={hud?.hambre ?? 100}
+                                maxHambre={hud?.maxHambre ?? 100}
+                                sed={hud?.sed ?? 100}
+                                maxSed={hud?.maxSed ?? 100}
+                            >
+                                <button
+                                    type="button"
+                                    data-testid="hud-menu-button"
+                                    onClick={openWoaoMenu}
+                                    disabled={arenaMode}
+                                    className={`${HUD_ACTION_BUTTON_CLASS} w-[92px] shrink-0 gap-1.5 text-[11px] tracking-[0.1em]`}
+                                >
+                                    <Menu className="h-3.5 w-3.5 text-amber-200" aria-hidden="true" />
+                                    Menú
+                                </button>
+                            </PanelVitals>
+                            {/* El nombre del mapa y el clima están en el recuadro de coordenadas del render. */}
+                            <div className="mt-1 flex h-[40px] items-center gap-2 border-t border-amber-200/10 pt-1 text-stone-100">
                                 <CastleHud
                                     onSendCommand={onSendCommand}
                                     castleState={hud?.castleState}
@@ -4123,6 +4040,13 @@ export default function InventoryFloatingPanel({
                                     />
                                 </div>
                             </div>
+                            {/* FPS, ping y seguros al pie del panel, como texto: fuera de la ventana del juego. */}
+                            <PanelStatusLine
+                                seguro={Boolean(hud?.seguroActivado)}
+                                seguroClan={Boolean(hud?.seguroClanActivado)}
+                                hasClan={Boolean(hud?.clan)}
+                                className="mt-1 border-t border-amber-200/10 px-1 pt-[5px]"
+                            />
                         </section>
                     </div>
                 </div>
@@ -5037,14 +4961,14 @@ export default function InventoryFloatingPanel({
                               }
                               setIsQuestNpcDialogOpen(false);
                               setWoaoHubTab(nextTab);
-                          }}
-                          onClose={() => {
-                              if (woaoHubTab === "subastas") {
-                                  onCloseAuctionHouse?.();
+                              // Lo mismo que hacían los botones Misiones y Montura del panel: pedir el estado al día.
+                              if (nextTab !== woaoHubTab) {
+                                  if (nextTab === "misiones") onSendCommand?.("/quests");
+                                  if (nextTab === "montura") onSendCommand?.("/montura");
                               }
-                              setIsQuestNpcDialogOpen(false);
-                              setWoaoHubTab(null);
                           }}
+                          shortcuts={woaoHubShortcuts}
+                          onClose={closeWoaoHub}
                           onOpenAuctionHouse={onOpenAuctionHouse}
                           onOpenShop={openShop}
                           onSendCommand={onSendCommand}

@@ -19,7 +19,7 @@ type Parte = { desde: string; segundos: number; titulo: string; texto: string };
 const PARTES: Parte[] = [
     { desde: "invisible", segundos: 5.5, titulo: "1 · Se vuelve invisible (dura 20 s)", texto: "Para los demás jugadores desaparece del todo, también el nombre. Las criaturas no lo detectan." },
     { desde: "combate", segundos: 6.5, titulo: "2 · Si pelea con un jugador, se lo ve parpadear", texto: "Cada golpe o hechizo entre jugadores abre 5 s en los que aparece y desaparece del todo." },
-    { desde: "corte", segundos: 4.5, titulo: "3 · Si le hace daño a un jugador, se le corta", texto: "Con un golpe o un hechizo de daño. Paralizar o inmovilizar no la cortan, y pegarle a criaturas tampoco." },
+    { desde: "corte", segundos: 8.0, titulo: "3 · Si ataca, también parpadea y vuelve a ser invisible", texto: "Un golpe o un hechizo de daño a un jugador no la cortan: 5 s después del último ataque vuelve a desaparecer." },
     { desde: "clan", segundos: 6.0, titulo: "4 · Así lo ven su clan y su party", texto: "Transparente y con el nombre. Él mismo también se ve así." },
 ];
 
@@ -49,10 +49,13 @@ async function main() {
         marcas.combate = Date.now() - 300;
         await hacer("Paladín", { que: "hechizo", id: 66, a: "Asesino" });
         await esperar(6500);
-        // El asesino le tira un hechizo de daño (inmovilizado no puede caminar hasta él): se le corta.
+        // El asesino le tira un hechizo de daño (inmovilizado no puede caminar hasta él): parpadea 5 s y vuelve a ser
+        // invisible. Antes renueva la invisibilidad, así no se le termina (dura 20 s) en medio de la toma.
+        await hacer("Asesino", { que: "hechizo", id: 14, a: "yo" });
+        await esperar(1500);
         marcas.corte = Date.now() - 600;
         await hacer("Asesino", { que: "hechizo", id: 73, a: "Paladín" });
-        await esperar(4500);
+        await esperar(8000);
 
         await escena(page, "invisibilidad-clan");
         await esperar(1500);

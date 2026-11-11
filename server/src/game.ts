@@ -2351,32 +2351,20 @@ function setHiddenSkillState(idUser: EntityId, enabled: boolean) {
     game.syncUserNpcVisibility(idUser);
 }
 
-function breakUserInvisibilityOnPvPDamageAttack(idUser: EntityId) {
+// Hacerle daño a un jugador corta el ocultamiento (Ocultarse). La invisibilidad (el hechizo y la Capa Hobbit) no se
+// corta: como al recibir un golpe, el que pega parpadea durante la ventana de pelea (markUsersInPvpCombat) y después
+// vuelve a ser invisible.
+function breakHiddenSkillOnPvPDamageAttack(idUser: EntityId) {
     const user = getCharacterById(idUser);
 
-    if (!user) {
+    if (!user?.hiddenSkill) {
         return;
     }
 
-    let visibilityChanged = false;
-
-    if (user.invisibleSpell) {
-        user.invisibleSpell = false;
-        user.cooldownInvisibleSpell = 0;
-        visibilityChanged = true;
-    }
-
-    if (user.hiddenSkill) {
-        user.hiddenSkill = false;
-        user.hiddenSkillStartedAt = 0;
-        user.hiddenSkillExpiresAt = 0;
-        user.hiddenSkillCooldownUntil = 0;
-        visibilityChanged = true;
-    }
-
-    if (!visibilityChanged) {
-        return;
-    }
+    user.hiddenSkill = false;
+    user.hiddenSkillStartedAt = 0;
+    user.hiddenSkillExpiresAt = 0;
+    user.hiddenSkillCooldownUntil = 0;
 
     syncCharacterVisibility(idUser);
     game.syncUserNpcVisibility(idUser);
@@ -10327,7 +10315,7 @@ function Game(this: GameApi) {
 
                     markUsersInPvpCombat(user, userAttacked);
 
-                    breakUserInvisibilityOnPvPDamageAttack(idUser);
+                    breakHiddenSkillOnPvPDamageAttack(idUser);
 
                     const resisted = applyUserSpellDamage(user, userAttacked, datSpell);
                     if (resisted == null) {
@@ -10988,7 +10976,7 @@ function Game(this: GameApi) {
             interruptPendingLogoutOnAttack(idUserAttacked);
 
             if (userImpacto) {
-                breakUserInvisibilityOnPvPDamageAttack(idUser);
+                breakHiddenSkillOnPvPDamageAttack(idUser);
 
                 dmg = game.calcularDmg(idUser);
 

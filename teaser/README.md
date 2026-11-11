@@ -76,7 +76,7 @@ Para sumar o cambiar una habilidad: el texto va en `classSkills.ts`, y cómo la 
 
 1. Se vuelve invisible: los demás no lo ven, tampoco el nombre.
 2. Si pelea con un jugador, parpadea durante 5 s.
-3. Si le hace daño a un jugador, se le corta.
+3. Si ataca a un jugador, también parpadea y después vuelve a ser invisible.
 4. Su clan lo ve transparente y con el nombre.
 
 Usa las escenas `invisibilidad` e `invisibilidad-clan` de `server/src/teaser.ts`.

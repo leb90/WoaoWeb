@@ -2351,6 +2351,25 @@ function setHiddenSkillState(idUser: EntityId, enabled: boolean) {
     game.syncUserNpcVisibility(idUser);
 }
 
+// Quien entra invisible u oculto a un mapa sin invisibilidad vuelve a ser visible.
+function dropInvisibilityOnBlockedMap(user: GameCharacter, ws: RuntimeClient) {
+    if ((!user.invisibleSpell && !user.hiddenSkill) || !safeZone.isInvisibilityBlockedMap(user.map)) {
+        return;
+    }
+
+    if (user.invisibleSpell) {
+        setSpellInvisibility(user.id, false);
+    }
+
+    if (user.hiddenSkill) {
+        user.hiddenSkillStartedAt = 0;
+        user.hiddenSkillExpiresAt = 0;
+        setHiddenSkillState(user.id, false);
+    }
+
+    handleProtocol.console("En este mapa no se puede estar invisible: vuelves a ser visible.", "white", 0, 0, ws);
+}
+
 // Hacerle daño a un jugador corta el ocultamiento (Ocultarse). La invisibilidad (el hechizo y la Capa Hobbit) no se
 // corta: como al recibir un golpe, el que pega parpadea durante la ventana de pelea (markUsersInPvpCombat) y después
 // vuelve a ser invisible.
@@ -3782,6 +3801,43 @@ function syncPartyState(partyId?: string | null): void {
     });
 }
 
+// Mapa y coordenadas de un miembro para los mensajes de clan. Las instancias (mazmorras) se muestran con su mapa base.
+function formatClanMemberLocation(member: GameCharacter): string {
+    const mapId = Number(member.map ?? 0);
+    const baseMapId = mapInstanceManager.isInstanceMap(mapId) ? (mapInstanceManager.getBaseMapId(mapId) ?? mapId) : mapId;
+    const mapName = String(vars.mapData[baseMapId]?.name ?? "").trim();
+    return `Mapa ${baseMapId}${mapName ? ` (${mapName})` : ""} ${member.pos?.x ?? 0} ${member.pos?.y ?? 0}`;
+}
+
+function getOnlineClanMembers(clanId?: string | null): GameCharacter[] {
+    const memberIds = getGroupIndex(onlineClanMemberIdsByClanId, clanId);
+
+    if (!memberIds) {
+        return [];
+    }
+
+    return [...memberIds]
+        .map((memberId) => getCharacterById(memberId))
+        .filter((member): member is GameCharacter => isOnlineRelationshipMember(member));
+}
+
+// Avisa en el chat a todos los miembros conectados del clan dónde murió un compañero.
+function announceClanMemberDeath(user: GameCharacter): void {
+    if (!user.clanId) {
+        return;
+    }
+
+    const message = `${user.nameCharacter} murió en ${formatClanMemberLocation(user)}`;
+
+    getOnlineClanMembers(user.clanId).forEach((member) => {
+        const client = getClientById(member.id);
+
+        if (client) {
+            handleProtocol.console(message, "#E69500", 1, 0, client);
+        }
+    });
+}
+
 function syncClanState(clanId?: string | null): void {
     const memberIds = getGroupIndex(onlineClanMemberIdsByClanId, clanId);
 
@@ -4021,6 +4077,7 @@ export type GameApi = {
     syncClanState: (clanId?: string | null) => void;
     withClanVaultExclusive: <T>(clanId: string, run: () => Promise<T>) => Promise<T>;
     syncClanStateForMember: (idUser: EntityId) => void;
+    describeOnlineClanMembers: (idUser: EntityId) => string[];
     refreshRelationshipIndexesForMember: (
         idUser: EntityId,
         previousPartyId?: string | null,
@@ -6268,11 +6325,8 @@ function Game(this: GameApi) {
                     break;
                 }
                 case HOBBIT_CLOAK_OBJECT_TYPE: {
-                    const mapId = Number(user.map ?? 0);
-                    const isBlockedMap = (mapId > 199 && mapId < 212) || mapId === 182 || mapId === 92 || mapId === 279;
-
-                    if (isBlockedMap || !vars.mapData[mapId]?.pk) {
-                        handleProtocol.console("No puedes usar la Capa Hobbit en este mapa.", "white", 0, 0, ws);
+                    if (!user.invisibleSpell && safeZone.isInvisibilityBlockedMap(user.map)) {
+                        handleProtocol.console(safeZone.INVISIBILITY_BLOCKED_MESSAGE, "white", 0, 0, ws);
                         return;
                     }
 
@@ -6310,6 +6364,11 @@ function Game(this: GameApi) {
                         !user.maxMana
                     ) {
                         handleProtocol.console("Tu clase no puede aprender este hechizo.", "white", 0, 0, ws);
+                        return;
+                    }
+
+                    if (!vars.datSpell[obj.spellIndex]) {
+                        handleProtocol.console("Este pergamino ya no enseña ningún hechizo.", "white", 0, 0, ws);
                         return;
                     }
 
@@ -8792,6 +8851,7 @@ function Game(this: GameApi) {
                 syncPendingReviveCastVisibilityForUser?: (movedUserId: EntityId) => void;
             };
             protocolApi.syncPendingReviveCastVisibilityForUser?.(clientId);
+            dropInvisibilityOnBlockedMap(user, ws);
             game.refreshRelationshipIndexesForMember(clientId);
             game.syncPartyStateForMember(clientId);
             game.syncClanStateForMember(clientId);
@@ -8914,6 +8974,7 @@ function Game(this: GameApi) {
             const userClient = getClientById(idUser);
             const shouldSyncVisibilityState = Boolean(user.invisibleSpell || user.hiddenSkill);
             const hadMovementRestriction = Boolean(user.inmovilizado || user.paralizado);
+            const wasAlreadyDead = Boolean(user.dead);
             fishing.cancelFishing(idUser);
             harvesting.cancelHarvesting(idUser);
             smelting.cancelSmelting(idUser);
@@ -8994,6 +9055,10 @@ function Game(this: GameApi) {
                 syncCharacterVisibilityForOthers(idUser);
             }
 
+            if (!wasAlreadyDead) {
+                announceClanMemberDeath(user);
+            }
+
             // Un cierre puede revivir y restaurar el equipo. Debe suceder después
             // de limpiar y transmitir la muerte, sin sobrescribir esa restauración.
             require("./bloodCastle").onUserDied(String(idUser));
@@ -9062,6 +9127,24 @@ function Game(this: GameApi) {
 
     this.syncClanState = function (clanId?: string | null) {
         syncClanState(clanId);
+    };
+
+    // /onlineclan: una línea por miembro conectado con su mapa y coordenadas.
+    this.describeOnlineClanMembers = function (idUser: EntityId): string[] {
+        const user = getCharacterById(idUser);
+
+        if (!user?.clanId) {
+            return ["No perteneces a un clan."];
+        }
+
+        const members = getOnlineClanMembers(user.clanId).sort((a, b) =>
+            String(a.nameCharacter).localeCompare(String(b.nameCharacter)),
+        );
+
+        return [
+            `Miembros del clan conectados: ${members.length}`,
+            ...members.map((member) => `${member.nameCharacter}${member.dead ? " (muerto)" : ""} - ${formatClanMemberLocation(member)}`),
+        ];
     };
 
     this.withClanVaultExclusive = async function <T>(clanId: string, run: () => Promise<T>): Promise<T> {
@@ -10005,6 +10088,13 @@ function Game(this: GameApi) {
                         0,
                         userClient,
                     );
+                });
+                return 0;
+            }
+
+            if (datSpell.invisibilidad && safeZone.isInvisibilityBlockedMap(userAttacked.map)) {
+                withUserClient(idUser, (userClient) => {
+                    handleProtocol.console(safeZone.INVISIBILITY_BLOCKED_MESSAGE, "white", 0, 0, userClient);
                 });
                 return 0;
             }

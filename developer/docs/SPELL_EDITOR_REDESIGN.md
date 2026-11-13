@@ -36,7 +36,7 @@ La UI de categorías semánticas **no debe basarse sólo en `type`**: usar efect
 | **2** | Rechaza si no es NPC (“solo afecta a los npcs”) | NPCs |
 | **3** | Default; sin filtro 1/2 → usuarios y NPCs | Personaje o NPC |
 | **0** | Sin check explícito 1/2; datos: auras (`Aura Protectora*`, `Arco Iris`) | Especial / aura |
-| **4** | Invocaciones + Detectar invisibilidad (cast por posición; summons no pasan por check 1/2) | Posición / invocación |
+| **4** | Invocaciones (cast por posición; summons no pasan por check 1/2) | Posición / invocación |
 
 Default en código: `Number(datSpell.target ?? 3)`.
 
@@ -69,7 +69,6 @@ Ofensivo (`isOffensiveSpellData`): paraliza/inmoviliza/paralizaarea/envenena/ceg
 | `ceguera` / `estupidez` | 0/1 | Flags + cooldowns |
 | `invisibilidad` | 0/1 | Invisible |
 | `removerParalisis` | 0/1 | Limpia para/inmo |
-| `remueveInvisibilidadParcial` | 0/1 | Rama AOE dedicada |
 | `revivir` | 0/1 | Revive usuario muerto |
 | `protec` | **10** (no booleano) | % reducción dmg mágico; self |
 | `morph` | 0/1 | Morph |

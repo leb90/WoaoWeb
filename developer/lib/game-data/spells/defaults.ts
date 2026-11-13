@@ -22,7 +22,6 @@ const BASE_SPELL: SpellData = {
   ceguera: 0,
   estupidez: 0,
   paralizaarea: 0,
-  remueveInvisibilidadParcial: 0,
   morph: 0,
   protec: 0,
   invoca: 0,

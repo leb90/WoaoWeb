@@ -984,6 +984,11 @@ function Login(this: LoginApi) {
                 const spells: Record<string, { idSpell: number }> = {};
 
                 (personaje.spells as StoredSpellSlot[]).map((spell) => {
+                    // Hechizos que se sacaron del juego (por ejemplo Detectar invisibilidad) salen del libro.
+                    if (!vars.datSpell[spell.idSpell]) {
+                        return;
+                    }
+
                     spells[spell.idPos] = {
                         idSpell: spell.idSpell,
                     };

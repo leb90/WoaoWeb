@@ -13,6 +13,8 @@ export type MapMeta = {
   maxLevel?: number;
   backup?: number;
   pk?: number;
+  /** 1 = no se puede estar invisible (hechizo, Capa Hobbit ni Ocultarse). */
+  sinInviOcul?: number;
   [key: string]: unknown;
 };
 

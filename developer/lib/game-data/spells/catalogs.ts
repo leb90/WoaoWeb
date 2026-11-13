@@ -135,11 +135,6 @@ export const FLAG_EFFECTS: Array<{
   { key: "curaVeneno", label: "Cura veneno", group: "support" },
   { key: "removerParalisis", label: "Remueve parálisis", group: "support" },
   { key: "invisibilidad", label: "Invisibilidad", group: "support" },
-  {
-    key: "remueveInvisibilidadParcial",
-    label: "Remueve invisibilidad parcial",
-    group: "support",
-  },
   { key: "revivir", label: "Resucita", group: "support" },
   { key: "morph", label: "Morph", group: "misc" },
   { key: "invoca", label: "Invoca", group: "misc" },

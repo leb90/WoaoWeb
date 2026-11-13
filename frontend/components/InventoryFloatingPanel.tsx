@@ -2810,11 +2810,6 @@ export default function InventoryFloatingPanel({
                 event.preventDefault();
                 return;
             }
-
-            if (key === "h" && selectedSpell) {
-                onCastSpell(selectedSpell);
-                event.preventDefault();
-            }
         };
 
         window.addEventListener("keydown", handleKeyDown);

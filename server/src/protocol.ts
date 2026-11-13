@@ -49,6 +49,7 @@ const pkg = require("./package") as PackageApi;
 const npcs = require("./npcs");
 const handleProtocol = require("./handleProtocol");
 const safeZone = require("./safeZone");
+const homeRecall = require("./homeRecall");
 const worldLayout = require("./worldLayout");
 const fishing = require("./fishing");
 const harvesting = require("./harvesting");
@@ -829,10 +830,6 @@ function getSafeCityNpcAttackMessage(attacker: RuntimeCharacter, target: AreaTar
     return "En la ciudad no se puede atacar a ese NPC.";
 }
 
-function isPartialInvisibilityRemovalSpell(datSpell: Record<string, unknown> | undefined) {
-    return Number(datSpell?.remueveInvisibilidadParcial ?? 0) === 1;
-}
-
 function isReviveSpell(datSpell: Record<string, unknown> | undefined) {
     return Number(datSpell?.revivir ?? 0) === 1;
 }
@@ -1307,98 +1304,6 @@ function isOutsideClientVision(origin: { x: number; y: number }, target: { x: nu
     return deltaX > CLIENT_VIEW_RANGE_X || deltaY > maxVisibleDownY || deltaY < -CLIENT_VIEW_RANGE_Y;
 }
 
-function castPartialInvisibilityRemovalSpell(
-    ws: RuntimeClient,
-    user: RuntimeCharacter,
-    datSpell: Record<string, unknown>,
-) {
-    const visibleUsers = new Set<EntityId>();
-    const minX = Math.max(1, user.pos.x - CLIENT_VIEW_RANGE_X);
-    const maxX = Math.min(100, user.pos.x + CLIENT_VIEW_RANGE_X);
-    const minY = Math.max(1, user.pos.y - CLIENT_VIEW_RANGE_Y);
-    const maxY = Math.min(100, user.pos.y + CLIENT_VIEW_RANGE_Y + CLIENT_VIEW_EXTRA_BOTTOM_Y);
-
-    for (let y = minY; y <= maxY; y++) {
-        for (let x = minX; x <= maxX; x++) {
-            const targetId = vars.mapData[user.map]?.[y]?.[x]?.id;
-
-            if (!targetId) {
-                continue;
-            }
-
-            const targetUser = getCharacterById(targetId);
-
-            if (!targetUser || targetUser.dead) {
-                continue;
-            }
-
-            visibleUsers.add(targetUser.id);
-        }
-    }
-
-    const affectedUsers: EntityId[] = [];
-
-    for (const targetUserId of visibleUsers) {
-        const targetUser = getCharacterById(targetUserId);
-
-        if (!targetUser?.invisibleSpell) {
-            continue;
-        }
-
-        game.setSpellInvisibility(targetUserId, false);
-
-        if (targetUserId !== ws.id) {
-            game.interruptPendingLogoutOnAttack(targetUserId);
-        }
-
-        affectedUsers.push(targetUserId);
-    }
-
-    user.mana = Number(user.mana ?? 0) - Number(datSpell.manaRequired ?? 0);
-
-    game.loopArea(ws, function (client: AreaTarget) {
-        if (client.isNpc) {
-            return;
-        }
-
-        if (Number(datSpell.wav ?? 0) > 0) {
-            withTargetClient(client.id, (targetClient) => {
-                if (!canReceiveCharacterEvent(client.id, ws.id)) {
-                    return;
-                }
-
-                handleProtocol.playSound(ws.id, Number(datSpell.wav ?? 0), targetClient);
-            });
-        }
-
-        if (String(datSpell.palabrasMagicas ?? "").trim().length > 0) {
-            withTargetClient(client.id, (targetClient) => {
-                if (!canReceiveCharacterEvent(client.id, ws.id)) {
-                    return;
-                }
-
-                handleProtocol.dialog(ws.id, String(datSpell.palabrasMagicas), "", "#E69500", 0, targetClient);
-            });
-        }
-
-        if (Number(datSpell.fxGrh ?? 0) > 0) {
-            const fxTargets = affectedUsers.length ? affectedUsers : [ws.id!];
-
-            for (const targetUserId of fxTargets) {
-                withTargetClient(client.id, (targetClient) => {
-                    if (!canReceiveCharacterEvent(client.id, targetUserId)) {
-                        return;
-                    }
-
-                    handleProtocol.animFX(targetUserId, Number(datSpell.fxGrh ?? 0), targetClient);
-                });
-            }
-        }
-    });
-
-    handleProtocol.updateMana(user.mana, ws);
-}
-
 const dictionaryServer: Partial<Record<number, PacketHandler>> = {};
 
 dictionaryServer[pkg.serverPacketID.changeHeading] = changeHeading;
@@ -1566,9 +1471,7 @@ function getHiddenSkillDurationMs(user: RuntimeCharacter): number {
 }
 
 function isHiddenSkillBlockedByMap(user: RuntimeCharacter) {
-    const mapData = vars.mapData[user.map] ?? vars.infoMapData[user.map] ?? {};
-
-    return Boolean(mapData.sinInviOcul || mapData.SinInviOcul);
+    return safeZone.isInvisibilityBlockedMap(user.map);
 }
 
 function toggleHiddenSkill(ws: RuntimeClient) {
@@ -3971,6 +3874,7 @@ function attackMele(ws: RuntimeClient) {
 
         withClientFlushGroups(flushGroupClients, () => {
             user.lastCombatActivityAt = now;
+            homeRecall.noteHostileAction(clientId, resolvedTarget.id, Boolean(resolvedTarget.isNpc));
             sendCharacterSwingToViewers(ws, clientId, getCharacterSwingFlags(user));
 
             let dmg: number | string = 0;
@@ -4202,6 +4106,7 @@ function attackRange(ws: RuntimeClient) {
 
                 withClientFlushGroups(flushGroupClients, () => {
                     user.lastCombatActivityAt = now;
+                    homeRecall.noteHostileAction(clientId, resolvedTarget.id, Boolean(resolvedTarget.isNpc));
                     sendCharacterSwingToViewers(ws, clientId, getCharacterSwingFlags(user));
                     sendProjectileToCombatViewers(
                         ws,
@@ -4302,6 +4207,7 @@ function castAreaSpell(
 
     if (isHostileCombatSpell(datSpell)) {
         user.lastCombatActivityAt = now;
+        homeRecall.cancelHomeRecall(clientId, "atacaste.");
     }
 
     sendSpellProjectileToCombatViewers(
@@ -4485,13 +4391,14 @@ function attackSpell(ws: RuntimeClient) {
             handleProtocol.console("Durante la Evasión de viento no puedes hacerte invisible.", "white", 0, 0, ws);
             return;
         }
-        const isPartialInvisibilityRemoval = isPartialInvisibilityRemovalSpell(datSpell);
+
+        if (datSpell.invisibilidad && safeZone.isInvisibilityBlockedMap(user.map)) {
+            handleProtocol.console(safeZone.INVISIBILITY_BLOCKED_MESSAGE, "white", 0, 0, ws);
+            return;
+        }
         const reviveSpell = isReviveSpell(datSpell);
 
-        if (
-            isRankedRoundLocked(user) &&
-            (isHostileCombatSpell(datSpell) || isSummonSpell || isPartialInvisibilityRemoval)
-        ) {
+        if (isRankedRoundLocked(user) && (isHostileCombatSpell(datSpell) || isSummonSpell)) {
             handleProtocol.console(getRoundLockMessage(user), "white", 0, 0, ws);
             return;
         }
@@ -4560,11 +4467,6 @@ function attackSpell(ws: RuntimeClient) {
         }
 
         if (pos.y < 1 || pos.y > 100) {
-            return;
-        }
-
-        if (isPartialInvisibilityRemoval) {
-            castPartialInvisibilityRemovalSpell(ws, user, datSpell);
             return;
         }
 
@@ -4785,6 +4687,7 @@ function attackSpell(ws: RuntimeClient) {
 
             if (isHostileCombatSpell(datSpell)) {
                 user.lastCombatActivityAt = now;
+                homeRecall.noteHostileAction(clientId, spellTarget.id, Boolean(spellTarget.isNpc));
             }
 
             if (!shouldHideSpellProjectile(user, spellTarget)) {

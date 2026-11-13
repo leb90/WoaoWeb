@@ -8,7 +8,6 @@ const CONTROLS: Array<{ key: string; action: string }> = [
     { key: "E", action: "Equipar el ítem seleccionado" },
     { key: "U", action: "Usar el ítem seleccionado" },
     { key: "T", action: "Tirar el ítem seleccionado" },
-    { key: "H", action: "Lanzar el hechizo seleccionado" },
     { key: "N", action: "Meditar" },
     { key: "K", action: "Activar o desactivar el seguro" },
     { key: "J", action: "Activar o desactivar el seguro de clan" },

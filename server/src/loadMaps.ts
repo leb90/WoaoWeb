@@ -17,6 +17,8 @@ type MapMetadata = {
     maxLevel?: number;
     backup?: number;
     pk?: number;
+    // 1 = no se puede estar invisible: ni hechizo, ni Capa Hobbit, ni Ocultarse (safeZone.isInvisibilityBlockedMap).
+    sinInviOcul?: number;
 };
 
 type TerrainTile = {
@@ -289,6 +291,7 @@ class LoadMaps {
             vars.mapData[mapNum].maxLevel = toNumber(metadata.maxLevel);
             vars.mapData[mapNum].backup = toNumber(metadata.backup);
             vars.mapData[mapNum].pk = toNumber(metadata.pk);
+            vars.mapData[mapNum].sinInviOcul = toNumber(metadata.sinInviOcul);
 
             resolve(mapNum);
         });

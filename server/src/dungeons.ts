@@ -786,7 +786,7 @@ export function handleNpcInteraction(ws: RuntimeClient, npc: any): boolean {
 function copyMapMeta(baseMap: number, targetMap: number) {
     const base = vars.mapData[baseMap];
     const target = vars.mapData[targetMap];
-    for (const key of ["name", "musicNum", "magiaSinEfecto", "noEncriptarMp", "terreno", "zona", "restringir", "minLevel", "maxLevel", "backup", "pk"]) {
+    for (const key of ["name", "musicNum", "magiaSinEfecto", "noEncriptarMp", "terreno", "zona", "restringir", "minLevel", "maxLevel", "backup", "pk", "sinInviOcul"]) {
         target[key] = base[key];
     }
 }

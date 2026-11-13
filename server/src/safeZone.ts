@@ -63,8 +63,25 @@ export function getSafeZoneFlag(mapId: number | undefined, pos: Position | undef
     return isSafeZonePosition(mapId, pos) ? 1 : 0;
 }
 
+export const INVISIBILITY_BLOCKED_MESSAGE = "Una fuerza divina te impide volverte invisible en este mapa.";
+
+// Mapas sin invisibilidad (meta.json "sinInviOcul": 1): ahí no sirven el hechizo, la Capa Hobbit ni Ocultarse,
+// y quien entra invisible u oculto vuelve a ser visible.
+export function isInvisibilityBlockedMap(mapId: number | undefined): boolean {
+    const zoneMapId = resolveZoneMapId(mapId);
+
+    if (!zoneMapId) {
+        return false;
+    }
+
+    const mapData = vars.mapData[zoneMapId] ?? vars.infoMapData?.[zoneMapId];
+    return Number(mapData?.sinInviOcul ?? 0) === 1;
+}
+
 module.exports = {
+    INVISIBILITY_BLOCKED_MESSAGE,
     getSafeZoneFlag,
+    isInvisibilityBlockedMap,
     isSafeCityPosition,
     isSafeZonePosition,
     isUnsafeArenaPosition,

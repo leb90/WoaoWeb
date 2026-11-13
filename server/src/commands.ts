@@ -36,6 +36,7 @@ export {};
 
 const socket = require("./socket") as SocketApi;
 const game = require("./game") as GameApi;
+const homeRecall = require("./homeRecall");
 const npcs = require("./npcs");
 const vars = require("./vars");
 const itemKinds = require("./itemKinds") as {
@@ -483,6 +484,47 @@ function hasStaffPrivileges(user: CommandCharacter) {
 
 function isJailed(user: CommandCharacter | undefined) {
     return Number(user?.jailMinutes ?? 0) > 0;
+}
+
+function isInsideDungeon(user: CommandCharacter): boolean {
+    const dungeons = require("./dungeons");
+    const mapInstanceManager = require("./mapInstanceManager");
+    const mapId = Number(user.map ?? 0);
+    const baseMapId = mapInstanceManager.isInstanceMap(mapId) ? (mapInstanceManager.getBaseMapId(mapId) ?? mapId) : mapId;
+    return dungeons.isDungeonInstanceMap(mapId) || dungeons.isDungeonBaseMap(baseMapId);
+}
+
+// Con vida no se puede usar /hogar para salir de eventos, combates organizados ni del agua.
+function getAliveHomeRecallDeniedMessage(user: CommandCharacter): string {
+    if (isInsideDungeon(user)) {
+        return "En las mazmorras solo puedes usar /hogar estando muerto.";
+    }
+
+    const flags = user as CommandCharacter & {
+        bloodCastle?: boolean;
+        hungerGames?: boolean;
+        automaticTournament?: boolean;
+        huntersGame?: unknown;
+        rankedMatchId?: unknown;
+        arenaFfa?: boolean;
+    };
+
+    if (
+        flags.bloodCastle ||
+        flags.hungerGames ||
+        flags.automaticTournament ||
+        flags.huntersGame ||
+        flags.rankedMatchId ||
+        require("./arena").isArenaCharacter(flags)
+    ) {
+        return "No puedes usar /hogar mientras participas en un evento.";
+    }
+
+    if (user.navegando) {
+        return "No puedes usar /hogar mientras navegas.";
+    }
+
+    return "";
 }
 
 function normalizeCharacterName(name?: string) {
@@ -3277,7 +3319,7 @@ const command: CommandApi = {
 
                 case "/woao": {
                     handleProtocol.console(
-                        "WOAO: /quest /quests /questaceptar /questabandonar /montura /activarmontura /renombrarmontura /liberarmontura /monturastat /ofertarmontura /subastas /premios /canjear /donaciones /canjeardonacion /viaje /dungeon /comerciar /ranked /rankedaceptar /rankedrechazar /hunters /crearhunter /torneo /participar /atorneo /ciudades /castillos /castillo /clanpuntos /bloodcastle /guerra /templo /domar /robar /critico /pagarmulta /casa /dia /party /aceptar /partyinfo /salirparty",
+                        "WOAO: /quest /quests /questaceptar /questabandonar /montura /activarmontura /renombrarmontura /liberarmontura /monturastat /ofertarmontura /subastas /premios /canjear /donaciones /canjeardonacion /viaje /dungeon /comerciar /ranked /rankedaceptar /rankedrechazar /hunters /crearhunter /torneo /participar /atorneo /ciudades /castillos /castillo /clanpuntos /onlineclan /bloodcastle /guerra /templo /domar /robar /critico /pagarmulta /casa /dia /party /aceptar /partyinfo /salirparty",
                         "#E69500",
                         1,
                         0,
@@ -3700,6 +3742,13 @@ const command: CommandApi = {
                     break;
                 }
 
+                case "/onlineclan": {
+                    for (const line of game.describeOnlineClanMembers(clientId)) {
+                        handleProtocol.console(line, "#E69500", 0, 0, ws as CommandClient);
+                    }
+                    break;
+                }
+
                 case "/clanpuntos": {
                     const result = require("./clanMeta").describeClan(String(clientId));
                     handleProtocol.console(result.message, "#E69500", 1, 0, ws as CommandClient);
@@ -3845,6 +3894,7 @@ const command: CommandApi = {
                 }
 
                 case "/hogar":
+                case "/regresar":
                     if (user.challengeMatchId) {
                         handleProtocol.console(
                             "[Retos] No puedes usar /hogar durante un reto.",
@@ -3878,6 +3928,18 @@ const command: CommandApi = {
                         break;
                     }
 
+                    // En mazmorras /hogar solo sirve muerto, ni siquiera desde una zona segura de adentro.
+                    if (!user.dead && isInsideDungeon(user)) {
+                        handleProtocol.console(
+                            "En las mazmorras solo puedes usar /hogar estando muerto.",
+                            "white",
+                            0,
+                            0,
+                            ws as CommandClient,
+                        );
+                        break;
+                    }
+
                     if (user.pvpChar) {
                         if (user.dead && user.spawnMap && user.spawnPos) {
                             game.forceDismount(clientId);
@@ -3891,17 +3953,42 @@ const command: CommandApi = {
                         }
                         break;
                     } else if (user.dead || userInSafeZone) {
+                        homeRecall.cancelHomeRecall(clientId);
                         const home = resolveHomeDestination(user);
                         game.forceDismount(clientId);
                         game.telep(ws as CommandClient, home.map, home.x, home.y, "/hogar");
                     } else {
-                        handleProtocol.console(
-                            "Solo puedes usar /hogar estando muerto o en zona segura.",
-                            "white",
-                            0,
-                            0,
-                            ws as CommandClient,
-                        );
+                        // Con vida fuera de zona segura: 30 segundos quieto (homeRecall.ts).
+                        const deniedMessage = getAliveHomeRecallDeniedMessage(user);
+
+                        if (deniedMessage) {
+                            handleProtocol.console(deniedMessage, "white", 0, 0, ws as CommandClient);
+                            break;
+                        }
+
+                        if (homeRecall.isRecalling(clientId)) {
+                            handleProtocol.console(
+                                "Ya estás volviendo a tu hogar. Quedate quieto.",
+                                "white",
+                                0,
+                                0,
+                                ws as CommandClient,
+                            );
+                            break;
+                        }
+
+                        homeRecall.startHomeRecall(clientId, () => {
+                            const current = vars.personajes[clientId] as CommandCharacter | undefined;
+                            const client = vars.clients[clientId] as CommandClient | undefined;
+
+                            if (!current || !client || current.dead || getAliveHomeRecallDeniedMessage(current)) {
+                                return;
+                            }
+
+                            const home = resolveHomeDestination(current);
+                            game.forceDismount(clientId);
+                            game.telep(client, home.map, home.x, home.y, "/hogar");
+                        });
                     }
                     break;
 

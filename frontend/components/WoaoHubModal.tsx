@@ -25,6 +25,7 @@ import {
     Sparkles,
     Swords,
     Target,
+    Users,
     X,
 } from "lucide-react";
 import type {
@@ -45,7 +46,16 @@ import {
 import type { GraphicData, ObjectsDB } from "../types/game";
 import { getTexturePath, loadGraphicsDB, loadObjectsDB } from "../utils/gameLoader";
 
-export type WoaoHubTab = "misiones" | "montura" | "premios" | "ranked" | "subastas" | "viajes" | "eventos";
+export type WoaoHubTab =
+    | "misiones"
+    | "montura"
+    | "premios"
+    | "ranked"
+    | "subastas"
+    | "viajes"
+    | "eventos"
+    | "party"
+    | "clanes";
 
 type PremioDef = {
     id: number;
@@ -88,8 +98,9 @@ type WoaoHubModalProps = {
     donationPoints?: number;
     auctionPanel?: React.ReactNode;
     onTabChange: (tab: WoaoHubTab) => void;
-    // Accesos a ventanas que no son pestañas del panel (Party y Clanes), a la derecha de las pestañas.
-    shortcuts?: Array<{ label: string; icon?: React.ReactNode; onClick: () => void }>;
+    // Contenido de las pestañas Party y Clanes: lo arma el panel del inventario, que tiene su estado.
+    partyPanel?: React.ReactNode;
+    clanPanel?: React.ReactNode;
     onClose: () => void;
     onOpenAuctionHouse?: () => void;
     // Los puntos de donación se gastan en la Tienda (incluye este catálogo).
@@ -97,7 +108,7 @@ type WoaoHubModalProps = {
     onSendCommand?: (message: string) => void;
 };
 
-const TABS: Array<{ id: WoaoHubTab; label: string }> = [
+const TABS: Array<{ id: WoaoHubTab; label: string; icon?: React.ReactNode }> = [
     { id: "misiones", label: "Misiones" },
     { id: "montura", label: "Montura" },
     { id: "premios", label: "Premios" },
@@ -105,6 +116,8 @@ const TABS: Array<{ id: WoaoHubTab; label: string }> = [
     { id: "subastas", label: "Subastas" },
     { id: "viajes", label: "Viajes" },
     { id: "eventos", label: "Eventos" },
+    { id: "party", label: "Party", icon: <Users aria-hidden="true" className="h-3.5 w-3.5 text-cyan-300" /> },
+    { id: "clanes", label: "Clanes", icon: <Shield aria-hidden="true" className="h-3.5 w-3.5 text-amber-300" /> },
 ];
 
 type PremioCurrency = "quest" | "donation";
@@ -1473,7 +1486,8 @@ export default function WoaoHubModal({
     donationPoints = 0,
     auctionPanel,
     onTabChange,
-    shortcuts,
+    partyPanel,
+    clanPanel,
     onClose,
     onOpenAuctionHouse,
     onOpenShop,
@@ -1795,6 +1809,8 @@ export default function WoaoHubModal({
               ? "h-[min(680px,calc(100vh-32px))]"
             : tab === "viajes"
               ? "h-[min(680px,calc(100vh-32px))]"
+            : tab === "clanes"
+              ? "h-[min(780px,calc(100vh-32px))]"
               : "h-[min(620px,calc(100vh-32px))]";
     const hubWidthClass =
         tab === "eventos"
@@ -1811,9 +1827,11 @@ export default function WoaoHubModal({
                   ? ""
                 : tab === "viajes"
                   ? "md:w-[min(860px,calc(100vw-32px))]"
+                : tab === "party" || tab === "clanes"
+                  ? "md:w-[min(960px,calc(100vw-32px))]"
                   : "md:w-[min(620px,calc(100vw-32px))]";
     const contentOverflowClass =
-        tab === "premios" || tab === "ranked" || tab === "montura" || tab === "eventos" || tab === "subastas" || tab === "viajes" ? "overflow-hidden" : "overflow-y-auto";
+        tab === "premios" || tab === "ranked" || tab === "montura" || tab === "eventos" || tab === "subastas" || tab === "viajes" || tab === "clanes" ? "overflow-hidden" : "overflow-y-auto";
 
     if (tab === "misiones" && questDialog) {
         return (
@@ -1861,35 +1879,25 @@ export default function WoaoHubModal({
                             key={entry.id}
                             type="button"
                             onClick={() => onTabChange(entry.id)}
-                            className={`rounded-[10px] px-3 py-1.5 text-[11px] font-semibold transition ${
+                            className={`inline-flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-[11px] font-semibold transition ${
                                 tab === entry.id
                                     ? "border border-amber-400/50 bg-amber-500/15 text-amber-100"
                                     : "border border-transparent text-stone-300 hover:border-stone-600 hover:text-white"
                             }`}
                         >
+                            {entry.icon}
                             {entry.label}
                         </button>
                     ))}
-                    {shortcuts?.length ? (
-                        <div className="ml-auto flex gap-1 border-l border-amber-200/10 pl-2">
-                            {shortcuts.map((shortcut) => (
-                                <button
-                                    key={shortcut.label}
-                                    type="button"
-                                    onClick={shortcut.onClick}
-                                    className="inline-flex items-center gap-1 rounded-[10px] border border-transparent px-3 py-1.5 text-[11px] font-semibold text-stone-300 transition hover:border-stone-600 hover:text-white"
-                                >
-                                    {shortcut.icon}
-                                    {shortcut.label}
-                                </button>
-                            ))}
-                        </div>
-                    ) : null}
                 </div>
 
                 <div
                     className={`min-h-0 flex-1 px-4 py-3 text-sm text-[#f2e5ca] ${contentOverflowClass}`}
                 >
+                    {tab === "party" ? partyPanel : null}
+
+                    {tab === "clanes" ? clanPanel : null}
+
                     {tab === "misiones" ? (
                         <div className="grid h-full min-h-0 gap-3 md:grid-cols-[minmax(220px,0.85fr)_minmax(280px,1.15fr)]">
                             <div className="flex min-h-0 flex-col rounded border border-amber-200/10 bg-black/32">

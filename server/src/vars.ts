@@ -139,8 +139,8 @@ function Vars(this: any) {
         orbitalRojo: 21,
     };
 
-    this.multiplicadorExp = 5;
-    this.multiplicadorGold = 3;
+    this.multiplicadorExp = 100;
+    this.multiplicadorGold = 100;
     this.partyExpBonusPct = 15;
 
     this.clases = {

@@ -100,7 +100,9 @@ cat /root/.ssh/github_deploy
 
 4. Workflow file: `.github/workflows/deploy-hostinger.yml`
 
-## Mundo cerrado (beta)
+## Mundo abierto (desde la beta)
+
+El mundo está abierto para todas las cuentas: `docker-compose.hostinger.yml` ya no le pasa `WORLD_ACCESS_ALLOWLIST` a la API. Para volver a cerrarlo, agregar en el servicio `api` la línea `WORLD_ACCESS_ALLOWLIST: ${WORLD_ACCESS_ALLOWLIST:?WORLD_ACCESS_ALLOWLIST is required}` y desplegar.
 
 `WORLD_ACCESS_ALLOWLIST` lista las cuentas (nombre o email, separados por coma) que pueden usar personajes y entrar al mundo. El resto ve un aviso que las lleva a `/arenas`.
 

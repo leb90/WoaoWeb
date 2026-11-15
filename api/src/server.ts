@@ -44,6 +44,16 @@ import {
     updateDonationPaymentStatus,
 } from "./repositories/donations";
 import {
+    BUG_REPORT_LIST_FILTERS,
+    BUG_REPORT_STATUSES,
+    createBugReport,
+    createBugReportSchema,
+    deleteBugReport,
+    listBugReports,
+    updateBugReportStatus,
+    type BugReportListFilter,
+} from "./repositories/bugReports";
+import {
     createGmTicket,
     getGmTicket,
     listGmTickets,
@@ -3420,6 +3430,132 @@ app.patch("/gm/custom-designs/:id", async (request, response) => {
         }
 
         response.json(result.request);
+    } catch (error) {
+        response.status(500).json({
+            error: error instanceof Error ? error.message : "Unexpected error",
+        });
+    }
+});
+
+// ---------------------------------------------------------------------------
+// Reportes de bugs: el jugador los manda desde el juego y los GM los ven en /bugs
+// ---------------------------------------------------------------------------
+
+app.post("/bug-reports", async (request, response) => {
+    try {
+        const authorized = await getAuthorizedSession(request);
+
+        if (!authorized) {
+            response.status(401).json({ error: "Tu sesión venció. Volvé a entrar para reportar." });
+            return;
+        }
+
+        const parsed = createBugReportSchema.safeParse(request.body ?? {});
+
+        if (!parsed.success) {
+            response.status(400).json({ error: getFirstIssueMessage(parsed.error) });
+            return;
+        }
+
+        const { session } = authorized;
+        const character = session.characters.find(
+            (candidate) => candidate._id === session.selectedCharacterId,
+        );
+        const result = await createBugReport({
+            accountId: session.account._id,
+            characterId: character?._id ?? null,
+            reporterName: character?.name ?? session.account.name,
+            input: parsed.data,
+        });
+
+        if (!result.ok) {
+            response.status(result.status).json({ error: result.error });
+            return;
+        }
+
+        response.status(201).json({ id: result.report.id });
+    } catch (error) {
+        response.status(500).json({
+            error: error instanceof Error ? error.message : "Unexpected error",
+        });
+    }
+});
+
+const gmBugReportPatchSchema = z.object({
+    status: z.enum(BUG_REPORT_STATUSES, { error: "Estado inválido." }),
+});
+
+app.get("/gm/bug-reports", async (request, response) => {
+    const authorized = await requireGmSession(request, response);
+    if (!authorized) {
+        return;
+    }
+
+    try {
+        const rawStatus =
+            typeof request.query.status === "string" && request.query.status
+                ? request.query.status
+                : "pending";
+
+        if (!(BUG_REPORT_LIST_FILTERS as readonly string[]).includes(rawStatus)) {
+            response.status(400).json({ error: "Estado inválido." });
+            return;
+        }
+
+        response.json(await listBugReports(rawStatus as BugReportListFilter));
+    } catch (error) {
+        response.status(500).json({
+            error: error instanceof Error ? error.message : "Unexpected error",
+        });
+    }
+});
+
+app.patch("/gm/bug-reports/:id", async (request, response) => {
+    const authorized = await requireGmSession(request, response);
+    if (!authorized) {
+        return;
+    }
+
+    try {
+        const parsed = gmBugReportPatchSchema.safeParse(request.body ?? {});
+
+        if (!parsed.success) {
+            response.status(400).json({ error: getFirstIssueMessage(parsed.error) });
+            return;
+        }
+
+        const report = await updateBugReportStatus(
+            getRouteId(request),
+            parsed.data.status,
+            getStaffDisplayName(authorized.session),
+        );
+
+        if (!report) {
+            response.status(404).json({ error: "El reporte ya no existe." });
+            return;
+        }
+
+        response.json(report);
+    } catch (error) {
+        response.status(500).json({
+            error: error instanceof Error ? error.message : "Unexpected error",
+        });
+    }
+});
+
+app.delete("/gm/bug-reports/:id", async (request, response) => {
+    const authorized = await requireGmSession(request, response);
+    if (!authorized) {
+        return;
+    }
+
+    try {
+        if (!(await deleteBugReport(getRouteId(request)))) {
+            response.status(404).json({ error: "El reporte ya no existe." });
+            return;
+        }
+
+        response.json({ ok: true });
     } catch (error) {
         response.status(500).json({
             error: error instanceof Error ? error.message : "Unexpected error",

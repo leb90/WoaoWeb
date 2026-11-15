@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Map, Maximize2, Minimize2 } from "lucide-react";
+import { Bug, Map, Maximize2, Minimize2 } from "lucide-react";
 import React, {
     Suspense,
     useCallback,
@@ -25,6 +25,7 @@ import { publishPerformanceSample } from "../../lib/performanceReadout";
 import { DEFAULT_SOUND_VOLUMES, loadSoundVolumes, saveSoundVolumes, type SoundVolumes } from "../../lib/soundVolumes";
 import InvisibilityCornerTimer from "../../components/InvisibilityCornerTimer";
 import BleedBanner from "../../components/BleedBanner";
+import BugReportModal from "../../components/BugReportModal";
 import ElementalStatusBanner from "../../components/ElementalStatusBanner";
 import AggroPanel, { AGGRO_STRIP_SLOTS, AggroStrip } from "../../components/AggroPanel";
 import MacroBar from "../../components/MacroBar";
@@ -933,6 +934,7 @@ function HomeContent() {
     const [touchMovementDirection, setTouchMovementDirection] =
         useState<JoystickDirection | null>(null);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isBugReportOpen, setIsBugReportOpen] = useState(false);
     const [openSettingsRequest, setOpenSettingsRequest] = useState<{
         token: number;
     } | null>(null);
@@ -3788,6 +3790,27 @@ function HomeContent() {
                                     </PlayerUnitFrame>
                                 ) : null}
 
+                                {/* Reportar BUG: abajo a la izquierda del mundo, a la misma altura que la barra de mapa y
+                                    coordenadas. En celular está en el HUD de arriba (MobileHud). */}
+                                {!isMobile ? (
+                                    <button
+                                        type="button"
+                                        onClick={(event) => {
+                                            // Sin foco: si no, Espacio (atacar) lo volvería a apretar.
+                                            event.currentTarget.blur();
+                                            setIsBugReportOpen(true);
+                                        }}
+                                        className="pointer-events-auto absolute left-2 z-30 flex items-center gap-1.5 rounded-md border border-stone-200/12 bg-stone-950/72 px-2.5 py-1.5 text-[11px] font-semibold leading-none text-amber-100/80 shadow-xl backdrop-blur-sm transition hover:border-amber-300/45 hover:bg-stone-950/85 hover:text-amber-100"
+                                        style={{
+                                            bottom: isFullscreen ? 42 : 8,
+                                        }}
+                                        title="Contale al staff un error que encontraste"
+                                    >
+                                        <Bug aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={2} />
+                                        Reportar BUG
+                                    </button>
+                                ) : null}
+
                                 <div
                                     className="pointer-events-none absolute right-2 z-30 flex items-center gap-3 rounded-md border border-stone-200/12 bg-stone-950/72 px-2.5 py-1.5 font-mono text-[11px] leading-none text-amber-100/90 shadow-xl backdrop-blur-sm"
                                     style={{
@@ -4298,6 +4321,7 @@ function HomeContent() {
                                     onToggleChat={() =>
                                         setIsChatOpen((current) => !current)
                                     }
+                                    onReportBug={() => setIsBugReportOpen(true)}
                                     onOpenSettings={() =>
                                         setOpenSettingsRequest((current) => ({
                                             token: (current?.token ?? 0) + 1,
@@ -4473,6 +4497,16 @@ function HomeContent() {
                                         ✕
                                     </button>
                                 </form>
+                            ) : null}
+
+                            {isBugReportOpen ? (
+                                <BugReportModal
+                                    onClose={() => setIsBugReportOpen(false)}
+                                    map={hud?.map ?? selectedMap ?? null}
+                                    x={hud?.pos?.x ?? null}
+                                    y={hud?.pos?.y ?? null}
+                                    isMobile={isMobile}
+                                />
                             ) : null}
 
                             {isMobile &&

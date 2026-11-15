@@ -3232,7 +3232,7 @@ export default function InventoryFloatingPanel({
     // Party y Clanes son pestañas del Panel WOAO: su contenido se muestra dentro del panel, con la barra de
     // pestañas siempre visible para pasar a otra.
     const partyPanel = (
-                    <div className="mx-auto w-full max-w-xl overflow-hidden rounded-[18px] border border-amber-200/12 bg-black/25 text-stone-100">
+                    <div className="mx-auto w-full max-w-3xl overflow-hidden rounded-[18px] border border-amber-200/12 bg-black/25 text-stone-100">
                         <div className="flex items-center justify-between gap-4 border-b border-amber-200/10 bg-[linear-gradient(180deg,rgba(127,78,35,0.28),rgba(18,12,8,0))] px-4 py-3">
                             <div>
                                 <p className="text-[11px] uppercase tracking-[0.28em] text-amber-300/72">
@@ -3249,7 +3249,7 @@ export default function InventoryFloatingPanel({
                         <div className="space-y-3 px-4 py-4">
                             {partyMembers.length ? (
                                 <>
-                                    <div className="space-y-2">
+                                    <div className="grid gap-2 sm:grid-cols-2">
                                         {partyMembers.map((member) => {
                                             const isLeader =
                                                 typeof partyLeaderId !==

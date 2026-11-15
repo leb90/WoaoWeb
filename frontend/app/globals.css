@@ -249,9 +249,72 @@ html.cursor-dibujado
     text-shadow: 0 0 10px var(--elemental-glow), 0 2px 3px rgba(0, 0, 0, 0.95), 0 0 1px rgba(0, 0, 0, 1);
 }
 
+/* Panel WOAO (components/WoaoHubModal.tsx): el panel aparece con un leve acercamiento, el marco dorado se desliza a la
+   pestaña elegida y el contenido entra desde el lado hacia donde se movió (--woao-tab-dx: +28px, -28px o 0). */
+@keyframes woao-hub-open {
+    from {
+        opacity: 0;
+        transform: translate3d(0, 10px, 0) scale(0.985);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes woao-tab-enter {
+    from {
+        opacity: 0;
+        transform: translate3d(var(--woao-tab-dx, 0px), 0, 0);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes woao-fade-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.woao-hub-open {
+    animation: woao-hub-open 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.woao-tab-enter {
+    animation: woao-tab-enter 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.woao-tab-indicator {
+    box-shadow:
+        0 0 18px rgba(245, 158, 11, 0.16),
+        inset 0 1px 0 rgba(253, 230, 138, 0.12);
+}
+
+.woao-tab-indicator-animated {
+    transition:
+        transform 340ms cubic-bezier(0.22, 1, 0.36, 1),
+        width 340ms cubic-bezier(0.22, 1, 0.36, 1),
+        height 340ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 @media (prefers-reduced-motion: reduce) {
     .bleed-heartbeat,
     .elemental-pulse {
         animation: none;
+    }
+
+    .woao-hub-open,
+    .woao-tab-enter {
+        animation: woao-fade-in 140ms ease-out both;
+    }
+
+    .woao-tab-indicator-animated {
+        transition: none;
     }
 }

@@ -1796,40 +1796,74 @@ export default function WoaoHubModal({
         setSelectedMountId(ownedMounts.find((mount) => mount.active)?.id ?? ownedMounts[0]?.id ?? null);
     }, [ownedMounts, selectedMountId]);
 
-    const hubHeightClass =
-        tab === "eventos"
-            ? "h-[min(760px,calc(100vh-32px))]"
-            : tab === "subastas"
-              ? "h-[min(760px,calc(100vh-32px))]"
-            : tab === "ranked"
-              ? "h-[min(820px,calc(100vh-24px))]"
-            : tab === "premios"
-              ? "h-[min(820px,calc(100vh-24px))]"
-            : tab === "montura"
-              ? "h-[min(680px,calc(100vh-32px))]"
-            : tab === "viajes"
-              ? "h-[min(680px,calc(100vh-32px))]"
-            : tab === "clanes"
-              ? "h-[min(780px,calc(100vh-32px))]"
-              : "h-[min(620px,calc(100vh-32px))]";
-    const hubWidthClass =
-        tab === "eventos"
-            ? "md:w-[min(1140px,calc(100vw-32px))]"
-            : tab === "subastas"
-              ? "md:w-[min(1280px,calc(100vw-32px))]"
-            : tab === "ranked"
-              ? "md:w-[min(1420px,calc(100vw-28px))]"
-            : tab === "premios"
-              ? "md:w-[min(1320px,calc(100vw-28px))]"
-              : tab === "montura"
-                ? "md:w-[min(1220px,calc(100vw-32px))]"
-                : tab === "misiones"
-                  ? ""
-                : tab === "viajes"
-                  ? "md:w-[min(860px,calc(100vw-32px))]"
-                : tab === "party" || tab === "clanes"
-                  ? "md:w-[min(960px,calc(100vw-32px))]"
-                  : "md:w-[min(620px,calc(100vw-32px))]";
+    // Marco dorado de la pestaña activa: se mide la pestaña y el marco se desliza hasta ella (también cuando la barra
+    // pasa a dos líneas en celular). La primera vez aparece en su lugar, sin deslizarse desde la esquina.
+    const tabBarRef = React.useRef<HTMLDivElement | null>(null);
+    const tabButtonRefs = React.useRef(new Map<WoaoHubTab, HTMLButtonElement>());
+    const [tabIndicator, setTabIndicator] = React.useState<{ x: number; y: number; width: number; height: number } | null>(
+        null,
+    );
+    const [isTabIndicatorAnimated, setIsTabIndicatorAnimated] = React.useState(false);
+
+    React.useLayoutEffect(() => {
+        const measure = () => {
+            const button = tabButtonRefs.current.get(tab);
+
+            if (!button) {
+                return;
+            }
+
+            setTabIndicator((current) => {
+                const next = {
+                    x: button.offsetLeft,
+                    y: button.offsetTop,
+                    width: button.offsetWidth,
+                    height: button.offsetHeight,
+                };
+
+                return current &&
+                    current.x === next.x &&
+                    current.y === next.y &&
+                    current.width === next.width &&
+                    current.height === next.height
+                    ? current
+                    : next;
+            });
+        };
+
+        measure();
+
+        const tabBar = tabBarRef.current;
+        if (!tabBar || typeof ResizeObserver === "undefined") {
+            return;
+        }
+
+        const observer = new ResizeObserver(measure);
+        observer.observe(tabBar);
+        return () => observer.disconnect();
+    }, [tab]);
+
+    React.useEffect(() => {
+        if (!tabIndicator || isTabIndicatorAnimated) {
+            return;
+        }
+
+        const frame = window.requestAnimationFrame(() => setIsTabIndicatorAnimated(true));
+        return () => window.cancelAnimationFrame(frame);
+    }, [isTabIndicatorAnimated, tabIndicator]);
+
+    // El contenido nuevo entra desde el lado hacia donde se movió la pestaña: a la derecha, desde la derecha.
+    const [tabTransition, setTabTransition] = React.useState<{ tab: WoaoHubTab; direction: -1 | 0 | 1 }>({
+        tab,
+        direction: 0,
+    });
+
+    if (tabTransition.tab !== tab) {
+        const previousIndex = TABS.findIndex((entry) => entry.id === tabTransition.tab);
+        const nextIndex = TABS.findIndex((entry) => entry.id === tab);
+        setTabTransition({ tab, direction: nextIndex > previousIndex ? 1 : nextIndex < previousIndex ? -1 : 0 });
+    }
+
     const contentOverflowClass =
         tab === "premios" || tab === "ranked" || tab === "montura" || tab === "eventos" || tab === "subastas" || tab === "viajes" || tab === "clanes" ? "overflow-hidden" : "overflow-y-auto";
 
@@ -1850,8 +1884,9 @@ export default function WoaoHubModal({
             className="fixed inset-0 z-[84] flex items-center justify-center bg-black/45 px-4 backdrop-blur-[3px]"
             onClick={onClose}
         >
+            {/* Mismo tamaño para todas las pestañas: el panel no salta al cambiar de una a otra. */}
             <div
-                className={`flex ${hubHeightClass} w-[min(900px,calc(100vw-32px))] flex-col overflow-hidden rounded border border-amber-200/20 bg-[#120c08]/96 text-stone-100 shadow-[0_28px_90px_rgba(0,0,0,0.6)] ${hubWidthClass}`}
+                className="woao-hub-open flex h-[min(820px,calc(100dvh-32px))] w-[min(1280px,calc(100vw-32px))] flex-col overflow-hidden rounded border border-amber-200/20 bg-[#120c08]/96 text-stone-100 shadow-[0_28px_90px_rgba(0,0,0,0.6)]"
                 onClick={(event) => event.stopPropagation()}
             >
                 <div className="flex items-center justify-between gap-4 border-b border-amber-200/10 bg-[linear-gradient(180deg,rgba(127,78,35,0.28),rgba(18,12,8,0))] px-4 py-3">
@@ -1873,26 +1908,56 @@ export default function WoaoHubModal({
                     </button>
                 </div>
 
-                <div className="flex flex-wrap gap-1 border-b border-amber-200/10 px-3 py-2">
-                    {TABS.map((entry) => (
-                        <button
-                            key={entry.id}
-                            type="button"
-                            onClick={() => onTabChange(entry.id)}
-                            className={`inline-flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-[11px] font-semibold transition ${
-                                tab === entry.id
-                                    ? "border border-amber-400/50 bg-amber-500/15 text-amber-100"
-                                    : "border border-transparent text-stone-300 hover:border-stone-600 hover:text-white"
-                            }`}
-                        >
-                            {entry.icon}
-                            {entry.label}
-                        </button>
-                    ))}
+                <div className="border-b border-amber-200/10 px-3 py-2">
+                    <div ref={tabBarRef} role="tablist" aria-label="Secciones del Panel WOAO" className="relative flex flex-wrap gap-1">
+                        {tabIndicator ? (
+                            <span
+                                aria-hidden="true"
+                                className={`woao-tab-indicator pointer-events-none absolute left-0 top-0 rounded-[10px] border border-amber-400/55 bg-amber-500/15 ${
+                                    isTabIndicatorAnimated ? "woao-tab-indicator-animated" : ""
+                                }`}
+                                style={{
+                                    width: tabIndicator.width,
+                                    height: tabIndicator.height,
+                                    transform: `translate3d(${tabIndicator.x}px, ${tabIndicator.y}px, 0)`,
+                                }}
+                            />
+                        ) : null}
+                        {TABS.map((entry) => {
+                            const isActive = tab === entry.id;
+
+                            return (
+                                <button
+                                    key={entry.id}
+                                    ref={(element) => {
+                                        if (element) {
+                                            tabButtonRefs.current.set(entry.id, element);
+                                        } else {
+                                            tabButtonRefs.current.delete(entry.id);
+                                        }
+                                    }}
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={isActive}
+                                    onClick={() => onTabChange(entry.id)}
+                                    className={`relative z-10 inline-flex items-center gap-1.5 rounded-[10px] border px-3 py-1.5 text-[11px] font-semibold transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-amber-300/80 ${
+                                        isActive
+                                            ? "border-transparent text-amber-100"
+                                            : "border-transparent text-stone-300 hover:border-stone-600 hover:text-white"
+                                    }`}
+                                >
+                                    {entry.icon}
+                                    {entry.label}
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
 
                 <div
-                    className={`min-h-0 flex-1 px-4 py-3 text-sm text-[#f2e5ca] ${contentOverflowClass}`}
+                    key={tab}
+                    className={`woao-tab-enter min-h-0 flex-1 px-4 py-3 text-sm text-[#f2e5ca] ${contentOverflowClass}`}
+                    style={{ "--woao-tab-dx": `${tabTransition.direction * 28}px` } as React.CSSProperties}
                 >
                     {tab === "party" ? partyPanel : null}
 

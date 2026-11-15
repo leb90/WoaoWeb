@@ -3,6 +3,7 @@
 import {
     Backpack,
     BookOpen,
+    Bug,
     Check,
     Flower2,
     Lock,
@@ -80,6 +81,8 @@ type MobileHudProps = {
     onOpenSpellList: () => void;
     onToggleChat: () => void;
     onOpenSettings: () => void;
+    // Abre la ventana de Reportar BUG (components/BugReportModal.tsx).
+    onReportBug?: () => void;
     isQuickSlotEditMode: boolean;
     onToggleQuickSlotEditMode: () => void;
     isOrientationLocked: boolean;
@@ -114,6 +117,7 @@ export function MobileHud({
     onOpenSpellList,
     onToggleChat,
     onOpenSettings,
+    onReportBug,
     isQuickSlotEditMode,
     onToggleQuickSlotEditMode,
     isOrientationLocked,
@@ -182,6 +186,16 @@ export function MobileHud({
                 >
                     <MessageCircle className="h-4 w-4" />
                 </TapButton>
+                {onReportBug ? (
+                    <TapButton
+                        onTap={onReportBug}
+                        className={`${ROUND_BUTTON_CLASS} h-9 w-9`}
+                        aria-label="Reportar BUG"
+                        title="Reportar BUG"
+                    >
+                        <Bug className="h-4 w-4" />
+                    </TapButton>
+                ) : null}
                 <TapButton
                     onTap={onOpenSettings}
                     className={`${ROUND_BUTTON_CLASS} h-9 w-9`}

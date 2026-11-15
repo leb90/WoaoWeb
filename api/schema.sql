@@ -921,6 +921,32 @@ CREATE INDEX IF NOT EXISTS idx_custom_design_requests_character_created
 CREATE INDEX IF NOT EXISTS idx_custom_design_requests_status_created
     ON custom_design_requests(status, created_at DESC);
 
+-- Bugs que reportan los jugadores desde el juego (botón "Reportar bug"). Los GM
+-- los ven y les cambian el estado en /bugs. map/pos_x/pos_y son dónde estaba el
+-- personaje al reportar; client guarda navegador y tamaño de pantalla.
+CREATE TABLE IF NOT EXISTS bug_reports (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    character_id UUID REFERENCES characters(id) ON DELETE SET NULL,
+    reporter_name TEXT NOT NULL,
+    message TEXT NOT NULL,
+    map INTEGER,
+    pos_x INTEGER,
+    pos_y INTEGER,
+    client JSONB NOT NULL DEFAULT '{}'::jsonb,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (
+        status IN ('pending', 'in_progress', 'resolved')
+    ),
+    handled_by TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_bug_reports_status_created
+    ON bug_reports(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_bug_reports_account_created
+    ON bug_reports(account_id, created_at DESC);
+
 -- Progresión comprada y monederos Quest. La reputación de ranking sigue en points.
 ALTER TABLE clans ADD COLUMN IF NOT EXISTS level INTEGER NOT NULL DEFAULT 1 CHECK(level BETWEEN 1 AND 6);
 ALTER TABLE clans ADD COLUMN IF NOT EXISTS quest_points INTEGER NOT NULL DEFAULT 0 CHECK(quest_points>=0);

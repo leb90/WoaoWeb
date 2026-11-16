@@ -1380,8 +1380,27 @@ function markNpcChasing(npc: NpcCharacter, now: number) {
     npc.lastReachedTargetAt = now;
 }
 
-function shouldNpcGiveUpChase(npc: NpcCharacter, now: number) {
+/**
+ * El objetivo está en el mismo mapa que la criatura y dentro de lo que ella ve (el mismo rango con que
+ * se arma su área). Mientras sea así, no lo suelta: ni por distancia a su hogar ni por tiempo.
+ */
+function isTargetInNpcSight(npc: NpcCharacter, target: NpcFollowTarget | undefined) {
+    if (!target || target.map !== npc.map) {
+        return false;
+    }
+
+    return (
+        Math.abs(target.pos.x - npc.pos.x) <= AREA_RANGE_X && Math.abs(target.pos.y - npc.pos.y) <= AREA_RANGE_Y
+    );
+}
+
+function shouldNpcGiveUpChase(npc: NpcCharacter, now: number, target?: NpcFollowTarget) {
     if (npc.leashState !== "chasing" || !npc.leashHome) {
+        return false;
+    }
+
+    if (isTargetInNpcSight(npc, target)) {
+        npc.lastReachedTargetAt = now;
         return false;
     }
 
@@ -1393,9 +1412,8 @@ function shouldNpcGiveUpChase(npc: NpcCharacter, now: number) {
 }
 
 /**
- * Abandona la persecución y vuelve a casa (estilo WoW): deja de agredir,
- * olvida a quien la atacó y recupera la vida, así no se la puede desgastar
- * tirándola de la correa una y otra vez.
+ * Abandona la persecución y vuelve a casa: deja de agredir y olvida a quien la atacó. No recupera vida:
+ * las criaturas nunca se curan solas (lo que se le sacó, queda sacado hasta que muera y reaparezca).
  */
 function startNpcReturningHome(npc: NpcCharacter) {
     clearNpcTarget(npc);
@@ -1408,11 +1426,6 @@ function startNpcReturningHome(npc: NpcCharacter) {
     }
 
     npc.leashState = "returning";
-
-    if (Number(npc.hp ?? 0) < Number(npc.maxHp ?? 0)) {
-        npc.hp = npc.maxHp;
-        broadcastNpcVitalsDelta(npc);
-    }
 }
 
 /**
@@ -2941,9 +2954,13 @@ function Npcs(this: NpcsApi) {
             }
 
             const now = Date.now();
+            // Paralizada o inmovilizada no da ningún paso: ni persiguiendo, ni volviendo a casa, ni paseando.
+            const isImmobile = Boolean(npc.paralizado || npc.inmovilizado);
 
             if (npc.leashState === "returning") {
-                stepNpcTowardsHome(npc);
+                if (!isImmobile) {
+                    stepNpcTowardsHome(npc);
+                }
                 return;
             }
 
@@ -2957,7 +2974,7 @@ function Npcs(this: NpcsApi) {
                 // si no, pasea por su zona.
                 if (npc.leashState === "chasing" || previousTargetId) {
                     startNpcReturningHome(npc);
-                } else {
+                } else if (!isImmobile) {
                     wanderNpc(npc, now);
                 }
                 return;
@@ -2989,7 +3006,7 @@ function Npcs(this: NpcsApi) {
 
             if (isTargetAdjacent(npc, frameTarget)) {
                 npc.lastReachedTargetAt = now;
-            } else if (shouldNpcGiveUpChase(npc, now)) {
+            } else if (shouldNpcGiveUpChase(npc, now, frameTarget)) {
                 startNpcReturningHome(npc);
                 return;
             }

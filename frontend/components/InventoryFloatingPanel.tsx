@@ -132,6 +132,8 @@ type InventoryFloatingPanelProps = {
     compactSettings?: boolean;
     // Salir del juego (desconecta con la espera de /salir y vuelve al home).
     onLogoutRequest?: () => void;
+    onToggleSeguroRequest?: () => void;
+    onToggleClanSeguroRequest?: () => void;
     // Arena (todos contra todos): los accesos del mundo abierto quedan deshabilitados.
     arenaMode?: boolean;
     auctionPanel?: React.ReactNode;
@@ -1276,6 +1278,8 @@ export default function InventoryFloatingPanel({
     openSettingsRequest,
     compactSettings = false,
     onLogoutRequest,
+    onToggleSeguroRequest,
+    onToggleClanSeguroRequest,
     arenaMode = false,
     auctionPanel,
     onOpenAuctionHouse,
@@ -5078,6 +5082,8 @@ export default function InventoryFloatingPanel({
                                 seguro={Boolean(hud?.seguroActivado)}
                                 seguroClan={Boolean(hud?.seguroClanActivado)}
                                 hasClan={Boolean(hud?.clan)}
+                                onToggleSeguro={onToggleSeguroRequest}
+                                onToggleClanSeguro={onToggleClanSeguroRequest}
                                 className="mt-1 border-t border-amber-200/10 px-1 pt-[5px]"
                             />
                         </section>

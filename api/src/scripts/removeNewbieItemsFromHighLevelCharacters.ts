@@ -36,13 +36,13 @@ function getNakedBody(idGenero: number, idRaza: number): number {
       case 1:
         return 21;
       case 2:
-        return 210;
+        return 21;
       case 3:
         return 32;
       case 4:
         return 53;
       case 5:
-        return 222;
+        return 53;
       default:
         return 0;
     }
@@ -53,13 +53,13 @@ function getNakedBody(idGenero: number, idRaza: number): number {
       case 1:
         return 39;
       case 2:
-        return 259;
+        return 39;
       case 3:
         return 40;
       case 4:
         return 60;
       case 5:
-        return 260;
+        return 60;
       default:
         return 0;
     }

@@ -35,6 +35,11 @@ const TRADE_MODAL_MAX_WIDTH = "clamp(700px, calc(200dvh - 760px), 56rem)";
 const MAX_VISIBLE_GRID_ROWS = 5;
 const GRID_GAP_PX = 6;
 
+/** Lo que cobra el mercader por unidad: la mitad del valor, como mínimo 1 de oro (igual que el servidor). */
+function getMerchantUnitBuyPrice(value: number): number {
+    return Math.max(1, Math.floor(value / 2));
+}
+
 function ItemGraphic({
     graphicData,
     name,
@@ -442,18 +447,12 @@ export default function TradeModal({
             ? Math.max(selectedMerchantItem.amount, 1)
             : Math.max(
                   1,
-                  Math.floor(
-                      gold /
-                          Math.max(
-                              Math.floor(selectedMerchantItem.value / 2),
-                              1,
-                          ),
-                  ),
+                  Math.floor(gold / getMerchantUnitBuyPrice(selectedMerchantItem.value)),
               )
         : Math.max(selectedPlayerItem?.amount ?? 0, 1);
     const clampedAmount = Math.min(safeAmount, maxSelectableAmount);
     const buyTotalPrice = selectedMerchantItem
-        ? Math.floor((selectedMerchantItem.value * clampedAmount) / 2)
+        ? getMerchantUnitBuyPrice(selectedMerchantItem.value) * clampedAmount
         : 0;
     const sellTotalPrice = selectedPlayerItem
         ? selectedPlayerItem.value * clampedAmount
@@ -528,7 +527,7 @@ export default function TradeModal({
                                         ? selectedMerchantItem
                                             ? isBank
                                                 ? `Guardados: ${formatNumber(previewItem.amount)}`
-                                                : `${formatNumber(Math.floor(previewItem.value / 2))} oro por unidad`
+                                                : `${formatNumber(getMerchantUnitBuyPrice(previewItem.value))} oro por unidad`
                                             : isBank
                                               ? "Guarda o retira items desde tu banco."
                                               : `${formatNumber(previewItem.value)} oro por unidad`

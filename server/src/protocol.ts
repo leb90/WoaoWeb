@@ -34,6 +34,7 @@ const game = require("./game");
 const itemKinds = require("./itemKinds") as {
     isHelmetObject: (obj: DataObject | null | undefined) => boolean;
     getEquipObjectType: (obj: DataObject | null | undefined) => number;
+    isRaceSizedBodyArmor: (obj: DataObject | null | undefined, itemId?: number) => boolean;
 };
 const login = require("./login") as LoginApi;
 const socket = require("./socket") as SocketApi;
@@ -3219,14 +3220,9 @@ async function equiparItem(ws: RuntimeClient) {
 
         if (
             !isUnequipping &&
-            ((item.razaEnana &&
-                !game.isRazaEnana(user.idRaza) &&
-                item.objType == vars.objType.armaduras &&
-                !itemKinds.isHelmetObject(item)) ||
-                (!item.razaEnana &&
-                    game.isRazaEnana(user.idRaza) &&
-                    item.objType == vars.objType.armaduras &&
-                    !itemKinds.isHelmetObject(item)))
+            // Ropa para altos / para bajos: solo la armadura del cuerpo (no escudos, cascos ni sets de clase).
+            itemKinds.isRaceSizedBodyArmor(item, Number(idItem)) &&
+            Boolean(item.razaEnana) !== Boolean(game.isRazaEnana(user.idRaza))
         ) {
             handleProtocol.console("Tu raza no puede equipar ese item.", "white", 0, 0, ws);
             return;

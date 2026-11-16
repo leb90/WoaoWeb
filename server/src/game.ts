@@ -753,6 +753,7 @@ function getInventoryItem(user: GameCharacter, slot: number | string | undefined
 const itemKinds = require("./itemKinds") as {
     isHelmetObject: (obj: DataObject | null | undefined) => boolean;
     getEquipObjectType: (obj: DataObject | null | undefined) => number;
+    isRaceSizedBodyArmor: (obj: DataObject | null | undefined, itemId?: number) => boolean;
 };
 
 function getEquippedWeaponData(user: GameCharacter): DataObject | null {
@@ -1138,8 +1139,8 @@ function rebuildEquippedInventoryState(user: GameCharacter): void {
 // sprite/cuerpo (esas razas no pueden ponerse ropa "normal" ni al revés). Las otras
 // restricciones raciales (razaElfa/razaVampiro/razaHumana/razaOrca) son "de lore", no de
 // sprite, y en el viejo solo bloquean en un sentido (UseInvItem/EquiparObjeto).
-function isArmorRaceRestricted(user: GameCharacter, obj: DataObject): boolean {
-    if (obj.objType !== vars.objType.armaduras || itemKinds.isHelmetObject(obj)) {
+function isArmorRaceRestricted(user: GameCharacter, obj: DataObject, itemId?: number): boolean {
+    if (!itemKinds.isRaceSizedBodyArmor(obj, itemId)) {
         return false;
     }
 
@@ -1183,7 +1184,7 @@ function canAutoEquipInventoryItem(user: GameCharacter, obj: DataObject | undefi
         return false;
     }
 
-    if (isArmorRaceRestricted(user, obj)) {
+    if (isArmorRaceRestricted(user, obj, itemId)) {
         return false;
     }
 
@@ -2842,6 +2843,23 @@ function loopAreaByUserId(idUser: EntityId, callback: (target: AreaTarget) => vo
     return true;
 }
 
+/**
+ * Un item del piso desapareció (se limpió o alguien lo levantó): se avisa a todos los que están en ese mapa o en
+ * uno vecino, no solo a los que lo tienen a la vista. Si no, quien estaba lejos (por ejemplo, muerto yendo a
+ * resucitar) seguía viendo sus items al volver, sin poder agarrarlos, mientras que nadie más los veía.
+ */
+function notifyFloorItemRemoved(idMap: number, pos: Position): void {
+    for (const character of Object.values(vars.personajes as Record<string, GameCharacter | undefined>)) {
+        if (!character || character.isNpc || !worldLayout.isNeighborMap(Number(character.map), idMap)) {
+            continue;
+        }
+
+        withUserClient(character.id, (client) => {
+            handleProtocol.deleteItem(idMap, pos, client);
+        });
+    }
+}
+
 function withUserClient(idUser: EntityId | null | undefined, callback: (client: RuntimeClient) => void): boolean {
     const client = getClientById(idUser);
 
@@ -2992,6 +3010,43 @@ function getFactionPortalDeniedMessage(
 const MAP_LEVEL_FALLBACK_MAP_ID = 1;
 const MAP_LEVEL_FALLBACK_POS_X = 54;
 const MAP_LEVEL_FALLBACK_POS_Y = 59;
+
+// Al dejar de ser newbie (nivel 13) el personaje sale de la zona de principiantes y aparece en Nix.
+const NEWBIE_GRADUATION_MAP_ID = 34;
+const NEWBIE_GRADUATION_POS_X = 50;
+const NEWBIE_GRADUATION_POS_Y = 50;
+
+/**
+ * No se lo saca de donde está si está preso, muerto, en un evento, en una arena o dentro de una mazmorra:
+ * ahí manda esa actividad (y al terminarla, las reglas de nivel del mapa se encargan).
+ */
+function canSendNewbieGraduateToNix(user: GameCharacter): boolean {
+    return !(
+        user.dead ||
+        isJailTile(user) ||
+        user.huntersGame ||
+        user.hungerGames ||
+        user.bloodCastle ||
+        user.rankedArena ||
+        require("./dungeons").isDungeonInstanceMap(user.map)
+    );
+}
+
+function sendNewbieGraduateToNix(user: GameCharacter, client: RuntimeClient, source: string): boolean {
+    if (!canSendNewbieGraduateToNix(user)) {
+        return false;
+    }
+
+    handleProtocol.console(
+        "Dejaste de ser newbie: te llevamos a Nix para que sigas tu aventura.",
+        "#f6d98a",
+        1,
+        0,
+        client,
+    );
+    game.telep(client, NEWBIE_GRADUATION_MAP_ID, NEWBIE_GRADUATION_POS_X, NEWBIE_GRADUATION_POS_Y, source);
+    return true;
+}
 
 function relocateUserIfCurrentMapLevelDenied(user: GameCharacter, client: RuntimeClient, source: string): boolean {
     const deniedMessage = getMapEntryDeniedMessage(user, user.map);
@@ -6666,9 +6721,13 @@ function Game(this: GameApi) {
                 unregisterDroppedFloorItem(user.map, user.pos);
                 delete vars.mapa[user.map][user.pos.y][user.pos.x].objInfo;
 
-                game.loopAreaPos(user.map, user.pos, function (target: GameCharacter) {
-                    handleProtocol.deleteItem(user.map, user.pos, vars.clients[target.id]);
-                });
+                if (isDroppedItem) {
+                    notifyFloorItemRemoved(user.map, { x: user.pos.x, y: user.pos.y });
+                } else {
+                    game.loopAreaPos(user.map, user.pos, function (target: GameCharacter) {
+                        handleProtocol.deleteItem(user.map, user.pos, vars.clients[target.id]);
+                    });
+                }
 
                 if (datObj.objType == vars.objType.dinero) {
                     await persistCharacterGold(user);
@@ -6789,11 +6848,7 @@ function Game(this: GameApi) {
             delete registry[registryKey];
             removed++;
 
-            game.loopAreaPos(entry.mapId, entry.pos, function (target: GameCharacter) {
-                withUserClient(target.id, (targetClient) => {
-                    handleProtocol.deleteItem(entry.mapId, entry.pos, targetClient);
-                });
-            });
+            notifyFloorItemRemoved(entry.mapId, entry.pos);
 
             if ((index + 1) % Math.max(1, batchSize) === 0) {
                 await new Promise<void>((resolve) => {
@@ -6828,11 +6883,7 @@ function Game(this: GameApi) {
             delete registry[registryKey];
             removed++;
 
-            game.loopAreaPos(entry.mapId, entry.pos, function (target: GameCharacter) {
-                withUserClient(target.id, (targetClient) => {
-                    handleProtocol.deleteItem(entry.mapId, entry.pos, targetClient);
-                });
-            });
+            notifyFloorItemRemoved(entry.mapId, entry.pos);
 
             if (removed % Math.max(1, batchSize) === 0) {
                 await new Promise<void>((resolve) => {
@@ -8938,10 +8989,13 @@ function Game(this: GameApi) {
             const nakedBodiesByRace: Record<number, { male: number; female: number }> =
                 {
                     [vars.razas.humano]: { male: 21, female: 39 },
-                    [vars.razas.elfo]: { male: 210, female: 259 },
+                    // Elfos y gnomos usan los cuerpos desnudos de humano y de enano (los mismos que dibuja el
+                    // cliente, scenePreload.ts). Los 210/259/222/260 del AO original acá son otros gráficos:
+                    // el 260, por ejemplo, es el Murciélago Gigante.
+                    [vars.razas.elfo]: { male: 21, female: 39 },
                     [vars.razas.elfoDrow]: { male: 32, female: 40 },
                     [vars.razas.enano]: { male: 53, female: 60 },
-                    [vars.razas.gnomo]: { male: 222, female: 260 },
+                    [vars.razas.gnomo]: { male: 53, female: 60 },
                     [vars.razas.orco]: { male: 215, female: 217 },
                     [vars.razas.vampiro]: { male: 32, female: 40 },
                     [vars.razas.abisario]: { male: 488, female: 486 },
@@ -9545,6 +9599,7 @@ function Game(this: GameApi) {
             }
 
             const { user, client } = session;
+            const wasNewbie = isNewbieCharacter(user);
             let gainedHp = 0;
             let gainedMana = 0;
             let gainedHit = 0;
@@ -9639,7 +9694,13 @@ function Game(this: GameApi) {
                 );
                 emitCharacterFxToUserArea(idUser, LEVEL_UP_FX_ID);
                 emitCharacterSoundToUserArea(idUser, vars.arSounds.SND_NIVEL);
-                relocateUserIfCurrentMapLevelDenied(user, client, `checkUserLevel ${user.level}`);
+                const graduatedFromNewbie = wasNewbie && !isNewbieCharacter(user);
+                if (
+                    !graduatedFromNewbie ||
+                    !sendNewbieGraduateToNix(user, client, `checkUserLevel ${user.level} newbie`)
+                ) {
+                    relocateUserIfCurrentMapLevelDenied(user, client, `checkUserLevel ${user.level}`);
+                }
                 void persistCharacterSnapshot(user, { connected: true }).catch((error: unknown) => {
                     funct.dumpError(error);
                 });
@@ -11951,8 +12012,9 @@ function Game(this: GameApi) {
                     }
 
                     if (!tmpPos) {
+                        // Sin lugar en el piso: lo que queda se lo guarda, pero lo ya tirado se persiste igual.
                         console.log("<<<>>> NO HAY LUGAR EN EL PISO MAPA:" + user.map);
-                        return;
+                        break;
                     }
 
                     reservedDropPositions.add(getFloorItemRegistryKey(user.map, tmpPos));
@@ -12267,7 +12329,10 @@ function Game(this: GameApi) {
                         : 1;
                 // Una tienda puede tener precio propio (TradeItem.valor); si no, el del objeto.
                 const unitValue = Number(itemNpc.valor ?? 0) > 0 ? Number(itemNpc.valor) : objItem.valor;
-                const buyTotalCost = Math.floor(((unitValue * cantBuy) / 2) * treacheryPriceMultiplier);
+                // Precio por unidad: la mitad del valor, nunca menos de 1 de oro. Antes se redondeaba el total y una
+                // poción de valor 1 comprada de a una salía 0 (y de a varias sí cobraba).
+                const unitBuyPrice = Math.max(1, Math.floor((unitValue / 2) * treacheryPriceMultiplier));
+                const buyTotalCost = unitBuyPrice * cantBuy;
 
                 if (buyTotalCost > user.gold) {
                     withUserClient(idUser, (userClient) => {
@@ -12310,7 +12375,7 @@ function Game(this: GameApi) {
                     details: {
                         npcId: Number(user.npcTrade ?? 0),
                         tradeSlot: Number(idPos),
-                        unitPrice: Math.floor((unitValue / 2) * treacheryPriceMultiplier),
+                        unitPrice: unitBuyPrice,
                     },
                 });
                 await persistCharacterEconomyState(user);

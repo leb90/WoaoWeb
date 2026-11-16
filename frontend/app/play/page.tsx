@@ -14,6 +14,7 @@ import React, {
     useSyncExternalStore,
 } from "react";
 import { MapRenderer } from "../../components/game";
+import { useBlockBrowserShortcuts } from "../../hooks/useBlockBrowserShortcuts";
 import type { GroundItem } from "../../components/game/core/MapRendererCore";
 import { buildArenaQuickSlotMacros } from "../../components/game/controls/arenaQuickSlots";
 import AdminIntervalsModal from "../../components/AdminIntervalsModal";
@@ -928,6 +929,15 @@ function HomeContent() {
     const [pickupItemRequest, setPickupItemRequest] = useState<{
         token: number;
     } | null>(null);
+    const [seguroToggleRequest, setSeguroToggleRequest] = useState<{
+        kind: "seguro" | "clan";
+        token: number;
+    } | null>(null);
+    // Ctrl+P (imprimir), Ctrl+S, Ctrl+F y otros atajos del navegador no hacen nada dentro del juego.
+    useBlockBrowserShortcuts();
+    const requestSeguroToggle = useCallback((kind: "seguro" | "clan") => {
+        setSeguroToggleRequest((current) => ({ kind, token: (current?.token ?? 0) + 1 }));
+    }, []);
     // Mobile: lo que hay para agarrar bajo los pies (aparece el botoncito de agarrar junto al de atacar).
     const [groundItem, setGroundItem] = useState<GroundItem | null>(null);
     const arenaQuickSlotsAppliedRef = useRef(false);
@@ -3531,6 +3541,7 @@ function HomeContent() {
                                     }
                                     meleeAttackRequest={meleeAttackRequest}
                                     pickupItemRequest={pickupItemRequest}
+                                    seguroToggleRequest={seguroToggleRequest}
                                     onGroundItemChange={
                                         isMobile ? setGroundItem : undefined
                                     }
@@ -4724,6 +4735,8 @@ function HomeContent() {
                                     openSettingsRequest={openSettingsRequest}
                                     compactSettings={isMobile}
                                     onLogoutRequest={handleLogoutRequest}
+                                    onToggleSeguroRequest={() => requestSeguroToggle("seguro")}
+                                    onToggleClanSeguroRequest={() => requestSeguroToggle("clan")}
                                     arenaMode={arenaMode}
                                 />
                             </div>

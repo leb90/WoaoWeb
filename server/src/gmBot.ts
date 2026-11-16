@@ -5,14 +5,14 @@ const funct = require("./functions");
 const vars = require("./vars");
 const game = require("./game");
 const handleProtocol = require("./handleProtocol");
-const socket = require("./socket");
 
 const BOT_NAME = "GM-Aris";
 const BOT_COLOR = "#8be9fd";
 
-const HOME_MAP = 37;
-const HOME_X = 78;
-const HOME_Y = 87;
+// "Estoy atascado" lleva siempre a Nix (el 37 era la Mazmorra Newbie).
+const STUCK_MAP = 34;
+const STUCK_X = 50;
+const STUCK_Y = 50;
 const JAIL_MAP = 66;
 
 const SUMMON_COOLDOWN_MS = 3000;
@@ -173,17 +173,13 @@ function handleStuck(idUser: string, user: BotCharacter) {
         return;
     }
 
-    const homeMap = Number(user.homeMap ?? 0) > 0 ? Number(user.homeMap) : HOME_MAP;
-    const homeX = Number(user.homeX ?? 0) > 0 ? Number(user.homeX) : HOME_X;
-    const homeY = Number(user.homeY ?? 0) > 0 ? Number(user.homeY) : HOME_Y;
-
     const client = vars.clients[idUser];
     if (client) {
-        game.telep(client, homeMap, homeX, homeY, "gmbot atascado");
+        game.telep(client, STUCK_MAP, STUCK_X, STUCK_Y, "gmbot atascado");
     }
 
     user.gmBotStuckTeleportNextAt = now + STUCK_TELEPORT_COOLDOWN_MS;
-    tell(idUser, "Listo, te llevé a tu hogar. ¡Cuidado la próxima!");
+    tell(idUser, "Listo, te llevé a Nix. ¡Cuidado la próxima!");
     setState(user, null);
 }
 

@@ -104,6 +104,10 @@ const FREEZING_TEMPERATURE_C = 0;
 const FREEZING_DAMAGE_INTERVAL_MS = 5000;
 const FREEZING_DAMAGE_PERCENT = 0.05;
 const STA_REGEN_INTERVAL_MS = 2000;
+// Energía: peleando sube de a 2 por intervalo. Sin atacar durante STA_REST_DELAY_MS se recarga entera en
+// STA_REST_FULL_REGEN_MS (de 0 a lleno en menos de 15 s desde el último golpe).
+const STA_REST_DELAY_MS = 2000;
+const STA_REST_FULL_REGEN_MS = 12000;
 /**
  * Regeneración pasiva de vida (legacy Sanar / SanaIntervaloSinDescansar).
  * En el motor viejo: 400 ticks del GameTimer (40ms) ≈ 16s entre curas.
@@ -501,6 +505,7 @@ type GameCharacter = RuntimeCharacter & {
     maxSed?: number;
     lastHungerDrainAt?: number;
     lastStaRegenAt?: number;
+    lastStaminaSpentAt?: number;
     coldExposure?: 0 | 1 | 2;
     lastFreezingDamageAt?: number;
     protec?: number;
@@ -979,7 +984,7 @@ function syncUnequippedItemVisuals(user: GameCharacter, normalizedPos: string): 
     if (String(user.idItemBody) === normalizedPos) {
         const bodyNaked = game.bodyNaked(user.id);
 
-        if (user.navegando) {
+        if (user.navegando || user.mounted) {
             user.idLastBody = bodyNaked;
         } else {
             user.idBody = bodyNaked;
@@ -1042,7 +1047,7 @@ function syncUnequippedItemVisuals(user: GameCharacter, normalizedPos: string): 
                 return;
             }
 
-            if (removedBody) {
+            if (removedBody && !user.navegando && !user.mounted) {
                 handleProtocol.changeRopa(user.id, user.idBody, 0, targetClient);
             }
 
@@ -1073,13 +1078,19 @@ function rebuildEquippedInventoryState(user: GameCharacter): void {
     user.idItemArrow = 0;
     user.idItemRing = 0;
     const nakedBody = game.bodyNaked(user.id);
+    // Montado se sigue viendo la montura (con casco, arma y escudo encima): la ropa va a idLastBody.
+    const bodyHidden = Boolean(user.navegando || user.mounted);
     if (user.navegando) {
         user.idLastBody = nakedBody;
         user.idLastWeapon = 0;
         user.idLastShield = 0;
         user.idLastHelmet = 0;
     } else {
-        user.idBody = nakedBody;
+        if (bodyHidden) {
+            user.idLastBody = nakedBody;
+        } else {
+            user.idBody = nakedBody;
+        }
         user.idWeapon = 0;
         user.idShield = 0;
         user.idHelmet = 0;
@@ -1099,7 +1110,7 @@ function rebuildEquippedInventoryState(user: GameCharacter): void {
         const equipType = itemKinds.getEquipObjectType(obj);
 
         if (equipType == vars.objType.armaduras) {
-            if (user.navegando) {
+            if (bodyHidden) {
                 user.idLastBody = obj.anim;
             } else {
                 user.idBody = obj.anim;
@@ -3094,7 +3105,7 @@ function unequipRestrictedNewbieItems(user: GameCharacter, client: RuntimeClient
     const bodySlot = unequipSlot(user.idItemBody);
     if (bodySlot) {
         const bodyNaked = game.bodyNaked(user.id);
-        if (user.navegando) {
+        if (user.navegando || user.mounted) {
             user.idLastBody = bodyNaked;
         } else {
             user.idBody = bodyNaked;
@@ -9029,6 +9040,11 @@ function Game(this: GameApi) {
             const shouldSyncVisibilityState = Boolean(user.invisibleSpell || user.hiddenSkill);
             const hadMovementRestriction = Boolean(user.inmovilizado || user.paralizado);
             const wasAlreadyDead = Boolean(user.dead);
+            // Al morir montado se baja de la montura: si no, seguía "montado" con el cuerpo de muerto y al
+            // revivir volvía con la ropa puesta pero marcado como montado.
+            if (!wasAlreadyDead && user.mounted && dismountMount(user)) {
+                require("./mounts").sendMountState(String(idUser));
+            }
             fishing.cancelFishing(idUser);
             harvesting.cancelHarvesting(idUser);
             smelting.cancelSmelting(idUser);
@@ -9880,6 +9896,7 @@ function Game(this: GameApi) {
             if (isHostileSpell) {
                 const castleDeniedMessage =
                     require("./clanCastles").getCastleAttackDeniedMessage(user, npc) ||
+                    require("./factionWars").getKingAttackDeniedMessage(user, npc) ||
                     require("./dungeons").getNpcInvulnerableReason(npc, user, "hechizo");
                 if (castleDeniedMessage) {
                     withUserClient(idUser, (userClient) => {
@@ -10831,6 +10848,7 @@ function Game(this: GameApi) {
 
             const castleDeniedMessage =
                     require("./clanCastles").getCastleAttackDeniedMessage(user, npc) ||
+                    require("./factionWars").getKingAttackDeniedMessage(user, npc) ||
                     require("./dungeons").getNpcInvulnerableReason(npc, user);
             if (castleDeniedMessage) {
                 withUserClient(idUser, (userClient) => {
@@ -10976,7 +10994,9 @@ function Game(this: GameApi) {
 
                 return stabResult.stabbed ? `¡${totalDamage}!` : totalDamage;
             } else {
-                trainCharacterSkill(user, skills.SKILLS.tacticas);
+                // Fallar un golpe entrena el arma con la que se pega. La evasión (tácticas) sube al esquivar los
+                // golpes del NPC (npcs.ts), no al fallar los propios.
+                trainCharacterSkill(user, getAttackTrainSkillId(user));
                 emitNpcFxToArea(npc, COMBAT_MISS_FX_ID);
                 game.loopAreaPos(user.map, user.pos, function (target: GameCharacter) {
                     withUserClient(target.id, (targetClient) => {
@@ -11973,8 +11993,10 @@ function Game(this: GameApi) {
                     continue;
                 }
 
-                // Los legendarios (y los sets de tier, que siempre lo son) no se caen al morir.
-                if (!datObj.newbie && !datObj.noSeCae && !itemRarity.isRarityNoDrop(idItem, item.rarity)) {
+                // Los legendarios (y los sets de tier, que siempre lo son) no se caen al morir. Los barcos tampoco:
+                // sin barca no se puede volver a navegar para buscar lo que quedó tirado.
+                const isBoat = Number(datObj.objType) === vars.objType.barcos;
+                if (!datObj.newbie && !datObj.noSeCae && !isBoat && !itemRarity.isRarityNoDrop(idItem, item.rarity)) {
                     const cant = item.cant;
                     const droppedRarity = itemRarity.getItemRarity(idItem, item.rarity);
                     let tmpPos: Position | undefined;
@@ -13509,6 +13531,7 @@ function Game(this: GameApi) {
         }
 
         user.sta = Math.max(0, sta - funct.randomIntFromInterval(1, maxDrain));
+        user.lastStaminaSpentAt = Date.now();
         sendSelfVitals(record, client);
         return true;
     };
@@ -13588,9 +13611,13 @@ function Game(this: GameApi) {
             if (now - lastSta >= STA_REGEN_INTERVAL_MS) {
                 user.lastStaRegenAt = now;
                 const maxSta = Number(user.maxSta ?? 0);
+                const isResting = now - Number(user.lastStaminaSpentAt ?? 0) >= STA_REST_DELAY_MS;
+                const regenAmount = isResting
+                    ? Math.max(2, Math.ceil((maxSta * STA_REGEN_INTERVAL_MS) / STA_REST_FULL_REGEN_MS))
+                    : 2;
                 const nextSta = isStaminaStarving
                     ? Math.max(0, Number(user.sta ?? 0) - 2)
-                    : Math.min(maxSta, Number(user.sta ?? 0) + 2);
+                    : Math.min(maxSta, Number(user.sta ?? 0) + regenAmount);
                 if (nextSta !== Number(user.sta ?? 0)) {
                     user.sta = nextSta;
                     changed = true;

@@ -2810,6 +2810,13 @@ function Npcs(this: NpcsApi) {
                 return;
             }
 
+            // El rey de la guerra de facciones no reaparece (y si lo mataron, termina la guerra).
+            if (require("./factionWars").onKingRuntimeDeath(npc)) {
+                delete vars.npcs[idNpc];
+                delete vars.areaNpc[idNpc];
+                return;
+            }
+
             const castleDeath = require("./clanCastles").onCastleNpcRuntimeDeath(npc);
             if (castleDeath?.handled) {
                 if (castleDeath.removeNpc) {
@@ -3309,6 +3316,10 @@ function Npcs(this: NpcsApi) {
                             rechazo = funct.randomIntFromInterval(1, 100) <= probRechazo;
                         }
                     }
+
+                    // Esquivar o bloquear el golpe de un NPC entrena evasión o defensa con escudos, igual que en PvP.
+                    const skills = require("./skills");
+                    skills.applyTraining(user, rechazo ? skills.SKILLS.defensa : skills.SKILLS.tacticas);
 
                     if (rechazo) {
                         emitCharacterFxToUserArea(idUser, COMBAT_SHIELD_BLOCK_FX_ID);

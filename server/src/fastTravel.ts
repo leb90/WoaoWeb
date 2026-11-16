@@ -26,6 +26,13 @@ type DungeonRoute = {
 const routes = require("../jsons/fastTravel.json") as TravelRoute[];
 const dungeonRoutes = require("../jsons/dungeonTravel.json") as DungeonRoute[];
 const BOAT_ITEMS = [474, 475, 476];
+// Beta: viajar a ciudades (oro) y a dungeons (puntos de donación) no cuesta nada. Los precios quedan en
+// fastTravel.json y dungeonTravel.json para cuando termine la beta.
+export const BETA_FREE_TRAVEL = true;
+
+function routeCost(route: { cost: number }): number {
+    return BETA_FREE_TRAVEL ? 0 : Math.max(0, Number(route.cost ?? 0));
+}
 const DUNGEON_LANDING_RADIUS = 5;
 
 function tell(idUser: string, message: string) {
@@ -58,7 +65,7 @@ export function listRoutes(idUser: string) {
 
     tell(
         idUser,
-        "Destinos: " + available.map((route) => `${route.key} (${route.cost} oro)`).join(", "),
+        "Destinos: " + available.map((route) => `${route.key} (${routeCost(route) ? `${routeCost(route)} oro` : "gratis"})`).join(", "),
     );
     tell(idUser, "Usa /viaje DESTINO");
 }
@@ -141,11 +148,12 @@ export function travelDungeon(idUser: string, destination: string) {
 
     const progress = getProgress(user);
     const points = Number(progress.puntosDonacion ?? 0);
-    if (points < route.cost) {
-        return { ok: false, message: `Necesitas ${route.cost} puntos de donacion. Tienes ${points}.` };
+    const cost = routeCost(route);
+    if (points < cost) {
+        return { ok: false, message: `Necesitas ${cost} puntos de donacion. Tienes ${points}.` };
     }
 
-    progress.puntosDonacion = points - route.cost;
+    progress.puntosDonacion = points - cost;
     user.puntosDonacion = progress.puntosDonacion;
     saveProgress(user);
 
@@ -154,7 +162,9 @@ export function travelDungeon(idUser: string, destination: string) {
     refreshUserSnapshot(idUser, user);
     return {
         ok: true,
-        message: `Llegaste a ${route.name}. Gastaste ${route.cost} puntos de donacion. Te quedan ${progress.puntosDonacion}.`,
+        message: cost
+            ? `Llegaste a ${route.name}. Gastaste ${cost} puntos de donacion. Te quedan ${progress.puntosDonacion}.`
+            : `Llegaste a ${route.name}.`,
     };
 }
 
@@ -177,16 +187,17 @@ export function travel(idUser: string, destination: string) {
         return { ok: false, message: "Ese destino no esta disponible desde aca." };
     }
 
-    if (Number(user.gold ?? 0) < route.cost) {
-        return { ok: false, message: `Necesitas ${route.cost} monedas de oro.` };
+    const cost = routeCost(route);
+    if (Number(user.gold ?? 0) < cost) {
+        return { ok: false, message: `Necesitas ${cost} monedas de oro.` };
     }
 
     if (route.boat && !hasBoat(user)) {
         return { ok: false, message: "Para viajar a una isla necesitas una embarcacion y 40 de navegacion." };
     }
 
-    if (route.cost) {
-        user.gold -= route.cost;
+    if (cost) {
+        user.gold -= cost;
         handleProtocol.actGold(user.gold, client);
     }
 
@@ -194,6 +205,6 @@ export function travel(idUser: string, destination: string) {
     game.telep(client, route.map, route.x, route.y, "viaje");
     return {
         ok: true,
-        message: route.cost ? `Viajaste a ${route.key} por ${route.cost} monedas de oro.` : `Viajaste a ${route.key}.`,
+        message: cost ? `Viajaste a ${route.key} por ${cost} monedas de oro.` : `Viajaste a ${route.key}.`,
     };
 }

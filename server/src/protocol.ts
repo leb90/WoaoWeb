@@ -3290,13 +3290,15 @@ async function equiparItem(ws: RuntimeClient) {
         switch (equipType) {
             case vars.objType.armaduras: {
                 const body = isUnequipping ? game.bodyNaked(ws.id) : equippedAnimation;
-                if (user.navegando) {
+                // Navegando o montado se ve el barco o la montura: la ropa nueva queda guardada para cuando baje.
+                const bodyHidden = Boolean(user.navegando || user.mounted);
+                if (bodyHidden) {
                     user.idLastBody = body;
                 } else {
                     user.idBody = body;
                 }
                 user.idItemBody = equippedPosition;
-                if (!user.navegando) {
+                if (!bodyHidden) {
                     broadcastEquipmentChange((targetClient) =>
                         handleProtocol.changeRopa(ws.id, user.idBody, equippedPosition, targetClient),
                     );

@@ -14,6 +14,11 @@ const DEFEND_POS = { x: 45, y: 88 };
 const EXIT = { map: 34, x: 50, y: 50 };
 const TEMPLE = { map: 210, x: 59, y: 24 };
 
+// El rey de la facción que defiende el mapa (como en el AO viejo, Mod_Guerras.bas): los atacantes ganan si lo
+// matan; si sigue vivo cuando se acaba el tiempo, ganan los defensores.
+const KING_NPC_BY_FACTION: Record<"armada" | "caos", number> = { armada: 365, caos: 366 };
+const KING_POS = { x: 54, y: 45 };
+
 const WAR_DURATION_MS = 5 * 60_000;
 const INTERVAL_MS = 90 * 60_000;
 const REVIVE_INTERVAL_MS = 10_000;
@@ -55,6 +60,7 @@ type WarState = {
     participants: Map<string, WarParticipant>;
     reentryBlocked: Set<string>;
     kills: Record<WarFaction, number>;
+    kingNpcId: string | null;
     timer: ReturnType<typeof setInterval> | null;
     preStartAnnouncements: Set<number>;
     activeAnnouncements: Set<number>;
@@ -71,6 +77,7 @@ const state: WarState = {
     participants: new Map(),
     reentryBlocked: new Set(),
     kills: { armada: 0, caos: 0 },
+    kingNpcId: null,
     timer: null,
     preStartAnnouncements: new Set(),
     activeAnnouncements: new Set(),
@@ -149,6 +156,54 @@ function isAttackingFaction(faction: WarFaction): boolean {
 
 function getSpawnForFaction(faction: WarFaction) {
     return isAttackingFaction(faction) ? ATTACK_POS : DEFEND_POS;
+}
+
+function getDefendingFaction(): WarFaction {
+    return state.map === REAL_MAP ? "armada" : "caos";
+}
+
+function kingName(): string {
+    return getDefendingFaction() === "armada" ? "Rey Imperial" : "Rey Caotico";
+}
+
+function spawnKing() {
+    const npcIndex = KING_NPC_BY_FACTION[getDefendingFaction()];
+    if (!vars.datNpc?.[npcIndex]) {
+        return;
+    }
+
+    const before = new Set(Object.keys(vars.npcs ?? {}));
+    const LoadNpcs = require("./loadNpcs");
+    new LoadNpcs().createNpcInMap(
+        { mapNum: state.map, x: KING_POS.x, y: KING_POS.y, npcIndex, movement: 0 },
+        true,
+    );
+
+    const kingId = Object.keys(vars.npcs ?? {}).find((id) => !before.has(id));
+    const king = kingId ? vars.npcs[kingId] : null;
+    if (!king) {
+        console.warn(`[Guerras] No se pudo crear el rey ${npcIndex} en el mapa ${state.map}.`);
+        return;
+    }
+
+    king.factionWarKing = true;
+    king.movement = 0;
+    state.kingNpcId = String(kingId);
+}
+
+function removeKing() {
+    const kingId = state.kingNpcId;
+    state.kingNpcId = null;
+    if (!kingId || !vars.npcs?.[kingId]) {
+        return;
+    }
+
+    try {
+        // muereNpc lo saca de la vista de todos; onKingRuntimeDeath evita que reaparezca.
+        require("./npcs").muereNpc(kingId);
+    } catch {
+        delete vars.npcs[kingId];
+    }
 }
 
 function getTeamCount(faction: WarFaction): number {
@@ -280,6 +335,7 @@ function awardMvp(category: MvpCategory, label: string) {
 
 function resetWarRuntime() {
     rewards.endRewardRun("factionWar");
+    removeKing();
     state.active = false;
     state.map = 0;
     state.startedAt = 0;
@@ -335,6 +391,15 @@ function finish(winner: WarFaction | "none", rewardParticipants = true) {
 
     for (const participant of participants) {
         leaveWar(participant.id);
+    }
+
+    // También a quien quedó en el mapa sin estar en la lista (se desconectó y volvió a entrar, o fue expulsado
+    // sin poder salir): el mapa de guerra no tiene salida y quedaba encerrado.
+    const warMap = state.map;
+    for (const [idUser, user] of Object.entries(vars.personajes ?? {}) as Array<[string, RuntimeCharacter]>) {
+        if (user && !user.isNpc && Number(user.map) === warMap) {
+            leaveWar(idUser);
+        }
     }
 
     resetWarRuntime();
@@ -418,14 +483,9 @@ function tickActiveWar(now: number) {
     }
 
     if (remaining <= 0) {
-        const winner =
-            state.kills.armada === state.kills.caos
-                ? "none"
-                : state.kills.armada > state.kills.caos
-                  ? "armada"
-                  : "caos";
-
-        finish(winner);
+        // Se acabó el tiempo con el rey vivo: ganan los que lo defendían.
+        announce(`El ${kingName()} resistió. La defensa cumplió su objetivo.`);
+        finish(getDefendingFaction());
     }
 }
 
@@ -464,9 +524,12 @@ export function startWar() {
     state.kills = { armada: 0, caos: 0 };
     state.preStartAnnouncements.clear();
     state.activeAnnouncements.clear();
+    spawnKing();
 
+    const defenders = factionName(getDefendingFaction());
+    const attackers = factionName(getOpponentFaction(getDefendingFaction()));
     announce(
-        `La Guerra ha comenzado en mapa ${state.map}. Dura 5 minutos. Para participar envia /guerra.`,
+        `La Guerra ha comenzado en mapa ${state.map}. La ${attackers} tiene 5 minutos para matar al ${kingName()}; la ${defenders} tiene que defenderlo. Para participar envia /guerra.`,
     );
 
     return { ok: true, message: "Guerra faccionaria iniciada." };
@@ -528,7 +591,10 @@ export function joinWar(idUser: string) {
 
     return {
         ok: true,
-        message: `Entraste a la Guerra por la ${factionName(faction)}. Gana la faccion con mas kills.`,
+        message:
+            faction === getDefendingFaction()
+                ? `Entraste a la Guerra por la ${factionName(faction)}. Defendé al ${kingName()} hasta que termine el tiempo.`
+                : `Entraste a la Guerra por la ${factionName(faction)}. Matá al ${kingName()} antes de que termine el tiempo.`,
     };
 }
 
@@ -568,7 +634,66 @@ export function enterTemple(idUser: string) {
 
 export function onNpcDied(_templateNpcIndex: number) {
     void _templateNpcIndex;
-    // La guerra nueva se define por kills entre facciones, no por matar un NPC.
+    // El rey se resuelve en onKingRuntimeDeath (npcs.muereNpc), que sabe qué NPC murió.
+}
+
+/**
+ * Murió un NPC (npcs.muereNpc). Si es el rey de la guerra: ganan los atacantes y el rey no reaparece.
+ * Devuelve true si era el rey (el que llama lo borra en vez de hacerlo reaparecer).
+ */
+export function onKingRuntimeDeath(npc: { id?: unknown; factionWarKing?: boolean } | undefined): boolean {
+    if (!npc?.factionWarKing) {
+        return false;
+    }
+
+    if (state.active && state.kingNpcId && String(npc.id) === state.kingNpcId) {
+        state.kingNpcId = null;
+        const attackers = getOpponentFaction(getDefendingFaction());
+        announce(`¡El ${kingName()} ha caído! La ${factionName(attackers)} conquistó el reino.`);
+        // Después de que muereNpc termine con el NPC.
+        setImmediate(() => finish(attackers));
+    }
+
+    return true;
+}
+
+/** El rey solo lo pueden atacar los participantes de la facción atacante. */
+export function getKingAttackDeniedMessage(
+    user: RuntimeCharacter | undefined,
+    npc: { factionWarKing?: boolean } | undefined,
+): string {
+    if (!npc?.factionWarKing || !user) {
+        return "";
+    }
+
+    const participant = state.participants.get(String(user.id));
+    if (!state.active || !participant) {
+        return "Solo los participantes de la guerra pueden atacar al rey.";
+    }
+
+    if (participant.faction === getDefendingFaction()) {
+        return "No podés atacar a tu propio rey: tenés que defenderlo.";
+    }
+
+    return "";
+}
+
+/** Al entrar al juego en un mapa de guerra sin estar peleando en ella (el mapa no tiene salida): a Nix. */
+export function relocateFromWarMapIfNeeded(user: { id?: unknown; map?: number; pos?: { x: number; y: number }; posX?: number; posY?: number; guerra?: boolean } | undefined): string {
+    if (!user || (Number(user.map) !== REAL_MAP && Number(user.map) !== CAOS_MAP)) {
+        return "";
+    }
+
+    if (state.active && state.participants.has(String(user.id))) {
+        return "";
+    }
+
+    user.map = EXIT.map;
+    user.posX = EXIT.x;
+    user.posY = EXIT.y;
+    user.pos = { x: EXIT.x, y: EXIT.y };
+    user.guerra = false;
+    return "Estabas en un mapa de guerra. Te enviamos a Nix.";
 }
 
 export function onUserLeft(idUser: string) {
@@ -793,7 +918,7 @@ export function setAutomatic(on: boolean) {
 export function describe() {
     if (state.active) {
         const leftSeconds = Math.max(0, Math.ceil((state.startedAt + WAR_DURATION_MS - Date.now()) / 1000));
-        return `Guerra activa en mapa ${state.map}. Alianza ${state.kills.armada} - Horda ${state.kills.caos}. Quedan ${leftSeconds}s. /guerra para entrar.`;
+        return `Guerra activa en mapa ${state.map}: la ${factionName(getOpponentFaction(getDefendingFaction()))} ataca al ${kingName()}. Alianza ${state.kills.armada} - Horda ${state.kills.caos}. Quedan ${leftSeconds}s. /guerra para entrar.`;
     }
 
     const temple = state.temple === 1 ? "Alianza" : state.temple === 2 ? "Horda" : "nadie";

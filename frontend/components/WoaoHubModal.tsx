@@ -75,6 +75,9 @@ type TravelRoute = {
     boat?: boolean;
 };
 
+// Beta: los viajes a ciudades y a dungeons son gratis (server/src/fastTravel.ts, BETA_FREE_TRAVEL).
+const BETA_FREE_TRAVEL = true;
+
 type DungeonTravelRoute = {
     key: string;
     name: string;
@@ -243,7 +246,7 @@ const AUTOMATIC_EVENT_DEFINITIONS: AutomaticEventDefinition[] = [
     {
         id: "faction_war",
         name: "Guerra de facciones",
-        description: "Horda contra Alianza. Gana la facción con más kills.",
+        description: "Horda contra Alianza: una facción ataca el reino de la otra y tiene 5 minutos para matar a su rey.",
         category: "pvp",
         startsInMinutes: 90,
         locationLabel: "Mapas 203/204",
@@ -2789,8 +2792,14 @@ export default function WoaoHubModal({
                                                     </span>
                                                 </span>
                                                 <span className="flex shrink-0 items-center gap-1.5 text-sm font-semibold text-amber-200">
-                                                    <Coins aria-hidden="true" className="h-4 w-4" strokeWidth={1.8} />
-                                                    {formatAmount(route.cost)}
+                                                    {BETA_FREE_TRAVEL ? (
+                                                        "Gratis"
+                                                    ) : (
+                                                        <>
+                                                            <Coins aria-hidden="true" className="h-4 w-4" strokeWidth={1.8} />
+                                                            {formatAmount(route.cost)}
+                                                        </>
+                                                    )}
                                                 </span>
                                             </button>
                                         ))
@@ -2814,7 +2823,7 @@ export default function WoaoHubModal({
                                                 <span className="text-xs text-stone-400">Entrada · mapa {route.map}</span>
                                             </span>
                                             <span className="shrink-0 text-sm font-semibold text-amber-200">
-                                                {formatAmount(route.cost)} pts
+                                                {BETA_FREE_TRAVEL ? "Gratis" : `${formatAmount(route.cost)} pts`}
                                             </span>
                                         </button>
                                     ))

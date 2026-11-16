@@ -1038,7 +1038,9 @@ function Login(this: LoginApi) {
                 personaje.gold = balance.clampGold(personaje.gold || 0);
                 relocateToJailIfNeeded(personaje);
                 ensureCharacterHasValidMapPosition(personaje);
-                const eventMapMessage = relocateFromEventMapIfNeeded(personaje);
+                const eventMapMessage =
+                    relocateFromEventMapIfNeeded(personaje) ||
+                    require("./factionWars").relocateFromWarMapIfNeeded(personaje);
                 const fortressDeniedMessage = require("./clanCastles").relocateFromFortressIfNeeded(personaje);
                 const mapLevelDeniedMessage =
                     eventMapMessage || fortressDeniedMessage || relocateCharacterToUllaIfMapLevelDenied(personaje);

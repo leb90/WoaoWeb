@@ -35,6 +35,35 @@ test("el servidor y la API comparten las mismas recetas", () => {
     assert.equal(server, api);
 });
 
+test("en la beta viajar a ciudades y dungeons es gratis", () => {
+    const fastTravel = require("./fastTravel");
+    assert.equal(fastTravel.BETA_FREE_TRAVEL, true);
+});
+
+test("sin guerra en curso, quien entra en un mapa de guerra va a Nix", () => {
+    const factionWars = require("./factionWars");
+    for (const map of [203, 204]) {
+        const user = { id: "x", map, pos: { x: 45, y: 88 }, posX: 45, posY: 88, guerra: true };
+        const message = factionWars.relocateFromWarMapIfNeeded(user);
+        assert.match(message, /Nix/);
+        assert.deepEqual([user.map, user.posX, user.posY, user.guerra], [34, 50, 50, false]);
+    }
+
+    const elsewhere = { id: "y", map: 1, pos: { x: 50, y: 50 }, posX: 50, posY: 50 };
+    assert.equal(factionWars.relocateFromWarMapIfNeeded(elsewhere), "");
+    assert.equal(elsewhere.map, 1);
+});
+
+test("el rey de la guerra solo se ataca estando en la guerra", () => {
+    const factionWars = require("./factionWars");
+    const user = { id: "z", map: 204 };
+    assert.match(factionWars.getKingAttackDeniedMessage(user, { factionWarKing: true }), /participantes/);
+    assert.equal(factionWars.getKingAttackDeniedMessage(user, { factionWarKing: false }), "");
+    // El rey no reaparece aunque muera fuera de una guerra.
+    assert.equal(factionWars.onKingRuntimeDeath({ id: 1, factionWarKing: true }), true);
+    assert.equal(factionWars.onKingRuntimeDeath({ id: 2 }), false);
+});
+
 test("la Barca pide 40 de navegación; Galera y Galeón siguen igual", () => {
     const vars = require("./vars");
     const workProfessions = require("./workProfessions");

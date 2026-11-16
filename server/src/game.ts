@@ -104,6 +104,10 @@ const FREEZING_TEMPERATURE_C = 0;
 const FREEZING_DAMAGE_INTERVAL_MS = 5000;
 const FREEZING_DAMAGE_PERCENT = 0.05;
 const STA_REGEN_INTERVAL_MS = 2000;
+// Energía: peleando sube de a 2 por intervalo. Sin atacar durante STA_REST_DELAY_MS se recarga entera en
+// STA_REST_FULL_REGEN_MS (de 0 a lleno en menos de 15 s desde el último golpe).
+const STA_REST_DELAY_MS = 2000;
+const STA_REST_FULL_REGEN_MS = 12000;
 /**
  * Regeneración pasiva de vida (legacy Sanar / SanaIntervaloSinDescansar).
  * En el motor viejo: 400 ticks del GameTimer (40ms) ≈ 16s entre curas.
@@ -501,6 +505,7 @@ type GameCharacter = RuntimeCharacter & {
     maxSed?: number;
     lastHungerDrainAt?: number;
     lastStaRegenAt?: number;
+    lastStaminaSpentAt?: number;
     coldExposure?: 0 | 1 | 2;
     lastFreezingDamageAt?: number;
     protec?: number;
@@ -9891,6 +9896,7 @@ function Game(this: GameApi) {
             if (isHostileSpell) {
                 const castleDeniedMessage =
                     require("./clanCastles").getCastleAttackDeniedMessage(user, npc) ||
+                    require("./factionWars").getKingAttackDeniedMessage(user, npc) ||
                     require("./dungeons").getNpcInvulnerableReason(npc, user, "hechizo");
                 if (castleDeniedMessage) {
                     withUserClient(idUser, (userClient) => {
@@ -10842,6 +10848,7 @@ function Game(this: GameApi) {
 
             const castleDeniedMessage =
                     require("./clanCastles").getCastleAttackDeniedMessage(user, npc) ||
+                    require("./factionWars").getKingAttackDeniedMessage(user, npc) ||
                     require("./dungeons").getNpcInvulnerableReason(npc, user);
             if (castleDeniedMessage) {
                 withUserClient(idUser, (userClient) => {
@@ -10987,7 +10994,9 @@ function Game(this: GameApi) {
 
                 return stabResult.stabbed ? `¡${totalDamage}!` : totalDamage;
             } else {
-                trainCharacterSkill(user, skills.SKILLS.tacticas);
+                // Fallar un golpe entrena el arma con la que se pega. La evasión (tácticas) sube al esquivar los
+                // golpes del NPC (npcs.ts), no al fallar los propios.
+                trainCharacterSkill(user, getAttackTrainSkillId(user));
                 emitNpcFxToArea(npc, COMBAT_MISS_FX_ID);
                 game.loopAreaPos(user.map, user.pos, function (target: GameCharacter) {
                     withUserClient(target.id, (targetClient) => {
@@ -11984,8 +11993,10 @@ function Game(this: GameApi) {
                     continue;
                 }
 
-                // Los legendarios (y los sets de tier, que siempre lo son) no se caen al morir.
-                if (!datObj.newbie && !datObj.noSeCae && !itemRarity.isRarityNoDrop(idItem, item.rarity)) {
+                // Los legendarios (y los sets de tier, que siempre lo son) no se caen al morir. Los barcos tampoco:
+                // sin barca no se puede volver a navegar para buscar lo que quedó tirado.
+                const isBoat = Number(datObj.objType) === vars.objType.barcos;
+                if (!datObj.newbie && !datObj.noSeCae && !isBoat && !itemRarity.isRarityNoDrop(idItem, item.rarity)) {
                     const cant = item.cant;
                     const droppedRarity = itemRarity.getItemRarity(idItem, item.rarity);
                     let tmpPos: Position | undefined;
@@ -13520,6 +13531,7 @@ function Game(this: GameApi) {
         }
 
         user.sta = Math.max(0, sta - funct.randomIntFromInterval(1, maxDrain));
+        user.lastStaminaSpentAt = Date.now();
         sendSelfVitals(record, client);
         return true;
     };
@@ -13599,9 +13611,13 @@ function Game(this: GameApi) {
             if (now - lastSta >= STA_REGEN_INTERVAL_MS) {
                 user.lastStaRegenAt = now;
                 const maxSta = Number(user.maxSta ?? 0);
+                const isResting = now - Number(user.lastStaminaSpentAt ?? 0) >= STA_REST_DELAY_MS;
+                const regenAmount = isResting
+                    ? Math.max(2, Math.ceil((maxSta * STA_REGEN_INTERVAL_MS) / STA_REST_FULL_REGEN_MS))
+                    : 2;
                 const nextSta = isStaminaStarving
                     ? Math.max(0, Number(user.sta ?? 0) - 2)
-                    : Math.min(maxSta, Number(user.sta ?? 0) + 2);
+                    : Math.min(maxSta, Number(user.sta ?? 0) + regenAmount);
                 if (nextSta !== Number(user.sta ?? 0)) {
                     user.sta = nextSta;
                     changed = true;

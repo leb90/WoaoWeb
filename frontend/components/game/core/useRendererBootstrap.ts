@@ -37,7 +37,6 @@ import {
     setTextIfChanged,
 } from "../rendering/textStyles";
 import { Engine } from "../engine/Engine";
-import { getCanvasRenderResolution } from "../../../lib/viewport";
 import { exposeTeaserControls } from "../../../lib/teaserRecording";
 import { getHoverRelation, updateHoverHighlight } from "../rendering/hoverHighlight";
 import { cursorForHoverRelation, setElementCursor } from "../../../lib/gameCursors";
@@ -421,10 +420,7 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                             height: options.screenSize.height,
                             backgroundColor: 0x000000,
                             antialias: false,
-                            resolution: getCanvasRenderResolution(
-                                options.canvasRef.current?.clientWidth ?? 0,
-                                options.screenSize.width,
-                            ),
+                            resolution: 1,
                             autoDensity: false,
                             roundPixels: true,
                         });
@@ -966,6 +962,7 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                     text: options.fpsDisplayTextRef.current,
                     style: fpsStyle,
                 });
+                fpsText.resolution = 1;
                 fpsText.x = 10;
                 fpsText.y = 8;
 
@@ -980,6 +977,7 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                     text: options.pingDisplayTextRef.current,
                     style: fpsStyle,
                 });
+                pingText.resolution = 1;
                 pingText.x = 10;
                 pingText.y = 22;
                 statusTextLayer.addChild(pingText);
@@ -988,6 +986,7 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                     text: "",
                     style: getHudStatusTextStyle(0xff3b30),
                 });
+                seguroText.resolution = 1;
                 seguroText.x = 10;
                 seguroText.y = 36;
                 statusTextLayer.addChild(seguroText);
@@ -996,6 +995,7 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                     text: "",
                     style: getHudStatusTextStyle(0xff3b30),
                 });
+                clanSeguroText.resolution = 1;
                 clanSeguroText.x = 10;
                 clanSeguroText.y = 50;
                 statusTextLayer.addChild(clanSeguroText);
@@ -1009,6 +1009,7 @@ export function useRendererBootstrap(options: UseRendererBootstrapOptions) {
                         stroke: { color: 0x000000, width: 1.5 },
                     }),
                 });
+                debugCombatText.resolution = 1;
                 debugCombatText.x = 10;
                 debugCombatText.y = 50;
                 debugCombatText.zIndex = 1000;

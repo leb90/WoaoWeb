@@ -47,7 +47,7 @@ import {
 import { getRowZIndex, Z_INDEX_LAYERS } from "./mapLayers";
 import { getMapRowLayerContainer } from "./rowLayerContainers";
 import { syncEquipmentAura } from "./equipmentAuras";
-import { getWarpedBodyTextures, resolveWarpRaceBodyId, setLayoutBodyData } from "./armorWarp";
+import { getWarpedBodyTextures, isSmallRaceBodyId, resolveWarpRaceBodyId, setLayoutBodyData } from "./armorWarp";
 import { rememberBreathBase } from "./breathing";
 
 export function shouldRenderHead(
@@ -939,6 +939,7 @@ async function resolveArmorWarp(
         entity,
         engine.objectsDB,
         deps.resolveNakedBodyIdFromHeadId,
+        engine.bodiesDB,
     );
     const raceBodyData = raceBodyId
         ? engine.bodiesDB?.[raceBodyId.toString()]
@@ -960,10 +961,12 @@ async function resolveArmorWarp(
         raceTextures = loadedTextures;
         engine.animatedTextureCache.set(raceGraphicId.toString(), loadedTextures);
     }
+    const fitHeight = isSmallRaceBodyId(raceBodyId);
     const textures = getWarpedBodyTextures(
-        `${bodyGraphicId}>${raceGraphicId}`,
+        `${bodyGraphicId}>${raceGraphicId}${fitHeight ? ":fit" : ""}`,
         bodyTextures,
         raceTextures,
+        fitHeight,
     );
     return textures
         ? { textures, bodyData: raceBodyData, graphicData: raceGraphicData }

@@ -32,7 +32,6 @@ import {
     type TradeState,
 } from "../../../lib/aowProtocol";
 import {
-    getCanvasRenderResolution,
     VIEWPORT_PIXEL_HEIGHT,
     VIEWPORT_PIXEL_WIDTH,
 } from "../../../lib/viewport";
@@ -1640,14 +1639,7 @@ export default function MapRenderer({
 
         if (!engine || !app) return;
 
-        // El canvas se estira con CSS hasta el tamaño en pantalla. Se dibuja a esa resolución (tope x2) para que
-        // los textos (nombres, diálogos, daño) salgan nítidos en pantallas grandes; el pixel art usa "nearest"
-        // y se ve igual que antes.
-        app.renderer.resize(
-            screenSize.width,
-            screenSize.height,
-            getCanvasRenderResolution(canvasDisplaySize.width, screenSize.width),
-        );
+        app.renderer.resize(screenSize.width, screenSize.height);
         if (fpsText) {
             fpsText.x = FPS_TEXT_OFFSET_X;
             fpsText.y = FPS_TEXT_OFFSET_Y;
@@ -1670,7 +1662,7 @@ export default function MapRenderer({
         }
         engine.updateCamera();
         engine.updateCulling();
-    }, [canvasDisplaySize.width, screenSize.height, screenSize.width]);
+    }, [screenSize.height, screenSize.width]);
 
     useEffect(() => {
         if (engineRef.current) {

@@ -28,6 +28,7 @@ import {
     Map as MapIcon,
     Search,
     Plus,
+    Minus,
     Check,
     Clock3,
     Swords,
@@ -457,6 +458,7 @@ function resolveBaseInstanceMapId(mapId: number | null | undefined): number | nu
 }
 const DEFAULT_MAP_GRID_SIZE = 100;
 const WORLD_MAP_MARKER_SIZE = 10;
+const WORLD_MAP_ZOOM_LEVELS = [1, 1.5, 2, 3, 4];
 const SPELL_LIST_ROW_HEIGHT = 24;
 const SPELL_LIST_AUTOSCROLL_EDGE_PX = 22;
 const SPELL_LIST_AUTOSCROLL_STEP = 12;
@@ -1474,6 +1476,16 @@ export default function InventoryFloatingPanel({
         string | null
     >(null);
     const [isWorldMapOpen, setIsWorldMapOpen] = React.useState(false);
+    // En pantallas chicas (celular) se ve una sola parte a la vez: el mapa ocupa toda la ventana.
+    const [worldMapTab, setWorldMapTab] = React.useState<
+        "map" | "atlas" | "detail"
+    >("map");
+    const [worldMapZoom, setWorldMapZoom] = React.useState(1);
+    const [worldMapViewport, setWorldMapViewport] = React.useState({
+        width: 0,
+        height: 0,
+    });
+    const worldMapScrollerRef = React.useRef<HTMLDivElement | null>(null);
     const [worldMapSearch, setWorldMapSearch] = React.useState("");
     const [selectedWorldMapId, setSelectedWorldMapId] = React.useState<
         number | null
@@ -2379,8 +2391,102 @@ export default function InventoryFloatingPanel({
 
     const closeWorldMap = React.useCallback(() => {
         setIsWorldMapOpen(false);
+        setWorldMapZoom(1);
+        setWorldMapTab("map");
         worldMapTriggerRef.current?.blur();
     }, []);
+
+    // Tamaño del mapa: entra entero en el espacio disponible (zoom 1) y con el zoom crece y se recorre con scroll.
+    const setWorldMapScroller = React.useCallback(
+        (node: HTMLDivElement | null) => {
+            worldMapScrollerRef.current = node;
+        },
+        [],
+    );
+    React.useEffect(() => {
+        const node = worldMapScrollerRef.current;
+        if (!isWorldMapOpen || !node || typeof ResizeObserver === "undefined") {
+            return;
+        }
+
+        const measure = () => {
+            setWorldMapViewport((current) =>
+                current.width === node.clientWidth &&
+                current.height === node.clientHeight
+                    ? current
+                    : { width: node.clientWidth, height: node.clientHeight },
+            );
+        };
+        measure();
+        const observer = new ResizeObserver(measure);
+        observer.observe(node);
+        return () => observer.disconnect();
+    }, [isWorldMapOpen]);
+    const worldMapStageSize = React.useMemo(() => {
+        const { width, height } = worldMapViewport;
+        if (!(width > 0) || !(height > 0)) {
+            return null;
+        }
+
+        const aspect = worldMapVisibleImageWidth / worldMapImageHeight;
+        const fitHeight = Math.min(height, width / aspect);
+        return {
+            width: Math.floor(fitHeight * aspect * worldMapZoom),
+            height: Math.floor(fitHeight * worldMapZoom),
+        };
+    }, [
+        worldMapImageHeight,
+        worldMapViewport,
+        worldMapVisibleImageWidth,
+        worldMapZoom,
+    ]);
+    const changeWorldMapZoom = React.useCallback((direction: 1 | -1) => {
+        setWorldMapZoom((current) => {
+            const index = WORLD_MAP_ZOOM_LEVELS.indexOf(current);
+            const nextIndex = Math.max(
+                0,
+                Math.min(
+                    WORLD_MAP_ZOOM_LEVELS.length - 1,
+                    (index < 0 ? 0 : index) + direction,
+                ),
+            );
+            return WORLD_MAP_ZOOM_LEVELS[nextIndex];
+        });
+    }, []);
+    // Al cambiar el zoom se centra en el mapa elegido (o en donde está el personaje).
+    React.useLayoutEffect(() => {
+        const node = worldMapScrollerRef.current;
+        if (!node || !worldMapStageSize) {
+            return;
+        }
+
+        const selectedCell = selectedWorldMapEntry
+            ? getWorldMapCellStyle(worldMapGrid, selectedWorldMapEntry)
+            : null;
+        const focus = selectedCell
+            ? {
+                  x:
+                      parseFloat(selectedCell.left) +
+                      parseFloat(selectedCell.width) / 2,
+                  y:
+                      parseFloat(selectedCell.top) +
+                      parseFloat(selectedCell.height) / 2,
+              }
+            : worldMapMarkerPosition
+              ? {
+                    x: parseFloat(worldMapMarkerPosition.left),
+                    y: parseFloat(worldMapMarkerPosition.top),
+                }
+              : { x: 50, y: 50 };
+        const offsetX = Math.max(0, (node.clientWidth - worldMapStageSize.width) / 2);
+        const offsetY = Math.max(0, (node.clientHeight - worldMapStageSize.height) / 2);
+        node.scrollLeft =
+            offsetX + (focus.x / 100) * worldMapStageSize.width - node.clientWidth / 2;
+        node.scrollTop =
+            offsetY + (focus.y / 100) * worldMapStageSize.height - node.clientHeight / 2;
+        // Solo cuando cambia el zoom: elegir otro mapa no tiene que mover la vista.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [worldMapZoom]);
     const handleWorldMapSearchChange = React.useCallback(
         (event: React.ChangeEvent<HTMLInputElement>) => {
             const nextSearch = event.target.value;
@@ -5255,15 +5361,15 @@ export default function InventoryFloatingPanel({
                           onClick={closeWorldMap}
                       >
                           <div
-                              className="relative w-full max-w-[1420px] overflow-hidden rounded-[24px] border border-amber-200/20 bg-[#120c08]/96 shadow-[0_28px_90px_rgba(0,0,0,0.6)]"
+                              className="relative flex h-full w-full max-w-[1420px] flex-col overflow-hidden rounded-[24px] border border-amber-200/20 bg-[#120c08]/96 shadow-[0_28px_90px_rgba(0,0,0,0.6)] max-lg:rounded-[16px]"
                               onClick={(event) => event.stopPropagation()}
                           >
-                              <div className="flex items-center justify-between gap-4 border-b border-amber-200/10 bg-[linear-gradient(180deg,rgba(127,78,35,0.28),rgba(18,12,8,0))] px-4 py-3 sm:px-5">
-                                  <div>
-                                      <p className="text-[11px] uppercase tracking-[0.28em] text-amber-300/72">
+                              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-amber-200/10 bg-[linear-gradient(180deg,rgba(127,78,35,0.28),rgba(18,12,8,0))] px-4 py-3 sm:px-5 [@media(max-height:520px)]:py-2">
+                                  <div className="min-w-0">
+                                      <p className="text-[11px] uppercase tracking-[0.28em] text-amber-300/72 [@media(max-height:520px)]:hidden">
                                           Navegacion
                                       </p>
-                                      <h3 className="mt-1 text-lg font-semibold text-[#f2e5ca] sm:text-xl">
+                                      <h3 className="mt-1 text-lg font-semibold text-[#f2e5ca] sm:text-xl [@media(max-height:520px)]:mt-0">
                                           Mapa del mundo
                                       </h3>
                                       {isAdmin ? (
@@ -5299,10 +5405,38 @@ export default function InventoryFloatingPanel({
                                           </p>
                                       ) : null}
                                   </div>
+                                  <div
+                                      role="tablist"
+                                      aria-label="Partes del mapa del mundo"
+                                      className="order-3 flex w-full gap-1 rounded-[12px] border border-amber-200/12 bg-black/30 p-1 sm:order-none sm:ml-auto sm:w-auto lg:hidden"
+                                  >
+                                      {(
+                                          [
+                                              ["map", "Mapa"],
+                                              ["atlas", "Atlas"],
+                                              ["detail", "Detalle"],
+                                          ] as const
+                                      ).map(([tab, label]) => (
+                                          <button
+                                              key={tab}
+                                              type="button"
+                                              role="tab"
+                                              aria-selected={worldMapTab === tab}
+                                              onClick={() => setWorldMapTab(tab)}
+                                              className={`flex-1 rounded-[9px] px-3 py-1.5 text-sm font-semibold transition sm:flex-none ${
+                                                  worldMapTab === tab
+                                                      ? "bg-amber-300/18 text-amber-50 shadow-[inset_0_0_0_1px_rgba(252,211,77,0.45)]"
+                                                      : "text-stone-400 hover:text-stone-200"
+                                              }`}
+                                          >
+                                              {label}
+                                          </button>
+                                      ))}
+                                  </div>
                                   <button
                                       type="button"
                                       onClick={closeWorldMap}
-                                      className="flex h-10 w-10 items-center justify-center rounded-full border border-stone-700 bg-black/20 text-stone-300 transition hover:border-stone-500 hover:text-white"
+                                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-stone-700 bg-black/20 text-stone-300 transition hover:border-stone-500 hover:text-white [@media(max-height:520px)]:h-8 [@media(max-height:520px)]:w-8"
                                       aria-label="Cerrar mapa del mundo"
                                   >
                                       <X
@@ -5313,9 +5447,15 @@ export default function InventoryFloatingPanel({
                                   </button>
                               </div>
 
-                              <div className="h-[calc(100vh-7rem)] overflow-hidden bg-[#0b0705] p-3">
-                                  <div className="grid h-full min-h-0 grid-cols-1 gap-3 lg:grid-cols-[250px_minmax(0,1fr)_280px]">
-                                      <aside className="min-h-0 overflow-hidden border border-amber-200/10 bg-black/22">
+                              <div className="min-h-0 flex-1 overflow-hidden bg-[#0b0705] p-2 sm:p-3">
+                                  <div className="grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(0,1fr)] gap-3 lg:grid-cols-[250px_minmax(0,1fr)_280px]">
+                                      <aside
+                                          className={`${
+                                              worldMapTab === "atlas"
+                                                  ? ""
+                                                  : "hidden "
+                                          }min-h-0 overflow-hidden border border-amber-200/10 bg-black/22 lg:block`}
+                                      >
                                           <div className="flex items-center justify-between gap-3 border-b border-amber-200/10 px-3 py-2">
                                               <span className="text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-300">
                                                   Atlas
@@ -5366,6 +5506,10 @@ export default function InventoryFloatingPanel({
                                                                       setMissingWorldMapId(
                                                                           null,
                                                                       );
+                                                                      // En el celular se vuelve al mapa para verlo marcado.
+                                                                      setWorldMapTab(
+                                                                          "map",
+                                                                      );
                                                                   }
                                                               }
                                                               className={`mb-2 w-full border px-3 py-2 text-left transition ${
@@ -5407,15 +5551,56 @@ export default function InventoryFloatingPanel({
                                           </div>
                                       </aside>
 
-                                      <section className="flex min-h-0 items-center justify-center overflow-hidden rounded-sm border border-amber-400/50 bg-black/35 p-1 shadow-[0_0_0_1px_rgba(0,0,0,0.45)]">
+                                      <section
+                                          className={`${
+                                              worldMapTab === "map"
+                                                  ? "flex"
+                                                  : "hidden"
+                                          } relative min-h-0 overflow-hidden rounded-sm border border-amber-400/50 bg-black/35 p-1 shadow-[0_0_0_1px_rgba(0,0,0,0.45)] lg:flex`}
+                                      >
                                           <div
-                                              className="relative h-full max-h-full max-w-full overflow-hidden"
+                                              ref={setWorldMapScroller}
+                                              data-testid="world-map-scroller"
+                                              className="h-full w-full overflow-auto overscroll-contain"
+                                          >
+                                          <div
+                                              className="flex items-center justify-center"
+                                              style={
+                                                  worldMapStageSize
+                                                      ? {
+                                                            width: Math.max(
+                                                                worldMapViewport.width,
+                                                                worldMapStageSize.width,
+                                                            ),
+                                                            height: Math.max(
+                                                                worldMapViewport.height,
+                                                                worldMapStageSize.height,
+                                                            ),
+                                                        }
+                                                      : {
+                                                            width: "100%",
+                                                            height: "100%",
+                                                        }
+                                              }
+                                          >
+                                          <div
+                                              data-testid="world-map-stage"
+                                              className="relative shrink-0 overflow-hidden"
                                               onContextMenu={
                                                   handleWorldMapContextMenu
                                               }
-                                              style={{
-                                                  aspectRatio: `${worldMapVisibleImageWidth} / ${worldMapImageHeight}`,
-                                              }}
+                                              style={
+                                                  worldMapStageSize
+                                                      ? {
+                                                            width: worldMapStageSize.width,
+                                                            height: worldMapStageSize.height,
+                                                        }
+                                                      : {
+                                                            height: "100%",
+                                                            maxWidth: "100%",
+                                                            aspectRatio: `${worldMapVisibleImageWidth} / ${worldMapImageHeight}`,
+                                                        }
+                                              }
                                               title={
                                                   isAdmin
                                                       ? "Click derecho para teletransportarte"
@@ -5532,9 +5717,87 @@ export default function InventoryFloatingPanel({
                                                   </div>
                                               ) : null}
                                           </div>
+                                          </div>
+                                          </div>
+                                          <div className="pointer-events-none absolute inset-x-2 bottom-2 z-40 flex items-end justify-between gap-2">
+                                              {selectedWorldMapEntry ? (
+                                                  <button
+                                                      type="button"
+                                                      onClick={() =>
+                                                          setWorldMapTab(
+                                                              "detail",
+                                                          )
+                                                      }
+                                                      className="pointer-events-auto min-w-0 truncate rounded-[10px] border border-amber-200/25 bg-black/75 px-3 py-1.5 text-left text-sm font-semibold text-[#f2e5ca] backdrop-blur-sm lg:invisible"
+                                                  >
+                                                      {selectedWorldMapEntry.name ||
+                                                          `Mapa ${selectedWorldMapEntry.id}`}
+                                                      <span className="ml-2 text-xs font-normal text-amber-200/80">
+                                                          Ver detalle
+                                                      </span>
+                                                  </button>
+                                              ) : (
+                                                  <span />
+                                              )}
+                                              <div className="pointer-events-auto flex shrink-0 overflow-hidden rounded-[10px] border border-amber-200/25 bg-black/75 backdrop-blur-sm">
+                                                  <button
+                                                      type="button"
+                                                      onClick={() =>
+                                                          changeWorldMapZoom(-1)
+                                                      }
+                                                      disabled={
+                                                          worldMapZoom <=
+                                                          WORLD_MAP_ZOOM_LEVELS[0]
+                                                      }
+                                                      aria-label="Alejar el mapa"
+                                                      className="flex h-9 w-9 items-center justify-center text-stone-200 transition hover:bg-white/10 disabled:text-stone-600"
+                                                  >
+                                                      <Minus
+                                                          aria-hidden="true"
+                                                          className="h-4 w-4"
+                                                          strokeWidth={2}
+                                                      />
+                                                  </button>
+                                                  <span
+                                                      aria-live="polite"
+                                                      className="flex min-w-[3.25rem] items-center justify-center border-x border-amber-200/15 text-xs font-semibold tabular-nums text-amber-100"
+                                                  >
+                                                      {worldMapZoom === 1
+                                                          ? "Entero"
+                                                          : `x${worldMapZoom}`}
+                                                  </span>
+                                                  <button
+                                                      type="button"
+                                                      onClick={() =>
+                                                          changeWorldMapZoom(1)
+                                                      }
+                                                      disabled={
+                                                          worldMapZoom >=
+                                                          WORLD_MAP_ZOOM_LEVELS[
+                                                              WORLD_MAP_ZOOM_LEVELS.length -
+                                                                  1
+                                                          ]
+                                                      }
+                                                      aria-label="Acercar el mapa"
+                                                      className="flex h-9 w-9 items-center justify-center text-stone-200 transition hover:bg-white/10 disabled:text-stone-600"
+                                                  >
+                                                      <Plus
+                                                          aria-hidden="true"
+                                                          className="h-4 w-4"
+                                                          strokeWidth={2}
+                                                      />
+                                                  </button>
+                                              </div>
+                                          </div>
                                       </section>
 
-                                      <aside className="min-h-0 overflow-hidden border border-amber-200/10 bg-black/22">
+                                      <aside
+                                          className={`${
+                                              worldMapTab === "detail"
+                                                  ? ""
+                                                  : "hidden "
+                                          }min-h-0 overflow-hidden border border-amber-200/10 bg-black/22 lg:block`}
+                                      >
                                           <div className="border-b border-amber-200/10 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-300">
                                               Detalle
                                           </div>

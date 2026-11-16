@@ -979,7 +979,7 @@ function syncUnequippedItemVisuals(user: GameCharacter, normalizedPos: string): 
     if (String(user.idItemBody) === normalizedPos) {
         const bodyNaked = game.bodyNaked(user.id);
 
-        if (user.navegando) {
+        if (user.navegando || user.mounted) {
             user.idLastBody = bodyNaked;
         } else {
             user.idBody = bodyNaked;
@@ -1042,7 +1042,7 @@ function syncUnequippedItemVisuals(user: GameCharacter, normalizedPos: string): 
                 return;
             }
 
-            if (removedBody) {
+            if (removedBody && !user.navegando && !user.mounted) {
                 handleProtocol.changeRopa(user.id, user.idBody, 0, targetClient);
             }
 
@@ -1073,13 +1073,19 @@ function rebuildEquippedInventoryState(user: GameCharacter): void {
     user.idItemArrow = 0;
     user.idItemRing = 0;
     const nakedBody = game.bodyNaked(user.id);
+    // Montado se sigue viendo la montura (con casco, arma y escudo encima): la ropa va a idLastBody.
+    const bodyHidden = Boolean(user.navegando || user.mounted);
     if (user.navegando) {
         user.idLastBody = nakedBody;
         user.idLastWeapon = 0;
         user.idLastShield = 0;
         user.idLastHelmet = 0;
     } else {
-        user.idBody = nakedBody;
+        if (bodyHidden) {
+            user.idLastBody = nakedBody;
+        } else {
+            user.idBody = nakedBody;
+        }
         user.idWeapon = 0;
         user.idShield = 0;
         user.idHelmet = 0;
@@ -1099,7 +1105,7 @@ function rebuildEquippedInventoryState(user: GameCharacter): void {
         const equipType = itemKinds.getEquipObjectType(obj);
 
         if (equipType == vars.objType.armaduras) {
-            if (user.navegando) {
+            if (bodyHidden) {
                 user.idLastBody = obj.anim;
             } else {
                 user.idBody = obj.anim;
@@ -3094,7 +3100,7 @@ function unequipRestrictedNewbieItems(user: GameCharacter, client: RuntimeClient
     const bodySlot = unequipSlot(user.idItemBody);
     if (bodySlot) {
         const bodyNaked = game.bodyNaked(user.id);
-        if (user.navegando) {
+        if (user.navegando || user.mounted) {
             user.idLastBody = bodyNaked;
         } else {
             user.idBody = bodyNaked;
@@ -9029,6 +9035,11 @@ function Game(this: GameApi) {
             const shouldSyncVisibilityState = Boolean(user.invisibleSpell || user.hiddenSkill);
             const hadMovementRestriction = Boolean(user.inmovilizado || user.paralizado);
             const wasAlreadyDead = Boolean(user.dead);
+            // Al morir montado se baja de la montura: si no, seguía "montado" con el cuerpo de muerto y al
+            // revivir volvía con la ropa puesta pero marcado como montado.
+            if (!wasAlreadyDead && user.mounted && dismountMount(user)) {
+                require("./mounts").sendMountState(String(idUser));
+            }
             fishing.cancelFishing(idUser);
             harvesting.cancelHarvesting(idUser);
             smelting.cancelSmelting(idUser);

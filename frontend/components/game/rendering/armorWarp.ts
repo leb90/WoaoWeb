@@ -11,6 +11,10 @@ import type { Character } from "../engine/Engine";
 // Cuerpos desnudos de las razas que se adaptan (hombre / mujer). Humano, elfo, drow y vampiro usan el
 // cuerpo humano y enano / gnomo tienen armaduras propias, así que ahí la deformación no aporta.
 const WARP_RACE_BODY_IDS = new Set([215, 217, 178, 212, 486, 488, 526, 527, 528, 529, 530, 531]);
+// Enano y gnomo (hombre / mujer). Con su ropa "(Bajo/as)" se dibujan tal cual; con una ropa de altos (las piezas
+// de los sets de clase, que existen en una sola versión) la armadura se achica a la altura y el ancho del cuerpo
+// bajo, así no queda un cuerpo de humano con cabeza de enano.
+const SMALL_RACE_BODY_IDS = new Set([53, 60]);
 
 const ALPHA_THRESHOLD = 16;
 const MAX_CACHED_WARPS = 400;
@@ -40,11 +44,27 @@ export function resolveWarpRaceBodyId(
     entity: Character,
     objectsDB: ObjectsDB | null | undefined,
     resolveNakedBodyIdFromHeadId: (headId: number) => number | null,
+    bodiesDB?: BodiesDB | null,
 ): number | null {
     if (entity.isNpc || entity.dead || entity.navegando) return null;
     const raceBodyId = resolveNakedBodyIdFromHeadId(entity.idHead);
-    if (!raceBodyId || raceBodyId === entity.idBody || !WARP_RACE_BODY_IDS.has(raceBodyId)) return null;
-    return getArmorBodyIds(objectsDB).has(entity.idBody) ? raceBodyId : null;
+    if (!raceBodyId || raceBodyId === entity.idBody) return null;
+    if (!getArmorBodyIds(objectsDB).has(entity.idBody)) return null;
+    if (WARP_RACE_BODY_IDS.has(raceBodyId)) return raceBodyId;
+    if (SMALL_RACE_BODY_IDS.has(raceBodyId) && isTallArmorBody(entity.idBody, bodiesDB)) return raceBodyId;
+    return null;
+}
+
+/** Enano o gnomo: la armadura se achica también en altura (ver SMALL_RACE_BODY_IDS). */
+export function isSmallRaceBodyId(bodyId: number | null | undefined): boolean {
+    return SMALL_RACE_BODY_IDS.has(Number(bodyId));
+}
+
+// Las ropas de altos llevan la cabeza arriba del cuadro (headOffsetY negativo, -4 en el cuerpo humano) y las de
+// bajos más abajo (+6 en el cuerpo de enano). Los cuadros miden lo mismo (46 px), así que se distinguen por esto.
+function isTallArmorBody(bodyId: number, bodiesDB: BodiesDB | null | undefined): boolean {
+    const headOffsetY = Number(bodiesDB?.[String(bodyId)]?.headOffsetY ?? 0);
+    return headOffsetY < 0;
 }
 
 function readPixels(texture: Texture): Pixels | null {
@@ -89,18 +109,44 @@ function buildRowProfile(pixels: Pixels): RowProfile[] {
     return rows;
 }
 
+// Primera y última fila con algo dibujado.
+function getOpaqueRowRange(rows: RowProfile[]): { top: number; bottom: number } | null {
+    let top = -1;
+    let bottom = -1;
+    rows.forEach((row, index) => {
+        if (!row) return;
+        if (top < 0) top = index;
+        bottom = index;
+    });
+    return top < 0 ? null : { top, bottom };
+}
+
 // Por cada fila del cuerpo de la raza toma la fila proporcional de la armadura y la estira o encoge
 // al ancho de la raza, centrada. Escribe en `out` (el atlas) a partir de la columna offsetX.
-function warpFrame(armor: Pixels, race: Pixels, out: ImageData, offsetX: number) {
+// Con fitHeight la armadura además se achica a la altura de la silueta (enano y gnomo con ropa de altos): la parte
+// dibujada de la armadura, de los hombros a los pies, se reparte entre la primera y la última fila de la raza.
+function warpFrame(armor: Pixels, race: Pixels, out: ImageData, offsetX: number, fitHeight = false) {
     const armorRows = buildRowProfile(armor);
     const raceRows = buildRowProfile(race);
+    const armorRange = fitHeight ? getOpaqueRowRange(armorRows) : null;
+    const raceRange = fitHeight ? getOpaqueRowRange(raceRows) : null;
     for (let targetY = 0; targetY < race.height; targetY++) {
         const raceRow = raceRows[targetY];
         if (!raceRow) continue;
-        const sourceY = Math.min(
-            Math.round((race.height > 1 ? targetY / (race.height - 1) : 0) * (armor.height - 1)),
-            armor.height - 1,
-        );
+        const sourceY =
+            armorRange && raceRange
+                ? Math.min(
+                      Math.round(
+                          armorRange.top +
+                              ((targetY - raceRange.top) / Math.max(1, raceRange.bottom - raceRange.top)) *
+                                  (armorRange.bottom - armorRange.top),
+                      ),
+                      armor.height - 1,
+                  )
+                : Math.min(
+                      Math.round((race.height > 1 ? targetY / (race.height - 1) : 0) * (armor.height - 1)),
+                      armor.height - 1,
+                  );
         const armorRow = armorRows[sourceY];
         if (!armorRow) continue;
         const widthRatio = armorRow.width / (raceRow.width || 1);
@@ -121,7 +167,12 @@ function warpFrame(armor: Pixels, race: Pixels, out: ImageData, offsetX: number)
  * Cuadros de la armadura adaptados a la silueta de la raza, uno por cuadro de la raza.
  * Se guardan por `${armorGraphicId}>${raceGraphicId}`: todos los cuadros van en un solo lienzo.
  */
-export function getWarpedBodyTextures(key: string, armorTextures: Texture[], raceTextures: Texture[]): Texture[] | null {
+export function getWarpedBodyTextures(
+    key: string,
+    armorTextures: Texture[],
+    raceTextures: Texture[],
+    fitHeight = false,
+): Texture[] | null {
     const cached = warpCache.get(key);
     if (cached) return cached;
     if (armorTextures.length === 0 || raceTextures.length === 0) return null;
@@ -144,7 +195,7 @@ export function getWarpedBodyTextures(key: string, armorTextures: Texture[], rac
     const context = canvas.getContext("2d");
     if (!context) return null;
     const image = context.createImageData(atlasWidth, atlasHeight);
-    for (const frame of frames) warpFrame(frame.armor, frame.race, image, frame.x);
+    for (const frame of frames) warpFrame(frame.armor, frame.race, image, frame.x, fitHeight);
     context.putImageData(image, 0, 0);
 
     const atlas = Texture.from(canvas);

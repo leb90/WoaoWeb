@@ -46,8 +46,14 @@ function getNavegacionMod(idClase: number) {
     return 2.3;
 }
 
+// La Barca (el barco de entrada, minSkill 20) pide como mucho 40 puntos de navegación, para cualquier clase.
+// Con el modificador general (2,3) daba 46. Galera y Galeón siguen con la cuenta de siempre.
+const BARCA_MIN_SKILL = 20;
+const BARCA_MAX_REQUIRED_SKILL = 40;
+
 function getRequiredNavegacionSkill(minSkill: number, idClase: number) {
-    return Math.ceil(Math.max(0, minSkill) * getNavegacionMod(idClase));
+    const required = Math.ceil(Math.max(0, minSkill) * getNavegacionMod(idClase));
+    return minSkill <= BARCA_MIN_SKILL ? Math.min(required, BARCA_MAX_REQUIRED_SKILL) : required;
 }
 
 function getFishingCatchAmount(user: { idClase?: number; level?: number } | null | undefined) {

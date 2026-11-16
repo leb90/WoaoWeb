@@ -46,6 +46,23 @@ function isShieldObject(obj: EquipObject): boolean {
     );
 }
 
+/**
+ * ¿Le aplica la regla de "ropa para altos / ropa para bajos" (enanos, gnomos y goblins)? Solo a la armadura
+ * del cuerpo, que es un sprite distinto según la altura. Cascos y escudos no, y tampoco las piezas de los
+ * sets de clase (Verdugo, Templario...), que existen en una sola versión para todas las razas.
+ */
+function isRaceSizedBodyArmor(obj: EquipObject, itemId?: number): boolean {
+    if (!obj || Number(obj.objType) !== vars.objType.armaduras || isHelmetObject(obj) || isShieldObject(obj)) {
+        return false;
+    }
+
+    if (itemId && require("./tierSets").isTierSetItem(Number(itemId))) {
+        return false;
+    }
+
+    return true;
+}
+
 function getEquipObjectType(obj: EquipObject): number {
     if (isHelmetObject(obj)) {
         return vars.objType.cascos;
@@ -67,4 +84,5 @@ module.exports = {
     isShieldObject,
     isRingObject,
     getEquipObjectType,
+    isRaceSizedBodyArmor,
 };

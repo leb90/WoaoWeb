@@ -118,6 +118,9 @@ export function mergeClientRuntimeTiming(
         actionCooldowns: {
             ...DEFAULT_RUNTIME_TIMING.actionCooldowns,
             ...timing.actionCooldowns,
+            // Pegar y lanzar hechizos son independientes: ninguno frena al otro, diga lo que diga el panel.
+            meleeToSpellMs: 0,
+            spellToMeleeMs: 0,
         },
         visualEffects: {
             ...DEFAULT_RUNTIME_TIMING.visualEffects,

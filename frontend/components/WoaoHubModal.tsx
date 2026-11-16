@@ -25,6 +25,7 @@ import {
     Sparkles,
     Swords,
     Target,
+    Undo2,
     Users,
     X,
 } from "lucide-react";
@@ -487,6 +488,71 @@ function questStatusLabel(status: QuestEntryState["status"]): string {
     }
 
     return "Activa";
+}
+
+function canAbandonQuest(quest: QuestEntryState | null | undefined): quest is QuestEntryState {
+    return Boolean(quest && (quest.status === "active" || quest.status === "ready"));
+}
+
+/**
+ * Abandonar una misión pide confirmar en el mismo lugar: se pierde el progreso y libera el cupo para otra.
+ * Se resetea al cambiar de misión.
+ */
+function AbandonQuestButton({
+    quest,
+    onSendCommand,
+    variant,
+}: {
+    quest: QuestEntryState;
+    onSendCommand?: (message: string) => void;
+    variant: "hub" | "dialog";
+}) {
+    const [confirming, setConfirming] = React.useState(false);
+
+    React.useEffect(() => {
+        setConfirming(false);
+    }, [quest.id]);
+
+    const baseClass =
+        variant === "dialog"
+            ? "flex min-h-[42px] items-center justify-center gap-2 rounded-md border px-4 text-sm font-bold"
+            : "inline-flex items-center gap-2 rounded border px-4 py-2 text-sm font-semibold transition";
+
+    if (!confirming) {
+        return (
+            <button
+                type="button"
+                onClick={() => setConfirming(true)}
+                className={`${baseClass} border-stone-500/50 bg-black/30 text-stone-200 hover:border-red-300/60 hover:text-red-100`}
+            >
+                <Undo2 aria-hidden="true" className="h-4 w-4" strokeWidth={2.2} />
+                Abandonar misión
+            </button>
+        );
+    }
+
+    return (
+        <span className="flex flex-wrap items-center justify-end gap-2" role="group" aria-label="Confirmar abandono">
+            <span className="text-xs text-red-100/90">Se pierde el progreso.</span>
+            <button
+                type="button"
+                onClick={() => {
+                    setConfirming(false);
+                    onSendCommand?.(`/questabandonar ${quest.id}`);
+                }}
+                className={`${baseClass} border-red-300/70 bg-[linear-gradient(180deg,#b33a32,#6e1d1a)] text-white`}
+            >
+                Sí, abandonar
+            </button>
+            <button
+                type="button"
+                onClick={() => setConfirming(false)}
+                className={`${baseClass} border-stone-500/50 bg-black/30 text-stone-200 hover:text-white`}
+            >
+                No
+            </button>
+        </span>
+    );
 }
 
 function QuestProgressRows({ quest }: { quest: QuestEntryState }) {
@@ -959,9 +1025,12 @@ function QuestNpcDialog({
                                 No quedan misiones pendientes.
                             </div>
                         )}
-                        <div className="flex items-center justify-between gap-3 border-t border-[#5c3d22] bg-[#140e0a] px-5 py-3">
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#5c3d22] bg-[#140e0a] px-5 py-3">
                             <p className="text-xs font-semibold text-[#cbb896]">Misiones activas: {activeCount}/3</p>
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap justify-end gap-2">
+                                {canAbandonQuest(selectedQuest) ? (
+                                    <AbandonQuestButton quest={selectedQuest} onSendCommand={onSendCommand} variant="dialog" />
+                                ) : null}
                                 {primaryLabel ? (
                                     <button
                                         type="button"
@@ -2036,7 +2105,14 @@ export default function WoaoHubModal({
                                             graphicsDB={graphicsDB}
                                         />
 
-                                        <div className="mt-6 flex justify-end gap-2">
+                                        <div className="mt-6 flex flex-wrap justify-end gap-2">
+                                            {canAbandonQuest(selectedQuest) ? (
+                                                <AbandonQuestButton
+                                                    quest={selectedQuest}
+                                                    onSendCommand={onSendCommand}
+                                                    variant="hub"
+                                                />
+                                            ) : null}
                                             {selectedQuest.status === "available" ? (
                                                 <button
                                                     type="button"

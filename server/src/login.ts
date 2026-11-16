@@ -11,6 +11,9 @@ export {};
 const funct = require("./functions");
 const vars = require("./vars");
 const game = require("./game");
+
+// Cuerpos "desnudos" de elfo y gnomo heredados del AO original que en este juego son otros gráficos.
+const LEGACY_WRONG_NAKED_BODIES = new Set([210, 259, 222, 260]);
 const itemRarity = require("./itemRarity") as typeof import("./itemRarity");
 const itemKinds = require("./itemKinds") as {
     getEquipObjectType: (obj: { objType?: number; subtipo?: number } | null | undefined) => number;
@@ -326,6 +329,16 @@ function relocateCharacterToUllaIfMapLevelDenied(user: MapLevelRestrictedCharact
 
     if (!deniedMessage) {
         return "";
+    }
+
+    // Quedó en la zona de principiantes después de dejar de ser newbie: sale por Nix, igual que al subir de nivel.
+    const mapMaxLevel = Number(vars.mapData[user.map]?.maxLevel ?? 0);
+    if (mapMaxLevel > 0 && Number(user.level ?? 0) > mapMaxLevel) {
+        user.map = NIX_MAP_ID;
+        user.posX = NIX_POS_X;
+        user.posY = NIX_POS_Y;
+        user.pos = { x: NIX_POS_X, y: NIX_POS_Y };
+        return "Dejaste de ser newbie: te llevamos a Nix para que sigas tu aventura.";
     }
 
     user.map = ULLA_MAP_ID;
@@ -1040,7 +1053,12 @@ function Login(this: LoginApi) {
                 require("./skills").ensureSkills(personaje);
                 vars.personajes[ws.id] = personaje;
 
-                if (!personaje.idBody) {
+                // Sin cuerpo, o desnudo con uno de los cuerpos viejos de elfo/gnomo que en este juego son
+                // otros gráficos (el 260 es el Murciélago Gigante): se le pone el desnudo de su raza.
+                if (
+                    !personaje.idBody ||
+                    (!personaje.idItemBody && !personaje.dead && !personaje.navegando && LEGACY_WRONG_NAKED_BODIES.has(Number(personaje.idBody)))
+                ) {
                     personaje.idBody = game.bodyNaked(personaje.id);
                 }
 

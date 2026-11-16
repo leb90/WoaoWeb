@@ -163,12 +163,23 @@ function flattenTimingEntries(value: Record<string, unknown>, prefix = ""): Arra
 }
 
 function applyEnvironmentTimingOverrides(timing: RuntimeTimingConfig): RuntimeTimingConfig {
+    // Pegar y lanzar hechizos son independientes: se puede hacer una cosa justo después de la otra. El cliente
+    // aplica lo mismo (frontend/lib/runtime-config.ts), así un valor viejo en el panel no vuelve a trabarlo.
+    const combatTiming: RuntimeTimingConfig = {
+        ...timing,
+        actionCooldowns: {
+            ...timing.actionCooldowns,
+            meleeToSpellMs: 0,
+            spellToMeleeMs: 0,
+        },
+    };
+
     if (!config.isTestDeployment) {
-        return timing;
+        return combatTiming;
     }
 
     return {
-        ...timing,
+        ...combatTiming,
         walkStepMs: TEST_WALK_STEP_MS,
     };
 }

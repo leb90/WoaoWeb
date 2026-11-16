@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, type RefObject } from "react";
 import {
     createBuyItemPacket,
     createChangeBankTabPacket,
+    createChangeClanSeguroPacket,
+    createChangeSeguroPacket,
     createCloseTradePacket,
     createCraftItemPacket,
     createDepositBankGoldPacket,
@@ -104,6 +106,8 @@ type OutgoingRequestProps = {
     meleeAttackRequest?: { token: number } | null;
     // Botón de agarrar de mobile (el mismo paquete que la tecla de agarrar).
     pickupItemRequest?: { token: number } | null;
+    // Clic en "Seguro" / "Clan" al pie del panel: el mismo paquete que las teclas de seguro.
+    seguroToggleRequest?: { kind: "seguro" | "clan"; token: number } | null;
     spellTargetRequest?: {
         slot: number;
         manaRequired: number;
@@ -250,6 +254,7 @@ export function useOutgoingRequests({
     spellTargetRequest,
     meleeAttackRequest,
     pickupItemRequest,
+    seguroToggleRequest,
 }: UseOutgoingRequestsOptions) {
     const useItemClickQueueRef = useRef<number[]>([]);
     const useItemUQueueRef = useRef<number[]>([]);
@@ -680,6 +685,33 @@ export function useOutgoingRequests({
         markRequestTokenProcessed,
         pickupItemRequest,
         recordClientGameAction,
+        websocketRef,
+    ]);
+
+    useEffect(() => {
+        const request = seguroToggleRequest;
+        if (!request || hasProcessedRequestToken("seguroToggle", request.token)) {
+            return;
+        }
+
+        const socket = getSocket(websocketRef);
+        if (!socket) {
+            return;
+        }
+
+        if (request.kind === "clan") {
+            socket.send(createChangeClanSeguroPacket());
+            recordClientGameAction("toggle_clan_seguro", { source: "click" });
+        } else {
+            socket.send(createChangeSeguroPacket());
+            recordClientGameAction("toggle_seguro", { source: "click" });
+        }
+        markRequestTokenProcessed("seguroToggle", request.token);
+    }, [
+        hasProcessedRequestToken,
+        markRequestTokenProcessed,
+        recordClientGameAction,
+        seguroToggleRequest,
         websocketRef,
     ]);
 

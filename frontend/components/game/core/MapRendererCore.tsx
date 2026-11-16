@@ -32,6 +32,7 @@ import {
     type TradeState,
 } from "../../../lib/aowProtocol";
 import {
+    getCanvasRenderResolution,
     VIEWPORT_PIXEL_HEIGHT,
     VIEWPORT_PIXEL_WIDTH,
 } from "../../../lib/viewport";
@@ -158,6 +159,8 @@ interface MapRendererProps {
     touchMovementDirection?: "up" | "down" | "left" | "right" | null;
     meleeAttackRequest?: { token: number } | null;
     pickupItemRequest?: { token: number } | null;
+    // Clic en "Seguro" / "Clan" del panel (PanelStatusLine).
+    seguroToggleRequest?: { kind: "seguro" | "clan"; token: number } | null;
     // Lo que hay para agarrar en la baldosa del personaje (null si nada): el botón de agarrar de mobile.
     onGroundItemChange?: (item: GroundItem | null) => void;
     cancelTargetingRequest?: { token: number } | null;
@@ -675,6 +678,7 @@ export default function MapRenderer({
     touchMovementDirection = null,
     meleeAttackRequest,
     pickupItemRequest,
+    seguroToggleRequest,
     onGroundItemChange,
     cancelTargetingRequest,
     equipRequest,
@@ -1543,6 +1547,7 @@ export default function MapRenderer({
         spellTargetRequest,
         meleeAttackRequest,
         pickupItemRequest,
+        seguroToggleRequest,
     });
 
     // Item agarrable bajo los pies. Se mira cada 200 ms: el personaje se mueve y los items aparecen y desaparecen
@@ -1635,7 +1640,14 @@ export default function MapRenderer({
 
         if (!engine || !app) return;
 
-        app.renderer.resize(screenSize.width, screenSize.height);
+        // El canvas se estira con CSS hasta el tamaño en pantalla. Se dibuja a esa resolución (tope x2) para que
+        // los textos (nombres, diálogos, daño) salgan nítidos en pantallas grandes; el pixel art usa "nearest"
+        // y se ve igual que antes.
+        app.renderer.resize(
+            screenSize.width,
+            screenSize.height,
+            getCanvasRenderResolution(canvasDisplaySize.width, screenSize.width),
+        );
         if (fpsText) {
             fpsText.x = FPS_TEXT_OFFSET_X;
             fpsText.y = FPS_TEXT_OFFSET_Y;
@@ -1658,7 +1670,7 @@ export default function MapRenderer({
         }
         engine.updateCamera();
         engine.updateCulling();
-    }, [screenSize.height, screenSize.width]);
+    }, [canvasDisplaySize.width, screenSize.height, screenSize.width]);
 
     useEffect(() => {
         if (engineRef.current) {

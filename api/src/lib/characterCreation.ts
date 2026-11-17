@@ -295,7 +295,7 @@ const raceOptions: Record<RaceKey, RaceOption> = {
     },
     gnomo: {
         key: "gnomo",
-        baseStats: statsFromBonus({ fuerza: -1, agilidad: 1, inteligencia: 4, carisma: 0, constitucion: 2 }),
+        baseStats: statsFromBonus({ fuerza: -1, agilidad: 1, inteligencia: 4, carisma: 0, constitucion: 0 }),
         genders: {
             male: { bodyId: 53, startHeadId: 401, endHeadId: 411 },
             female: { bodyId: 60, startHeadId: 470, endHeadId: 476 },
@@ -327,7 +327,7 @@ const raceOptions: Record<RaceKey, RaceOption> = {
     },
     goblin: {
         key: "goblin",
-        baseStats: statsFromBonus({ fuerza: -1, agilidad: 1, inteligencia: 4, carisma: 0, constitucion: 2 }),
+        baseStats: statsFromBonus({ fuerza: -1, agilidad: 1, inteligencia: 4, carisma: 0, constitucion: 0 }),
         genders: {
             male: { bodyId: 178, startHeadId: 705, endHeadId: 712 },
             female: { bodyId: 212, startHeadId: 701, endHeadId: 704 },

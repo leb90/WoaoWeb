@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Crown, Flame, Trophy } from "lucide-react";
 import { formatNumber } from "@/lib/number-format";
+import { RACE_ID_MAP, raceOptions } from "@/lib/characterCreation";
 import type {
     RankingCharacter,
     RankingHeadSprite,
@@ -38,13 +39,10 @@ const classLabels: Record<number, string> = {
     22: "Chaman",
 };
 
-const raceLabels: Record<number, string> = {
-    1: "Humano",
-    2: "Elfo",
-    3: "Elfo Drow",
-    4: "Enano",
-    5: "Gnomo",
-};
+// Todas las razas jugables, con el mismo nombre que en la creación de personaje.
+const raceLabels: Record<number, string> = Object.fromEntries(
+    raceOptions.map((race) => [RACE_ID_MAP[race.key], race.label]),
+);
 
 const factionColors = {
     armada: "#00AFFF",

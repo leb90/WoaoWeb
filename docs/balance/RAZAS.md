@@ -1,12 +1,12 @@
 # Razas: espejos por arquetipo
 
-Estado al 2026-10-29. Las 12 razas vuelven a ser **espejos**: cada raza de la Alianza tiene una de la Horda con los mismos atributos, como en el cliente viejo (`old/Nuevo Motor Graf/Cliente 7.7 1280x720/CODIGO/frmCrearPersonaje.frm`). Los 6 pares son 6 arquetipos nivelados entre sí, medidos sobre el motor real.
+Estado al 2026-10-29; el 2026-11-17 Gnomo y Goblin pasaron a +0 de constitución. Las 12 razas vuelven a ser **espejos**: cada raza de la Alianza tiene una de la Horda con los mismos atributos, como en el cliente viejo (`old/Nuevo Motor Graf/Cliente 7.7 1280x720/CODIGO/frmCrearPersonaje.frm`). Los 6 pares son 6 arquetipos nivelados entre sí, medidos sobre el motor real.
 
 ## La tabla
 
 | Arquetipo | Alianza | Horda | Fuerza | Agilidad | Inteligencia | Constitución | Carisma |
 |---|---|---|---:|---:|---:|---:|---:|
-| Arcano | Gnomo | Goblin | −1 | +1 | +4 | +2 | 0 |
+| Arcano | Gnomo | Goblin | −1 | +1 | +4 | 0 | 0 |
 | Místico | Elfo | Vampiro | 0 | +2 | +3 | +1 | 0 |
 | Equilibrado | Humano | No-Muerto | +1 | +1 | +2 | +2 | 0 |
 | Tanque | Enano | Orco | +2 | +1 | 0 | +2 | 0 |
@@ -25,7 +25,7 @@ En producción manda el perfil de la tabla `game_balance` (ver "Personajes exist
 ## Reglas
 
 - **Fuerza y agilidad, hasta +2.** En PvP la fuerza y la agilidad efectivas tienen tope 40 (`PVP_ATTRIBUTE_CAP`) y el buff las duplica: +2 llega justo a 40 y +3 no suma nada.
-- **Constitución, de +1 a +2.** El promedio queda en 1,5, igual que antes, para no mover el balance de clases (ver "Balance de clases").
+- **Constitución, de 0 a +2.** El Arcano (Gnomo / Goblin) queda en 0 desde el 2026-11-17: con +4 de inteligencia y +2 de constitución era el mejor en todo para las clases con maná. Las demás quedan en +1 o +2.
 - **Inteligencia, hasta +4.**
 - **Carisma, 0 en todas.** Ningún código del juego lo usa.
 - **Las razas no suman lo mismo, a propósito:**
@@ -104,12 +104,12 @@ El Elfo Oscuro se subió porque quedaba muy por debajo del Tauros.
   - la recarga del balance con jugadores conectados (`gameDataSync.refreshConnectedCharactersFromBalance`), sobre la vida base, sin el bono del set;
   - `applyBalanceToCharacters.ts`.
 - **Ejemplos a nivel 50:**
-  - Gnomo mago, constitución 18 → 20: de 337 a 388.
+  - Gnomo mago, constitución 18 → 20: de 337 a 388 (2026-10-29). Con el cambio del 2026-11-17 (20 → 18) vuelve a correrse para abajo.
   - Tauros guerrero, 20 → 19: de 535 a 509.
   - Probado en local con Playwright: en el segundo login la vida no vuelve a cambiar.
 - **Producción:**
   - el deploy no corre `import-game-data` y `game_balance` solo se siembra con la tabla vacía;
-  - por eso la api aplica la tabla nueva una sola vez al arrancar: migración `2026-10-29-razas-espejo` de `api/src/dataMigrations.ts`, anotada en `data_migrations`;
+  - por eso la api aplica la tabla nueva una sola vez al arrancar: migraciones `2026-10-29-razas-espejo` y `2026-11-17-gnomo-goblin-sin-constitucion` de `api/src/dataMigrations.ts`, anotadas en `data_migrations`;
   - un cambio posterior desde el panel de admin no se pisa.
 
 ## Balance de clases

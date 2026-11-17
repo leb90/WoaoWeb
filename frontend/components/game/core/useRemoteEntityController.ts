@@ -309,7 +309,13 @@ export function useRemoteEntityController(
             }
 
             options.clearEntityFX(engine, id);
-            engine.remoteEntityRenderRequestIds.delete(id);
+            // Se avanza el contador en vez de borrarlo: si quedó un render en curso de la entidad
+            // borrada, pasa a ser viejo y no pisa al de la que reaparece con el mismo id (un NPC que
+            // revive conserva su id).
+            engine.remoteEntityRenderRequestIds.set(
+                id,
+                (engine.remoteEntityRenderRequestIds.get(id) ?? 0) + 1,
+            );
             options.activeCastBarsRef.current.delete(id);
             options.removeCastBarFromOverlay(engine, id);
 

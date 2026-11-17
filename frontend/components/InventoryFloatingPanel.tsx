@@ -2630,11 +2630,11 @@ export default function InventoryFloatingPanel({
         }
     }, [items, selectedSlot]);
 
+    // Solo se vuelve al inventario si ya no queda ningún hechizo. Al mover un hechizo a un slot
+    // vacío, la selección pasa al slot destino antes de que el server confirme: ese instante
+    // con el slot vacío no debe sacar al jugador de la pestaña de hechizos.
     React.useEffect(() => {
-        if (
-            selectedSpellSlot !== null &&
-            !spells.some((spell) => spell.slot === selectedSpellSlot)
-        ) {
+        if (selectedSpellSlot !== null && spells.length === 0) {
             setActiveTab("inventory");
         }
     }, [selectedSpellSlot, spells]);

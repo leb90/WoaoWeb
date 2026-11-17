@@ -18,6 +18,21 @@ type DataMigration = {
 
 const DATA_MIGRATIONS: DataMigration[] = [
     {
+        // Gnomo (5) y Goblin (9) ya tienen +4 de inteligencia: pasan a +0 de constitución. Solo se toca ese dato,
+        // para no pisar otros ajustes hechos desde el panel. Al entrar, cada personaje toma la constitución nueva y
+        // su vida se corre con la diferencia (server/src/login.ts, getHpShiftForConstitutionChange).
+        id: "2026-11-17-gnomo-goblin-sin-constitucion",
+        run: async () => {
+            const current = await getGameBalance();
+            const balanceRazas = { ...current.data.balanceRazas };
+            for (const raceId of ["5", "9"]) {
+                const race = balanceRazas[raceId];
+                if (race) balanceRazas[raceId] = { ...race, constitucion: 0 };
+            }
+            await upsertGameBalance({ ...current.data, balanceRazas });
+        },
+    },
+    {
         id: "2026-11-06-misiones-npc-universal",
         run: async () => {
             const template = loadSeedNpcsJson().find((row) => row.id === 9601);

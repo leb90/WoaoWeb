@@ -244,6 +244,40 @@ function getNpcRespawnEntry(npc: NpcCharacter): NpcRespawnEntry | null {
     };
 }
 
+// Jefes únicos que custodian una sala: al reaparecer vuelven a su lugar (o a la casilla libre más
+// cercana) en vez de nacer en cualquier punto del mapa.
+const FIXED_RESPAWN_TEMPLATE_IDS = new Set<number>([
+    761, // Rey Mago (mapa 148)
+]);
+const FIXED_RESPAWN_SEARCH_RADIUS = 6;
+
+function getFixedRespawnPosition(npc: NpcCharacter): RespawnPosition | null {
+    if (!FIXED_RESPAWN_TEMPLATE_IDS.has(Number(npc.templateNpcIndex ?? 0))) {
+        return null;
+    }
+
+    const origin = npc.spawnOrigin;
+    if (!origin || Number(npc.spawnMapNum ?? npc.map) !== Number(npc.map)) {
+        return null;
+    }
+
+    for (let radius = 0; radius <= FIXED_RESPAWN_SEARCH_RADIUS; radius++) {
+        for (let y = origin.y - radius; y <= origin.y + radius; y++) {
+            for (let x = origin.x - radius; x <= origin.x + radius; x++) {
+                if (Math.max(Math.abs(x - origin.x), Math.abs(y - origin.y)) !== radius) {
+                    continue;
+                }
+
+                if (game.validPosRespawnNpc({ x, y }, npc.map, Boolean(npc.aguaValida), Boolean(npc.tierraInvalida))) {
+                    return { posNewX: x, posNewY: y };
+                }
+            }
+        }
+    }
+
+    return null;
+}
+
 function getNpcRespawnCooldownMs(npc: NpcCharacter): number {
     if (Number(npc.npcType ?? 0) === Number(vars.npcType.dragon)) {
         return DRAGON_RESPAWN_COOLDOWN_MS;
@@ -2873,11 +2907,9 @@ function Npcs(this: NpcsApi) {
             npc.wanderHomeMap = undefined;
             npc.wanderTarget = null;
 
-            const posNewNpc = game.respawnNpc(
-                npc.map,
-                Boolean(npc.aguaValida),
-                Boolean(npc.tierraInvalida),
-            ) as RespawnPosition;
+            const posNewNpc =
+                getFixedRespawnPosition(npc) ??
+                (game.respawnNpc(npc.map, Boolean(npc.aguaValida), Boolean(npc.tierraInvalida)) as RespawnPosition);
 
             npc.pos.x = posNewNpc.posNewX;
             npc.pos.y = posNewNpc.posNewY;

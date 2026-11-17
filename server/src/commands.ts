@@ -146,9 +146,15 @@ type ClanCharacterSummary = {
 
 type ChatChannel = "global" | "party" | "clan" | "whisper";
 
+// Hogar por defecto de los newbies (hasta nivel 12): la Newbie Dungeon.
 const HOME_MAP = 37;
 const HOME_X = 78;
 const HOME_Y = 87;
+// Desde nivel 13 ya no son newbies: si su hogar sigue siendo la Newbie Dungeon, vuelven a Nix.
+const VETERAN_HOME_MIN_LEVEL = 13;
+const VETERAN_HOME_MAP = 34;
+const VETERAN_HOME_X = 50;
+const VETERAN_HOME_Y = 50;
 const GOVERNOR_NPC_IDS = [13, 150, 151, 152, 153, 9019] as const;
 const GOVERNOR_HOME_COORDS: Record<number, { x: number; y: number }> = {
     13: { x: 54, y: 59 },
@@ -357,6 +363,15 @@ function resolveHomeDestination(user: CommandCharacter) {
     const homeMap = Number(user.homeMap ?? 0);
     const homeX = Number(user.homeX ?? 0);
     const homeY = Number(user.homeY ?? 0);
+    const isVeteran = Number(user.level ?? 0) >= VETERAN_HOME_MIN_LEVEL;
+
+    if (isVeteran && (homeMap <= 0 || homeMap === HOME_MAP)) {
+        return {
+            map: VETERAN_HOME_MAP,
+            x: VETERAN_HOME_X,
+            y: VETERAN_HOME_Y,
+        };
+    }
 
     if (homeMap > 0 && homeX > 0 && homeY > 0) {
         return {

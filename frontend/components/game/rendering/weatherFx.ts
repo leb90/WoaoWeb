@@ -30,8 +30,10 @@ export function rememberEnvironment(environment: EnvironmentState | null): void 
     lastEnvironment = environment;
 }
 
-// Texturas de la niebla, pintadas una sola vez: dos bancos redondeados, una franja larga y el velo de arriba abajo.
-type FogTextures = { bankLarge: Texture; bankSoft: Texture; ribbon: Texture; veil: Texture };
+// Texturas de la niebla, pintadas una sola vez: una nube difusa (redonda, que se estira al dibujarla) y el velo
+// de arriba abajo. La nube se pinta en un lienzo cuadrado con el degradado terminando antes de los bordes, así
+// nunca quedan cortes rectos (los bancos y franjas de antes dejaban bandas y rectángulos marcados).
+type FogTextures = { puff: Texture; veil: Texture };
 let fogTextures: FogTextures | null = null;
 
 function paintTexture(width: number, height: number, paint: (ctx: CanvasRenderingContext2D) => void): Texture {
@@ -45,48 +47,29 @@ function paintTexture(width: number, height: number, paint: (ctx: CanvasRenderin
     return Texture.from(canvas);
 }
 
-function radialBank(width: number, height: number, stops: Array<[number, string]>, centerX = 0.5): Texture {
-    return paintTexture(width, height, (ctx) => {
-        const gradient = ctx.createRadialGradient(width * centerX, height * 0.48, width * 0.06, width * centerX, height * 0.48, width * 0.5);
-        for (const [offset, color] of stops) gradient.addColorStop(offset, color);
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, width, height);
-    });
-}
+const FOG_PUFF_SIZE = 256;
 
 function getFogTextures(): FogTextures {
     if (!fogTextures) {
         fogTextures = {
-            bankLarge: radialBank(320, 160, [
-                [0, "rgba(238, 244, 248, 0.85)"],
-                [0.48, "rgba(226, 234, 240, 0.42)"],
-                [1, "rgba(220, 230, 235, 0)"],
-            ]),
-            bankSoft: radialBank(
-                220,
-                110,
-                [
-                    [0, "rgba(242, 247, 250, 0.72)"],
-                    [0.55, "rgba(228, 236, 242, 0.28)"],
-                    [1, "rgba(225, 232, 238, 0)"],
-                ],
-                0.48,
-            ),
-            ribbon: paintTexture(420, 72, (ctx) => {
-                const gradient = ctx.createLinearGradient(0, 36, 420, 36);
-                gradient.addColorStop(0, "rgba(225, 234, 240, 0)");
-                gradient.addColorStop(0.22, "rgba(232, 239, 245, 0.18)");
-                gradient.addColorStop(0.5, "rgba(245, 248, 250, 0.44)");
-                gradient.addColorStop(0.78, "rgba(232, 239, 245, 0.18)");
-                gradient.addColorStop(1, "rgba(225, 234, 240, 0)");
+            puff: paintTexture(FOG_PUFF_SIZE, FOG_PUFF_SIZE, (ctx) => {
+                const center = FOG_PUFF_SIZE / 2;
+                // Radio menor que medio lado: la nube llega a 0 antes de tocar cualquier borde.
+                const gradient = ctx.createRadialGradient(center, center, 0, center, center, center * 0.96);
+                gradient.addColorStop(0, "rgba(232, 237, 241, 0.62)");
+                gradient.addColorStop(0.3, "rgba(230, 235, 239, 0.46)");
+                gradient.addColorStop(0.6, "rgba(226, 232, 236, 0.2)");
+                gradient.addColorStop(0.85, "rgba(224, 230, 234, 0.05)");
+                gradient.addColorStop(1, "rgba(224, 230, 234, 0)");
                 ctx.fillStyle = gradient;
-                ctx.fillRect(0, 0, 420, 72);
+                ctx.fillRect(0, 0, FOG_PUFF_SIZE, FOG_PUFF_SIZE);
             }),
+            // Bruma pareja en toda la pantalla, apenas más densa arriba y abajo (el centro queda más limpio).
             veil: paintTexture(4, 256, (ctx) => {
                 const gradient = ctx.createLinearGradient(0, 0, 0, 256);
-                gradient.addColorStop(0, "rgba(228, 236, 242, 0.04)");
-                gradient.addColorStop(0.5, "rgba(220, 229, 236, 0.085)");
-                gradient.addColorStop(1, "rgba(232, 238, 243, 0.05)");
+                gradient.addColorStop(0, "rgba(222, 229, 234, 0.22)");
+                gradient.addColorStop(0.5, "rgba(222, 229, 234, 0.12)");
+                gradient.addColorStop(1, "rgba(222, 229, 234, 0.22)");
                 ctx.fillStyle = gradient;
                 ctx.fillRect(0, 0, 4, 256);
             }),
@@ -97,7 +80,7 @@ function getFogTextures(): FogTextures {
 
 type Raindrop = { g: Graphics; speed: number };
 type Snowflake = { g: Graphics; speed: number; swaySpeed: number; swayPhase: number };
-// Un banco o una franja de niebla que cruza la pantalla de izquierda a derecha, meciéndose arriba y abajo.
+// Una nube de niebla que cruza la pantalla de izquierda a derecha, muy despacio, meciéndose arriba y abajo.
 type FogPiece = {
     sprite: Sprite;
     baseY: number;
@@ -106,7 +89,6 @@ type FogPiece = {
     driftAmp: number;
     driftSpeed: number;
     seed: number;
-    strand: boolean;
 };
 
 type WeatherFxState = {
@@ -176,10 +158,10 @@ export function createWeatherOverlay(engine: Engine): Container {
     fogLayer.eventMode = "none";
     fogLayer.visible = false;
 
-    // Lo último de la niebla: un blanqueo parejo muy suave por encima de los bancos.
+    // Lo último de la niebla: un blanqueo parejo suave por encima de las nubes, que apaga un poco los colores.
     const fogWash = new Graphics();
     fogWash.eventMode = "none";
-    fogWash.alpha = 0.08;
+    fogWash.alpha = 0.06;
 
     const dayTintLayer = new Graphics();
     dayTintLayer.eventMode = "none";
@@ -300,28 +282,30 @@ function updateSnow(state: WeatherFxState, width: number, height: number, deltaM
     }
 }
 
-function buildFogPiece(textures: FogTextures, width: number, height: number, strand: boolean, index: number): FogPiece {
-    const renderWidth = strand ? randomBetween(300, 560) : randomBetween(180, 400);
-    const renderHeight = strand ? randomBetween(26, 54) : randomBetween(70, 180);
-    const texture = strand ? textures.ribbon : index % 2 === 0 ? textures.bankLarge : textures.bankSoft;
-    const sprite = new Sprite(texture);
+function randomFogPieceY(height: number, renderHeight: number): number {
+    return randomBetween(-renderHeight * 0.45, height - renderHeight * 0.55);
+}
+
+function buildFogPiece(textures: FogTextures, width: number, height: number): FogPiece {
+    // Nubes grandes y achatadas: de lejos se leen como un cielo cubierto, no como manchas sueltas.
+    const renderWidth = Math.max(420, width * randomBetween(0.55, 0.95));
+    const renderHeight = renderWidth * randomBetween(0.38, 0.55);
+    const sprite = new Sprite(textures.puff);
     sprite.eventMode = "none";
     sprite.width = renderWidth;
     sprite.height = renderHeight;
-    sprite.x = Math.random() * (width + renderWidth) - renderWidth * 0.5;
-    const baseY = strand ? height * randomBetween(0.14, 0.82) : Math.random() * (height + 40) - 20;
+    sprite.x = randomBetween(-renderWidth, width);
+    const baseY = randomFogPieceY(height, renderHeight);
     sprite.y = baseY;
-    const depth = randomBetween(0.75, 1.6);
 
     return {
         sprite,
         baseY,
-        speedX: strand ? randomBetween(0.025, 0.075) : randomBetween(0.035, 0.12) * depth,
-        opacity: strand ? randomBetween(0.04, 0.09) : randomBetween(0.08, 0.16),
-        driftAmp: strand ? randomBetween(2, 6) : randomBetween(4, 12),
-        driftSpeed: strand ? randomBetween(0.00018, 0.0004) : randomBetween(0.00022, 0.00077),
+        speedX: randomBetween(0.03, 0.08),
+        opacity: randomBetween(0.28, 0.5),
+        driftAmp: randomBetween(4, 10),
+        driftSpeed: randomBetween(0.00015, 0.0004),
         seed: Math.random() * Math.PI * 2,
-        strand,
     };
 }
 
@@ -339,10 +323,9 @@ function startFog(state: WeatherFxState, width: number, height: number): void {
     }
     state.fogLayer.addChild(state.fogVeil);
 
-    const strands = 5 + Math.floor(Math.random() * 3);
-    const banks = 14 + Math.floor(Math.random() * 4);
-    for (let index = 0; index < strands + banks; index++) {
-        const piece = buildFogPiece(textures, width, height, index < strands, index);
+    const pieces = 7 + Math.floor(Math.random() * 3);
+    for (let index = 0; index < pieces; index++) {
+        const piece = buildFogPiece(textures, width, height);
         state.fogPieces.push(piece);
         state.fogLayer.addChild(piece.sprite);
     }
@@ -366,21 +349,17 @@ function updateFog(state: WeatherFxState, width: number, height: number, deltaMs
 
     for (const piece of state.fogPieces) {
         piece.sprite.x += piece.speedX * speedFactor;
-        if (piece.sprite.x > width + piece.sprite.width * 0.5) {
+        // Sale entera por la derecha y vuelve a entrar entera por la izquierda (nunca aparece de golpe).
+        if (piece.sprite.x > width) {
             piece.sprite.x = -piece.sprite.width;
-            piece.baseY = piece.strand ? height * randomBetween(0.14, 0.82) : Math.random() * (height + 50) - 25;
+            piece.baseY = randomFogPieceY(height, piece.sprite.height);
         }
         piece.sprite.y = piece.baseY + Math.sin(now * piece.driftSpeed + piece.seed) * piece.driftAmp;
-
-        if (piece.strand) {
-            piece.sprite.alpha = piece.opacity;
-            continue;
-        }
 
         // Alrededor del personaje (el centro) la niebla es más rala, para que se lo siga viendo.
         const normX = Math.abs(piece.sprite.x + piece.sprite.width * 0.5 - centerX) / (width * 0.5);
         const normY = Math.abs(piece.sprite.y + piece.sprite.height * 0.5 - centerY) / (height * 0.5);
-        piece.sprite.alpha = piece.opacity * Math.max(0.28, Math.min(1, Math.sqrt(normX * normX + normY * normY)));
+        piece.sprite.alpha = piece.opacity * Math.max(0.45, Math.min(1, Math.sqrt(normX * normX + normY * normY)));
     }
 }
 

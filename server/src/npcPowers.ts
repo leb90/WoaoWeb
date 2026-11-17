@@ -390,6 +390,12 @@ function summonDarkKnightMinions(npc: PowerNpc, previousHp: number) {
 }
 
 function applyHitPowers(npc: PowerNpc, attacker: PowerAttacker, previousHp: number) {
+    // El golpe que lo mata no dispara poderes: teletransportar o curar a una criatura que está por
+    // morir la mandaba a los clientes con 0 de vida justo antes de borrarla y reaparecerla.
+    if (Number(npc.hp ?? 0) <= 0) {
+        return;
+    }
+
     summonDarkKnightMinions(npc, previousHp);
 
     if (hasSpecialPower(npc, 2)) {

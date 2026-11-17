@@ -1890,7 +1890,11 @@ export class Engine {
             container.parent?.removeChild(container);
             container.destroy({ children: true });
             this.remoteEntities.delete(id);
-            this.remoteEntityRenderRequestIds.delete(id);
+            // Avanzar (no borrar) invalida cualquier render pendiente de esta entidad.
+            this.remoteEntityRenderRequestIds.set(
+                id,
+                (this.remoteEntityRenderRequestIds.get(id) ?? 0) + 1,
+            );
             this.entityEffects.delete(id);
             this.entityEffectGraphicIds.delete(id);
             this.entityEffectStartedAt.delete(id);

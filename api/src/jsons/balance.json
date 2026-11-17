@@ -32,7 +32,7 @@
             "fuerza": -1,
             "agilidad": 1,
             "inteligencia": 4,
-            "constitucion": 2,
+            "constitucion": 0,
             "carisma": 0
         },
         "6": {
@@ -60,7 +60,7 @@
             "fuerza": -1,
             "agilidad": 1,
             "inteligencia": 4,
-            "constitucion": 2,
+            "constitucion": 0,
             "carisma": 0
         },
         "10": {

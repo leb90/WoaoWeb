@@ -316,7 +316,7 @@ export const raceOptions: RaceOption[] = [
         label: "Gnomo",
         faction: "alianza",
         summary: "Los gnomos tienen un 10% de evasión extra.",
-        bonus: { fuerza: -1, inteligencia: 4, agilidad: 1, carisma: 0, constitucion: 2 },
+        bonus: { fuerza: -1, inteligencia: 4, agilidad: 1, carisma: 0, constitucion: 0 },
         genders: {
             male: { bodyId: 53, startHeadId: 401, endHeadId: 411 },
             female: { bodyId: 60, startHeadId: 470, endHeadId: 476 },
@@ -383,7 +383,7 @@ export const raceOptions: RaceOption[] = [
         label: "Goblin",
         faction: "horda",
         summary: "Los goblins tienen 15% de probabilidad de evitar ser paralizados.",
-        bonus: { fuerza: -1, inteligencia: 4, agilidad: 1, carisma: 0, constitucion: 2 },
+        bonus: { fuerza: -1, inteligencia: 4, agilidad: 1, carisma: 0, constitucion: 0 },
         genders: {
             male: { bodyId: 178, startHeadId: 705, endHeadId: 712 },
             female: { bodyId: 212, startHeadId: 701, endHeadId: 704 },
